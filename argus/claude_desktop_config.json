@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "argus": {
+      "command": "<path-to-repo>/argus/.venv/bin/python",
+      "args": ["-m", "argus.mcp_server"],
+      "cwd": "<path-to-repo>/argus"
+    }
+  }
+}

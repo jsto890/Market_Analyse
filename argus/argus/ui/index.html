@@ -1,0 +1,383 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Argus Local</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  :root {
+    --bg:#0d0f12; --panel:#15181d; --line:#262b33; --text:#e6e8ec; --muted:#8b93a3;
+    --green:#1eb854; --red:#e0455a; --amber:#d8a23a; --accent:#7da5ff;
+    --mono:'SF Mono','Monaco','Menlo',ui-monospace,monospace;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);font:14px/1.5 system-ui,-apple-system,sans-serif}
+  header{padding:12px 20px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:16px}
+  header h1{margin:0;font-size:16px;font-weight:600;letter-spacing:.02em}
+  header .badge{font:11px var(--mono);color:var(--muted)}
+  nav{display:flex;gap:6px;padding:8px 20px;border-bottom:1px solid var(--line);background:var(--panel)}
+  nav button{background:none;border:1px solid transparent;color:var(--muted);padding:6px 12px;cursor:pointer;font:13px system-ui;border-radius:4px}
+  nav button.active{color:var(--text);border-color:var(--line);background:var(--bg)}
+  main{padding:20px;max-width:1300px;margin:0 auto}
+  section{display:none}
+  section.active{display:block}
+  .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:12px}
+  input,select,textarea,button.primary{
+    background:var(--panel);border:1px solid var(--line);color:var(--text);
+    padding:8px 10px;border-radius:4px;font:13px system-ui;outline:none;
+  }
+  input:focus,textarea:focus{border-color:var(--accent)}
+  button.primary{cursor:pointer;background:var(--accent);color:#0a0d12;border:none;font-weight:600}
+  button.primary:hover{filter:brightness(1.1)}
+  button.ghost{background:transparent;border:1px solid var(--line);color:var(--text);padding:6px 10px;border-radius:4px;cursor:pointer;font:13px system-ui}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:16px;margin-bottom:14px}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+  .grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+  table{width:100%;border-collapse:collapse;font:12px var(--mono)}
+  th,td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--line)}
+  th{color:var(--muted);font-weight:500;font-size:11px;text-transform:uppercase;letter-spacing:.06em}
+  .verdict{display:inline-block;padding:4px 10px;border-radius:4px;font:13px var(--mono);font-weight:600}
+  .verdict.LONG{background:rgba(30,184,84,.15);color:var(--green)}
+  .verdict.SHORT{background:rgba(224,69,90,.15);color:var(--red)}
+  .verdict.WAIT{background:rgba(139,147,163,.15);color:var(--muted)}
+  .kv{display:grid;grid-template-columns:140px 1fr;row-gap:6px;column-gap:14px}
+  .kv .k{color:var(--muted);font:12px var(--mono)}
+  .kv .v{font:13px var(--mono)}
+  .hi{color:var(--amber);font-weight:600}
+  pre{font:12px var(--mono);background:var(--bg);border:1px solid var(--line);border-radius:4px;padding:10px;overflow:auto;max-height:380px;white-space:pre-wrap}
+  .pos{color:var(--green)} .neg{color:var(--red)} .neu{color:var(--muted)}
+  .agent-pill{display:inline-block;padding:2px 8px;margin:2px;border-radius:3px;font:11px var(--mono)}
+  .agent-pill.LONG{background:rgba(30,184,84,.10);color:var(--green);border:1px solid rgba(30,184,84,.4)}
+  .agent-pill.SHORT{background:rgba(224,69,90,.10);color:var(--red);border:1px solid rgba(224,69,90,.4)}
+  .agent-pill.WAIT{background:transparent;color:var(--muted);border:1px solid var(--line)}
+  .chat-msg{margin:6px 0;padding:10px;border-radius:4px;background:var(--bg);border:1px solid var(--line)}
+  .chat-msg.user{border-color:var(--accent)}
+  .footer{padding:14px 20px;color:var(--muted);font:11px var(--mono);text-align:center;border-top:1px solid var(--line)}
+</style>
+</head>
+<body>
+<header>
+  <h1>ARGUS <span style="color:var(--muted);font-weight:400">/ local</span></h1>
+  <span class="badge" id="health">…</span>
+</header>
+<nav>
+  <button class="active" data-tab="card">Action Card</button>
+  <button data-tab="screener">Screener</button>
+  <button data-tab="flow">Flow</button>
+  <button data-tab="backtest">Backtest</button>
+  <button data-tab="portfolio">Portfolio</button>
+  <button data-tab="hedge">Hedge</button>
+  <button data-tab="chat">AI Chat</button>
+  <button data-tab="journal">Journal</button>
+  <button data-tab="agents">Agents</button>
+</nav>
+<main>
+
+  <!-- Action Card -->
+  <section id="tab-card" class="active">
+    <div class="panel">
+      <div class="row">
+        <input id="sym" placeholder="Symbol e.g. AAPL" style="width:160px">
+        <button class="primary" onclick="loadCard()">Run agents</button>
+        <button class="ghost" onclick="loadAnalysis()">AI analysis</button>
+      </div>
+      <div id="card-out" class="kv"></div>
+    </div>
+    <div class="grid2">
+      <div class="panel">
+        <h3 style="margin:0 0 8px">Voting agents</h3>
+        <div id="votes"></div>
+      </div>
+      <div class="panel">
+        <h3 style="margin:0 0 8px">Indicator panel</h3>
+        <pre id="ind">(load a symbol)</pre>
+      </div>
+    </div>
+    <div class="panel" id="analysis-panel" style="display:none">
+      <h3 style="margin:0 0 8px">Written analysis</h3>
+      <pre id="analysis"></pre>
+    </div>
+  </section>
+
+  <!-- Screener -->
+  <section id="tab-screener">
+    <div class="panel">
+      <div class="row">
+        <input id="screen-min" type="number" step="0.05" value="0.3" style="width:80px">
+        <span style="color:var(--muted)">min |score|</span>
+        <input id="screen-univ" placeholder="Override universe (comma-separated)" style="flex:1">
+        <button class="primary" onclick="runScreener()">Run</button>
+      </div>
+      <div id="screener-out"></div>
+    </div>
+  </section>
+
+  <!-- Flow -->
+  <section id="tab-flow">
+    <div class="panel">
+      <div class="row">
+        <input id="flow-sym" placeholder="Symbol" style="width:160px">
+        <button class="primary" onclick="loadFlow()">Load flow</button>
+      </div>
+      <pre id="flow-out">(empty)</pre>
+    </div>
+  </section>
+
+  <!-- Backtest -->
+  <section id="tab-backtest">
+    <div class="panel">
+      <div class="row">
+        <input id="bt-sym" placeholder="Symbol" style="width:160px">
+        <select id="bt-period">
+          <option>2y</option><option>5y</option><option>10y</option>
+        </select>
+        <button class="primary" onclick="runBacktest()">Backtest</button>
+        <button class="ghost" onclick="runMC()">Monte Carlo (5000)</button>
+      </div>
+      <div id="bt-out" class="kv"></div>
+      <pre id="bt-extra" style="margin-top:14px"></pre>
+    </div>
+  </section>
+
+  <!-- Portfolio -->
+  <section id="tab-portfolio">
+    <div class="panel">
+      <div class="row">
+        <button class="primary" onclick="loadPortfolio()">Refresh from IBKR</button>
+        <button class="ghost" onclick="loadAccount()">Account summary</button>
+      </div>
+      <div id="portfolio-out"></div>
+      <pre id="account-out" style="margin-top:14px"></pre>
+    </div>
+  </section>
+
+  <!-- Hedge -->
+  <section id="tab-hedge">
+    <div class="panel">
+      <div class="row">
+        <input id="h-pv" type="number" placeholder="Portfolio value $" style="width:200px">
+        <input id="h-cov" type="number" step="0.05" value="0.5" style="width:120px">
+        <span style="color:var(--muted)">coverage (0..1)</span>
+        <button class="primary" onclick="runHedge()">Compute</button>
+      </div>
+      <pre id="hedge-out"></pre>
+    </div>
+  </section>
+
+  <!-- Chat -->
+  <section id="tab-chat">
+    <div class="panel">
+      <div class="row">
+        <input id="chat-sym" placeholder="Symbol" style="width:160px">
+        <input id="chat-q" placeholder="Ask about the chart…" style="flex:1">
+        <button class="primary" onclick="askChat()">Ask</button>
+      </div>
+      <div id="chat-log"></div>
+    </div>
+  </section>
+
+  <!-- Journal -->
+  <section id="tab-journal">
+    <div class="panel">
+      <h3 style="margin:0 0 8px">Open trade</h3>
+      <div class="row">
+        <input id="j-sym" placeholder="Symbol" style="width:120px">
+        <select id="j-side"><option>LONG</option><option>SHORT</option></select>
+        <input id="j-qty" type="number" placeholder="Qty" style="width:90px">
+        <input id="j-entry" type="number" placeholder="Entry" style="width:100px" step="0.01">
+        <input id="j-stop" type="number" placeholder="Stop" style="width:100px" step="0.01">
+        <input id="j-target" type="number" placeholder="Target" style="width:100px" step="0.01">
+        <input id="j-setup" placeholder="Setup tag" style="width:160px">
+        <button class="primary" onclick="openTrade()">Open</button>
+      </div>
+    </div>
+    <div class="panel">
+      <h3 style="margin:0 0 8px">Trades</h3>
+      <button class="ghost" onclick="loadJournal()">Refresh</button>
+      <div id="journal-out" style="margin-top:10px"></div>
+      <pre id="journal-stats"></pre>
+    </div>
+  </section>
+
+  <!-- Agents -->
+  <section id="tab-agents">
+    <div class="panel">
+      <h3 style="margin:0 0 8px">Registered agents</h3>
+      <div id="agents-out"></div>
+    </div>
+  </section>
+
+</main>
+<div class="footer">single-user local · binds 127.0.0.1 · IBKR live trading is OFF unless IBKR_LIVE_TRADING=1</div>
+
+<script>
+const $=id=>document.getElementById(id);
+const fmt=(v,d=2)=>v==null||isNaN(v)?"—":(typeof v==="number"?v.toFixed(d):v);
+const fmtPct=(v,d=2)=>v==null||isNaN(v)?"—":(v*100).toFixed(d)+"%";
+const fmtSign=v=>v==null?"":(v>0?"pos":v<0?"neg":"neu");
+
+// ---- nav ----
+document.querySelectorAll("nav button").forEach(b=>b.onclick=()=>{
+  document.querySelectorAll("nav button").forEach(x=>x.classList.remove("active"));
+  document.querySelectorAll("section").forEach(x=>x.classList.remove("active"));
+  b.classList.add("active");
+  $("tab-"+b.dataset.tab).classList.add("active");
+  if(b.dataset.tab==="agents") loadAgents();
+});
+
+// ---- health ----
+fetch("/health").then(r=>r.json()).then(j=>$("health").textContent=j.ok?"online":"down");
+
+// ---- card ----
+async function loadCard(){
+  const sym=$("sym").value.trim().toUpperCase(); if(!sym) return;
+  $("card-out").innerHTML="loading…"; $("votes").innerHTML=""; $("ind").textContent="";
+  const r=await fetch("/api/action_card/"+sym).then(r=>r.json());
+  if(r.detail){$("card-out").textContent=r.detail;return}
+  $("card-out").innerHTML=`
+    <div class="k">Symbol</div><div class="v">${r.symbol}</div>
+    <div class="k">Verdict</div><div class="v"><span class="verdict ${r.verdict}">${r.verdict}</span> ${r.high_conviction?'<span class="hi">⚡ HIGH CONVICTION</span>':''}</div>
+    <div class="k">Score</div><div class="v ${fmtSign(r.score)}">${fmt(r.score,3)}</div>
+    <div class="k">Agreement</div><div class="v">${fmt(r.agreement_pct,1)}%</div>
+    <div class="k">Entry / Stop / Target</div><div class="v">${fmt(r.entry)} / ${fmt(r.stop)} / ${fmt(r.target)}</div>
+    <div class="k">Risk:Reward</div><div class="v">${fmt(r.risk_reward,2)}</div>
+    <div class="k">Votes</div><div class="v">L:${r.long_votes} · S:${r.short_votes} · W:${r.wait_votes}</div>
+    <div class="k">Note</div><div class="v">${r.notes||"—"}</div>`;
+  $("votes").innerHTML=r.votes.map(v=>`<span class="agent-pill ${v.verdict}" title="${v.note}">${v.agent} · ${v.verdict} · ${(v.confidence*100).toFixed(0)}%</span>`).join("");
+  const ind=await fetch("/api/indicators/"+sym).then(r=>r.json());
+  $("ind").textContent=JSON.stringify(ind.values,null,2);
+}
+async function loadAnalysis(){
+  const sym=$("sym").value.trim().toUpperCase(); if(!sym) return;
+  $("analysis-panel").style.display="block";
+  $("analysis").textContent="loading…";
+  const r=await fetch("/api/analysis/"+sym).then(r=>r.json());
+  $("analysis").textContent=r.report || JSON.stringify(r,null,2);
+}
+
+// ---- screener ----
+async function runScreener(){
+  const min=parseFloat($("screen-min").value)||0;
+  const univ=$("screen-univ").value.trim();
+  const body={min_conviction:min};
+  if(univ) body.universe=univ.split(",").map(s=>s.trim().toUpperCase()).filter(Boolean);
+  $("screener-out").innerHTML="running…";
+  const r=await fetch("/api/screener",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)}).then(r=>r.json());
+  $("screener-out").innerHTML=`
+    <table><thead><tr><th>Symbol</th><th>Verdict</th><th>Score</th><th>Agreement</th><th>Entry</th><th>Stop</th><th>Target</th><th>RR</th><th>HC</th></tr></thead>
+    <tbody>${r.results.map(c=>`<tr><td>${c.symbol}</td><td><span class="verdict ${c.verdict}">${c.verdict}</span></td>
+      <td class="${fmtSign(c.score)}">${fmt(c.score,3)}</td><td>${fmt(c.agreement_pct,0)}%</td>
+      <td>${fmt(c.entry)}</td><td>${fmt(c.stop)}</td><td>${fmt(c.target)}</td><td>${fmt(c.risk_reward,2)}</td>
+      <td>${c.high_conviction?'<span class="hi">⚡</span>':''}</td></tr>`).join("")}</tbody></table>`;
+}
+
+// ---- flow ----
+async function loadFlow(){
+  const sym=$("flow-sym").value.trim().toUpperCase(); if(!sym) return;
+  $("flow-out").textContent="loading…";
+  const r=await fetch("/api/flow/"+sym).then(r=>r.json());
+  $("flow-out").textContent=JSON.stringify(r,null,2);
+}
+
+// ---- backtest ----
+let _lastBT=null;
+async function runBacktest(){
+  const sym=$("bt-sym").value.trim().toUpperCase(); if(!sym) return;
+  $("bt-out").innerHTML="running…";
+  const r=await fetch(`/api/backtest/${sym}?period=${$("bt-period").value}`).then(r=>r.json());
+  if(r.detail){$("bt-out").textContent=r.detail;return}
+  _lastBT=r;
+  $("bt-out").innerHTML=`
+    <div class="k">Symbol</div><div class="v">${r.symbol}</div>
+    <div class="k">Bars / Trades</div><div class="v">${r.bars} / ${r.trades}</div>
+    <div class="k">Win rate</div><div class="v">${fmtPct(r.win_rate)}</div>
+    <div class="k">Profit factor</div><div class="v">${fmt(r.profit_factor,2)}</div>
+    <div class="k">CAGR</div><div class="v">${fmtPct(r.cagr)}</div>
+    <div class="k">Sharpe / Sortino</div><div class="v">${fmt(r.sharpe,2)} / ${fmt(r.sortino,2)}</div>
+    <div class="k">Max DD</div><div class="v neg">${fmtPct(r.max_drawdown)}</div>
+    <div class="k">Final equity</div><div class="v">${fmt(r.final_equity,3)}</div>`;
+}
+async function runMC(){
+  if(!_lastBT||!_lastBT.trade_returns||!_lastBT.trade_returns.length){
+    $("bt-extra").textContent="run a backtest first";return;
+  }
+  $("bt-extra").textContent="simulating 5000 paths…";
+  const r=await fetch("/api/monte_carlo",{method:"POST",headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({trade_returns:_lastBT.trade_returns,sims:5000})}).then(r=>r.json());
+  $("bt-extra").textContent=JSON.stringify(r,null,2);
+}
+
+// ---- portfolio ----
+async function loadPortfolio(){
+  $("portfolio-out").innerHTML="loading…";
+  const r=await fetch("/api/portfolio").then(r=>r.json());
+  if(r[0] && r[0].error){$("portfolio-out").textContent=r[0].error;return}
+  $("portfolio-out").innerHTML=`<table><thead><tr><th>Symbol</th><th>Pos</th><th>Avg cost</th><th>Edge</th><th>Verdict</th><th>Score</th></tr></thead>
+    <tbody>${r.map(p=>`<tr><td>${p.symbol}</td><td>${p.position}</td><td>${fmt(p.avg_cost)}</td><td>${p.edge||""}</td>
+    <td>${p.verdict?`<span class="verdict ${p.verdict}">${p.verdict}</span>`:""}</td><td class="${fmtSign(p.score)}">${fmt(p.score,2)}</td></tr>`).join("")}</tbody></table>`;
+}
+async function loadAccount(){
+  const r=await fetch("/api/account").then(r=>r.json());
+  $("account-out").textContent=JSON.stringify(r,null,2);
+}
+
+// ---- hedge ----
+async function runHedge(){
+  const pv=parseFloat($("h-pv").value); const cov=parseFloat($("h-cov").value);
+  if(!pv) return;
+  const r=await fetch("/api/hedge",{method:"POST",headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({portfolio_value:pv,coverage_pct:cov})}).then(r=>r.json());
+  $("hedge-out").textContent=JSON.stringify(r,null,2);
+}
+
+// ---- chat ----
+async function askChat(){
+  const sym=$("chat-sym").value.trim().toUpperCase();
+  const q=$("chat-q").value.trim();
+  if(!sym||!q) return;
+  const log=$("chat-log");
+  log.innerHTML += `<div class="chat-msg user"><b>${sym}</b>: ${q}</div>`;
+  const r=await fetch("/api/chat/"+sym,{method:"POST",headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({question:q})}).then(r=>r.json());
+  log.innerHTML += `<div class="chat-msg"><b>argus</b> (${r.mode}): <pre style="margin:8px 0">${(r.answer||r.error||"").replace(/</g,"&lt;")}</pre></div>`;
+  $("chat-q").value="";
+  log.scrollTop=log.scrollHeight;
+}
+
+// ---- journal ----
+async function openTrade(){
+  const body={
+    symbol:$("j-sym").value.trim().toUpperCase(),
+    side:$("j-side").value,
+    qty:parseFloat($("j-qty").value),
+    entry:parseFloat($("j-entry").value)||null,
+    stop:parseFloat($("j-stop").value)||null,
+    target:parseFloat($("j-target").value)||null,
+    setup:$("j-setup").value||null,
+  };
+  await fetch("/api/journal/open",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});
+  loadJournal();
+}
+async function loadJournal(){
+  const r=await fetch("/api/journal").then(r=>r.json());
+  $("journal-out").innerHTML=`<table><thead><tr><th>ID</th><th>Date</th><th>Symbol</th><th>Side</th><th>Qty</th><th>Entry</th><th>Stop</th><th>Target</th><th>Exit</th><th>P&L</th><th>Status</th></tr></thead>
+  <tbody>${r.trades.map(t=>`<tr><td>${t.id}</td><td>${t.ts.slice(0,10)}</td><td>${t.symbol}</td><td>${t.side}</td><td>${t.qty}</td>
+  <td>${fmt(t.entry)}</td><td>${fmt(t.stop)}</td><td>${fmt(t.target)}</td><td>${fmt(t.exit)}</td>
+  <td class="${fmtSign(t.pnl)}">${fmt(t.pnl,2)}</td><td>${t.status}</td></tr>`).join("")}</tbody></table>`;
+  $("journal-stats").textContent=JSON.stringify(r.stats,null,2);
+}
+
+// ---- agents ----
+async function loadAgents(){
+  const r=await fetch("/api/agents").then(r=>r.json());
+  const groups={};
+  r.forEach(a=>{(groups[a.family]=groups[a.family]||[]).push(a.name)});
+  $("agents-out").innerHTML=Object.entries(groups).map(([fam,names])=>
+    `<div style="margin-bottom:10px"><b style="color:var(--accent)">${fam}</b> · ${names.length}<br>${names.map(n=>`<span class="agent-pill WAIT">${n}</span>`).join(" ")}</div>`
+  ).join("")+`<div style="color:var(--muted);margin-top:10px">Total: <b>${r.length}</b> agents</div>`;
+}
+loadJournal();
+</script>
+</body>
+</html>
