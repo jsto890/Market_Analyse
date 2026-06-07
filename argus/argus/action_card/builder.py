@@ -502,11 +502,15 @@ def _classify_action(
 
     # Tier assignment. Combo[:4] = 4-char daily family pattern; combo[4] = weekly direction.
     # trending_late qualifies for PRIME_LONG — oscillators are more reliable when ADX is declining.
+    # In ranging, weekly=L (bullish weekly) conflicts with ranging regime — the stock is
+    # rangebound but weekly thinks it's trending up, creating directional uncertainty.
+    # PRIME_LONG in ranging requires weekly=S or N for confirmation quality.
     is_prime = (
         combo[:4] in _STRONG_COMBOS
         and adj >= 0.40
         and 2.0 <= n_eff <= 3.0
         and regime in ("neutral", "ranging", "trending_late")
+        and not (regime == "ranging" and wk_dir == "L")
     )
     is_standard = (
         adj >= 0.30
