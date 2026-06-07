@@ -195,11 +195,15 @@ footer{padding:5px 18px;color:var(--muted);font:10px var(--mono);border-top:1px 
 
 /* ── MORNING SCAN CARDS ── */
 .candidate-stack{display:flex;flex-direction:column;gap:8px}
-.candidate-card{background:var(--bg);border:1px solid var(--line);border-left:3px solid var(--green);border-radius:5px;padding:11px 13px;display:grid;grid-template-columns:1fr auto;gap:6px;align-items:center;cursor:pointer;transition:border-color .15s}
+.candidate-card{background:var(--bg);border:1px solid var(--line);border-left:4px solid var(--green);border-radius:5px;padding:11px 13px;display:grid;grid-template-columns:1fr auto;gap:6px;align-items:center;cursor:pointer;transition:border-color .15s}
 .candidate-card:hover{border-left-color:var(--accent)}
 .candidate-card.TECH_WAIT{border-left-color:var(--muted);opacity:.7}
 .candidate-card.DIVERGING{border-left-color:var(--red)}
 .candidate-card.NEUTRAL{border-left-color:var(--muted);opacity:.6}
+.candidate-card.CONTRARIAN{border-left-color:var(--amber)}
+.cand-enter{font:10px var(--mono);padding:3px 8px;background:transparent;border:1px solid rgba(125,165,255,.3);color:var(--accent);border-radius:3px;cursor:pointer;white-space:nowrap}
+.cand-enter:hover{background:rgba(125,165,255,.12)}
+.hc-separator{font:9px var(--mono);color:var(--muted);text-transform:uppercase;letter-spacing:.08em;padding:4px 0 2px;border-top:1px solid var(--line);margin-top:4px}
 .cand-sym{font:16px var(--mono);font-weight:700}
 .cand-meta{font:10px var(--mono);color:var(--muted);margin-top:2px}
 .cand-bar-track{height:3px;background:var(--line);border-radius:2px;margin-top:5px;position:relative;overflow:hidden}
@@ -216,6 +220,45 @@ footer{padding:5px 18px;color:var(--muted);font:10px var(--mono);border-top:1px 
 /* ── DRILL BUTTON ── */
 .drill-btn{background:transparent;border:1px solid var(--line);color:var(--muted);padding:2px 7px;border-radius:3px;cursor:pointer;font:13px var(--mono);transition:all .15s;line-height:1}
 .drill-btn:hover{border-color:var(--accent);color:var(--accent)}
+
+/* ── FAMILY VERDICT BARS ── */
+.fam-bars{display:flex;flex-direction:column;gap:5px;margin-top:8px}
+.fam-bar-row{display:flex;align-items:center;gap:7px;font:10px var(--mono)}
+.fam-bar-label{width:90px;color:var(--muted);text-align:right;flex-shrink:0}
+.fam-bar-track{flex:1;height:8px;background:rgba(255,255,255,.05);border-radius:2px;position:relative;overflow:hidden}
+.fam-bar-fill{height:100%;border-radius:2px;position:absolute;left:0;top:0}
+.fam-bar-meta{width:90px;flex-shrink:0;color:var(--text)}
+.regime-chip{display:inline-block;padding:1px 7px;border-radius:3px;font:10px var(--mono);font-weight:600;letter-spacing:.05em}
+.regime-chip.trending{background:rgba(30,184,84,.15);color:var(--green);border:1px solid rgba(30,184,84,.3)}
+.regime-chip.ranging{background:rgba(125,165,255,.1);color:var(--accent);border:1px solid rgba(125,165,255,.25)}
+.regime-chip.gap_down_continuation{background:rgba(224,69,90,.15);color:var(--red);border:1px solid rgba(224,69,90,.3)}
+.regime-chip.neutral{background:rgba(139,147,163,.1);color:var(--muted);border:1px solid rgba(139,147,163,.2)}
+.regime-chip.high_vol{background:rgba(216,162,58,.12);color:var(--amber);border:1px solid rgba(216,162,58,.3)}
+
+/* ── STICKY BRIDGE SUMMARY BAR ── */
+#bridge-summary-bar{
+  display:none;font:11px var(--mono);color:var(--text);padding:5px 12px;
+  background:rgba(13,15,18,.95);border-bottom:1px solid var(--line);
+  position:sticky;top:0;z-index:5;backdrop-filter:blur(4px);
+  flex-wrap:wrap;gap:10px;align-items:center;
+}
+#bridge-summary-bar.visible{display:flex}
+
+/* ── MOBILE ── */
+@media(max-width:768px){
+  .main-inner{padding:10px 10px}
+  .grid2{grid-template-columns:1fr}
+  .candidate-card{grid-template-columns:1fr}
+  .cand-action{flex-direction:row;align-items:center;flex-wrap:wrap;gap:8px;margin-top:6px}
+  nav{padding:5px 10px;gap:2px}
+  nav button{padding:3px 8px;font-size:11px}
+  .fund-grid{grid-template-columns:repeat(2,1fr)}
+  table{font-size:11px}
+  th,td{padding:5px 6px}
+  .vote-matrix{grid-template-columns:repeat(4,1fr)}
+  .stat-row{grid-template-columns:repeat(3,1fr)}
+  .stress-out{grid-template-columns:repeat(2,1fr)}
+}
 </style>
 </head>
 <body>
@@ -341,11 +384,12 @@ footer{padding:5px 18px;color:var(--muted);font:10px var(--mono);border-top:1px 
       <div class="row" style="margin-bottom:8px">
         <span style="font:11px var(--mono);color:var(--muted)">Sentiment × Technical bridge</span>
         <button class="ghost" style="font-size:11px;padding:3px 8px" onclick="loadBridge()">↺ Refresh</button>
-        <button class="ghost" id="morning-toggle" style="font-size:11px;padding:3px 8px" onclick="toggleMorningMode()">☀ Morning Mode</button>
+        <button class="ghost active-filter" id="morning-toggle" style="font-size:11px;padding:3px 8px" onclick="toggleMorningMode()">☀ Exit Morning Mode</button>
         <button class="ghost" id="compass-toggle" style="font-size:11px;padding:3px 8px" onclick="toggleCompass()">⊕ Compass</button>
         <span id="bridge-ts" style="font:10px var(--mono);color:var(--muted);margin-left:auto"></span>
       </div>
       <div class="stat-row" id="bridge-stats"></div>
+      <div id="bridge-summary-bar"></div>
       <div class="row" id="bridge-filters" style="gap:5px;margin-bottom:10px">
         <button class="ghost active-filter" data-f="all"       onclick="setFilter(this,'all')">All</button>
         <button class="ghost"              data-f="ALIGNED"    onclick="setFilter(this,'ALIGNED')"    style="color:var(--green)">✅ Aligned</button>
@@ -713,6 +757,54 @@ function buildFamilyRings(votes) {
   }).join('');
 }
 
+/* ═══════════════════════ FAMILY VERDICT BARS ═══════════════════════ */
+const _CAP_FAM_ORDER = ['ma_trend','breakout','squeeze','momentum_osc','other'];
+
+function buildFamilyBars(familyVotes, verdict) {
+  const el = $('family-bars');
+  if (!el || !familyVotes) return;
+  el.innerHTML = _CAP_FAM_ORDER.map(fam => {
+    const c = familyVotes[fam];
+    if (!c) return '';
+    const total = c.long + c.short + c.wait || 1;
+    const actionable = c.long + c.short || 1;
+    const dominant = c.long >= c.short ? 'long' : 'short';
+    const dominantN = c.long >= c.short ? c.long : c.short;
+    const pct = dominantN / total;
+    const clr = dominant === 'long' ? 'var(--green)' : 'var(--red)';
+    const label = fam === 'other' ? 'uncapped' : fam.replace('_', '_');
+    const meta = `${dominantN}/${total} ${dominant.toUpperCase()}`;
+    return `<div class="fam-bar-row">
+      <div class="fam-bar-label">${label}</div>
+      <div class="fam-bar-track">
+        <div class="fam-bar-fill" style="width:${(pct*100).toFixed(1)}%;background:${clr}"></div>
+      </div>
+      <div class="fam-bar-meta">${meta}</div>
+    </div>`;
+  }).join('');
+}
+
+/* ═══════════════════════ REGIME CHIP HELPER ═══════════════════════ */
+function regimeChip(regime, highVol) {
+  const r = regime || 'neutral';
+  const hvTag = highVol ? ` <span class="regime-chip high_vol">HIGH VOL</span>` : '';
+  return `<span class="regime-chip ${r}">${r.replace(/_/g,' ').toUpperCase()}</span>${hvTag}`;
+}
+
+let _spyRegime = null;
+let _spyHighVol = false;
+
+async function fetchSpyRegime() {
+  if (_spyRegime !== null) return;
+  try {
+    const c = await fetch(`${API}/api/action_card/SPY`, {signal: AbortSignal.timeout(8000)}).then(r=>r.json());
+    _spyRegime = c.ticker_regime || 'neutral';
+    _spyHighVol = !!c.high_vol_regime;
+  } catch { _spyRegime = 'neutral'; }
+  const chip = $('spy-regime-chip');
+  if (chip) chip.innerHTML = regimeChip(_spyRegime, _spyHighVol);
+}
+
 /* ═══════════════════════ ACTION CARD ═══════════════════════ */
 async function loadCard() {
   const sym = $('sym').value.trim().toUpperCase();
@@ -756,17 +848,22 @@ async function loadCard() {
       <div class="k">Score</div>
       <div class="v" id="${scoreBarId}"></div>
       <div class="k">Agreement</div>
-      <div class="v">${fmt(card.agreement_pct,1)}%</div>
+      <div class="v">${fmt(card.agreement_pct,1)}%${card.inflation_gap > 0.15 ? ' <span style="color:var(--amber);font-size:10px">⚠ inflation +' + (card.inflation_gap*100).toFixed(0) + '%</span>' : ''}</div>
       <div class="k">Votes</div>
       <div class="v">
         <span class="pos">L:${card.long_votes}</span> ·
         <span class="neg">S:${card.short_votes}</span> ·
         <span class="neu">W:${card.wait_votes}</span>
+        <span style="color:var(--muted);font-size:10px;margin-left:8px">N_eff ${(card.n_eff||0).toFixed(1)}</span>
       </div>
       <div class="k">Entry / Stop / Target</div>
       <div class="v">${fmt(card.entry)} / <span class="neg">${fmt(card.stop)}</span> / <span class="pos">${fmt(card.target)}</span></div>
       <div class="k">Risk : Reward</div>
       <div class="v">${fmt(card.risk_reward,2)}x</div>
+      <div class="k">Regime</div>
+      <div class="v">${regimeChip(card.ticker_regime, card.high_vol_regime)}</div>
+      <div class="k">Family breakdown</div>
+      <div class="v"><div class="fam-bars" id="family-bars"></div></div>
       <div class="k">Momentum</div>
       <div class="v" id="${momId}"></div>
       <div class="k">Note</div>
@@ -775,10 +872,11 @@ async function loadCard() {
     renderScoreBar($(scoreBarId), sc, card.verdict);
     renderMomentum($(momId), card.ret_1d, card.ret_5d, card.ret_20d);
 
-    // Vote matrix + family rings
+    // Vote matrix + family rings + cap-family bars
     const votes = card.votes || [];
     buildVoteMatrix(votes);
     buildFamilyRings(votes);
+    buildFamilyBars(card.family_votes, card.verdict);
 
     // Agreed / dissented
     const agreed    = card.agreed    || [];
@@ -932,7 +1030,7 @@ async function runScreener() {
 /* ═══════════════════════ BRIDGE REPORT ═══════════════════════ */
 let _bridgeRows   = [];
 let _bridgeFilter = 'all';
-let _morningMode  = false;
+let _morningMode  = true;
 let _compassOpen  = false;
 
 const BRIDGE_CSV = `ticker,setup_label,quality_score,signa_verdict,high_conviction,agreement_pct,entry,stop,target,risk_reward,sentiment_score,tech_score,combined_score,alignment,catalysts,ret_1d,ret_5d,ret_20d
@@ -1034,6 +1132,44 @@ function renderBridgeSummary(rows) {
     <div class="sl">${s.k}</div>
     <div class="sv" style="color:${s.cls==='green'?'var(--green)':s.cls==='red'?'var(--red)':s.cls==='amber'?'var(--amber)':'var(--text)'}">${s.v}</div>
   </div>`).join('');
+  renderSummaryBar(rows);
+}
+
+let _bridgeGeneratedAt = null;
+
+function _signalAgeHours() {
+  if (!_bridgeGeneratedAt) return null;
+  const ms = Date.now() - Date.parse(_bridgeGeneratedAt);
+  if (isNaN(ms) || ms < 0) return null;
+  return ms / 3_600_000;
+}
+
+function renderSummaryBar(rows) {
+  const bar = $('bridge-summary-bar');
+  if (!bar) return;
+  const isHC = r => r.high_conviction==='true' || r.high_conviction===true;
+  const verd = r => r.argus_verdict || r.signa_verdict || '';
+  const hcLong  = rows.filter(r => isHC(r) && verd(r)==='LONG'  && r.alignment==='ALIGNED').length;
+  const hcShort = rows.filter(r => isHC(r) && (verd(r)==='SHORT'||r.alignment==='DIVERGING')).length;
+  const aligned = rows.filter(r => r.alignment==='ALIGNED').length;
+  const ageH = _signalAgeHours();
+  const ageStr = ageH === null ? '' : ageH < 1
+    ? `<span style="color:var(--green)">${(ageH*60).toFixed(0)}m old</span>`
+    : ageH > 48
+      ? `<span style="color:var(--red)">${(ageH/24).toFixed(1)}d old — stale</span>`
+      : `<span style="color:var(--muted)">${ageH.toFixed(1)}h old</span>`;
+  bar.className = 'visible';
+  bar.innerHTML = `
+    <span style="color:var(--green)">⚡ ${hcLong} HC longs</span>
+    <span style="color:var(--line)">·</span>
+    <span style="color:var(--red)">⚡ ${hcShort} HC shorts</span>
+    <span style="color:var(--line)">·</span>
+    <span style="color:var(--text)">${aligned} aligned</span>
+    <span style="color:var(--line)">·</span>
+    <span id="spy-regime-chip">${_spyRegime ? regimeChip(_spyRegime, _spyHighVol) : '<span style="color:var(--muted)">SPY …</span>'}</span>
+    ${ageStr ? `<span style="color:var(--line)">·</span>${ageStr}` : ''}
+    <span style="color:var(--muted);margin-left:auto;font-size:10px">${rows.length} tickers</span>
+  `;
 }
 
 function renderBridge() {
@@ -1102,22 +1238,29 @@ function renderBridgeTable(rows) {
 }
 
 function renderMorningCards(rows) {
-  // Sort by combined_score desc, group ALIGNED first
-  const sorted = [...rows].sort((a,b) => parseFloat(b.combined_score||0) - parseFloat(a.combined_score||0));
-  $('bridge-out').innerHTML = `<div class="candidate-stack">${sorted.map(r => {
-    const sc    = parseFloat(r.combined_score) || 0;
-    const verd  = r.signa_verdict || r.argus_verdict || '';
-    const am    = alignMeta(r.alignment);
-    const hc    = r.high_conviction==='true'||r.high_conviction===true;
-    const pct   = Math.abs(sc) * 50;
+  const byScore = (a,b) => parseFloat(b.combined_score||0) - parseFloat(a.combined_score||0);
+  const isHC = r => r.high_conviction==='true' || r.high_conviction===true;
+  const hcRows   = [...rows].filter(isHC).sort(byScore);
+  const nonHcRows= [...rows].filter(r => !isHC(r)).sort(byScore);
+
+  const renderCard = r => {
+    const sc     = parseFloat(r.combined_score) || 0;
+    const verd   = r.argus_verdict || r.signa_verdict || '';
+    const am     = alignMeta(r.alignment);
+    const hc     = isHC(r);
+    const pct    = Math.abs(sc) * 50;
     const barClr = sc > 0 ? 'var(--green)' : 'var(--red)';
-    const barLeft = sc >= 0 ? '50%' : (50-pct)+'%';
+    const barLeft= sc >= 0 ? '50%' : (50-pct)+'%';
+    const ent    = parseFloat(r.entry);
+    const stp    = parseFloat(r.stop);
+    const tgt    = parseFloat(r.target);
     return `<div class="candidate-card ${r.alignment}" onclick="drillTicker('${r.ticker}')">
       <div>
-        <div class="cand-sym">${r.ticker} ${hc?'⚡':''}</div>
-        <div class="cand-meta">${am.icon} ${r.alignment} · ${verd} · ${r.quality_score||0} qual · ${r.agreement_pct||0}% agree</div>
+        <div class="cand-sym">${r.ticker}${hc?' <span style="color:var(--amber)">⚡</span>':''}</div>
+        <div class="cand-meta">${am.icon} ${r.alignment} · ${verd} · Q${parseFloat(r.quality_score||0).toFixed(1)} · ${r.agreement_pct||0}% agree</div>
         <div class="cand-meta" style="margin-top:2px">
           ${fmtRet(r.ret_1d)} 1d &nbsp;${fmtRet(r.ret_5d)} 5d &nbsp;${fmtRet(r.ret_20d)} 20d
+          ${isNaN(ent)?'':` &nbsp;<span style="color:var(--muted)">E <b>${ent.toFixed(2)}</b> S <span style="color:var(--red)">${stp.toFixed(2)}</span> T <span style="color:var(--green)">${tgt.toFixed(2)}</span></span>`}
         </div>
         <div class="cand-bar-track">
           <div class="cand-bar-fill" style="left:${barLeft};width:${pct}%;background:${barClr}"></div>
@@ -1127,10 +1270,46 @@ function renderMorningCards(rows) {
         <span class="verdict ${verd}" style="margin-bottom:4px">${verd}</span>
         <div class="cand-rr">${sc >= 0 ? '+' : ''}${sc.toFixed(3)}</div>
         <div class="cand-rr">${r.risk_reward}x R:R</div>
-        <div class="cand-rr" style="color:var(--muted)">${(r.catalysts||'').split(';').slice(0,2).join(' ')}</div>
+        ${isNaN(ent)?'':
+          `<button class="cand-enter" onclick="event.stopPropagation();enterAtMarket('${r.ticker}','${verd}',${ent.toFixed(2)},${stp.toFixed(2)},${tgt.toFixed(2)})">Enter ›</button>`}
       </div>
     </div>`;
-  }).join('')}</div>`;
+  };
+
+  let html = `<div class="candidate-stack">`;
+  hcRows.forEach(r => { html += renderCard(r); });
+  if (hcRows.length && nonHcRows.length) {
+    html += `<div class="hc-separator">— non-HC below —</div>`;
+  }
+  nonHcRows.forEach(r => { html += renderCard(r); });
+  html += `</div>`;
+  $('bridge-out').innerHTML = html;
+}
+
+let _pendingSnapshot = null;
+
+function enterAtMarket(ticker, verdict, entry, stop, target) {
+  $('j-sym').value   = ticker;
+  $('j-side').value  = verdict === 'SHORT' ? 'SHORT' : 'LONG';
+  $('j-entry').value = entry;
+  $('j-stop').value  = stop;
+  $('j-target').value= target;
+  const row = (_bridgeRows||[]).find(r => r.ticker === ticker);
+  _pendingSnapshot = {
+    ts: new Date().toISOString(),
+    ticker, verdict, entry, stop, target,
+    score:           row ? parseFloat(row.combined_score||row.quality_score)||null : null,
+    agreement_pct:   row ? parseFloat(row.agreement_pct)||null : null,
+    inflation_gap:   row ? parseFloat(row.inflation_gap)||null : null,
+    entry_quality:   row ? (row.setup_label||row.entry_quality||null) : null,
+    stop_anchor:     row ? (row.stop_anchor||null) : null,
+    ticker_regime:   row ? (row.ticker_regime||null) : null,
+    catalysts:       row ? (row.catalysts||null) : null,
+    rr:              row ? parseFloat(row.risk_reward)||null : null,
+    ret_1d:          row ? parseFloat(row.ret_1d)||null : null,
+    ret_5d:          row ? parseFloat(row.ret_5d)||null : null,
+  };
+  switchTab('journal');
 }
 
 /* ═══════════════════════ ALIGNMENT COMPASS ═══════════════════════ */
@@ -1161,10 +1340,12 @@ function buildAlignmentCompass(rows) {
 }
 
 async function loadBridge() {
+  fetchSpyRegime(); // kick off in background; chip updates when resolved
   try {
     const r = await fetch(`${API}/api/bridge`, {signal: AbortSignal.timeout(3000)}).then(r=>r.json());
     if (r?.rows?.length) {
       _bridgeRows = r.rows;
+      _bridgeGeneratedAt = r.generated_at || null;
       $('bridge-ts').textContent = r.generated_at || '';
       renderBridgeSummary(_bridgeRows);
       renderBridge();
@@ -1172,6 +1353,7 @@ async function loadBridge() {
     }
   } catch { /* fall through */ }
   _bridgeRows = parseCSV(BRIDGE_CSV);
+  _bridgeGeneratedAt = '2026-05-13 08:03';
   $('bridge-ts').textContent = '2026-05-13 08:03 (embedded snapshot)';
   renderBridgeSummary(_bridgeRows);
   renderBridge();
@@ -1378,6 +1560,11 @@ function escHtml(s) {
 async function openTrade() {
   const sym = $('j-sym').value.trim().toUpperCase();
   if (!sym) { alert('Enter a symbol'); $('j-sym').focus(); return; }
+  let setup = $('j-setup').value.trim() || null;
+  if (_pendingSnapshot && _pendingSnapshot.ticker === sym) {
+    setup = JSON.stringify(_pendingSnapshot);
+    _pendingSnapshot = null;
+  }
   const body = {
     symbol: sym,
     side:   $('j-side').value,
@@ -1385,7 +1572,7 @@ async function openTrade() {
     entry:  parseFloat($('j-entry').value)  ||null,
     stop:   parseFloat($('j-stop').value)   ||null,
     target: parseFloat($('j-target').value) ||null,
-    setup:  $('j-setup').value.trim()||null,
+    setup,
   };
   try {
     await fetch(`${API}/api/journal/open`,{

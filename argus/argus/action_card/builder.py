@@ -45,6 +45,31 @@ _AGENT_FAMILY: dict[str, str] = {
 }
 
 
+def _detect_ticker_regime(df: pd.DataFrame) -> str:
+    """Classify per-ticker market regime from recent OHLCV + indicators."""
+    try:
+        adx = float(df['adx_14'].iloc[-1]) if 'adx_14' in df.columns else None
+        if pd.isna(adx):
+            adx = None
+    except Exception:
+        adx = None
+    gap = float(df['open'].iloc[-1] / df['close'].iloc[-2] - 1) if len(df) > 1 else 0.0
+    try:
+        ema50 = float(df['ema_50'].iloc[-1]) if 'ema_50' in df.columns else None
+        if pd.isna(ema50):
+            ema50 = None
+    except Exception:
+        ema50 = None
+    last = float(df['close'].iloc[-1])
+    if gap < -0.02 and ema50 is not None and last < ema50:
+        return 'gap_down_continuation'
+    if adx is not None and adx > 25:
+        return 'trending'
+    if adx is not None and adx < 20:
+        return 'ranging'
+    return 'neutral'
+
+
 def _capped_weights(votes: list[Vote]) -> tuple[float, float]:
     """Confidence-weighted long/short sums with per-family caps."""
     fam_long: dict[str, float] = {f: 0.0 for f in _FAMILIES}
@@ -68,6 +93,61 @@ def _capped_weights(votes: list[Vote]) -> tuple[float, float]:
     return long_w, short_w
 
 
+def _loo_family_attribution(votes: list[Vote], base_score: float) -> dict[str, float]:
+    """Leave-one-family-out score delta per family."""
+    attrs = {}
+    for fam in _FAMILIES:
+        remaining = [v for v in votes if _AGENT_FAMILY.get(v.agent) != fam]
+        lw, sw = _capped_weights(remaining)
+        tw = lw + sw
+        s_without = (lw - sw) / tw if tw > 0 else 0.0
+        attrs[fam] = round(base_score - s_without, 4)
+    return attrs
+
+
+def _effective_n(votes: list[Vote]) -> float:
+    """Inverse Herfindahl over capped family weight shares + an 'other' bucket.
+    Returns 1.0 (one family dominates) → ~5-6 (fully spread)."""
+    fam_w: dict[str, float] = {f: 0.0 for f in _FAMILIES}
+    other = 0.0
+    for v in votes:
+        if v.verdict not in (Verdict.LONG, Verdict.SHORT):
+            continue
+        w = v.confidence
+        fam = _AGENT_FAMILY.get(v.agent)
+        if fam:
+            fam_w[fam] = min(fam_w[fam] + w, _FAMILY_MAX[fam])
+        else:
+            other += w
+    total = sum(fam_w.values()) + other
+    if total <= 0:
+        return 0.0
+    shares = [w / total for w in fam_w.values()] + [other / total]
+    return round(1.0 / sum(p * p for p in shares if p > 0), 2)
+
+
+def _family_vote_counts(votes: list[Vote]) -> dict[str, dict]:
+    """Per cap-family vote breakdown for dashboard display.
+    Includes an 'other' bucket for uncapped agents."""
+    result: dict[str, dict] = {}
+    other_l = other_s = other_w = 0
+    for v in votes:
+        fam = _AGENT_FAMILY.get(v.agent)
+        if fam:
+            if fam not in result:
+                result[fam] = {'long': 0, 'short': 0, 'wait': 0}
+            result[fam][v.verdict.value.lower()] += 1
+        else:
+            if v.verdict == Verdict.LONG:
+                other_l += 1
+            elif v.verdict == Verdict.SHORT:
+                other_s += 1
+            else:
+                other_w += 1
+    result['other'] = {'long': other_l, 'short': other_s, 'wait': other_w}
+    return result
+
+
 @dataclass
 class ActionCard:
     symbol: str
@@ -88,6 +168,12 @@ class ActionCard:
     is_extended: bool = False
     entry_quality: str = "clean"
     stop_anchor: str = ""
+    inflation_gap: float = 0.0       # agreement_pct/100 - weight_conviction; >0.15 = correlated inflation
+    family_attribution: dict = field(default_factory=dict)  # LOO score delta per family
+    family_votes: dict = field(default_factory=dict)         # per cap-family vote counts for bars
+    ticker_regime: str = "neutral"   # gap_down_continuation | trending | ranging | neutral
+    n_eff: float = 0.0               # inverse Herfindahl over family weight shares
+    high_vol_regime: bool = False    # 50d realized vol > 252d realized vol
     votes: List[Vote] = field(default_factory=list)
     agreed: List[str] = field(default_factory=list)
     dissented: List[str] = field(default_factory=list)
@@ -262,7 +348,19 @@ def build_action_card(symbol: str, df: pd.DataFrame) -> ActionCard:
     ret_20d = float(df["close"].pct_change(20).iloc[-1]) if len(df) >= 21 else 0.0
     is_extended = abs(ret_1d) > 0.05 or abs(ret_5d) > 0.15
 
+    ticker_regime = _detect_ticker_regime(df_ind)
+
     votes = run_all(df_ind)
+
+    # Regime gate: gap-down continuation → down-weight mean-reversion oscillators.
+    # These agents fire false LONGs when the market gaps down in a downtrend.
+    if ticker_regime == 'gap_down_continuation':
+        votes = [
+            Vote(v.agent, v.verdict, v.confidence * 0.3, v.note, v.family)
+            if _AGENT_FAMILY.get(v.agent) == 'momentum_osc'
+            else v
+            for v in votes
+        ]
 
     long_w, short_w = _capped_weights(votes)
     total_w = long_w + short_w
@@ -285,6 +383,24 @@ def build_action_card(symbol: str, df: pd.DataFrame) -> ActionCard:
         else:
             verdict = Verdict.WAIT
         score = float(net)
+
+    # Inflation gap: vote-count agreement vs weight-based conviction.
+    # A large positive gap means correlated families are driving the score.
+    weight_conviction = (1.0 + abs(score)) / 2.0
+    inflation_gap = round(agreement - weight_conviction, 4)
+
+    family_attribution = _loo_family_attribution(votes, score)
+    family_votes_map = _family_vote_counts(votes)
+    n_eff = _effective_n(votes)
+
+    # High-vol regime: 50d annualised vol > 252d annualised vol.
+    _ret = df["close"].pct_change().dropna()
+    if len(_ret) >= 252:
+        high_vol_regime = bool(_ret.iloc[-50:].std() > _ret.iloc[-252:].std())
+    elif len(_ret) >= 50:
+        high_vol_regime = bool(_ret.iloc[-50:].std() > _ret.std())
+    else:
+        high_vol_regime = False
 
     entry, stop, target, rr, stop_anchor = _entry_stop_target(df_ind, verdict, is_extended, agreement, score)
     high_conviction = agreement >= 0.75 and verdict != Verdict.WAIT
@@ -316,6 +432,12 @@ def build_action_card(symbol: str, df: pd.DataFrame) -> ActionCard:
         is_extended=is_extended,
         entry_quality="extended" if is_extended else "clean",
         stop_anchor=stop_anchor,
+        inflation_gap=inflation_gap,
+        family_attribution=family_attribution,
+        family_votes=family_votes_map,
+        ticker_regime=ticker_regime,
+        n_eff=n_eff,
+        high_vol_regime=high_vol_regime,
         votes=votes,
         agreed=agreed,
         dissented=dissented,
