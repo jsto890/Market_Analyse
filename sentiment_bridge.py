@@ -146,6 +146,11 @@ def _analyse_ticker(row: pd.Series) -> Optional[dict]:
         "tech_score":        round(tech_score, 3),
         "combined_score":    round(combined, 3),
         "alignment":         alignment,
+        "action_label":      card.action_label,
+        "trade_style":       card.trade_style,
+        "combo":             card.combo,
+        "ticker_regime":     card.ticker_regime,
+        "n_eff":             round(card.n_eff, 1),
     }
 
 
@@ -228,7 +233,7 @@ def _write_markdown(
         "# Sentiment × Technical Bridge Report",
         f"*Generated {ts} | min_quality ≥ {min_quality} | {len(results)} tickers analysed{extra_note}*",
         "",
-        "Scoring: **40% sentiment** (quality × setup bias) + **60% technical** (Argus 52-agent ensemble)",
+        "Scoring: **40% sentiment** (quality × setup bias) + **60% technical** (Argus 70-agent ensemble)",
         "",
     ]
 
@@ -303,16 +308,18 @@ def _write_markdown(
             continue
         lines += [f"## {icon} {title}", ""]
         lines += [
-            "| Ticker | Setup | Quality | Argus | Score | Entry | Agreement | Entry $ | Stop | Target | Catalysts |",
-            "|--------|-------|---------|-------|-------|-------|-----------|---------|------|--------|-----------|",
+            "| Ticker | Setup | Quality | Argus | Tier | Regime | Score | Entry | Agreement | Entry $ | Stop | Target | Catalysts |",
+            "|--------|-------|---------|-------|------|--------|-------|-------|-----------|---------|------|--------|-----------|",
         ]
         for r in subset:
-            hc  = " ⚡" if r["high_conviction"] else ""
-            tag = " `[T]`" if r.get("extra") else ""
-            eq  = "⚠ ext" if r.get("entry_quality") == "extended" else "clean"
+            hc   = " ⚡" if r["high_conviction"] else ""
+            tag  = " `[T]`" if r.get("extra") else ""
+            eq   = "⚠ ext" if r.get("entry_quality") == "extended" else "clean"
+            tier = r.get("action_label") or "—"
+            reg  = r.get("ticker_regime") or "—"
             lines.append(
                 f"| **{r['ticker']}**{tag} | {r['setup_label']} | {r['quality_score']} "
-                f"| {r['argus_verdict']}{hc} | {r['combined_score']:+.3f} "
+                f"| {r['argus_verdict']}{hc} | {tier} | {reg} | {r['combined_score']:+.3f} "
                 f"| {eq} | {r['agreement_pct']}% "
                 f"| {r['entry']:.2f} | {r['stop']:.2f} | {r['target']:.2f} "
                 f"| {(r['catalysts'] or '')[:40]} |"
@@ -335,7 +342,7 @@ def _write_markdown(
                 f"- **Accounts:** {r['accounts']} ({r['mentions']} mentions) — {trust_str}",
                 f"- **Catalysts:** {r['catalysts']}",
                 f"- **Price:** 1d {r['ret_1d']:+.1f}%  5d {r['ret_5d']:+.1f}%  20d {r['ret_20d']:+.1f}%  | Entry: {r['entry_quality']}{' ⚠️' if r['is_extended'] else ''}",
-                f"- **Argus:** {r['argus_verdict']} | Score {r['argus_score']:+.3f} | Agreement {r['agreement_pct']}% | Votes L:{r['long_votes']} S:{r['short_votes']} W:{r['wait_votes']}",
+                f"- **Argus:** {r['argus_verdict']} `{r.get('action_label','—')}` | Score {r['argus_score']:+.3f} | Agreement {r['agreement_pct']}% | N_eff {r.get('n_eff','—')} | Combo {r.get('combo','—')} | {r.get('ticker_regime','—')} | Votes L:{r['long_votes']} S:{r['short_votes']} W:{r['wait_votes']}",
                 f"- **Trade:** Entry {r['entry']:.2f}  Stop {r['stop']:.2f} *({anchor})*  Target {r['target']:.2f}  R:R {r['risk_reward']:.1f}x",
                 f"- **Combined score:** {r['combined_score']:+.3f}",
                 "",
