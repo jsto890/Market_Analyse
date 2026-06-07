@@ -480,11 +480,13 @@ def _classify_action(
         return "NONE", "WATCH"
 
     # Oscillator-divergence score adjustment (affects tier logic only, not raw score)
+    # trending_late: ADX is falling so overbought oscillators don't signal extension;
+    # we already exempt trending_late from the extension veto above for the same reason.
     adj = score
     if ma_dir == "L" and mo_dir == "S":
         adj += 0.08   # oversold oscillators in uptrend = pullback entry point
-    elif ma_dir == "L" and mo_dir == "L":
-        adj -= 0.05   # extended entry penalty
+    elif ma_dir == "L" and mo_dir == "L" and regime != "trending_late":
+        adj -= 0.05   # extension penalty (not applied in weakening-trend regime)
 
     # Weak combo veto — match against first 4 chars only (family combos are 4-char patterns)
     if combo[:4] in _WEAK_COMBOS:
