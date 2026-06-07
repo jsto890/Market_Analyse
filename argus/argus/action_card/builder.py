@@ -455,8 +455,8 @@ def _classify_action(
     """Return (trade_style, action_label).
 
     action_label tiers:
-      PRIME_LONG     — highest-expectancy setup (STRONG_COMBO, neutral/ranging/trending_late)
-      STANDARD_LONG  — solid BULLISH_SETUP not meeting PRIME criteria
+      PRIME_LONG     — highest-expectancy setup (STRONG_COMBO + weekly=L, neutral/trending_late)
+      STANDARD_LONG  — solid BULLISH_SETUP not meeting PRIME criteria (weekly bearish excluded)
       WATCH          — long signal but weak/extended setup
       AVOID          — short signal or gap-down continuation
       WAIT           — no actionable signal
