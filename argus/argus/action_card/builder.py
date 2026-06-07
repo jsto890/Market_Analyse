@@ -523,6 +523,7 @@ def _classify_action(
         and inflation_gap < 0.15
         and regime in _trend_regimes
         and combo[:4] not in _WEAK_COMBOS
+        and wk_dir != "S"   # weekly bearish = fighting higher-timeframe trend
     )
 
     if is_prime:
