@@ -762,14 +762,13 @@ function buildFamilyRings(votes) {
 /* ═══════════════════════ FAMILY VERDICT BARS ═══════════════════════ */
 const _CAP_FAM_ORDER = ['ma_trend','breakout','squeeze','momentum_osc','weekly_structure','other'];
 
-function buildFamilyBars(familyVotes, verdict) {
+function buildFamilyBars(familyVotes, verdict, familyAttribution) {
   const el = $('family-bars');
   if (!el || !familyVotes) return;
   el.innerHTML = _CAP_FAM_ORDER.map(fam => {
     const c = familyVotes[fam];
     if (!c) return '';
     const total = c.long + c.short + c.wait || 1;
-    const actionable = c.long + c.short || 1;
     const dominant = c.long >= c.short ? 'long' : 'short';
     const dominantN = c.long >= c.short ? c.long : c.short;
     const pct = dominantN / total;
@@ -777,8 +776,13 @@ function buildFamilyBars(familyVotes, verdict) {
     const FAM_LABELS = {ma_trend:'MA Trend', breakout:'Breakout', squeeze:'Squeeze', momentum_osc:'Momentum', weekly_structure:'Weekly', other:'Uncapped'};
     const label = FAM_LABELS[fam] || fam;
     const meta = `${dominantN}/${total} ${dominant.toUpperCase()}`;
+    // LOO attribution delta: how much does removing this family change the score?
+    const attr = familyAttribution && familyAttribution[fam] != null ? familyAttribution[fam] : null;
+    const attrHtml = attr != null
+      ? ` <span style="font-size:9px;color:${attr>0.02?'var(--green)':attr<-0.02?'var(--red)':'var(--muted)'};margin-left:4px" title="Score drops by ${attr.toFixed(3)} if this family removed">${attr>0?'+':''}${(attr*100).toFixed(1)}%</span>`
+      : '';
     return `<div class="fam-bar-row">
-      <div class="fam-bar-label">${label}</div>
+      <div class="fam-bar-label">${label}${attrHtml}</div>
       <div class="fam-bar-track">
         <div class="fam-bar-fill" style="width:${(pct*100).toFixed(1)}%;background:${clr}"></div>
       </div>
@@ -966,7 +970,7 @@ async function loadCard() {
     const votes = card.votes || [];
     buildVoteMatrix(votes);
     buildFamilyRings(votes);
-    buildFamilyBars(card.family_votes, card.verdict);
+    buildFamilyBars(card.family_votes, card.verdict, card.family_attribution);
 
     // Agreed / dissented
     const agreed    = card.agreed    || [];
@@ -1409,6 +1413,7 @@ function enterAtMarket(ticker, verdict, entry, stop, target) {
     action_label:    card ? (card.action_label||null) : null,
     trade_style:     card ? (card.trade_style||null) : null,
     family_votes:    card ? (card.family_votes||null) : null,
+    family_attribution: card ? (card.family_attribution||null) : null,
     meta_coherence:  card ? parseFloat(card.meta_coherence)||null : null,
     meta_note:       card ? (card.meta_note||null) : null,
   };
