@@ -311,6 +311,7 @@ footer{padding:5px 18px;color:var(--muted);font:10px var(--mono);border-top:1px 
         <button class="primary" onclick="loadCard()">Run agents</button>
         <button class="ghost" onclick="loadAnalysis()">AI analysis</button>
         <button class="ghost" onclick="pinCurrentTicker()" id="pin-btn" style="display:none">📌 Pin</button>
+        <button class="ghost" id="enter-btn" style="display:none;color:var(--green)" onclick="enterFromCard()">Enter ›</button>
       </div>
       <div id="card-out" class="kv" style="min-height:36px"></div>
     </div>
@@ -867,6 +868,7 @@ async function loadCard() {
   panel.classList.remove('extended-warning');
   $('ext-banner').classList.remove('show');
   $('pin-btn').style.display = 'none';
+  $('enter-btn').style.display = 'none';
   $('fund-section').style.display = 'none';
 
   $('card-out').innerHTML = '<span style="color:var(--muted)">running agents…</span>';
@@ -940,7 +942,16 @@ async function loadCard() {
       <div class="k">Momentum</div>
       <div class="v" id="${momId}"></div>
       <div class="k">Note</div>
-      <div class="v" style="color:var(--muted)">${card.notes||'—'}</div>`;
+      <div class="v" style="color:var(--muted)">${card.notes||'—'}</div>
+      ${(card.meta_note) ? `
+      <div class="k" style="color:var(--muted);font-size:10px">Meta-analyst</div>
+      <div class="v" style="font-size:10px">
+        <span style="color:${card.meta_coherence>=0.7?'var(--green)':card.meta_coherence<=0.35?'var(--red)':'var(--amber)'}">
+          ●${(card.meta_coherence*100).toFixed(0)}% coherent
+        </span>
+        ${card.meta_adjustment !== 0 ? `<span style="color:var(--muted);margin-left:6px">${card.meta_adjustment>0?'+':''}${(card.meta_adjustment*100).toFixed(0)}% adj</span>` : ''}
+        <div style="color:var(--muted);margin-top:2px;font-style:italic">${card.meta_note}</div>
+      </div>` : ''}`;
 
     renderScoreBar($(scoreBarId), sc, card.verdict);
     renderMomentum($(momId), card.ret_1d, card.ret_5d, card.ret_20d);
@@ -966,6 +977,8 @@ async function loadCard() {
     $('ind').textContent = JSON.stringify(indRes.values||indRes, null, 2);
     $('card-detail').style.display = 'grid';
     $('pin-btn').style.display = 'inline-block';
+    $('enter-btn').style.display = (card.verdict === 'LONG' || card.verdict === 'SHORT') ? 'inline-block' : 'none';
+    _lastCard = card;
 
     // Fetch fundamentals from IBKR in background
     fetchFundamentals(sym);
@@ -1105,6 +1118,7 @@ let _bridgeRows   = [];
 let _bridgeFilter = 'all';
 let _morningMode  = true;
 let _compassOpen  = false;
+let _lastCard     = null;   // most recently fetched action card — used to enrich signal snapshots
 
 const BRIDGE_CSV = `ticker,setup_label,quality_score,signa_verdict,high_conviction,agreement_pct,entry,stop,target,risk_reward,sentiment_score,tech_score,combined_score,alignment,catalysts,ret_1d,ret_5d,ret_20d
 IREN,fresh_watch,19.67,LONG,true,85.7,56.56,49.25,71.17,2.0,0.7,0.804,0.762,ALIGNED,ai_infrastructure;crypto;earnings,2.56,3.32,19.4
@@ -1367,22 +1381,44 @@ function enterAtMarket(ticker, verdict, entry, stop, target) {
   $('j-entry').value = entry;
   $('j-stop').value  = stop;
   $('j-target').value= target;
-  const row = (_bridgeRows||[]).find(r => r.ticker === ticker);
+  const row  = (_bridgeRows||[]).find(r => r.ticker === ticker);
+  const card = (_lastCard && (_lastCard.symbol||'').toUpperCase() === ticker) ? _lastCard : null;
   _pendingSnapshot = {
     ts: new Date().toISOString(),
     ticker, verdict, entry, stop, target,
-    score:           row ? parseFloat(row.combined_score||row.quality_score)||null : null,
-    agreement_pct:   row ? parseFloat(row.agreement_pct)||null : null,
-    inflation_gap:   row ? parseFloat(row.inflation_gap)||null : null,
-    entry_quality:   row ? (row.setup_label||row.entry_quality||null) : null,
-    stop_anchor:     row ? (row.stop_anchor||null) : null,
-    ticker_regime:   row ? (row.ticker_regime||null) : null,
-    catalysts:       row ? (row.catalysts||null) : null,
-    rr:              row ? parseFloat(row.risk_reward)||null : null,
-    ret_1d:          row ? parseFloat(row.ret_1d)||null : null,
-    ret_5d:          row ? parseFloat(row.ret_5d)||null : null,
+    // prefer action card data (richer) over bridge row fallback
+    score:           card ? parseFloat(card.score)||null           : row ? parseFloat(row.combined_score||row.quality_score)||null : null,
+    agreement_pct:   card ? parseFloat(card.agreement_pct)||null   : row ? parseFloat(row.agreement_pct)||null : null,
+    inflation_gap:   card ? parseFloat(card.inflation_gap)||null   : row ? parseFloat(row.inflation_gap)||null : null,
+    entry_quality:   card ? (card.entry_quality||null)             : row ? (row.setup_label||row.entry_quality||null) : null,
+    stop_anchor:     card ? (card.stop_anchor||null)               : row ? (row.stop_anchor||null) : null,
+    ticker_regime:   card ? (card.ticker_regime||null)             : row ? (row.ticker_regime||null) : null,
+    catalysts:       row  ? (row.catalysts||null) : null,
+    rr:              card ? parseFloat(card.risk_reward)||null      : row ? parseFloat(row.risk_reward)||null : null,
+    ret_1d:          card ? parseFloat(card.ret_1d)||null          : row ? parseFloat(row.ret_1d)||null : null,
+    ret_5d:          card ? parseFloat(card.ret_5d)||null          : row ? parseFloat(row.ret_5d)||null : null,
+    // signal snapshot fields (only from action card)
+    combo:           card ? (card.combo||null) : null,
+    n_eff:           card ? parseFloat(card.n_eff)||null : null,
+    action_label:    card ? (card.action_label||null) : null,
+    trade_style:     card ? (card.trade_style||null) : null,
+    family_votes:    card ? (card.family_votes||null) : null,
+    meta_coherence:  card ? parseFloat(card.meta_coherence)||null : null,
+    meta_note:       card ? (card.meta_note||null) : null,
   };
   switchTab('journal');
+}
+
+function enterFromCard() {
+  if (!_lastCard) return;
+  const c = _lastCard;
+  enterAtMarket(
+    (c.symbol||'').toUpperCase(),
+    c.verdict,
+    parseFloat(c.entry)||0,
+    parseFloat(c.stop)||0,
+    parseFloat(c.target)||0
+  );
 }
 
 /* ═══════════════════════ ALIGNMENT COMPASS ═══════════════════════ */
