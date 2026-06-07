@@ -44,6 +44,51 @@ _AGENT_FAMILY: dict[str, str] = {
     name: fam for fam, members in _FAMILIES.items() for name in members
 }
 
+# Regime × family confidence multipliers.
+# Each family's agent confidences are scaled before _capped_weights.
+# Theory: trend-following agents (ma_trend, breakout) are reliable in trends but
+# generate whipsaws in ranges; mean-reversion oscillators are reliable in ranges
+# but generate false oversold/overbought signals in strong trends.
+_REGIME_FAMILY_MULT: dict[str, dict[str, float]] = {
+    "trending": {
+        "ma_trend":     1.0,   # MA crossovers valid in trend
+        "breakout":     1.1,   # breakouts follow through in trends
+        "squeeze":      0.7,   # squeezes ambiguous mid-trend
+        "momentum_osc": 0.3,   # oversold in a trend = continuation trap
+    },
+    "ranging": {
+        "ma_trend":     0.4,   # MAs whipsaw in chop
+        "breakout":     0.4,   # most breakouts fail without trend
+        "squeeze":      1.2,   # squeezes resolve well from ranging bases
+        "momentum_osc": 1.2,   # oscillators accurate in mean-reverting ranges
+    },
+    "gap_down_continuation": {
+        "ma_trend":     0.7,   # trend is down; MA agents may be lagging
+        "breakout":     0.3,   # gap-down is a breakdown, not a setup
+        "squeeze":      0.5,   # ambiguous on gap-down day
+        "momentum_osc": 0.3,   # oversold ≠ bounce when price < EMA50
+    },
+    "neutral": {
+        "ma_trend":     0.9,
+        "breakout":     0.9,
+        "squeeze":      0.9,
+        "momentum_osc": 0.9,
+    },
+}
+
+
+def _apply_regime_scaling(votes: list[Vote], regime: str) -> list[Vote]:
+    """Scale agent confidences by regime × family multiplier."""
+    mults = _REGIME_FAMILY_MULT.get(regime)
+    if not mults:
+        return votes
+    out = []
+    for v in votes:
+        fam = _AGENT_FAMILY.get(v.agent)
+        m = mults.get(fam, 1.0) if fam else 1.0
+        out.append(Vote(v.agent, v.verdict, v.confidence * m, v.note, v.family))
+    return out
+
 
 def _detect_ticker_regime(df: pd.DataFrame) -> str:
     """Classify per-ticker market regime from recent OHLCV + indicators."""
@@ -372,15 +417,9 @@ def build_action_card(symbol: str, df: pd.DataFrame) -> ActionCard:
 
     votes = run_all(df_ind)
 
-    # Regime gate: gap-down continuation → down-weight mean-reversion oscillators.
-    # These agents fire false LONGs when the market gaps down in a downtrend.
-    if ticker_regime == 'gap_down_continuation':
-        votes = [
-            Vote(v.agent, v.verdict, v.confidence * 0.3, v.note, v.family)
-            if _AGENT_FAMILY.get(v.agent) == 'momentum_osc'
-            else v
-            for v in votes
-        ]
+    # Regime-conditional scaling: adjust family confidences based on current regime.
+    # Trend agents are reliable in trends; oscillators are reliable in ranges.
+    votes = _apply_regime_scaling(votes, ticker_regime)
 
     long_w, short_w = _capped_weights(votes)
     total_w = long_w + short_w
