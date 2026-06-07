@@ -92,7 +92,7 @@ _REGIME_FAMILY_MULT: dict[str, dict[str, float]] = {
 # Family combos with negative expectancy in backtest — veto these to WATCH.
 # Combo string: ma_trend + breakout + squeeze + momentum_osc direction (L/S/N).
 # LNNL/LLNL: oscillator confirms LONG while trend is already up = "entering extended".
-_WEAK_COMBOS: frozenset[str] = frozenset({"LNNL", "LLNL"})
+_WEAK_COMBOS: frozenset[str] = frozenset({"LNNL", "LLNL", "LLLL"})
 # LSNS/LNLL/LSNL: highest expectancy combos — "dip in uptrend" pattern.
 _STRONG_COMBOS: frozenset[str] = frozenset({"LSNS", "LNLL", "LSNL"})
 
@@ -246,9 +246,9 @@ def _classify_action(
     sq_dir = combo[2] if len(combo) >= 4 else "N"
     br_dir = combo[1] if len(combo) >= 4 else "N"
 
-    # Extension veto: oscillators confirming LONG while trend is already up in ADX > 25
-    if (ma_dir == "L" and mo_dir == "L" and adx is not None and adx > 25
-            and regime == "trending"):
+    # Extension veto: oscillators confirming LONG while trend is up = price already extended.
+    # regime=="trending" implies ADX>25, so no need to check adx separately.
+    if ma_dir == "L" and mo_dir == "L" and regime == "trending":
         return "NONE", "WATCH"
 
     # Oscillator-divergence score adjustment (affects tier logic only, not raw score)
