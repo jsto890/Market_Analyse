@@ -286,7 +286,11 @@ def backtest_ticker(meta: dict) -> list[dict]:
             )
 
             # R earned this trade under dynamic sizing
+            # Onset (day-1 of new signal) gets half size — fresh signals underperform
+            # until confirmed by persistence (36.6% WR vs 43.9% for continuation)
             size = _TIER_SIZE.get(tier, 0.0)
+            if onset and tier == "BULLISH_SETUP":
+                size *= 0.5
             if outcome == "WIN":
                 r_earned = actual_rr * size
             elif outcome == "LOSS":
@@ -543,7 +547,7 @@ def main() -> None:
     n_watch = (fixed["tier"] == "WATCH").sum()
 
     print(f"  Fixed (all signals, size=1):    {total_fixed:+.1f}R over {len(fixed)} trades")
-    print(f"  Dynamic (BS=1.0×, WATCH=0.5×):  {total_dynamic:+.1f}R over {len(fixed)} trades")
+    print(f"  Dynamic (BS=1.0×, BS_onset=0.5×, WATCH=0.5×):  {total_dynamic:+.1f}R over {len(fixed)} trades")
     print(f"    BULLISH_SETUP trades: {n_bs}")
     print(f"    WATCH trades:         {n_watch}")
 
