@@ -472,8 +472,11 @@ def _classify_action(
     mo_dir = combo[3] if len(combo) >= 4 else "N"
     wk_dir = combo[4] if len(combo) >= 5 else "N"
 
-    # Extension veto: oscillators confirming LONG while trend is up = price already extended.
-    if ma_dir == "L" and mo_dir == "L" and regime in ("trending", "trending_late"):
+    # Extension veto: oscillators confirming LONG in an active trend = price already extended.
+    # Does NOT apply to trending_late: when ADX is falling, oscillator overbought can mean
+    # a healthy final push rather than exhaustion. WEAK_COMBOS (LNNL, LLNL, LLLL) protect
+    # against the genuinely dangerous overbought-in-weakening-trend patterns.
+    if ma_dir == "L" and mo_dir == "L" and regime == "trending":
         return "NONE", "WATCH"
 
     # Oscillator-divergence score adjustment (affects tier logic only, not raw score)
