@@ -34,7 +34,6 @@ from argus.action_card.builder import (
     _capped_weights,
     _detect_ticker_regime,
     _effective_n,
-    _family_dominant,
     _combo_string,
     _classify_action,
     _WEAK_COMBOS,
@@ -171,6 +170,7 @@ def _fast_score(df_slice: pd.DataFrame) -> dict:
         "fam_break":     combo[1] if len(combo) >= 4 else "N",
         "fam_squeeze":   combo[2] if len(combo) >= 4 else "N",
         "fam_mosc":      combo[3] if len(combo) >= 4 else "N",
+        "fam_week":      combo[4] if len(combo) >= 5 else "N",
     }
 
 
@@ -326,6 +326,7 @@ def backtest_ticker(meta: dict) -> list[dict]:
                 "fam_break":      sig["fam_break"],
                 "fam_squeeze":    sig["fam_squeeze"],
                 "fam_mosc":       sig["fam_mosc"],
+                "fam_week":       sig["fam_week"],
                 "combo":          sig["combo"],
                 # Fixed-period for reference
                 "fwd_5d":         round(fwd_5d * 100, 4) if fwd_5d is not None else None,

@@ -758,7 +758,7 @@ function buildFamilyRings(votes) {
 }
 
 /* ═══════════════════════ FAMILY VERDICT BARS ═══════════════════════ */
-const _CAP_FAM_ORDER = ['ma_trend','breakout','squeeze','momentum_osc','other'];
+const _CAP_FAM_ORDER = ['ma_trend','breakout','squeeze','momentum_osc','weekly_structure','other'];
 
 function buildFamilyBars(familyVotes, verdict) {
   const el = $('family-bars');
@@ -772,7 +772,8 @@ function buildFamilyBars(familyVotes, verdict) {
     const dominantN = c.long >= c.short ? c.long : c.short;
     const pct = dominantN / total;
     const clr = dominant === 'long' ? 'var(--green)' : 'var(--red)';
-    const label = fam === 'other' ? 'uncapped' : fam.replace('_', '_');
+    const FAM_LABELS = {ma_trend:'MA Trend', breakout:'Breakout', squeeze:'Squeeze', momentum_osc:'Momentum', weekly_structure:'Weekly', other:'Uncapped'};
+    const label = FAM_LABELS[fam] || fam;
     const meta = `${dominantN}/${total} ${dominant.toUpperCase()}`;
     return `<div class="fam-bar-row">
       <div class="fam-bar-label">${label}</div>

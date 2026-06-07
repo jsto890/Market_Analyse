@@ -217,9 +217,10 @@ def _family_dominant(votes: list[Vote], fam: str) -> str:
 
 
 def _combo_string(votes: list[Vote]) -> str:
-    """ma_trend + breakout + squeeze + momentum_osc dominant directions."""
+    """ma_trend + breakout + squeeze + momentum_osc + weekly_structure dominant directions."""
     return "".join(_family_dominant(votes, f)
-                   for f in ("ma_trend", "breakout", "squeeze", "momentum_osc"))
+                   for f in ("ma_trend", "breakout", "squeeze", "momentum_osc",
+                              "weekly_structure"))
 
 
 def _classify_action(
@@ -242,9 +243,10 @@ def _classify_action(
         return "NONE", "AVOID"
 
     ma_dir = combo[0] if len(combo) >= 4 else "N"
-    mo_dir = combo[3] if len(combo) >= 4 else "N"
-    sq_dir = combo[2] if len(combo) >= 4 else "N"
     br_dir = combo[1] if len(combo) >= 4 else "N"
+    sq_dir = combo[2] if len(combo) >= 4 else "N"
+    mo_dir = combo[3] if len(combo) >= 4 else "N"
+    wk_dir = combo[4] if len(combo) >= 5 else "N"
 
     # Extension veto: oscillators confirming LONG while trend is up = price already extended.
     # regime=="trending" implies ADX>25, so no need to check adx separately.
@@ -258,8 +260,8 @@ def _classify_action(
     elif ma_dir == "L" and mo_dir == "L":
         adj -= 0.05   # extended entry penalty
 
-    # Weak combo veto
-    if combo in _WEAK_COMBOS:
+    # Weak combo veto — match against first 4 chars only (family combos are 4-char patterns)
+    if combo[:4] in _WEAK_COMBOS:
         return "MIXED", "WATCH"
 
     # Trade style
@@ -274,9 +276,9 @@ def _classify_action(
     else:
         trade_style = "MIXED"
 
-    # Tier assignment
+    # Tier assignment. Combo[:4] = 4-char daily family pattern; combo[4] = weekly direction.
     is_prime = (
-        combo in _STRONG_COMBOS
+        combo[:4] in _STRONG_COMBOS
         and adj >= 0.40
         and 1.4 <= n_eff <= 2.5
         and regime in ("neutral", "ranging")
@@ -284,6 +286,8 @@ def _classify_action(
     is_breakout = (
         trade_style == "BREAKOUT"
         and adj >= 0.35
+        and n_eff > 1.4
+        and inflation_gap < 0.20
         and regime in ("trending", "neutral")
     )
     is_standard = (
@@ -291,7 +295,7 @@ def _classify_action(
         and n_eff > 1.4
         and inflation_gap < 0.15
         and regime in ("trending", "neutral")
-        and combo not in _WEAK_COMBOS
+        and combo[:4] not in _WEAK_COMBOS
     )
 
     if is_prime:
