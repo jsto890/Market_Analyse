@@ -1,18 +1,16 @@
 #!/usr/bin/env python3
 """
-Argus technical agent backtest — broad universe, 2 years.
+Argus technical agent backtest v2 — quality-tier framework.
 
-Universe: ~90 tickers across indexes, large/mid/small cap, all 11 GICS sectors.
-Method:
-  - Fetch 2.5 years of daily OHLCV per ticker (extra lookback for indicator warm-up)
-  - Compute indicators once per ticker on full history
-  - Walk forward weekly (every 5 trading days), slice at each date
-  - Score via _capped_weights (regime gate included); skip RS-vs-Sector and bootstrap CI
-  - Record verdict, score, regime, and forward 1d / 5d / 20d returns
-  - Segment analysis: direction accuracy, by cap tier, by sector, score buckets,
-    regime gate impact, and family attribution across wins/losses
+Improvements over v1:
+  - ATR-based stop/target exits (2×ATR stop, 3×ATR target, 1.5:1 R:R)
+  - Quality tier: BULLISH_SETUP / WATCH / AVOID based on regime + N_eff + inflation_gap
+  - Signal onset detection: first LONG after non-LONG (fresh vs stale)
+  - Per-signal N_eff and inflation_gap computed in fast path
 
-Output: backtest_results.csv + printed summary
+Universe: 81 tickers across indexes, large/mid/small cap, all 11 GICS sectors.
+Method: compute indicators once per ticker, walk forward weekly, ATR-gated exits.
+Output: backtest_results.csv + printed summary tables
 """
 from __future__ import annotations
 
@@ -34,7 +32,9 @@ from argus.agents import run_all
 from argus.action_card.builder import (
     _capped_weights,
     _detect_ticker_regime,
+    _effective_n,
     _AGENT_FAMILY,
+    _FAMILIES,
 )
 from argus.agents.base import Vote, Verdict
 
@@ -49,101 +49,83 @@ UNIVERSE: list[dict] = [
     {"ticker": "DIA",   "cap": "index",  "sector": "Broad Market"},
     {"ticker": "MDY",   "cap": "index",  "sector": "Mid Cap"},
     # Sector ETFs
-    {"ticker": "XLK",   "cap": "etf",    "sector": "Technology"},
-    {"ticker": "XLF",   "cap": "etf",    "sector": "Financials"},
-    {"ticker": "XLV",   "cap": "etf",    "sector": "Healthcare"},
-    {"ticker": "XLY",   "cap": "etf",    "sector": "Consumer Cyclical"},
-    {"ticker": "XLP",   "cap": "etf",    "sector": "Consumer Defensive"},
-    {"ticker": "XLE",   "cap": "etf",    "sector": "Energy"},
-    {"ticker": "XLI",   "cap": "etf",    "sector": "Industrials"},
-    {"ticker": "XLC",   "cap": "etf",    "sector": "Comm Services"},
-    {"ticker": "XLRE",  "cap": "etf",    "sector": "Real Estate"},
-    {"ticker": "XLU",   "cap": "etf",    "sector": "Utilities"},
-    {"ticker": "XLB",   "cap": "etf",    "sector": "Materials"},
-    # Large cap — Technology
-    {"ticker": "AAPL",  "cap": "large",  "sector": "Technology"},
-    {"ticker": "MSFT",  "cap": "large",  "sector": "Technology"},
-    {"ticker": "NVDA",  "cap": "large",  "sector": "Technology"},
-    {"ticker": "AMD",   "cap": "large",  "sector": "Technology"},
-    {"ticker": "AVGO",  "cap": "large",  "sector": "Technology"},
-    {"ticker": "INTC",  "cap": "large",  "sector": "Technology"},
-    {"ticker": "QCOM",  "cap": "large",  "sector": "Technology"},
-    {"ticker": "AMAT",  "cap": "large",  "sector": "Technology"},
-    # Large cap — Financials
-    {"ticker": "JPM",   "cap": "large",  "sector": "Financials"},
-    {"ticker": "GS",    "cap": "large",  "sector": "Financials"},
-    {"ticker": "BAC",   "cap": "large",  "sector": "Financials"},
-    {"ticker": "V",     "cap": "large",  "sector": "Financials"},
-    {"ticker": "MA",    "cap": "large",  "sector": "Financials"},
-    # Large cap — Healthcare
-    {"ticker": "JNJ",   "cap": "large",  "sector": "Healthcare"},
-    {"ticker": "LLY",   "cap": "large",  "sector": "Healthcare"},
-    {"ticker": "ABBV",  "cap": "large",  "sector": "Healthcare"},
-    {"ticker": "MRK",   "cap": "large",  "sector": "Healthcare"},
-    {"ticker": "UNH",   "cap": "large",  "sector": "Healthcare"},
-    # Large cap — Consumer / Industrials / Energy / Comm
-    {"ticker": "AMZN",  "cap": "large",  "sector": "Consumer Cyclical"},
-    {"ticker": "TSLA",  "cap": "large",  "sector": "Consumer Cyclical"},
-    {"ticker": "NKE",   "cap": "large",  "sector": "Consumer Cyclical"},
-    {"ticker": "COST",  "cap": "large",  "sector": "Consumer Defensive"},
-    {"ticker": "PG",    "cap": "large",  "sector": "Consumer Defensive"},
-    {"ticker": "XOM",   "cap": "large",  "sector": "Energy"},
-    {"ticker": "CVX",   "cap": "large",  "sector": "Energy"},
-    {"ticker": "COP",   "cap": "large",  "sector": "Energy"},
-    {"ticker": "CAT",   "cap": "large",  "sector": "Industrials"},
-    {"ticker": "GE",    "cap": "large",  "sector": "Industrials"},
-    {"ticker": "GOOGL", "cap": "large",  "sector": "Comm Services"},
-    {"ticker": "META",  "cap": "large",  "sector": "Comm Services"},
-    {"ticker": "NFLX",  "cap": "large",  "sector": "Comm Services"},
+    {"ticker": "XLK",   "cap": "etf",   "sector": "Technology"},
+    {"ticker": "XLF",   "cap": "etf",   "sector": "Financials"},
+    {"ticker": "XLV",   "cap": "etf",   "sector": "Healthcare"},
+    {"ticker": "XLE",   "cap": "etf",   "sector": "Energy"},
+    {"ticker": "XLI",   "cap": "etf",   "sector": "Industrials"},
+    {"ticker": "XLY",   "cap": "etf",   "sector": "Consumer Cyclical"},
+    {"ticker": "XLP",   "cap": "etf",   "sector": "Consumer Defensive"},
+    {"ticker": "XLB",   "cap": "etf",   "sector": "Materials"},
+    {"ticker": "XLRE",  "cap": "etf",   "sector": "Real Estate"},
+    {"ticker": "XLU",   "cap": "etf",   "sector": "Utilities"},
+    {"ticker": "XLC",   "cap": "etf",   "sector": "Comm Services"},
+    # Large cap — diversified sectors
+    {"ticker": "AAPL",  "cap": "large", "sector": "Technology"},
+    {"ticker": "MSFT",  "cap": "large", "sector": "Technology"},
+    {"ticker": "NVDA",  "cap": "large", "sector": "Technology"},
+    {"ticker": "AVGO",  "cap": "large", "sector": "Technology"},
+    {"ticker": "META",  "cap": "large", "sector": "Comm Services"},
+    {"ticker": "GOOGL", "cap": "large", "sector": "Comm Services"},
+    {"ticker": "AMZN",  "cap": "large", "sector": "Consumer Cyclical"},
+    {"ticker": "TSLA",  "cap": "large", "sector": "Consumer Cyclical"},
+    {"ticker": "JPM",   "cap": "large", "sector": "Financials"},
+    {"ticker": "BAC",   "cap": "large", "sector": "Financials"},
+    {"ticker": "GS",    "cap": "large", "sector": "Financials"},
+    {"ticker": "MA",    "cap": "large", "sector": "Financials"},
+    {"ticker": "JNJ",   "cap": "large", "sector": "Healthcare"},
+    {"ticker": "UNH",   "cap": "large", "sector": "Healthcare"},
+    {"ticker": "LLY",   "cap": "large", "sector": "Healthcare"},
+    {"ticker": "XOM",   "cap": "large", "sector": "Energy"},
+    {"ticker": "COP",   "cap": "large", "sector": "Energy"},
+    {"ticker": "CAT",   "cap": "large", "sector": "Industrials"},
+    {"ticker": "HON",   "cap": "large", "sector": "Industrials"},
+    {"ticker": "COST",  "cap": "large", "sector": "Consumer Defensive"},
+    {"ticker": "WMT",   "cap": "large", "sector": "Consumer Defensive"},
+    {"ticker": "INTC",  "cap": "large", "sector": "Technology"},
+    {"ticker": "NKE",   "cap": "large", "sector": "Consumer Cyclical"},
     # Mid cap — diversified
-    {"ticker": "SMCI",  "cap": "mid",    "sector": "Technology"},
-    {"ticker": "FSLR",  "cap": "mid",    "sector": "Energy"},
-    {"ticker": "CELH",  "cap": "mid",    "sector": "Consumer Defensive"},
-    {"ticker": "FIVE",  "cap": "mid",    "sector": "Consumer Cyclical"},
-    {"ticker": "EXAS",  "cap": "mid",    "sector": "Healthcare"},
-    {"ticker": "ENPH",  "cap": "mid",    "sector": "Energy"},
-    {"ticker": "RCM",   "cap": "mid",    "sector": "Healthcare"},
-    {"ticker": "DKNG",  "cap": "mid",    "sector": "Consumer Cyclical"},
-    {"ticker": "CHRD",  "cap": "mid",    "sector": "Energy"},
-    {"ticker": "CRVL",  "cap": "mid",    "sector": "Technology"},
-    {"ticker": "LNTH",  "cap": "mid",    "sector": "Healthcare"},
-    {"ticker": "WCC",   "cap": "mid",    "sector": "Industrials"},
-    {"ticker": "MATX",  "cap": "mid",    "sector": "Industrials"},
-    {"ticker": "FCX",   "cap": "mid",    "sector": "Materials"},
-    {"ticker": "CF",    "cap": "mid",    "sector": "Materials"},
-    {"ticker": "AMT",   "cap": "mid",    "sector": "Real Estate"},
+    {"ticker": "CHRD",  "cap": "mid",   "sector": "Energy"},
+    {"ticker": "FIVE",  "cap": "mid",   "sector": "Consumer Cyclical"},
+    {"ticker": "WCC",   "cap": "mid",   "sector": "Industrials"},
+    {"ticker": "PLNT",  "cap": "mid",   "sector": "Consumer Cyclical"},
+    {"ticker": "NTNX",  "cap": "mid",   "sector": "Technology"},
+    {"ticker": "CRVL",  "cap": "mid",   "sector": "Healthcare"},
+    {"ticker": "SITM",  "cap": "mid",   "sector": "Technology"},
+    {"ticker": "TMDX",  "cap": "mid",   "sector": "Healthcare"},
+    {"ticker": "WING",  "cap": "mid",   "sector": "Consumer Cyclical"},
+    {"ticker": "NVST",  "cap": "mid",   "sector": "Healthcare"},
     # Small cap — diversified
-    {"ticker": "MARA",  "cap": "small",  "sector": "Technology"},
-    {"ticker": "RIOT",  "cap": "small",  "sector": "Technology"},
-    {"ticker": "QUBT",  "cap": "small",  "sector": "Technology"},
-    {"ticker": "IREN",  "cap": "small",  "sector": "Technology"},
-    {"ticker": "NNE",   "cap": "small",  "sector": "Industrials"},
-    {"ticker": "LUNR",  "cap": "small",  "sector": "Industrials"},
-    {"ticker": "DNN",   "cap": "small",  "sector": "Energy"},
-    {"ticker": "UEC",   "cap": "small",  "sector": "Energy"},
-    {"ticker": "LEU",   "cap": "small",  "sector": "Energy"},
-    {"ticker": "RXRX",  "cap": "small",  "sector": "Healthcare"},
-    {"ticker": "ACHR",  "cap": "small",  "sector": "Industrials"},
-    {"ticker": "JOBY",  "cap": "small",  "sector": "Industrials"},
-    {"ticker": "AVXL",  "cap": "small",  "sector": "Healthcare"},
-    {"ticker": "TMDX",  "cap": "small",  "sector": "Healthcare"},
-    {"ticker": "GROY",  "cap": "small",  "sector": "Materials"},
-    {"ticker": "BKSY",  "cap": "small",  "sector": "Technology"},
-    {"ticker": "SOFI",  "cap": "small",  "sector": "Financials"},
-    {"ticker": "UPST",  "cap": "small",  "sector": "Financials"},
+    {"ticker": "IREN",  "cap": "small", "sector": "Technology"},
+    {"ticker": "RIOT",  "cap": "small", "sector": "Technology"},
+    {"ticker": "LUNR",  "cap": "small", "sector": "Industrials"},
+    {"ticker": "NNE",   "cap": "small", "sector": "Industrials"},
+    {"ticker": "ACHR",  "cap": "small", "sector": "Industrials"},
+    {"ticker": "DNN",   "cap": "small", "sector": "Energy"},
+    {"ticker": "QUBT",  "cap": "small", "sector": "Technology"},
+    {"ticker": "AVXL",  "cap": "small", "sector": "Healthcare"},
+    {"ticker": "GROY",  "cap": "small", "sector": "Materials"},
+    {"ticker": "BKSY",  "cap": "small", "sector": "Technology"},
+    {"ticker": "SOFI",  "cap": "small", "sector": "Financials"},
+    {"ticker": "UPST",  "cap": "small", "sector": "Financials"},
 ]
 
 BACKTEST_YEARS = 2
-SIGNAL_STEP    = 5    # signal every 5 trading days (weekly)
-MIN_BARS       = 260  # minimum bars for indicator warm-up (EMA200 needs 200+)
-FETCH_YEARS    = BACKTEST_YEARS + 0.5  # extra buffer for warm-up
+SIGNAL_STEP    = 5      # signal every 5 trading days (weekly)
+MIN_BARS       = 260    # indicator warm-up
+FETCH_YEARS    = BACKTEST_YEARS + 0.5
+ATR_STOP_MULT  = 2.0    # stop = entry ± ATR_STOP_MULT × ATR14
+ATR_TARGET_MULT = 3.0   # target = entry ± ATR_TARGET_MULT × ATR14 → 1.5:1 R:R
+MAX_HOLD_DAYS  = 20     # max bars before treating exit as OPEN
 
-# ── scoring (fast path — no bootstrap CI, no RS-vs-Sector, no LOO) ────────────
 
-def _fast_score(df_slice: pd.DataFrame) -> tuple[str, float, str]:
-    """Score a slice. Returns (verdict, score, regime)."""
+# ── fast scoring (no bootstrap CI, no RS-vs-Sector) ──────────────────────────
+
+def _fast_score(df_slice: pd.DataFrame) -> dict:
+    """Return verdict, score, regime, n_eff, inflation_gap, agreement_pct."""
     regime = _detect_ticker_regime(df_slice)
     votes = [v for v in run_all(df_slice) if v.agent != "RS vs Sector"]
+
     if regime == "gap_down_continuation":
         votes = [
             Vote(v.agent, v.verdict, v.confidence * 0.3, v.note, v.family)
@@ -151,26 +133,105 @@ def _fast_score(df_slice: pd.DataFrame) -> tuple[str, float, str]:
             else v
             for v in votes
         ]
+
     lw, sw = _capped_weights(votes)
     tw = lw + sw
     score = (lw - sw) / tw if tw > 0 else 0.0
+
     if score > 0.15:
         verdict = "LONG"
     elif score < -0.15:
         verdict = "SHORT"
     else:
         verdict = "WAIT"
-    return verdict, score, regime
+
+    # Agreement (vote-count, not weight-based)
+    n_long  = sum(1 for v in votes if v.verdict == Verdict.LONG)
+    n_short = sum(1 for v in votes if v.verdict == Verdict.SHORT)
+    n_total = len(votes)
+    agreement = max(n_long, n_short) / n_total if n_total > 0 else 0.5
+    inflation_gap = round(agreement - (1.0 + abs(score)) / 2.0, 4)
+
+    n_eff = _effective_n(votes)
+
+    return {
+        "verdict": verdict,
+        "score": round(score, 4),
+        "regime": regime,
+        "n_eff": n_eff,
+        "inflation_gap": inflation_gap,
+        "agreement_pct": round(agreement * 100, 1),
+    }
 
 
-def _fast_score_unfiltered(df_slice: pd.DataFrame) -> tuple[str, float]:
-    """Score without regime gate — for gate-impact comparison."""
-    votes = [v for v in run_all(df_slice) if v.agent != "RS vs Sector"]
-    lw, sw = _capped_weights(votes)
-    tw = lw + sw
-    score = (lw - sw) / tw if tw > 0 else 0.0
-    verdict = "LONG" if score > 0.15 else ("SHORT" if score < -0.15 else "WAIT")
-    return verdict, score
+def _quality_tier(verdict: str, regime: str, score: float,
+                  n_eff: float, inflation_gap: float) -> str:
+    """
+    Three-tier entry classification:
+      BULLISH_SETUP: strong case to enter LONG
+      WATCH:         LONG signal but one or more quality conditions weak
+      AVOID:         SHORT verdict OR gap_down_continuation
+      WAIT:          neutral verdict
+    """
+    if verdict == "WAIT":
+        return "WAIT"
+    if verdict == "SHORT" or regime == "gap_down_continuation":
+        return "AVOID"
+    # verdict == LONG beyond here
+    strong_regime  = regime in ("trending", "neutral")
+    high_score     = abs(score) > 0.3
+    good_n_eff     = n_eff > 1.8
+    low_inflation  = inflation_gap < 0.15
+    if strong_regime and high_score and good_n_eff and low_inflation:
+        return "BULLISH_SETUP"
+    return "WATCH"
+
+
+def _atr_exit(highs: np.ndarray, lows: np.ndarray, idx: int,
+              c0: float, atr: float, verdict: str) -> tuple[str, int]:
+    """
+    Scan forward MAX_HOLD_DAYS bars. For LONG:
+      stop   = c0 - ATR_STOP_MULT * atr
+      target = c0 + ATR_TARGET_MULT * atr
+    Returns (outcome, days_to_exit) where outcome ∈ WIN / LOSS / OPEN.
+    First bar that breaches either level wins. If same bar, loss wins (conservative).
+    """
+    if atr <= 0 or verdict == "WAIT":
+        return "OPEN", MAX_HOLD_DAYS
+
+    if verdict == "LONG":
+        stop   = c0 - ATR_STOP_MULT   * atr
+        target = c0 + ATR_TARGET_MULT * atr
+        for d in range(1, MAX_HOLD_DAYS + 1):
+            i = idx + d
+            if i >= len(highs):
+                return "OPEN", d
+            hit_stop   = lows[i]  <= stop
+            hit_target = highs[i] >= target
+            if hit_stop and hit_target:
+                return "LOSS", d   # same bar, conservative
+            if hit_target:
+                return "WIN", d
+            if hit_stop:
+                return "LOSS", d
+        return "OPEN", MAX_HOLD_DAYS
+
+    else:  # SHORT
+        stop   = c0 + ATR_STOP_MULT   * atr
+        target = c0 - ATR_TARGET_MULT * atr
+        for d in range(1, MAX_HOLD_DAYS + 1):
+            i = idx + d
+            if i >= len(lows):
+                return "OPEN", d
+            hit_stop   = highs[i] >= stop
+            hit_target = lows[i]  <= target
+            if hit_stop and hit_target:
+                return "LOSS", d
+            if hit_target:
+                return "WIN", d
+            if hit_stop:
+                return "LOSS", d
+        return "OPEN", MAX_HOLD_DAYS
 
 
 # ── per-ticker backtest ───────────────────────────────────────────────────────
@@ -188,58 +249,82 @@ def backtest_ticker(meta: dict) -> list[dict]:
             progress=False,
             auto_adjust=True,
         )
-        if raw.empty or len(raw) < MIN_BARS + 25:
+        if raw.empty or len(raw) < MIN_BARS + MAX_HOLD_DAYS + 5:
             return []
-        raw.columns = [c[0].lower() if isinstance(c, tuple) else c.lower() for c in raw.columns]
+        raw.columns = [c[0].lower() if isinstance(c, tuple) else c.lower()
+                       for c in raw.columns]
         raw = raw.rename(columns={"adj close": "close"})
 
-        # Compute indicators once on full history
         df_full = compute_all(raw)
         df_full.attrs["symbol"] = ticker
 
         closes = df_full["close"].values
+        highs  = df_full["high"].values
+        lows   = df_full["low"].values
         dates  = df_full.index
 
+        # ATR column (compute_all provides atr_14)
+        atrs = (df_full["atr_14"].values
+                if "atr_14" in df_full.columns
+                else np.zeros(len(df_full)))
+
         records = []
-        # Walk forward: signal at each step, measure forward returns
-        backtest_start_idx = MIN_BARS
-        signal_indices = range(backtest_start_idx, len(df_full) - 21, SIGNAL_STEP)
+        prev_verdict = "WAIT"
 
-        for idx in signal_indices:
+        for idx in range(MIN_BARS, len(df_full) - MAX_HOLD_DAYS - 1, SIGNAL_STEP):
             sl = df_full.iloc[: idx + 1]
-            verdict, score, regime = _fast_score(sl)
-            verdict_raw, score_raw = _fast_score_unfiltered(sl)
+            sig = _fast_score(sl)
 
-            # Forward returns from close at signal date
-            c0 = closes[idx]
-            fwd_1d  = (closes[min(idx + 1,  len(closes)-1)] - c0) / c0 if c0 > 0 else None
+            verdict       = sig["verdict"]
+            score         = sig["score"]
+            regime        = sig["regime"]
+            n_eff         = sig["n_eff"]
+            inflation_gap = sig["inflation_gap"]
+            agreement_pct = sig["agreement_pct"]
+
+            tier   = _quality_tier(verdict, regime, score, n_eff, inflation_gap)
+            onset  = (prev_verdict != verdict and verdict in ("LONG", "SHORT"))
+            c0     = closes[idx]
+            atr    = float(atrs[idx]) if not np.isnan(atrs[idx]) else 0.0
+
+            # ATR-based stop/target exit
+            outcome, days_held = _atr_exit(highs, lows, idx, c0, atr, verdict)
+
+            # Fixed-period returns for comparison
             fwd_5d  = (closes[min(idx + 5,  len(closes)-1)] - c0) / c0 if c0 > 0 else None
             fwd_20d = (closes[min(idx + 20, len(closes)-1)] - c0) / c0 if c0 > 0 else None
 
-            # Directional correctness (LONG → positive return = win)
-            def win(fwd, v):
-                if fwd is None or v == "WAIT":
+            # Directional correctness at fixed periods
+            def dir_win(fwd):
+                if fwd is None or verdict == "WAIT":
                     return None
-                return (fwd > 0) if v == "LONG" else (fwd < 0)
+                return 1 if ((fwd > 0) if verdict == "LONG" else (fwd < 0)) else 0
 
             records.append({
-                "ticker":       ticker,
-                "cap":          meta["cap"],
-                "sector":       meta["sector"],
-                "date":         dates[idx].strftime("%Y-%m-%d"),
-                "verdict":      verdict,
-                "score":        round(score, 4),
-                "verdict_raw":  verdict_raw,
-                "score_raw":    round(score_raw, 4),
-                "regime":       regime,
-                "gate_changed": verdict != verdict_raw,
-                "fwd_1d":       round(fwd_1d * 100, 4) if fwd_1d is not None else None,
-                "fwd_5d":       round(fwd_5d * 100, 4) if fwd_5d is not None else None,
-                "fwd_20d":      round(fwd_20d * 100, 4) if fwd_20d is not None else None,
-                "win_1d":       win(fwd_1d, verdict),
-                "win_5d":       win(fwd_5d, verdict),
-                "win_20d":      win(fwd_20d, verdict),
+                "ticker":         ticker,
+                "cap":            meta["cap"],
+                "sector":         meta["sector"],
+                "date":           dates[idx].strftime("%Y-%m-%d"),
+                "verdict":        verdict,
+                "score":          score,
+                "regime":         regime,
+                "n_eff":          n_eff,
+                "inflation_gap":  inflation_gap,
+                "agreement_pct":  agreement_pct,
+                "tier":           tier,
+                "onset":          onset,
+                "atr":            round(atr, 4),
+                # ATR-exit outcome
+                "outcome":        outcome,      # WIN / LOSS / OPEN
+                "days_held":      days_held,
+                # Fixed-period comparison
+                "fwd_5d":         round(fwd_5d * 100, 4) if fwd_5d is not None else None,
+                "fwd_20d":        round(fwd_20d * 100, 4) if fwd_20d is not None else None,
+                "dir_win_5d":     dir_win(fwd_5d),
+                "dir_win_20d":    dir_win(fwd_20d),
             })
+            prev_verdict = verdict
+
         return records
     except Exception as e:
         print(f"  [{ticker}] ERROR: {e}")
@@ -248,40 +333,55 @@ def backtest_ticker(meta: dict) -> list[dict]:
 
 # ── analysis helpers ──────────────────────────────────────────────────────────
 
-def _wr(df: pd.DataFrame, win_col: str) -> tuple[float | None, int]:
-    v = pd.to_numeric(df[win_col], errors="coerce").dropna()
+def _wr(df: pd.DataFrame, col: str):
+    v = pd.to_numeric(df[col], errors="coerce").dropna()
     return (v.mean(), len(v)) if len(v) else (None, 0)
 
 
-def _avg(df: pd.DataFrame, ret_col: str) -> tuple[float | None, int]:
-    v = df[ret_col].dropna()
-    return (v.mean(), len(v)) if len(v) else (None, 0)
+def _outcome_stats(sub: pd.DataFrame) -> tuple[float | None, float | None, float | None, int]:
+    """ATR-exit win rate, avg days won, avg days lost, n (actionable only)."""
+    act = sub[sub["verdict"].isin(["LONG", "SHORT"]) & sub["outcome"].isin(["WIN", "LOSS"])]
+    if len(act) == 0:
+        return None, None, None, 0
+    wins   = act[act["outcome"] == "WIN"]
+    losses = act[act["outcome"] == "LOSS"]
+    wr = len(wins) / len(act)
+    avg_d_win  = wins["days_held"].mean()  if len(wins)   else None
+    avg_d_loss = losses["days_held"].mean() if len(losses) else None
+    return round(wr, 4), avg_d_win, avg_d_loss, len(act)
 
 
-def print_table(title: str, rows: list[tuple]) -> None:
-    print(f"\n{'═'*64}")
+def _expectancy(wr: float | None) -> str:
+    """Expected R per trade given 1.5:1 R:R and win rate wr."""
+    if wr is None:
+        return "  —"
+    # Win +1.5R, Lose −1R
+    e = wr * 1.5 - (1 - wr) * 1.0
+    return f"{e:+.2f}R"
+
+
+def print_outcome_table(title: str, rows: list[tuple]) -> None:
+    print(f"\n{'═'*72}")
     print(title)
-    print('═'*64)
-    hdr = f"  {'Group':<28} {'1d WR':>7} {'1d avg':>8} {'5d WR':>7} {'5d avg':>8} {'20d WR':>7}  {'n':>5}"
+    print('═'*72)
+    hdr = (f"  {'Group':<26} {'ATR WR':>7} {'Expect':>8} "
+           f"{'Avg WIN d':>9} {'Avg LOS d':>9} {'DirWR5d':>8} {'n':>5}")
     print(hdr)
-    print("  " + "─" * 61)
+    print("  " + "─" * 69)
     for label, subset in rows:
-        actionable = subset[subset["verdict"].isin(["LONG", "SHORT"])]
-        wr1, n1  = _wr(actionable, "win_1d")
-        wr5, _   = _wr(actionable, "win_5d")
-        wr20, _  = _wr(actionable, "win_20d")
-        a1, _    = _avg(actionable, "fwd_1d")
-        a5, _    = _avg(actionable, "fwd_5d")
+        wr, wd, ld, n = _outcome_stats(subset)
+        dwr5, _ = _wr(subset[subset["verdict"].isin(["LONG","SHORT"])], "dir_win_5d")
         def pct(v): return f"{v*100:.1f}%" if v is not None else "  —"
-        def ret(v): return f"{v:+.2f}%" if v is not None else "    —"
-        print(f"  {label:<28} {pct(wr1):>7} {ret(a1):>8} {pct(wr5):>7} {ret(a5):>8} {pct(wr20):>7}  {n1:>5}")
+        def days(v): return f"{v:.1f}d" if v is not None else "  —"
+        print(f"  {label:<26} {pct(wr):>7} {_expectancy(wr):>8} "
+              f"{days(wd):>9} {days(ld):>9} {pct(dwr5):>8} {n:>5}")
 
 
-# ── main ─────────────────────────────────────────────────────────────────────
+# ── main ──────────────────────────────────────────────────────────────────────
 
 def main() -> None:
-    print(f"Argus Agent Backtest — {len(UNIVERSE)} tickers, {BACKTEST_YEARS}y, weekly signals")
-    print(f"Indicator warm-up: {MIN_BARS} bars | Signal step: {SIGNAL_STEP} days")
+    print(f"Argus Backtest v2 — {len(UNIVERSE)} tickers, {BACKTEST_YEARS}y, "
+          f"ATR exits ({ATR_STOP_MULT}×stop / {ATR_TARGET_MULT}×target), weekly signals")
     print(f"Fetching data + scoring (parallel)…\n")
 
     t0 = time.time()
@@ -292,146 +392,183 @@ def main() -> None:
         done = 0
         for fut in concurrent.futures.as_completed(futures):
             done += 1
-            ticker = futures[fut]
             recs = fut.result()
             all_records.extend(recs)
             if done % 10 == 0 or done == len(UNIVERSE):
-                print(f"  {done}/{len(UNIVERSE)} tickers done  ({len(all_records):,} signal rows so far)")
+                print(f"  {done}/{len(UNIVERSE)} tickers  ({len(all_records):,} signals)")
 
     elapsed = time.time() - t0
-    print(f"\nCompleted in {elapsed:.0f}s — {len(all_records):,} total signal rows")
+    print(f"\nDone in {elapsed:.0f}s — {len(all_records):,} signal rows")
 
     if not all_records:
-        print("No data returned — check network / yfinance.")
+        print("No data returned.")
         return
 
     df = pd.DataFrame(all_records)
     df.to_csv(OUT_CSV, index=False)
     print(f"Saved → {OUT_CSV}")
 
-    # ── summary ─────────────────────────────────────────────────────────────
+    total      = len(df)
+    actionable = df[df["verdict"].isin(["LONG", "SHORT"])]
+    longs      = df[df["verdict"] == "LONG"]
+    shorts     = df[df["verdict"] == "SHORT"]
 
-    total       = len(df)
-    actionable  = df[df["verdict"].isin(["LONG", "SHORT"])]
-    longs       = df[df["verdict"] == "LONG"]
-    shorts      = df[df["verdict"] == "SHORT"]
-    waits       = df[df["verdict"] == "WAIT"]
-
-    print(f"\n{'═'*64}")
+    # ── distribution ─────────────────────────────────────────────────────────
+    print(f"\n{'═'*72}")
     print("SIGNAL DISTRIBUTION")
-    print('═'*64)
-    print(f"  Total signal rows   : {total:,}")
-    print(f"  LONG                : {len(longs):,}  ({len(longs)/total*100:.1f}%)")
-    print(f"  SHORT               : {len(shorts):,}  ({len(shorts)/total*100:.1f}%)")
-    print(f"  WAIT                : {len(waits):,}  ({len(waits)/total*100:.1f}%)")
-    print(f"  Date range          : {df['date'].min()} → {df['date'].max()}")
-    print(f"  Regime GDC events   : {(df['regime']=='gap_down_continuation').sum():,}  ({(df['regime']=='gap_down_continuation').mean()*100:.1f}%)")
-    print(f"  Gate changed verdict: {df['gate_changed'].sum():,}  ({df['gate_changed'].mean()*100:.1f}%)")
+    print('═'*72)
+    print(f"  Total rows  : {total:,}")
+    print(f"  LONG        : {len(longs):,}  ({len(longs)/total*100:.1f}%)")
+    print(f"  SHORT       : {len(shorts):,}  ({len(shorts)/total*100:.1f}%)")
+    print(f"  WAIT        : {total - len(longs) - len(shorts):,}")
+    print(f"  Date range  : {df['date'].min()} → {df['date'].max()}")
 
-    # ── direction accuracy ───────────────────────────────────────────────────
-    print_table("DIRECTION ACCURACY — LONG vs SHORT", [
-        ("ALL actionable",         actionable),
-        ("  LONG signals",         longs),
-        ("  SHORT signals",        shorts),
+    for tier in ["BULLISH_SETUP", "WATCH", "AVOID", "WAIT"]:
+        n = (df["tier"] == tier).sum()
+        print(f"  {tier:<15}: {n:,}  ({n/total*100:.1f}%)")
+
+    onset_n = df["onset"].sum()
+    print(f"  Onset signals: {onset_n:,}  ({onset_n/total*100:.1f}%)")
+
+    # ── ATR exit summary ─────────────────────────────────────────────────────
+    print(f"\n{'═'*72}")
+    print("ATR EXIT BREAKDOWN (actionable signals with resolved exits)")
+    print('═'*72)
+    resolved = actionable[actionable["outcome"].isin(["WIN", "LOSS"])]
+    open_n   = actionable[actionable["outcome"] == "OPEN"]
+    print(f"  Resolved exits : {len(resolved):,} "
+          f"({len(resolved)/len(actionable)*100:.1f}% of actionable)")
+    print(f"  OPEN (no exit) : {len(open_n):,}")
+    print(f"  WIN            : {(resolved['outcome']=='WIN').sum():,} "
+          f"({(resolved['outcome']=='WIN').mean()*100:.1f}%)")
+    print(f"  LOSS           : {(resolved['outcome']=='LOSS').sum():,} "
+          f"({(resolved['outcome']=='LOSS').mean()*100:.1f}%)")
+    avg_win_d  = resolved[resolved["outcome"]=="WIN"]["days_held"].mean()
+    avg_loss_d = resolved[resolved["outcome"]=="LOSS"]["days_held"].mean()
+    print(f"  Avg days to WIN  : {avg_win_d:.1f}")
+    print(f"  Avg days to LOSS : {avg_loss_d:.1f}")
+
+    # ── CORE TABLE: quality tier ──────────────────────────────────────────────
+    print_outcome_table("CORE: ACCURACY BY QUALITY TIER", [
+        ("BULLISH_SETUP",            df[df["tier"] == "BULLISH_SETUP"]),
+        ("  BULLISH onset (fresh)",  df[(df["tier"]=="BULLISH_SETUP") & df["onset"]]),
+        ("  BULLISH cont. (stale)",  df[(df["tier"]=="BULLISH_SETUP") & ~df["onset"]]),
+        ("WATCH",                    df[df["tier"] == "WATCH"]),
+        ("  WATCH onset (fresh)",    df[(df["tier"]=="WATCH") & df["onset"]]),
+        ("AVOID (SHORT + GDC)",      df[df["tier"] == "AVOID"]),
     ])
 
-    # ── score bucket accuracy ────────────────────────────────────────────────
-    def score_bucket(s):
-        a = abs(s)
-        if a >= 0.6: return "strong (|score|≥0.6)"
-        if a >= 0.4: return "medium (0.4–0.6)"
-        if a >= 0.2: return "weak   (0.2–0.4)"
-        return "borderline (0.15–0.2)"
+    # ── regime ───────────────────────────────────────────────────────────────
+    print_outcome_table("ACCURACY BY REGIME (LONG signals only)", [
+        (r[:26], longs[longs["regime"] == r])
+        for r in df["regime"].value_counts().index[:5]
+    ])
 
-    df["score_bucket"] = df["score"].apply(score_bucket)
-    bucket_rows = [(b, df[df["score_bucket"]==b]) for b in [
-        "strong (|score|≥0.6)", "medium (0.4–0.6)", "weak   (0.2–0.4)", "borderline (0.15–0.2)"
-    ]]
-    print_table("ACCURACY BY CONVICTION SCORE", bucket_rows)
+    # ── N_eff buckets ─────────────────────────────────────────────────────────
+    df["neff_bucket"] = pd.cut(
+        df["n_eff"], bins=[0, 1.5, 2.5, 10],
+        labels=["low <1.5 (echo)", "mid 1.5-2.5", "high >2.5 (diverse)"]
+    )
+    print_outcome_table("ACCURACY BY N_EFF SOURCE DIVERSITY (actionable)", [
+        (str(b)[:26], df[df["neff_bucket"] == b])
+        for b in ["low <1.5 (echo)", "mid 1.5-2.5", "high >2.5 (diverse)"]
+    ])
 
-    # ── by cap tier ──────────────────────────────────────────────────────────
-    cap_rows = [(c, df[df["cap"]==c]) for c in ["index", "etf", "large", "mid", "small"]]
-    print_table("ACCURACY BY CAP TIER", cap_rows)
+    # ── inflation gap ─────────────────────────────────────────────────────────
+    df["igap_bucket"] = pd.cut(
+        df["inflation_gap"], bins=[-1, 0.05, 0.15, 2],
+        labels=["low <0.05 (clean)", "mid 0.05-0.15", "high >0.15 (inflated)"]
+    )
+    print_outcome_table("ACCURACY BY INFLATION GAP (actionable)", [
+        (str(b)[:26], df[df["igap_bucket"] == b])
+        for b in ["low <0.05 (clean)", "mid 0.05-0.15", "high >0.15 (inflated)"]
+    ])
 
-    # ── by sector ───────────────────────────────────────────────────────────
-    sectors = sorted(df["sector"].unique())
-    sector_rows = [(s[:28], df[df["sector"]==s]) for s in sectors]
-    print_table("ACCURACY BY SECTOR", sector_rows)
+    # ── score magnitude ───────────────────────────────────────────────────────
+    df["score_bucket"] = pd.cut(
+        df["score"].abs(), bins=[0, 0.2, 0.4, 0.6, 2],
+        labels=["0.15-0.2 borderline", "0.2-0.4 weak", "0.4-0.6 medium", ">0.6 strong"]
+    )
+    print_outcome_table("ACCURACY BY SCORE MAGNITUDE", [
+        (str(b)[:26], df[df["score_bucket"] == b])
+        for b in ["0.15-0.2 borderline", "0.2-0.4 weak", "0.4-0.6 medium", ">0.6 strong"]
+    ])
 
-    # ── regime breakdown ─────────────────────────────────────────────────────
-    regime_rows = [(r[:28], df[df["regime"]==r]) for r in df["regime"].value_counts().index[:5]]
-    print_table("ACCURACY BY REGIME", regime_rows)
+    # ── cap tier ─────────────────────────────────────────────────────────────
+    print_outcome_table("ACCURACY BY CAP TIER", [
+        (c, df[df["cap"] == c]) for c in ["index", "etf", "large", "mid", "small"]
+    ])
 
-    # ── gate impact ──────────────────────────────────────────────────────────
-    gdc = df[df["regime"] == "gap_down_continuation"]
-    if len(gdc) > 0:
-        gdc_changed = gdc[gdc["gate_changed"]]
-        print(f"\n{'═'*64}")
-        print("REGIME GATE IMPACT (gap_down_continuation only)")
-        print('═'*64)
-        print(f"  GDC signal rows          : {len(gdc):,}")
-        print(f"  Gate changed verdict     : {len(gdc_changed):,}  ({len(gdc_changed)/len(gdc)*100:.1f}%)")
-        if len(gdc) >= 3:
-            wr_gdc, n = _wr(gdc[gdc["verdict"].isin(["LONG","SHORT"])], "win_5d")
-            wr_nongdc, _ = _wr(df[df["regime"]!="gap_down_continuation"][df["verdict"].isin(["LONG","SHORT"])], "win_5d")
-            if wr_gdc is not None:
-                print(f"  5d WR in GDC             : {wr_gdc*100:.1f}%  (n={n})")
-            if wr_nongdc is not None:
-                print(f"  5d WR non-GDC            : {wr_nongdc*100:.1f}%")
+    # ── sector (LONG only) ───────────────────────────────────────────────────
+    sectors = sorted(longs["sector"].unique())
+    print_outcome_table("ACCURACY BY SECTOR (LONG signals only)", [
+        (s[:26], longs[longs["sector"] == s]) for s in sectors
+    ])
 
-    # ── score–return correlation ─────────────────────────────────────────────
-    print(f"\n{'═'*64}")
-    print("SCORE–RETURN CORRELATION (actionable signals)")
-    print('═'*64)
-    for col, label in [("fwd_1d", "1d return"), ("fwd_5d", "5d return"), ("fwd_20d", "20d return")]:
+    # ── BULLISH_SETUP: what factors explain better outcomes? ─────────────────
+    bs = df[df["tier"] == "BULLISH_SETUP"]
+    if len(bs) > 20:
+        print(f"\n{'═'*72}")
+        print("BULLISH_SETUP DEEP DIVE")
+        print('═'*72)
+        wr_all, _, _, n_all = _outcome_stats(bs)
+        print(f"  Overall ATR WR     : {wr_all*100:.1f}%  n={n_all}  {_expectancy(wr_all)}")
+
+        # Onset within BULLISH_SETUP
+        bs_onset = bs[bs["onset"]]
+        bs_cont  = bs[~bs["onset"]]
+        wr_on, _, _, n_on   = _outcome_stats(bs_onset)
+        wr_co, _, _, n_co   = _outcome_stats(bs_cont)
+        print(f"  Onset (fresh entry): {wr_on*100:.1f}%  n={n_on}  {_expectancy(wr_on)}" if wr_on else "  Onset: —")
+        print(f"  Continuation       : {wr_co*100:.1f}%  n={n_co}  {_expectancy(wr_co)}" if wr_co else "  Cont: —")
+
+        # Regime within BULLISH_SETUP
+        for r in ["trending", "neutral", "ranging"]:
+            sub = bs[bs["regime"] == r]
+            wr_r, _, _, n_r = _outcome_stats(sub)
+            if wr_r is not None:
+                print(f"  regime={r:<10}: {wr_r*100:.1f}%  n={n_r}  {_expectancy(wr_r)}")
+
+    # ── per-ticker (top/bottom by ATR WR) ────────────────────────────────────
+    print(f"\n{'═'*72}")
+    print("PER-TICKER ATR WIN RATE (actionable, ≥10 resolved)")
+    print('═'*72)
+    ticker_rows = []
+    for t in df["ticker"].unique():
+        sub = df[df["ticker"] == t]
+        wr, _, _, n = _outcome_stats(sub)
+        dwr5, _ = _wr(sub[sub["verdict"].isin(["LONG","SHORT"])], "dir_win_5d")
+        if n >= 10 and wr is not None:
+            ticker_rows.append({
+                "ticker": t, "wr": wr, "dwr5": dwr5, "n": n,
+                "cap": sub["cap"].iloc[0], "sector": sub["sector"].iloc[0],
+                "tier_bs": (sub["tier"]=="BULLISH_SETUP").mean(),
+            })
+    tdf = pd.DataFrame(ticker_rows).sort_values("wr", ascending=False)
+
+    for section, rows in [("Top 15", tdf.head(15)), ("Bottom 15", tdf.tail(15))]:
+        print(f"\n  {section}:")
+        print(f"  {'Ticker':<7} {'Cap':<7} {'Sector':<20} "
+              f"{'ATR WR':>7} {'DirWR5':>7} {'%BS':>6} {'n':>4}")
+        print("  " + "─" * 60)
+        for _, r in rows.iterrows():
+            print(f"  {r['ticker']:<7} {r['cap']:<7} {r['sector'][:20]:<20} "
+                  f"{r['wr']*100:>6.1f}% {(r['dwr5'] or 0)*100:>6.1f}% "
+                  f"{r['tier_bs']*100:>5.0f}%  {r['n']:>4}")
+
+    # ── score-return correlation (fixed-period, for comparison) ──────────────
+    print(f"\n{'═'*72}")
+    print("SCORE–RETURN CORRELATION (reference — fixed-period returns)")
+    print('═'*72)
+    for col, label in [("fwd_5d", "5d"), ("fwd_20d", "20d")]:
         valid = actionable[["score", col]].dropna()
         if len(valid) > 10:
-            corr = valid["score"].corr(valid[col])
-            print(f"  score vs {label:<12}: r = {corr:+.4f}  (n={len(valid):,})")
+            corr = valid["score"].corr(pd.to_numeric(valid[col], errors="coerce"))
+            print(f"  score vs {label} return : r = {corr:+.4f}  (n={len(valid):,})")
 
-    # ── per-ticker summary (top/bottom performers) ───────────────────────────
-    print(f"\n{'═'*64}")
-    print("PER-TICKER 5d WIN RATE (actionable, ≥10 signals)")
-    print('═'*64)
-    ticker_stats = []
-    for t in df["ticker"].unique():
-        sub = df[(df["ticker"]==t) & df["verdict"].isin(["LONG","SHORT"])]
-        wr5, n = _wr(sub, "win_5d")
-        a5, _  = _avg(sub, "fwd_5d")
-        if n >= 10 and wr5 is not None:
-            ticker_stats.append({"ticker": t, "wr5": wr5, "avg5": a5, "n": n,
-                                  "cap": df[df["ticker"]==t]["cap"].iloc[0],
-                                  "sector": df[df["ticker"]==t]["sector"].iloc[0]})
-    stats_df = pd.DataFrame(ticker_stats).sort_values("wr5", ascending=False)
-    print(f"\n  Top 15:")
-    print(f"  {'Ticker':<8} {'Cap':<7} {'Sector':<22} {'5d WR':>7} {'5d avg':>8} {'n':>5}")
-    print("  " + "─" * 57)
-    for _, r in stats_df.head(15).iterrows():
-        print(f"  {r['ticker']:<8} {r['cap']:<7} {r['sector'][:22]:<22} "
-              f"{r['wr5']*100:>6.1f}% {r['avg5']:>+7.2f}%  {r['n']:>4}")
-    print(f"\n  Bottom 15:")
-    print(f"  {'Ticker':<8} {'Cap':<7} {'Sector':<22} {'5d WR':>7} {'5d avg':>8} {'n':>5}")
-    print("  " + "─" * 57)
-    for _, r in stats_df.tail(15).iterrows():
-        print(f"  {r['ticker']:<8} {r['cap']:<7} {r['sector'][:22]:<22} "
-              f"{r['wr5']*100:>6.1f}% {r['avg5']:>+7.2f}%  {r['n']:>4}")
-
-    # ── LONG vs SHORT asymmetry ───────────────────────────────────────────────
-    print(f"\n{'═'*64}")
-    print("LONG vs SHORT SIGNAL ASYMMETRY BY CAP TIER")
-    print('═'*64)
-    print(f"  {'Tier':<8} {'LONG WR(5d)':>12} {'SHORT WR(5d)':>13} {'LONG n':>8} {'SHORT n':>8}")
-    print("  " + "─" * 52)
-    for cap in ["index", "etf", "large", "mid", "small"]:
-        sub = df[df["cap"] == cap]
-        lwr, ln = _wr(sub[sub["verdict"]=="LONG"], "win_5d")
-        swr, sn = _wr(sub[sub["verdict"]=="SHORT"], "win_5d")
-        def p(v): return f"{v*100:.1f}%" if v is not None else "—"
-        print(f"  {cap:<8} {p(lwr):>12} {p(swr):>13} {ln:>8} {sn:>8}")
-
-    print(f"\n{'═'*64}")
-    print(f"Results saved to: {OUT_CSV}")
-    print('═'*64)
+    print(f"\n{'═'*72}")
+    print(f"Results saved → {OUT_CSV}")
+    print('═'*72)
 
 
 if __name__ == "__main__":
