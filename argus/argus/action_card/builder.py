@@ -170,6 +170,28 @@ def _detect_ticker_regime(df: pd.DataFrame) -> str:
     return 'neutral'
 
 
+def _adx_context(df: pd.DataFrame) -> tuple[float | None, str]:
+    """Return (adx_value, slope_label) where slope_label is 'rising'/'falling'/'flat'/''."""
+    try:
+        col = df['adx_14'] if 'adx_14' in df.columns else None
+        if col is None or len(col) < 6:
+            return None, ''
+        adx_now  = float(col.iloc[-1])
+        adx_5d   = float(col.iloc[-6])
+        if pd.isna(adx_now) or pd.isna(adx_5d):
+            return None, ''
+        delta = adx_now - adx_5d
+        if delta > 2.0:
+            slope = 'rising'
+        elif delta < -2.0:
+            slope = 'falling'
+        else:
+            slope = 'flat'
+        return round(adx_now, 1), slope
+    except Exception:
+        return None, ''
+
+
 def _capped_weights(votes: list[Vote], regime: str = "neutral") -> tuple[float, float]:
     """Confidence-weighted long/short sums with per-family caps + post-cap regime scaling.
 
@@ -557,6 +579,8 @@ class ActionCard:
     trade_style: str = "NONE"        # MOMENTUM | SWING | BREAKOUT | MEAN_REVERT | MIXED | NONE
     action_label: str = "WAIT"       # PRIME_LONG | BREAKOUT_LONG | STANDARD_LONG | WATCH | AVOID | WAIT
     sector: str = ""                  # yfinance sector for display; empty if unknown
+    adx_value: float | None = None    # current ADX-14 value, None if unavailable
+    adx_slope: str = ""               # 'rising' | 'falling' | 'flat' | ''
     # ── LLM meta-analyst (advisory only; does NOT feed score or action_label) ──
     meta_coherence: float = 0.5      # 0..1 — do the signals tell one story? 0.5 = unknown/neutral
     meta_adjustment: float = 0.0     # -0.2..+0.2 — suggested up/down-weight of action_label conviction
@@ -823,6 +847,7 @@ def build_action_card(symbol: str, df: pd.DataFrame) -> ActionCard:
     )
 
     sector = _lookup_sector(symbol)
+    adx_value, adx_slope = _adx_context(df_ind)
 
     return ActionCard(
         symbol=symbol.upper(),
@@ -855,6 +880,8 @@ def build_action_card(symbol: str, df: pd.DataFrame) -> ActionCard:
         trade_style=trade_style,
         action_label=action_label,
         sector=sector,
+        adx_value=adx_value,
+        adx_slope=adx_slope,
         meta_coherence=meta_coherence,
         meta_adjustment=meta_adjustment,
         meta_note=meta_note,
