@@ -929,6 +929,8 @@ async function loadCard() {
         })() : ''}</div>
       <div class="k">Stop anchor</div>
       <div class="v">${stopAnchorHtml(card.stop_anchor)}</div>
+      ${card.sector ? `<div class="k" style="color:var(--muted);font-size:10px">Sector</div>
+      <div class="v" style="font-size:10px;color:var(--muted)">${card.sector}</div>` : ''}
       <div class="k">Regime</div>
       <div class="v">${regimeChip(card.ticker_regime, card.high_vol_regime)}${card.combo ? (() => {
         const daily = card.combo.slice(0,4);

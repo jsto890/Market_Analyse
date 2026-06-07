@@ -15,6 +15,50 @@ from ..agents import run_all
 from ..indicators import compute_all
 from ..settings import settings
 
+# ── Sector lookup — static map for common tickers, yfinance fallback ─────────
+_STATIC_SECTORS: dict[str, str] = {
+    # Broad market / ETFs
+    "SPY": "Broad Market", "QQQ": "Technology", "IWM": "Small Cap",
+    "DIA": "Broad Market", "MDY": "Mid Cap",
+    "XLK": "Technology", "XLF": "Financials", "XLV": "Healthcare",
+    "XLE": "Energy", "XLI": "Industrials", "XLY": "Consumer Cyclical",
+    "XLP": "Consumer Defensive", "XLB": "Materials", "XLRE": "Real Estate",
+    "XLU": "Utilities", "XLC": "Comm Services",
+    # Large-caps
+    "AAPL": "Technology", "MSFT": "Technology", "NVDA": "Technology",
+    "AVGO": "Technology", "META": "Comm Services", "GOOGL": "Comm Services",
+    "AMZN": "Consumer Cyclical", "TSLA": "Consumer Cyclical",
+    "JPM": "Financials", "BAC": "Financials", "GS": "Financials",
+    "MA": "Financials", "WFC": "Financials", "MS": "Financials",
+    "JNJ": "Healthcare", "UNH": "Healthcare", "LLY": "Healthcare", "PFE": "Healthcare",
+    "WMT": "Consumer Defensive", "COST": "Consumer Defensive",
+    "HD": "Consumer Cyclical", "MCD": "Consumer Cyclical", "NKE": "Consumer Cyclical",
+    "DIS": "Comm Services", "NFLX": "Comm Services",
+    "BA": "Industrials", "CAT": "Industrials", "DE": "Industrials", "HON": "Industrials",
+    "XOM": "Energy", "CVX": "Energy",
+    "ORCL": "Technology", "AMD": "Technology",
+}
+
+_SECTOR_CACHE: dict[str, tuple[float, str]] = {}
+_SECTOR_TTL_S = 86400  # 24h
+
+def _lookup_sector(symbol: str) -> str:
+    """Return sector for display, '' if unknown. Static map first, yfinance fallback cached 24h."""
+    sym = symbol.upper()
+    if sym in _STATIC_SECTORS:
+        return _STATIC_SECTORS[sym]
+    now = time.time()
+    cached = _SECTOR_CACHE.get(sym)
+    if cached is not None and now - cached[0] < _SECTOR_TTL_S:
+        return cached[1]
+    try:
+        import yfinance as yf
+        sector = str(yf.Ticker(sym).info.get("sector", "") or "")
+    except Exception:
+        sector = ""
+    _SECTOR_CACHE[sym] = (now, sector)
+    return sector
+
 # Correlated agent families — each family's combined contribution is capped so that
 # momentum stocks with many confirming MA/breakout signals don't inflate the score.
 _FAMILIES: dict[str, frozenset[str]] = {
@@ -512,6 +556,7 @@ class ActionCard:
     combo: str = "NNNNN"             # family dominant directions: ma+break+squeeze+mosc+weekly
     trade_style: str = "NONE"        # MOMENTUM | SWING | BREAKOUT | MEAN_REVERT | MIXED | NONE
     action_label: str = "WAIT"       # PRIME_LONG | BREAKOUT_LONG | STANDARD_LONG | WATCH | AVOID | WAIT
+    sector: str = ""                  # yfinance sector for display; empty if unknown
     # ── LLM meta-analyst (advisory only; does NOT feed score or action_label) ──
     meta_coherence: float = 0.5      # 0..1 — do the signals tell one story? 0.5 = unknown/neutral
     meta_adjustment: float = 0.0     # -0.2..+0.2 — suggested up/down-weight of action_label conviction
@@ -777,6 +822,8 @@ def build_action_card(symbol: str, df: pd.DataFrame) -> ActionCard:
         votes, ticker_regime, score, combo_str, action_label
     )
 
+    sector = _lookup_sector(symbol)
+
     return ActionCard(
         symbol=symbol.upper(),
         verdict=verdict,
@@ -807,6 +854,7 @@ def build_action_card(symbol: str, df: pd.DataFrame) -> ActionCard:
         combo=combo_str,
         trade_style=trade_style,
         action_label=action_label,
+        sector=sector,
         meta_coherence=meta_coherence,
         meta_adjustment=meta_adjustment,
         meta_note=meta_note,
