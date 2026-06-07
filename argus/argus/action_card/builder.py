@@ -531,6 +531,7 @@ def build_action_card(symbol: str, df: pd.DataFrame) -> ActionCard:
     is_extended = abs(ret_1d) > 0.05 or abs(ret_5d) > 0.15
 
     df_ind.attrs['symbol'] = symbol.upper()
+    df_ind.attrs['ticker'] = symbol.upper()
 
     ticker_regime = _detect_ticker_regime(df_ind)
 
@@ -581,6 +582,13 @@ def build_action_card(symbol: str, df: pd.DataFrame) -> ActionCard:
     trade_style, action_label = _classify_action(
         verdict, score, ticker_regime, combo_str, n_eff, inflation_gap, _adx
     )
+
+    # Risk filter override: high-confidence WAIT from earnings/event agents forces WAIT
+    for v in votes:
+        if v.verdict == Verdict.WAIT and v.confidence >= 1.5 and v.family == "risk_filter":
+            action_label = "WAIT"
+            trade_style = "NONE"
+            break
 
     # High-vol regime: 50d annualised vol > 252d annualised vol.
     _ret = df["close"].pct_change().dropna()

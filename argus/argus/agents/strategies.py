@@ -10,6 +10,44 @@ import numpy as np
 import pandas as pd
 
 from .base import Vote, Verdict
+
+_EARNINGS_CACHE: dict = {}
+
+
+def _days_to_earnings(ticker: str) -> int | None:
+    """Return calendar days until next earnings, or None if unavailable."""
+    import datetime
+    cached = _EARNINGS_CACHE.get(ticker)
+    now = datetime.datetime.now(datetime.timezone.utc)
+    if cached is not None:
+        ts, days = cached
+        if (now - ts).total_seconds() < 3600:
+            return days
+    try:
+        import yfinance as yf
+        info = yf.Ticker(ticker).get_earnings_dates(limit=4)
+        if info is None or info.empty:
+            _EARNINGS_CACHE[ticker] = (now, None)
+            return None
+        future = [
+            d for d in info.index
+            if d.tzinfo and d.replace(tzinfo=None) > now.replace(tzinfo=None)
+               or (not d.tzinfo and d.to_pydatetime() > now.replace(tzinfo=None))
+        ]
+        if not future:
+            _EARNINGS_CACHE[ticker] = (now, None)
+            return None
+        next_dt = min(future)
+        if hasattr(next_dt, "to_pydatetime"):
+            next_dt = next_dt.to_pydatetime()
+        if next_dt.tzinfo is None:
+            next_dt = next_dt.replace(tzinfo=datetime.timezone.utc)
+        days = max(0, (next_dt - now).days)
+        _EARNINGS_CACHE[ticker] = (now, days)
+        return days
+    except Exception:
+        _EARNINGS_CACHE[ticker] = (now, None)
+        return None
 from ..indicators import compute_all
 from ..indicators.smc import break_of_structure, order_block
 from ..indicators.wyckoff import classify as wyckoff_phase
@@ -1407,3 +1445,27 @@ def weekly_bollinger_position(df):
     if pctb > 0.5:
         return _vote("Weekly Bollinger Position", Verdict.LONG, 0.6, "upper half of weekly bands")
     return _vote("Weekly Bollinger Position", Verdict.SHORT, 0.6, "lower half of weekly bands")
+
+
+# ---------------- RISK FILTER ----------------
+
+def earnings_proximity(df):
+    """Vote WAIT before binary earnings events. High confidence to override directional agents.
+
+    Earnings within 5 days: the ensemble's technical edge evaporates — returns
+    are dominated by the surprise, not the trend. Prevents entering a new
+    position 5 days before a known binary event.
+    """
+    ticker = df.attrs.get("ticker") or df.attrs.get("symbol")
+    if not ticker:
+        return _vote("Earnings Proximity", Verdict.WAIT, 0.0, "ticker unknown")
+    days = _days_to_earnings(ticker)
+    if days is None:
+        return _vote("Earnings Proximity", Verdict.WAIT, 0.0, "earnings dates unavailable")
+    if days <= 5:
+        return _vote("Earnings Proximity", Verdict.WAIT, 1.8,
+                     f"earnings in {days}d — binary event risk")
+    if days <= 10:
+        return _vote("Earnings Proximity", Verdict.WAIT, 0.6,
+                     f"earnings in {days}d — caution")
+    return _vote("Earnings Proximity", Verdict.WAIT, 0.0, f"earnings in {days}d — clear")
