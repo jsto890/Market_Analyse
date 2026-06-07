@@ -121,6 +121,7 @@ MAX_HOLD_DAYS   = 20
 # Trending → wider target (trend can run); ranging → tighter (range-bound)
 _REGIME_RR: dict[str, tuple[float, float]] = {
     "trending":              (2.0, 4.0),   # 2:1 R:R — let winners run
+    "trending_late":         (2.0, 3.0),   # 1.5:1 — trend waning, take profits sooner
     "ranging":               (1.5, 2.5),   # 1.67:1 — range won't run far
     "gap_down_continuation": (1.5, 2.5),   # defensive — don't trust signal
     "neutral":               (2.0, 3.0),   # 1.5:1 default
@@ -436,7 +437,7 @@ def main() -> None:
     # ── regime breakdown ──────────────────────────────────────────────────────
     print_table("LONG SIGNALS: ACCURACY BY REGIME", [
         (r[:30], longs[longs["regime"] == r])
-        for r in ["trending", "ranging", "neutral", "gap_down_continuation"]
+        for r in ["trending", "trending_late", "ranging", "neutral", "gap_down_continuation"]
     ])
 
     # ── regime × score threshold ──────────────────────────────────────────────
@@ -445,7 +446,7 @@ def main() -> None:
     print(f"{'═'*70}")
     print(f"  {'Regime':<22} {'score>0.3':>10} {'score>0.5':>10} {'score>0.7':>10}")
     print("  " + "─" * 58)
-    for r in ["trending", "ranging", "neutral"]:
+    for r in ["trending", "trending_late", "ranging", "neutral"]:
         sub = longs[longs["regime"] == r]
         row = f"  {r:<22}"
         for thresh in [0.3, 0.5, 0.7]:

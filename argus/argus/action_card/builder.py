@@ -110,8 +110,16 @@ _REGIME_FAMILY_MULT: dict[str, dict[str, float]] = {
         "ma_trend":       1.0,   # MA crossovers valid in trend
         "breakout":       1.2,   # breakouts have follow-through in trends
         "squeeze":        0.7,   # squeezes ambiguous mid-trend
-        "momentum_osc":   0.3,   # oversold in a trend = continuation trap
+        "momentum_osc":   0.3,   # oscillators unreliable mid-trend (overbought ≠ extended if trend intact)
         "weekly_structure": 1.0, # weekly trend most reliable in trending markets
+    },
+    # ADX > 25 but declining — trend losing momentum, oscillators become more informative
+    "trending_late": {
+        "ma_trend":       0.9,
+        "breakout":       0.8,   # fewer breakouts when trend wanes
+        "squeeze":        0.9,   # squeezes useful as trend consolidates
+        "momentum_osc":   0.8,   # oscillators reliable in transition; oversold = good entry
+        "weekly_structure": 1.0,
     },
     "ranging": {
         "ma_trend":       0.4,   # MAs whipsaw in chop
@@ -147,25 +155,24 @@ _STRONG_COMBOS: frozenset[str] = frozenset({"LSNS", "LNLL", "LSNL", "LLNS", "LLL
 
 def _detect_ticker_regime(df: pd.DataFrame) -> str:
     """Classify per-ticker market regime from recent OHLCV + indicators."""
-    try:
-        adx = float(df['adx_14'].iloc[-1]) if 'adx_14' in df.columns else None
-        if pd.isna(adx):
-            adx = None
-    except Exception:
-        adx = None
     gap = float(df['open'].iloc[-1] / df['close'].iloc[-2] - 1) if len(df) > 1 else 0.0
     try:
         ema50 = float(df['ema_50'].iloc[-1]) if 'ema_50' in df.columns else None
-        if pd.isna(ema50):
+        if ema50 is not None and pd.isna(ema50):
             ema50 = None
     except Exception:
         ema50 = None
     last = float(df['close'].iloc[-1])
     if gap < -0.02 and ema50 is not None and last < ema50:
         return 'gap_down_continuation'
-    if adx is not None and adx > 25:
+    adx_val, adx_slope = _adx_context(df)
+    if adx_val is not None and adx_val > 25:
+        # Trend weakening: ADX still above 25 but actively declining.
+        # Pullback entries and oscillators become more reliable in this transition phase.
+        if adx_slope == 'falling':
+            return 'trending_late'
         return 'trending'
-    if adx is not None and adx < 20:
+    if adx_val is not None and adx_val < 20:
         return 'ranging'
     return 'neutral'
 
@@ -467,14 +474,13 @@ def _classify_action(
     wk_dir = combo[4] if len(combo) >= 5 else "N"
 
     # Extension veto: oscillators confirming LONG while trend is up = price already extended.
-    # regime=="trending" implies ADX>25, so no need to check adx separately.
-    if ma_dir == "L" and mo_dir == "L" and regime == "trending":
+    if ma_dir == "L" and mo_dir == "L" and regime in ("trending", "trending_late"):
         return "NONE", "WATCH"
 
     # Oscillator-divergence score adjustment (affects tier logic only, not raw score)
     adj = score
     if ma_dir == "L" and mo_dir == "S":
-        adj += 0.08   # dip in uptrend: overbought oscillators = momentum continuation
+        adj += 0.08   # oversold oscillators in uptrend = pullback entry point
     elif ma_dir == "L" and mo_dir == "L":
         adj -= 0.05   # extended entry penalty
 
@@ -483,11 +489,12 @@ def _classify_action(
         return "MIXED", "WATCH"
 
     # Trade style
-    if sq_dir == "L" and br_dir == "L" and regime in ("trending", "neutral"):
+    _trend_regimes = ("trending", "trending_late", "neutral")
+    if sq_dir == "L" and br_dir == "L" and regime in _trend_regimes:
         trade_style = "BREAKOUT"
-    elif ma_dir == "L" and mo_dir == "S" and regime in ("trending", "neutral"):
+    elif ma_dir == "L" and mo_dir == "S" and regime in _trend_regimes:
         trade_style = "MOMENTUM"
-    elif regime in ("trending", "neutral") and ma_dir == "L":
+    elif regime in _trend_regimes and ma_dir == "L":
         trade_style = "SWING"
     elif regime == "ranging" and mo_dir == "L":
         trade_style = "MEAN_REVERT"
@@ -495,24 +502,25 @@ def _classify_action(
         trade_style = "MIXED"
 
     # Tier assignment. Combo[:4] = 4-char daily family pattern; combo[4] = weekly direction.
+    # trending_late qualifies for PRIME_LONG — oscillators are more reliable when ADX is declining.
     is_prime = (
         combo[:4] in _STRONG_COMBOS
         and adj >= 0.40
         and 2.0 <= n_eff <= 3.0
-        and regime in ("neutral", "ranging")
+        and regime in ("neutral", "ranging", "trending_late")
     )
     is_breakout = (
         trade_style == "BREAKOUT"
         and adj >= 0.35
         and n_eff > 1.4
         and inflation_gap < 0.20
-        and regime in ("trending", "neutral")
+        and regime in _trend_regimes
     )
     is_standard = (
         adj >= 0.30
         and n_eff > 1.4
         and inflation_gap < 0.15
-        and regime in ("trending", "neutral")
+        and regime in _trend_regimes
         and combo[:4] not in _WEAK_COMBOS
     )
 
