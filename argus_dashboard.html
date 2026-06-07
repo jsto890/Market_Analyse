@@ -811,6 +811,31 @@ function stopAnchorHtml(anchor) {
     : anchor;
 }
 
+/* ═══════════════════════ ACTION LABEL HELPER ═══════════════════════ */
+const ACTION_LABEL_META = {
+  PRIME_LONG:     { color: '#00c853', bg: 'rgba(0,200,83,0.15)',  desc: 'Highest-expectancy setup — overbought oscillators + trend dip' },
+  BREAKOUT_LONG:  { color: '#40c4ff', bg: 'rgba(64,196,255,0.15)', desc: 'Squeeze breakout setup — hold for expansion' },
+  STANDARD_LONG:  { color: '#69f0ae', bg: 'rgba(105,240,174,0.12)', desc: 'Solid trend setup — BULLISH_SETUP criteria met' },
+  WATCH:          { color: '#ffd740', bg: 'rgba(255,215,64,0.12)', desc: 'Monitor — setup forming or weak combo' },
+  AVOID:          { color: '#ff5252', bg: 'rgba(255,82,82,0.12)',  desc: 'No entry — SHORT signal or gap-down continuation' },
+  WAIT:           { color: '#90a4ae', bg: 'rgba(144,164,174,0.1)', desc: 'No actionable signal' },
+};
+const TRADE_STYLE_LABEL = {
+  MOMENTUM:    'Momentum',
+  SWING:       'Swing',
+  BREAKOUT:    'Breakout',
+  MEAN_REVERT: 'Mean-revert',
+  MIXED:       'Mixed',
+  NONE:        '',
+};
+function actionLabelHtml(label, style) {
+  const m = ACTION_LABEL_META[label] || ACTION_LABEL_META.WAIT;
+  const sl = TRADE_STYLE_LABEL[style] || '';
+  const styleTag = sl ? ` <span style="color:var(--muted);font-size:10px">${sl}</span>` : '';
+  return `<span style="font-weight:700;font-size:12px;padding:2px 8px;border-radius:4px;
+    color:${m.color};background:${m.bg}" title="${m.desc}">${label||'WAIT'}</span>${styleTag}`;
+}
+
 /* ═══════════════════════ REGIME CHIP HELPER ═══════════════════════ */
 function regimeChip(regime, highVol) {
   const r = regime || 'neutral';
@@ -872,6 +897,8 @@ async function loadCard() {
       </div>
       <div class="k">Verdict</div>
       <div class="v"><span class="verdict ${card.verdict}">${card.verdict}</span></div>
+      <div class="k">Action</div>
+      <div class="v">${actionLabelHtml(card.action_label, card.trade_style)}</div>
       <div class="k">Score</div>
       <div class="v" id="${scoreBarId}"></div>
       ${(card.score_ci_lo != null && card.score_ci_hi != null) ? `
@@ -900,7 +927,7 @@ async function loadCard() {
       <div class="k">Stop anchor</div>
       <div class="v">${stopAnchorHtml(card.stop_anchor)}</div>
       <div class="k">Regime</div>
-      <div class="v">${regimeChip(card.ticker_regime, card.high_vol_regime)}</div>
+      <div class="v">${regimeChip(card.ticker_regime, card.high_vol_regime)}${card.combo ? ` <span style="color:var(--muted);font-size:10px;margin-left:6px">combo: ${card.combo}</span>` : ''}</div>
       <div class="k">Family breakdown</div>
       <div class="v"><div class="fam-bars" id="family-bars"></div></div>
       <div class="k">Momentum</div>
