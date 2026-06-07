@@ -3,6 +3,8 @@ plus entry / stop / target / risk-reward."""
 from __future__ import annotations
 
 import dataclasses
+import json
+import time
 from dataclasses import dataclass, field, asdict
 from typing import List
 import numpy as np
@@ -11,6 +13,7 @@ import pandas as pd
 from ..agents.base import Vote, Verdict
 from ..agents import run_all
 from ..indicators import compute_all
+from ..settings import settings
 
 # Correlated agent families — each family's combined contribution is capped so that
 # momentum stocks with many confirming MA/breakout signals don't inflate the score.
@@ -223,6 +226,154 @@ def _combo_string(votes: list[Vote]) -> str:
                               "weekly_structure"))
 
 
+# ─────────────────────────────────────────────────────────────────────────────
+# LLM meta-analyst
+#
+# A lightweight, advisory layer on top of the rule-based card. It reasons about
+# things the deterministic system structurally cannot: cross-family COHERENCE,
+# vote-source INDEPENDENCE (same-data agents double-counting), and which agent
+# notes actually matter. It NEVER touches the score or action_label — its output
+# is carried in separate advisory fields (meta_note, meta_adjustment).
+#
+# Design constraints honoured here:
+#   • Model: claude-haiku-4-5 (settings.meta_analyst_model)
+#   • Input < 500 tokens (compact JSON; ≤6 distilled notes, family L/S/N summary)
+#   • < 2s wall time (hard timeout in settings.meta_analyst_timeout_s)
+#   • 60-min cache keyed on (combo, regime, score-bucket, action_label)
+#   • Graceful degradation: any failure → (0.5, 0.0, "")
+# ─────────────────────────────────────────────────────────────────────────────
+
+_META_NEUTRAL: tuple[float, float, str] = (0.5, 0.0, "")
+
+# Module-level cache: key -> (timestamp, (coherence, adjustment, note)).
+_META_CACHE: dict[tuple, tuple[float, tuple[float, float, str]]] = {}
+_META_CACHE_TTL_S = 60 * 60  # 60 minutes
+
+_META_SYSTEM = (
+    "You are a meta-analyst auditing a rule-based stock trading signal. The "
+    "rule-based verdict is already decided; do NOT re-derive it. Your job is to "
+    "judge whether the signals COHERE, whether the confirming votes are "
+    "INDEPENDENT (not the same indicator counted several times), and to name the "
+    "single biggest risk the rules may have missed. "
+    "Return ONLY minified JSON: "
+    '{"coherence_score":<0..1>,"risk_note":"<=1 sentence","confidence_adjustment":<-0.2..0.2>}. '
+    "coherence_score: 1=all families tell one story, 0=they contradict. "
+    "confidence_adjustment: positive if the picture is cleaner than the score "
+    "implies, negative if it is shakier (e.g. trend up but weekly structure "
+    "bearish, or confirmations all from one data source). Be conservative; use "
+    "0.0 when unsure."
+)
+
+
+def _meta_cache_key(combo: str, regime: str, score: float, action_label: str) -> tuple:
+    """Bucket score to 0.05 so near-identical signals share a cached answer."""
+    return (combo, regime, round(score * 20) / 20, action_label)
+
+
+def _distill_notes(votes: list[Vote], verdict: Verdict, limit: int = 6) -> list[dict]:
+    """Pick the most informative agent notes to keep the prompt under budget.
+
+    Prioritises: actionable (LONG/SHORT) votes, then highest confidence, then
+    notes that carry content (non-empty, not pure boilerplate). One note per
+    agent, truncated, so the LLM sees signal not noise."""
+    scored: list[tuple[float, dict]] = []
+    for v in votes:
+        if v.verdict == Verdict.WAIT or not v.note:
+            continue
+        # rank: agreeing votes first, then by confidence
+        agree_bonus = 1.0 if v.verdict == verdict else 0.0
+        rank = agree_bonus + min(v.confidence, 2.0)
+        scored.append((rank, {
+            "agent": v.agent,
+            "dir": v.verdict.value[0],          # L / S
+            "conf": round(float(v.confidence), 2),
+            "fam": _AGENT_FAMILY.get(v.agent, v.family or "other"),
+            "note": v.note[:80],
+        }))
+    scored.sort(key=lambda x: x[0], reverse=True)
+    return [d for _, d in scored[:limit]]
+
+
+def _build_meta_payload(
+    votes: list[Vote], regime: str, score: float, combo: str, action_label: str,
+) -> dict:
+    """Compact structured summary (< 500 tokens) for the meta-analyst."""
+    fam_dirs = {f: _family_dominant(votes, f) for f in _FAMILIES}
+    return {
+        "regime": regime,
+        "rule_verdict": action_label,
+        "score": round(float(score), 3),          # signed conviction, -1..1
+        "family_directions": fam_dirs,            # L/S/N per capped family
+        "combo": combo,                           # ma+break+sqz+mosc+weekly
+        "n_long": sum(1 for v in votes if v.verdict == Verdict.LONG),
+        "n_short": sum(1 for v in votes if v.verdict == Verdict.SHORT),
+        "key_notes": _distill_notes(
+            votes, Verdict.LONG if score >= 0 else Verdict.SHORT
+        ),
+    }
+
+
+def _parse_meta_response(text: str) -> tuple[float, float, str]:
+    """Parse + clamp the model's JSON. Any malformation → neutral."""
+    try:
+        start = text.index("{")
+        end = text.rindex("}") + 1
+        data = json.loads(text[start:end])
+        coherence = float(data.get("coherence_score", 0.5))
+        adjustment = float(data.get("confidence_adjustment", 0.0))
+        note = str(data.get("risk_note", "") or "")
+        coherence = max(0.0, min(1.0, coherence))
+        adjustment = max(-0.2, min(0.2, adjustment))
+        return coherence, adjustment, note[:160]
+    except Exception:
+        return _META_NEUTRAL
+
+
+def _meta_analyst(
+    votes: list[Vote], regime: str, score: float, combo: str, action_label: str,
+) -> tuple[float, float, str]:
+    """Advisory LLM coherence check. Returns (coherence_score, confidence_adjustment, risk_note).
+
+    Never raises and never modifies the rule-based verdict. Degrades to
+    (0.5, 0.0, "") if disabled, un-keyed, or the call fails/times out.
+    """
+    if not settings.meta_analyst_enabled or not settings.anthropic_api_key:
+        return _META_NEUTRAL
+
+    # WAIT/AVOID cards carry no tradeable thesis to audit — skip the spend.
+    if action_label in ("WAIT", "AVOID"):
+        return _META_NEUTRAL
+
+    key = _meta_cache_key(combo, regime, score, action_label)
+    cached = _META_CACHE.get(key)
+    now = time.time()
+    if cached is not None and now - cached[0] < _META_CACHE_TTL_S:
+        return cached[1]
+
+    try:
+        import anthropic
+        client = anthropic.Anthropic(
+            api_key=settings.anthropic_api_key,
+            timeout=settings.meta_analyst_timeout_s,
+            max_retries=0,   # one shot — we have a 2s budget, not time to retry
+        )
+        payload = _build_meta_payload(votes, regime, score, combo, action_label)
+        resp = client.messages.create(
+            model=settings.meta_analyst_model,
+            max_tokens=160,
+            system=_META_SYSTEM,
+            messages=[{"role": "user", "content": json.dumps(payload, default=str)}],
+        )
+        text = "".join(b.text for b in resp.content if hasattr(b, "text"))
+        result = _parse_meta_response(text)
+    except Exception:
+        result = _META_NEUTRAL
+
+    # Cache even neutral results so a transient failure doesn't hammer the API.
+    _META_CACHE[key] = (now, result)
+    return result
+
+
 def _classify_action(
     verdict: Verdict, score: float, regime: str, combo: str,
     n_eff: float, inflation_gap: float, adx: float | None,
@@ -360,6 +511,10 @@ class ActionCard:
     combo: str = "NNNNN"             # family dominant directions: ma+break+squeeze+mosc+weekly
     trade_style: str = "NONE"        # MOMENTUM | SWING | BREAKOUT | MEAN_REVERT | MIXED | NONE
     action_label: str = "WAIT"       # PRIME_LONG | BREAKOUT_LONG | STANDARD_LONG | WATCH | AVOID | WAIT
+    # ── LLM meta-analyst (advisory only; does NOT feed score or action_label) ──
+    meta_coherence: float = 0.5      # 0..1 — do the signals tell one story? 0.5 = unknown/neutral
+    meta_adjustment: float = 0.0     # -0.2..+0.2 — suggested up/down-weight of action_label conviction
+    meta_note: str = ""              # one-sentence risk the rule-based system may have missed
     votes: List[Vote] = field(default_factory=list)
     agreed: List[str] = field(default_factory=list)
     dissented: List[str] = field(default_factory=list)
@@ -614,6 +769,13 @@ def build_action_card(symbol: str, df: pd.DataFrame) -> ActionCard:
     if high_conviction:
         notes = "⚡ HIGH CONVICTION — ≥75% of actionable indicators agree."
 
+    # Advisory LLM coherence pass. Runs only when meta_analyst_enabled + key set;
+    # otherwise returns neutral instantly. Output is carried in separate fields and
+    # deliberately does NOT modify verdict, score, or action_label above.
+    meta_coherence, meta_adjustment, meta_note = _meta_analyst(
+        votes, ticker_regime, score, combo_str, action_label
+    )
+
     return ActionCard(
         symbol=symbol.upper(),
         verdict=verdict,
@@ -644,6 +806,9 @@ def build_action_card(symbol: str, df: pd.DataFrame) -> ActionCard:
         combo=combo_str,
         trade_style=trade_style,
         action_label=action_label,
+        meta_coherence=meta_coherence,
+        meta_adjustment=meta_adjustment,
+        meta_note=meta_note,
         votes=votes,
         agreed=agreed,
         dissented=dissented,

@@ -21,6 +21,10 @@ class Settings(BaseSettings):
     # Anthropic
     anthropic_api_key: str = ""
     anthropic_model: str = "claude-opus-4-6"
+    # Meta-analyst: lightweight LLM coherence check layered on the rule-based card.
+    meta_analyst_model: str = "claude-haiku-4-5"
+    meta_analyst_enabled: bool = False   # opt-in; screener loop leaves this off
+    meta_analyst_timeout_s: float = 2.0  # hard wall — degrade to neutral past this
 
     # SMTP
     smtp_host: str = ""
