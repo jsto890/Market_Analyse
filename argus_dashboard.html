@@ -928,7 +928,13 @@ async function loadCard() {
       <div class="k">Stop anchor</div>
       <div class="v">${stopAnchorHtml(card.stop_anchor)}</div>
       <div class="k">Regime</div>
-      <div class="v">${regimeChip(card.ticker_regime, card.high_vol_regime)}${card.combo ? ` <span style="color:var(--muted);font-size:10px;margin-left:6px">combo: ${card.combo}</span>` : ''}</div>
+      <div class="v">${regimeChip(card.ticker_regime, card.high_vol_regime)}${card.combo ? (() => {
+        const daily = card.combo.slice(0,4);
+        const wkDir = card.combo[4] || 'N';
+        const wkLabel = wkDir === 'L' ? 'wk↑' : wkDir === 'S' ? 'wk↓' : 'wk—';
+        const wkClr = wkDir === 'L' ? 'var(--green)' : wkDir === 'S' ? 'var(--red)' : 'var(--muted)';
+        return ` <span style="color:var(--muted);font-size:10px;margin-left:6px">combo: ${daily}</span> <span style="color:${wkClr};font-size:10px;margin-left:4px">${wkLabel}</span>`;
+      })() : ''}</div>
       <div class="k">Family breakdown</div>
       <div class="v"><div class="fam-bars" id="family-bars"></div></div>
       <div class="k">Momentum</div>

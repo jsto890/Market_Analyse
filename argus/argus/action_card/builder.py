@@ -357,7 +357,7 @@ class ActionCard:
     ticker_regime: str = "neutral"   # gap_down_continuation | trending | ranging | neutral
     n_eff: float = 0.0               # inverse Herfindahl over family weight shares
     high_vol_regime: bool = False    # 50d realized vol > 252d realized vol
-    combo: str = "NNNN"              # family dominant directions: ma+break+squeeze+mosc
+    combo: str = "NNNNN"             # family dominant directions: ma+break+squeeze+mosc+weekly
     trade_style: str = "NONE"        # MOMENTUM | SWING | BREAKOUT | MEAN_REVERT | MIXED | NONE
     action_label: str = "WAIT"       # PRIME_LONG | BREAKOUT_LONG | STANDARD_LONG | WATCH | AVOID | WAIT
     votes: List[Vote] = field(default_factory=list)
