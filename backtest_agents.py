@@ -175,19 +175,6 @@ def _fast_score(df_slice: pd.DataFrame) -> dict:
     }
 
 
-def _quality_tier(verdict: str, score: float, regime: str, combo: str,
-                  n_eff: float, inflation_gap: float, adx=None) -> str:
-    """Map to backtest tier using the same logic as _classify_action."""
-    v_enum = Verdict.LONG if verdict == "LONG" else (
-             Verdict.SHORT if verdict == "SHORT" else Verdict.WAIT)
-    _, label = _classify_action(v_enum, score, regime, combo, n_eff, inflation_gap, adx)
-    if label in ("PRIME_LONG", "BREAKOUT_LONG", "STANDARD_LONG"):
-        return "BULLISH_SETUP"
-    if label == "AVOID":
-        return "AVOID"
-    if label == "WATCH":
-        return "WATCH"
-    return "WAIT"
 
 
 def _atr_exit(highs: np.ndarray, lows: np.ndarray, idx: int,
@@ -283,7 +270,13 @@ def backtest_ticker(meta: dict) -> list[dict]:
             inflation_gap = sig["inflation_gap"]
             combo         = sig["combo"]
 
-            tier  = _quality_tier(verdict, score, regime, combo, n_eff, inflation_gap)
+            _, action_label = _classify_action(
+                Verdict.LONG if verdict == "LONG" else (Verdict.SHORT if verdict == "SHORT" else Verdict.WAIT),
+                score, regime, combo, n_eff, inflation_gap, None,
+            )
+            tier = "BULLISH_SETUP" if action_label in ("PRIME_LONG","BREAKOUT_LONG","STANDARD_LONG") else (
+                   "AVOID" if action_label == "AVOID" else
+                   "WAIT"  if action_label == "WAIT" else "WATCH")
             onset = prev_verdict != verdict and verdict in ("LONG", "SHORT")
             c0    = closes[idx]
             atr   = float(atrs[idx]) if not np.isnan(atrs[idx]) else 0.0
@@ -315,6 +308,7 @@ def backtest_ticker(meta: dict) -> list[dict]:
                 "inflation_gap":  inflation_gap,
                 "agreement_pct":  sig["agreement_pct"],
                 "tier":           tier,
+                "action_label":   action_label,
                 "onset":          onset,
                 "actual_rr":      actual_rr,
                 "size":           size,
@@ -562,6 +556,18 @@ def main() -> None:
     print(f"    ~{trades_per_ticker_yr:.0f} resolved trades/yr")
     print(f"    Fixed sizing:   {r_per_ticker_yr_fixed:+.1f}R/yr")
     print(f"    Dynamic sizing: {r_per_ticker_yr_dynamic:+.1f}R/yr")
+
+    # ── action tier breakdown ────────────────────────────────────────────────
+    print(f"\n{'═'*70}")
+    print("ACTION TIER BREAKDOWN (BULLISH_SETUP sub-tiers)")
+    print(f"{'═'*70}")
+    print(f"  {'Tier':<20} {'ATR WR':>8} {'Expect':>8} {'n':>6}")
+    print("  " + "─" * 44)
+    for lbl in ["PRIME_LONG", "STANDARD_LONG"]:
+        sub = df[df["action_label"] == lbl]
+        wr, exp, n = _outcome_stats(sub)
+        if n >= 5:
+            print(f"  {lbl:<20} {_pct(wr):>8} {_exp(exp):>8} {n:>6}")
 
     # ── dynamic score threshold: BULLISH only ────────────────────────────────
     print(f"\n{'═'*70}")

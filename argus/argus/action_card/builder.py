@@ -455,8 +455,7 @@ def _classify_action(
     """Return (trade_style, action_label).
 
     action_label tiers:
-      PRIME_LONG     — highest-expectancy setup (dip-in-uptrend, neutral/ranging regime)
-      BREAKOUT_LONG  — squeeze breakout in trending regime
+      PRIME_LONG     — highest-expectancy setup (STRONG_COMBO, neutral/ranging/trending_late)
       STANDARD_LONG  — solid BULLISH_SETUP not meeting PRIME criteria
       WATCH          — long signal but weak/extended setup
       AVOID          — short signal or gap-down continuation
@@ -509,13 +508,6 @@ def _classify_action(
         and 2.0 <= n_eff <= 3.0
         and regime in ("neutral", "ranging", "trending_late")
     )
-    is_breakout = (
-        trade_style == "BREAKOUT"
-        and adj >= 0.35
-        and n_eff > 1.4
-        and inflation_gap < 0.20
-        and regime in _trend_regimes
-    )
     is_standard = (
         adj >= 0.30
         and n_eff > 1.4
@@ -526,8 +518,6 @@ def _classify_action(
 
     if is_prime:
         return trade_style, "PRIME_LONG"
-    if is_breakout:
-        return trade_style, "BREAKOUT_LONG"
     if is_standard:
         return trade_style, "STANDARD_LONG"
     return trade_style, "WATCH"
