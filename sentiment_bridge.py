@@ -141,6 +141,7 @@ def _analyse_ticker(row: pd.Series) -> Optional[dict]:
         "risk_reward":       round(card.risk_reward, 2),
         "is_extended":       card.is_extended,
         "entry_quality":     card.entry_quality,
+        "stop_anchor":       card.stop_anchor,
         "sentiment_score":   round(sentiment_score, 3),
         "tech_score":        round(tech_score, 3),
         "combined_score":    round(combined, 3),
@@ -165,25 +166,92 @@ def _action_emoji(r: dict) -> str:
     return "—"
 
 
-def _write_markdown(results: list[dict], out_path: Path, min_quality: float) -> None:
+def _format_trust(accounts_str: str, trust_lookup: dict) -> str:
+    """Top accounts with hit rate + n inline. Suppresses display when n < 5."""
+    parts = []
+    for handle in (accounts_str or "").split(";")[:4]:
+        handle = handle.strip()
+        if not handle:
+            continue
+        info = trust_lookup.get(handle)
+        if info and info["n"] >= 5:
+            parts.append(f"{handle} {int(info['hit_rate_1d'] * 100)}%({info['n']})")
+        elif info and info["n"] > 0:
+            parts.append(f"{handle} ⟨n={info['n']}⟩")
+        else:
+            parts.append(handle)
+    return " · ".join(parts) if parts else (accounts_str or "")[:60]
+
+
+def _write_markdown(
+    results: list[dict],
+    out_path: Path,
+    min_quality: float,
+    trust_lookup: dict | None = None,
+    prev_sections: dict | None = None,
+    persistence_days: dict | None = None,
+) -> None:
+    trust_lookup = trust_lookup or {}
+    prev_sections = prev_sections or {}
+    persistence_days = persistence_days or {}
+
     ts = datetime.now().strftime("%Y-%m-%d %H:%M")
     extra_count = sum(1 for r in results if r.get("extra"))
     extra_note = f" | `[T]` = {extra_count} force-included (pure technical, no sentiment data)" if extra_count else ""
     lines = [
-        f"# Sentiment × Technical Bridge Report",
+        "# Sentiment × Technical Bridge Report",
         f"*Generated {ts} | min_quality ≥ {min_quality} | {len(results)} tickers analysed{extra_note}*",
         "",
         "Scoring: **40% sentiment** (quality × setup bias) + **60% technical** (Argus 52-agent ensemble)",
         "",
     ]
 
-    # Group by alignment
+    # ── Summary header ────────────────────────────────────────────────────────
+    aligned_all = [r for r in results if r["alignment"] == "ALIGNED"]
+    aligned_hc  = [r for r in aligned_all if r["high_conviction"]]
+    short_hc    = [r for r in results if r["argus_verdict"] == "SHORT" and r["high_conviction"]]
+    extended_warn = [r for r in aligned_all if r.get("entry_quality") == "extended"]
+    new_today   = [r for r in aligned_all if r["ticker"].upper() not in prev_sections]
+    changed     = [
+        (r["ticker"], prev_sections[r["ticker"].upper()], r["alignment"])
+        for r in results
+        if r["ticker"].upper() in prev_sections
+        and prev_sections[r["ticker"].upper()] != r["alignment"]
+    ]
+
+    # Catalyst concentration across top HC picks
+    from collections import Counter as _Counter
+    cat_counts: _Counter = _Counter()
+    for r in aligned_hc[:10]:
+        for cat in (r["catalysts"] or "").split(";"):
+            if cat.strip() and cat.strip() != "nan":
+                cat_counts[cat.strip()] += 1
+    top_cat, top_cat_n = cat_counts.most_common(1)[0] if cat_counts else ("", 0)
+
+    short_hc_str = f" · **{len(short_hc)} HC short**" if short_hc else ""
+    ext_str = f" · {len(extended_warn)} extended ⚠" if extended_warn else ""
+    lines += [
+        "---",
+        f"**⚡ {len(aligned_hc)} HC longs{short_hc_str} · {len(aligned_all)} total aligned{ext_str}**",
+        "",
+    ]
+    if new_today:
+        lines.append(f"🆕 **New today:** {' · '.join(r['ticker'] for r in new_today[:8])}")
+    for ticker, prev, curr in changed[:5]:
+        _sec = {"ALIGNED": "✅ Aligned", "DIVERGING": "⚠ Diverging", "CONTRARIAN": "🔄 Contrarian",
+                "TECH_WAIT": "⏳ Wait", "NEUTRAL": "— Neutral"}
+        lines.append(f"🔀 **{ticker}** {_sec.get(prev, prev)} → {_sec.get(curr, curr)}")
+    if top_cat_n >= 5:
+        lines.append(f"⚠ **Concentration:** {top_cat_n}/{min(len(aligned_hc), 10)} HC picks share **{top_cat}** catalyst")
+    lines += ["---", ""]
+
+    # ── Group tables ──────────────────────────────────────────────────────────
     groups = {
-        "ALIGNED":     ("Aligned — Sentiment + Technicals Both Bullish", "⚡✅"),
-        "TECH_WAIT":   ("Technical Hold — Sentiment Positive, Argus Waiting", "⏳"),
-        "DIVERGING":   ("Diverging — Sentiment Bullish, Argus Bearish", "⚠️"),
-        "CONTRARIAN":  ("Contrarian — Sentiment Bearish, Argus Bullish", "🔄"),
-        "NEUTRAL":     ("Neutral / Mixed", "—"),
+        "ALIGNED":    ("Aligned — Sentiment + Technicals Both Bullish", "⚡✅"),
+        "TECH_WAIT":  ("Technical Hold — Sentiment Positive, Argus Waiting", "⏳"),
+        "DIVERGING":  ("Diverging — Sentiment Bullish, Argus Bearish", "⚠️"),
+        "CONTRARIAN": ("Contrarian — Sentiment Bearish, Argus Bullish", "🔄"),
+        "NEUTRAL":    ("Neutral / Mixed", "—"),
     }
 
     for key, (title, icon) in groups.items():
@@ -192,34 +260,40 @@ def _write_markdown(results: list[dict], out_path: Path, min_quality: float) -> 
             continue
         lines += [f"## {icon} {title}", ""]
         lines += [
-            "| Ticker | Setup | Quality | Argus | Score | HiCon | Agreement | Entry | Stop | Target | R:R | Catalysts |",
-            "|--------|-------|---------|-------|-------|-------|-----------|-------|------|--------|-----|-----------|",
+            "| Ticker | Setup | Quality | Argus | Score | Entry | Agreement | Entry $ | Stop | Target | Catalysts |",
+            "|--------|-------|---------|-------|-------|-------|-----------|---------|------|--------|-----------|",
         ]
         for r in subset:
-            hc = "⚡" if r["high_conviction"] else ""
+            hc  = " ⚡" if r["high_conviction"] else ""
             tag = " `[T]`" if r.get("extra") else ""
+            eq  = "⚠ ext" if r.get("entry_quality") == "extended" else "clean"
             lines.append(
                 f"| **{r['ticker']}**{tag} | {r['setup_label']} | {r['quality_score']} "
-                f"| {r['argus_verdict']} {hc} | {r['combined_score']:+.3f} "
-                f"| {'Yes' if r['high_conviction'] else 'No'} | {r['agreement_pct']}% "
+                f"| {r['argus_verdict']}{hc} | {r['combined_score']:+.3f} "
+                f"| {eq} | {r['agreement_pct']}% "
                 f"| {r['entry']:.2f} | {r['stop']:.2f} | {r['target']:.2f} "
-                f"| {r['risk_reward']:.1f}x | {r['catalysts'][:40]} |"
+                f"| {(r['catalysts'] or '')[:40]} |"
             )
         lines.append("")
 
-    # Top picks detail
+    # ── Top picks detail ──────────────────────────────────────────────────────
     top = [r for r in results if r["alignment"] == "ALIGNED"][:5]
     if top:
         lines += ["## Top Picks — Detail", ""]
         for r in top:
+            ticker_up = r["ticker"].upper()
+            persist = persistence_days.get(ticker_up, 0)
+            persist_str = f" | **{persist}d** in Aligned" if persist > 1 else ""
+            anchor = r.get("stop_anchor") or "ATR"
+            trust_str = _format_trust(r.get("top_accounts", ""), trust_lookup)
             lines += [
                 f"### {r['ticker']}  `{_action_emoji(r)}`",
-                f"- **Setup:** {r['setup_label']} | **Quality:** {r['quality_score']}/15 | **Source score:** {r['source_score']}",
-                f"- **Sentiment accounts:** {r['accounts']} ({r['mentions']} mentions) — {r['top_accounts'][:60]}",
+                f"- **Setup:** {r['setup_label']} | **Quality:** {r['quality_score']}/15{persist_str} | **Source score:** {r['source_score']}",
+                f"- **Accounts:** {r['accounts']} ({r['mentions']} mentions) — {trust_str}",
                 f"- **Catalysts:** {r['catalysts']}",
-                f"- **Price:** 1d {r['ret_1d']:+.1f}%  5d {r['ret_5d']:+.1f}%  20d {r['ret_20d']:+.1f}%  | Entry quality: {r['entry_quality']}{' ⚠️ extended' if r['is_extended'] else ''}",
+                f"- **Price:** 1d {r['ret_1d']:+.1f}%  5d {r['ret_5d']:+.1f}%  20d {r['ret_20d']:+.1f}%  | Entry: {r['entry_quality']}{' ⚠️' if r['is_extended'] else ''}",
                 f"- **Argus:** {r['argus_verdict']} | Score {r['argus_score']:+.3f} | Agreement {r['agreement_pct']}% | Votes L:{r['long_votes']} S:{r['short_votes']} W:{r['wait_votes']}",
-                f"- **Trade:** Entry {r['entry']:.2f}  Stop {r['stop']:.2f}  Target {r['target']:.2f}  R:R {r['risk_reward']:.1f}x",
+                f"- **Trade:** Entry {r['entry']:.2f}  Stop {r['stop']:.2f} *({anchor})*  Target {r['target']:.2f}  R:R {r['risk_reward']:.1f}x",
                 f"- **Combined score:** {r['combined_score']:+.3f}",
                 "",
             ]
@@ -324,13 +398,59 @@ def main() -> None:
     # ── sort by combined score descending ─────────────────────────────────────
     results.sort(key=lambda r: r["combined_score"], reverse=True)
 
+    # ── load account trust data ───────────────────────────────────────────────
+    trust_lookup: dict[str, dict] = {}
+    trust_path = Path(os.environ.get("MARKET_REVIEW_ROOT", "/Users/josephstorey/Market_Review")) / "reports" / "account_backtest.csv"
+    if trust_path.exists():
+        try:
+            trust_df = pd.read_csv(trust_path)
+            for _, trow in trust_df.iterrows():
+                trust_lookup[trow["account"]] = {
+                    "hit_rate_1d": float(trow.get("hit_rate_1d") or 0),
+                    "n": int(float(trow.get("complete_1d_count") or 0)),
+                }
+        except Exception as exc:
+            print(f"  [warn] Could not load trust data: {exc}", file=sys.stderr)
+
+    # ── load previous results for delta + persistence ─────────────────────────
+    prev_sections: dict[str, str] = {}  # ticker_upper -> alignment last run
+    persistence_days: dict[str, int] = {}  # ticker_upper -> consecutive days in current alignment
+
+    latest_csv = out_dir / "bridge_latest.csv"
+    if latest_csv.exists():
+        try:
+            prev_df = pd.read_csv(latest_csv)
+            prev_sections = {str(t).upper(): str(a) for t, a in zip(prev_df["ticker"], prev_df["alignment"])}
+        except Exception:
+            pass
+
+    # Count consecutive days in same alignment from dated reports (last 7)
+    dated_csvs = sorted(out_dir.glob("bridge_????????_????.csv"), reverse=True)[:7]
+    for r in results:
+        ticker_up = r["ticker"].upper()
+        current_alignment = r["alignment"]
+        count = 0
+        for dated_csv in dated_csvs:
+            try:
+                hist_df = pd.read_csv(dated_csv)
+                match = hist_df[hist_df["ticker"].str.upper() == ticker_up]
+                if not match.empty and match.iloc[0]["alignment"] == current_alignment:
+                    count += 1
+                else:
+                    break
+            except Exception:
+                break
+        persistence_days[ticker_up] = count
+
     # ── write outputs ─────────────────────────────────────────────────────────
     ts_tag = datetime.now().strftime("%Y%m%d_%H%M")
-    _write_markdown(results, out_dir / f"bridge_{ts_tag}.md", args.min_quality)
+    _write_markdown(results, out_dir / f"bridge_{ts_tag}.md", args.min_quality,
+                    trust_lookup, prev_sections, persistence_days)
     _write_csv(results,      out_dir / f"bridge_{ts_tag}.csv")
 
     # also overwrite a stable "latest" copy
-    _write_markdown(results, out_dir / "bridge_latest.md", args.min_quality)
+    _write_markdown(results, out_dir / "bridge_latest.md", args.min_quality,
+                    trust_lookup, prev_sections, persistence_days)
     _write_csv(results,      out_dir / "bridge_latest.csv")
 
     # ── summary ───────────────────────────────────────────────────────────────

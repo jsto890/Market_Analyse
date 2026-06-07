@@ -87,6 +87,7 @@ class ActionCard:
     ret_20d: float = 0.0
     is_extended: bool = False
     entry_quality: str = "clean"
+    stop_anchor: str = ""
     votes: List[Vote] = field(default_factory=list)
     agreed: List[str] = field(default_factory=list)
     dissented: List[str] = field(default_factory=list)
@@ -102,9 +103,9 @@ class ActionCard:
         return d
 
 
-def _find_level_for_stop(df: pd.DataFrame, last: float, atr: float, direction: str) -> float | None:
-    """Nearest technical level to anchor a stop. Returns None if no clean level exists."""
-    candidates: list[float] = []
+def _find_level_for_stop(df: pd.DataFrame, last: float, atr: float, direction: str) -> tuple[float, str] | None:
+    """Nearest technical level to anchor a stop. Returns (level, name) or None."""
+    candidates: list[tuple[float, str]] = []
 
     def _col(name: str) -> float | None:
         if name not in df.columns:
@@ -116,37 +117,37 @@ def _find_level_for_stop(df: pd.DataFrame, last: float, atr: float, direction: s
         if len(df) >= 15:
             swing_lo = float(df["low"].iloc[-15:-1].min())
             if swing_lo < last:
-                candidates.append(swing_lo)
+                candidates.append((swing_lo, "swing_low"))
         for col in ("ema_50", "ema_200", "sma_50", "sma_200"):
             v = _col(col)
             if v is not None and v < last:
-                candidates.append(v)
+                candidates.append((v, col))
         st, st_dir = _col("supertrend"), _col("supertrend_dir")
         if st is not None and st_dir is not None and st_dir > 0 and st < last:
-            candidates.append(st)
+            candidates.append((st, "supertrend"))
         psar = _col("psar")
         if psar is not None and psar < last:
-            candidates.append(psar)
-        valid = [c for c in candidates if c < last - 0.3 * atr]
-        return max(valid) if valid else None
+            candidates.append((psar, "psar"))
+        valid = [(c, n) for c, n in candidates if c < last - 0.3 * atr]
+        return max(valid, key=lambda x: x[0]) if valid else None
 
     else:  # short
         if len(df) >= 15:
             swing_hi = float(df["high"].iloc[-15:-1].max())
             if swing_hi > last:
-                candidates.append(swing_hi)
+                candidates.append((swing_hi, "swing_high"))
         for col in ("ema_50", "ema_200", "sma_50", "sma_200"):
             v = _col(col)
             if v is not None and v > last:
-                candidates.append(v)
+                candidates.append((v, col))
         st, st_dir = _col("supertrend"), _col("supertrend_dir")
         if st is not None and st_dir is not None and st_dir < 0 and st > last:
-            candidates.append(st)
+            candidates.append((st, "supertrend"))
         psar = _col("psar")
         if psar is not None and psar > last:
-            candidates.append(psar)
-        valid = [c for c in candidates if c > last + 0.3 * atr]
-        return min(valid) if valid else None
+            candidates.append((psar, "psar"))
+        valid = [(c, n) for c, n in candidates if c > last + 0.3 * atr]
+        return min(valid, key=lambda x: x[0]) if valid else None
 
 
 def _find_level_for_target(df: pd.DataFrame, last: float, risk: float, direction: str) -> float | None:
@@ -194,7 +195,7 @@ def _entry_stop_target(
     is_extended: bool = False,
     agreement: float = 0.5,
     score: float = 0.0,
-) -> tuple[float, float, float, float]:
+) -> tuple[float, float, float, float, str]:
     """Adaptive entry/stop/target anchored to technical levels, scaled by conviction."""
     last = float(df["close"].iloc[-1])
     atr = float(df["atr_14"].iloc[-1]) if "atr_14" in df.columns else last * 0.015
@@ -204,13 +205,21 @@ def _entry_stop_target(
 
     if verdict == Verdict.LONG:
         entry = last
-        tech_stop = _find_level_for_stop(df, last, atr, "long")
-        if tech_stop is not None and agreement >= 0.75:
-            stop = round(tech_stop * 0.998, 2)
-        elif tech_stop is not None and agreement >= 0.60:
-            stop = round(min(tech_stop - 0.2 * atr, last - base_mult * atr), 2)
+        result = _find_level_for_stop(df, last, atr, "long")
+        if result is not None:
+            tech_stop, anchor = result
+            if agreement >= 0.75:
+                stop = round(tech_stop * 0.998, 2)
+                stop_anchor = anchor
+            elif agreement >= 0.60:
+                stop = round(min(tech_stop - 0.2 * atr, last - base_mult * atr), 2)
+                stop_anchor = anchor + "-buf"
+            else:
+                stop = round(last - base_mult * atr, 2)
+                stop_anchor = "ATR"
         else:
             stop = round(last - base_mult * atr, 2)
+            stop_anchor = "ATR"
         risk = last - stop
         rr_mult = 2.0 + min(abs(score), 1.0)
         tech_target = _find_level_for_target(df, last, risk, "long")
@@ -218,23 +227,31 @@ def _entry_stop_target(
 
     elif verdict == Verdict.SHORT:
         entry = last
-        tech_stop = _find_level_for_stop(df, last, atr, "short")
-        if tech_stop is not None and agreement >= 0.75:
-            stop = round(tech_stop * 1.002, 2)
-        elif tech_stop is not None and agreement >= 0.60:
-            stop = round(max(tech_stop + 0.2 * atr, last + base_mult * atr), 2)
+        result = _find_level_for_stop(df, last, atr, "short")
+        if result is not None:
+            tech_stop, anchor = result
+            if agreement >= 0.75:
+                stop = round(tech_stop * 1.002, 2)
+                stop_anchor = anchor
+            elif agreement >= 0.60:
+                stop = round(max(tech_stop + 0.2 * atr, last + base_mult * atr), 2)
+                stop_anchor = anchor + "-buf"
+            else:
+                stop = round(last + base_mult * atr, 2)
+                stop_anchor = "ATR"
         else:
             stop = round(last + base_mult * atr, 2)
+            stop_anchor = "ATR"
         risk = stop - last
         rr_mult = 2.0 + min(abs(score), 1.0)
         tech_target = _find_level_for_target(df, last, risk, "short")
         target = round(tech_target if tech_target is not None else last - rr_mult * risk, 2)
 
     else:
-        return last, last, last, 0.0
+        return last, last, last, 0.0, ""
 
     rr = abs(target - entry) / max(abs(entry - stop), 1e-9)
-    return float(entry), float(stop), float(target), float(rr)
+    return float(entry), float(stop), float(target), float(rr), stop_anchor
 
 
 def build_action_card(symbol: str, df: pd.DataFrame) -> ActionCard:
@@ -269,7 +286,7 @@ def build_action_card(symbol: str, df: pd.DataFrame) -> ActionCard:
             verdict = Verdict.WAIT
         score = float(net)
 
-    entry, stop, target, rr = _entry_stop_target(df_ind, verdict, is_extended, agreement, score)
+    entry, stop, target, rr, stop_anchor = _entry_stop_target(df_ind, verdict, is_extended, agreement, score)
     high_conviction = agreement >= 0.75 and verdict != Verdict.WAIT
 
     agreed = [v.agent for v in votes if v.verdict == verdict and verdict != Verdict.WAIT]
@@ -298,6 +315,7 @@ def build_action_card(symbol: str, df: pd.DataFrame) -> ActionCard:
         ret_20d=ret_20d,
         is_extended=is_extended,
         entry_quality="extended" if is_extended else "clean",
+        stop_anchor=stop_anchor,
         votes=votes,
         agreed=agreed,
         dissented=dissented,
