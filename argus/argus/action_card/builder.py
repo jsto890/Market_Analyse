@@ -96,8 +96,9 @@ _REGIME_FAMILY_MULT: dict[str, dict[str, float]] = {
 # Combo string: ma_trend + breakout + squeeze + momentum_osc direction (L/S/N).
 # LNNL/LLNL: oscillator confirms LONG while trend is already up = "entering extended".
 _WEAK_COMBOS: frozenset[str] = frozenset({"LNNL", "LLNL", "LLLL"})
-# LSNS/LNLL/LSNL: highest expectancy combos — "dip in uptrend" pattern.
-_STRONG_COMBOS: frozenset[str] = frozenset({"LSNS", "LNLL", "LSNL"})
+# LSNS/LNLL/LSNL: dip-in-uptrend. LLNS/LLLS: breakout+trend with oscillator counter-pressure.
+# All show 50-53% WR in neutral+ranging regime (n>=10).
+_STRONG_COMBOS: frozenset[str] = frozenset({"LSNS", "LNLL", "LSNL", "LLNS", "LLLS"})
 
 
 def _detect_ticker_regime(df: pd.DataFrame) -> str:
@@ -431,7 +432,7 @@ def _classify_action(
     is_prime = (
         combo[:4] in _STRONG_COMBOS
         and adj >= 0.40
-        and 1.4 <= n_eff <= 2.5
+        and 2.0 <= n_eff <= 3.0
         and regime in ("neutral", "ranging")
     )
     is_breakout = (
