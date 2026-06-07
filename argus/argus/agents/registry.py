@@ -85,6 +85,13 @@ _AGENTS: List[Agent] = [
     Agent("Pocket Pivot", "volume", S.pocket_pivot),
     Agent("Buyable Gap Up", "structure", S.buyable_gap_up),
     Agent("High Tight Flag", "structure", S.high_tight_flag),
+    # Weekly structure (6)
+    Agent("Weekly EMA Trend", "weekly_structure", S.weekly_ema_trend),
+    Agent("Weekly RSI Zone", "weekly_structure", S.weekly_rsi_zone),
+    Agent("Weekly MACD Cross", "weekly_structure", S.weekly_macd_cross),
+    Agent("Weekly Price Structure", "weekly_structure", S.weekly_price_structure),
+    Agent("Weekly OBV Trend", "weekly_structure", S.weekly_obv_trend),
+    Agent("Weekly Bollinger Position", "weekly_structure", S.weekly_bollinger_position),
 ]
 
 

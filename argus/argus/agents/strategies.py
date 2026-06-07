@@ -1259,3 +1259,151 @@ def high_tight_flag(df):
                      f"HTF: +{surge_pct:.0f}% surge, flag forming")
     return _vote("High Tight Flag", Verdict.WAIT, 0.3,
                  f"HTF surge +{surge_pct:.0f}% but flag {pullback*100:.0f}% deep")
+
+
+# ---------------- WEEKLY MULTI-TIMEFRAME ----------------
+
+_WEEKLY_CACHE: dict = {}
+
+
+def _weekly_bars(df: pd.DataFrame) -> pd.DataFrame:
+    """Resample daily OHLCV to weekly bars + weekly indicators. Cached per ticker-run."""
+    if not isinstance(df.index, pd.DatetimeIndex) or df.empty:
+        return df.iloc[0:0]
+    key = (df.index[-1], len(df))
+    cached = _WEEKLY_CACHE.get(key)
+    if cached is not None:
+        return cached
+    w = df.resample("W").agg(
+        {"open": "first", "high": "max", "low": "min", "close": "last", "volume": "sum"}
+    ).dropna()
+    if len(w) < 52:
+        _WEEKLY_CACHE[key] = w.iloc[0:0]
+        return w.iloc[0:0]
+    c = w["close"]
+    w["w_ema_10"] = c.ewm(span=10, adjust=False).mean()
+    w["w_ema_30"] = c.ewm(span=30, adjust=False).mean()
+    delta = c.diff()
+    up = delta.clip(lower=0).ewm(alpha=1 / 14, adjust=False).mean()
+    dn = (-delta.clip(upper=0)).ewm(alpha=1 / 14, adjust=False).mean()
+    w["w_rsi_14"] = 100 - 100 / (1 + up / dn.replace(0, np.nan))
+    macd = c.ewm(span=12, adjust=False).mean() - c.ewm(span=26, adjust=False).mean()
+    sig = macd.ewm(span=9, adjust=False).mean()
+    w["w_macd"] = macd
+    w["w_macd_signal"] = sig
+    w["w_macd_hist"] = macd - sig
+    w["w_obv"] = (np.sign(c.diff().fillna(0)) * w["volume"]).cumsum()
+    mid = c.rolling(20).mean()
+    sd = c.rolling(20).std()
+    w["w_bbu"] = mid + 2 * sd
+    w["w_bbl"] = mid - 2 * sd
+    if len(_WEEKLY_CACHE) > 256:
+        _WEEKLY_CACHE.clear()
+    _WEEKLY_CACHE[key] = w
+    return w
+
+
+def weekly_ema_trend(df):
+    w = _weekly_bars(df)
+    if w.empty:
+        return _vote("Weekly EMA Trend", Verdict.WAIT, 0.0, "<52 weekly bars")
+    c = _last(w["close"])
+    ema = _last(w["w_ema_10"])
+    if np.isnan(ema) or len(w) < 5:
+        return _vote("Weekly EMA Trend", Verdict.WAIT, 0.0)
+    slope = ema - float(w["w_ema_10"].iloc[-5])
+    above = c > ema
+    if above and slope > 0:
+        return _vote("Weekly EMA Trend", Verdict.LONG, 1.0, "above rising 10w EMA")
+    if not above and slope < 0:
+        return _vote("Weekly EMA Trend", Verdict.SHORT, 1.0, "below falling 10w EMA")
+    return _vote("Weekly EMA Trend", Verdict.WAIT, 0.3,
+                 "above flat EMA" if above else "below rising EMA")
+
+
+def weekly_rsi_zone(df):
+    w = _weekly_bars(df)
+    if w.empty:
+        return _vote("Weekly RSI Zone", Verdict.WAIT, 0.0, "<52 weekly bars")
+    r = _last(w["w_rsi_14"])
+    if np.isnan(r):
+        return _vote("Weekly RSI Zone", Verdict.WAIT, 0.0)
+    conf = min(1.1, 0.6 + abs(r - 50) / 30)
+    if r >= 55:
+        return _vote("Weekly RSI Zone", Verdict.LONG, conf, f"weekly RSI {r:.0f}")
+    if r <= 45:
+        return _vote("Weekly RSI Zone", Verdict.SHORT, conf, f"weekly RSI {r:.0f}")
+    return _vote("Weekly RSI Zone", Verdict.WAIT, 0.3, f"weekly RSI {r:.0f} neutral")
+
+
+def weekly_macd_cross(df):
+    w = _weekly_bars(df)
+    if w.empty:
+        return _vote("Weekly MACD Cross", Verdict.WAIT, 0.0, "<52 weekly bars")
+    macd = _last(w["w_macd"])
+    sig = _last(w["w_macd_signal"])
+    if np.isnan(macd) or np.isnan(sig) or len(w) < 2:
+        return _vote("Weekly MACD Cross", Verdict.WAIT, 0.0)
+    hist = w["w_macd_hist"]
+    h_now, h_prev = _last(hist), float(hist.iloc[-2])
+    expanding = abs(h_now) > abs(h_prev)
+    if macd > sig:
+        return _vote("Weekly MACD Cross", Verdict.LONG,
+                     1.1 if expanding and h_now > 0 else 0.8, "weekly MACD > signal")
+    if macd < sig:
+        return _vote("Weekly MACD Cross", Verdict.SHORT,
+                     1.1 if expanding and h_now < 0 else 0.8, "weekly MACD < signal")
+    return _vote("Weekly MACD Cross", Verdict.WAIT, 0.3)
+
+
+def weekly_price_structure(df):
+    w = _weekly_bars(df)
+    if w.empty:
+        return _vote("Weekly Price Structure", Verdict.WAIT, 0.0, "<52 weekly bars")
+    highs = _swing_highs(w["high"], radius=2)
+    lows = _swing_lows(w["low"], radius=2)
+    if len(highs) < 2 or len(lows) < 2:
+        return _vote("Weekly Price Structure", Verdict.WAIT, 0.2, "too few weekly swings")
+    hh = highs[-1][1] > highs[-2][1]
+    hl = lows[-1][1] > lows[-2][1]
+    if hh and hl:
+        return _vote("Weekly Price Structure", Verdict.LONG, 1.0, "weekly HH+HL")
+    if not hh and not hl:
+        return _vote("Weekly Price Structure", Verdict.SHORT, 1.0, "weekly LH+LL")
+    return _vote("Weekly Price Structure", Verdict.WAIT, 0.3, "mixed weekly structure")
+
+
+def weekly_obv_trend(df):
+    w = _weekly_bars(df)
+    if w.empty:
+        return _vote("Weekly OBV Trend", Verdict.WAIT, 0.0, "<52 weekly bars")
+    obv = w["w_obv"]
+    if len(obv) < 9 or np.isnan(_last(obv)):
+        return _vote("Weekly OBV Trend", Verdict.WAIT, 0.0)
+    now = _last(obv)
+    past = float(obv.iloc[-9])
+    span = float(obv.iloc[-9:].abs().max()) or 1.0
+    change = (now - past) / span
+    if change > 0.1:
+        return _vote("Weekly OBV Trend", Verdict.LONG, min(1.0, 0.6 + change), "weekly OBV rising")
+    if change < -0.1:
+        return _vote("Weekly OBV Trend", Verdict.SHORT, min(1.0, 0.6 + abs(change)), "weekly OBV falling")
+    return _vote("Weekly OBV Trend", Verdict.WAIT, 0.3, "flat weekly OBV")
+
+
+def weekly_bollinger_position(df):
+    w = _weekly_bars(df)
+    if w.empty:
+        return _vote("Weekly Bollinger Position", Verdict.WAIT, 0.0, "<52 weekly bars")
+    c = _last(w["close"])
+    u, lo = _last(w["w_bbu"]), _last(w["w_bbl"])
+    if any(np.isnan(x) for x in (u, lo)) or u == lo:
+        return _vote("Weekly Bollinger Position", Verdict.WAIT, 0.0)
+    pctb = (c - lo) / (u - lo)
+    if c > u:
+        return _vote("Weekly Bollinger Position", Verdict.LONG, 0.9, "above weekly upper band")
+    if c < lo:
+        return _vote("Weekly Bollinger Position", Verdict.SHORT, 0.9, "below weekly lower band")
+    if pctb > 0.5:
+        return _vote("Weekly Bollinger Position", Verdict.LONG, 0.6, "upper half of weekly bands")
+    return _vote("Weekly Bollinger Position", Verdict.SHORT, 0.6, "lower half of weekly bands")

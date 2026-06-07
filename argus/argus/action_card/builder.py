@@ -32,6 +32,10 @@ _FAMILIES: dict[str, frozenset[str]] = {
         "RSI Zone", "RSI(2) Extreme", "Stochastic", "Stochastic RSI",
         "Williams %R", "CCI", "WaveTrend", "Schaff Trend Cycle",
     }),
+    "weekly_structure": frozenset({
+        "Weekly EMA Trend", "Weekly RSI Zone", "Weekly MACD Cross",
+        "Weekly Price Structure", "Weekly OBV Trend", "Weekly Bollinger Position",
+    }),
 }
 
 _FAMILY_MAX: dict[str, float] = {
@@ -39,6 +43,7 @@ _FAMILY_MAX: dict[str, float] = {
     "breakout": 1.5,
     "squeeze": 1.0,
     "momentum_osc": 1.5,
+    "weekly_structure": 2.0,
 }
 
 _AGENT_FAMILY: dict[str, str] = {
@@ -55,28 +60,32 @@ _AGENT_FAMILY: dict[str, str] = {
 # in ranges; oscillators are reliable in ranges but misfire in strong trends.
 _REGIME_FAMILY_MULT: dict[str, dict[str, float]] = {
     "trending": {
-        "ma_trend":     1.0,   # MA crossovers valid in trend
-        "breakout":     1.2,   # breakouts have follow-through in trends
-        "squeeze":      0.7,   # squeezes ambiguous mid-trend
-        "momentum_osc": 0.3,   # oversold in a trend = continuation trap
+        "ma_trend":       1.0,   # MA crossovers valid in trend
+        "breakout":       1.2,   # breakouts have follow-through in trends
+        "squeeze":        0.7,   # squeezes ambiguous mid-trend
+        "momentum_osc":   0.3,   # oversold in a trend = continuation trap
+        "weekly_structure": 1.0, # weekly trend most reliable in trending markets
     },
     "ranging": {
-        "ma_trend":     0.4,   # MAs whipsaw in chop
-        "breakout":     0.4,   # most breakouts fail without trend
-        "squeeze":      1.3,   # squeezes resolve well from ranging bases
-        "momentum_osc": 1.2,   # oscillators accurate in mean-reverting ranges
+        "ma_trend":       0.4,   # MAs whipsaw in chop
+        "breakout":       0.4,   # most breakouts fail without trend
+        "squeeze":        1.3,   # squeezes resolve well from ranging bases
+        "momentum_osc":   1.2,   # oscillators accurate in mean-reverting ranges
+        "weekly_structure": 1.1, # weekly structure frames the range boundaries
     },
     "gap_down_continuation": {
-        "ma_trend":     0.7,   # trend is down; MAs may lag
-        "breakout":     0.3,   # gap-down is breakdown, not setup
-        "squeeze":      0.5,   # ambiguous on gap-down day
-        "momentum_osc": 0.3,   # oversold ≠ bounce when price < EMA50
+        "ma_trend":       0.7,   # trend is down; MAs may lag
+        "breakout":       0.3,   # gap-down is breakdown, not setup
+        "squeeze":        0.5,   # ambiguous on gap-down day
+        "momentum_osc":   0.3,   # oversold ≠ bounce when price < EMA50
+        "weekly_structure": 0.7, # weekly lags intraday gap events
     },
     "neutral": {
-        "ma_trend":     0.9,
-        "breakout":     0.9,
-        "squeeze":      0.9,
-        "momentum_osc": 0.9,
+        "ma_trend":       0.9,
+        "breakout":       0.9,
+        "squeeze":        0.9,
+        "momentum_osc":   0.9,
+        "weekly_structure": 1.0,
     },
 }
 
