@@ -758,6 +758,59 @@ def relative_strength_vs_spy(df):
         return _vote("Relative Strength vs SPY", Verdict.WAIT, 0.0, f"err: {e}")
 
 
+_SECTOR_ETF: dict[str, str] = {
+    "Technology": "XLK",
+    "Financial Services": "XLF",
+    "Healthcare": "XLV",
+    "Consumer Cyclical": "XLY",
+    "Consumer Defensive": "XLP",
+    "Energy": "XLE",
+    "Industrials": "XLI",
+    "Basic Materials": "XLB",
+    "Real Estate": "XLRE",
+    "Utilities": "XLU",
+    "Communication Services": "XLC",
+}
+
+
+_SECTOR_CACHE: dict[str, str] = {}
+
+
+def relative_strength_vs_sector(df):
+    """Compare 20d return vs the ticker's GICS sector ETF.
+    Requires df.attrs['symbol'] to be set by build_action_card."""
+    df = _ensure(df)
+    if len(df) < 21:
+        return _vote("RS vs Sector", Verdict.WAIT, 0.0)
+    sym = (df.attrs or {}).get("symbol", "")
+    if not sym:
+        return _vote("RS vs Sector", Verdict.WAIT, 0.0, "no symbol")
+    try:
+        import yfinance as yf
+        from ..data.market import get_history
+        if sym not in _SECTOR_CACHE:
+            _SECTOR_CACHE[sym] = yf.Ticker(sym).info.get("sector", "") or ""
+        sector = _SECTOR_CACHE[sym]
+        etf = _SECTOR_ETF.get(sector)
+        if not etf:
+            return _vote("RS vs Sector", Verdict.WAIT, 0.0, f"no ETF for '{sector}'")
+        etf_df = get_history(etf, period="3mo", interval="1d")
+        if etf_df.empty or len(etf_df) < 21:
+            return _vote("RS vs Sector", Verdict.WAIT, 0.0)
+        etf_ret = float(etf_df["close"].iloc[-1] / etf_df["close"].iloc[-21] - 1)
+        my_ret = float(_last(df["ret_20"]))
+        if np.isnan(my_ret):
+            return _vote("RS vs Sector", Verdict.WAIT, 0.0)
+        diff = my_ret - etf_ret
+        if diff > 0.03:
+            return _vote("RS vs Sector", Verdict.LONG, min(1.0, diff * 10), f"+{diff:.1%} vs {etf}")
+        if diff < -0.03:
+            return _vote("RS vs Sector", Verdict.SHORT, min(1.0, abs(diff) * 10), f"{diff:.1%} vs {etf}")
+        return _vote("RS vs Sector", Verdict.WAIT, 0.2, f"{diff:+.1%} vs {etf}")
+    except Exception as e:
+        return _vote("RS vs Sector", Verdict.WAIT, 0.0, f"err: {e}")
+
+
 # ---------------- regime ----------------
 
 def vix_regime(df):

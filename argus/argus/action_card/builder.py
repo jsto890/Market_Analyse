@@ -105,6 +105,22 @@ def _loo_family_attribution(votes: list[Vote], base_score: float) -> dict[str, f
     return attrs
 
 
+def _bootstrap_ci(votes: list[Vote], n_iter: int = 1000) -> tuple[float, float]:
+    """Bootstrap 90% CI on score by resampling votes with replacement."""
+    if not votes:
+        return 0.0, 0.0
+    n = len(votes)
+    rng = np.random.default_rng(42)
+    scores = []
+    for _ in range(n_iter):
+        sample = [votes[i] for i in rng.integers(0, n, size=n)]
+        lw, sw = _capped_weights(sample)
+        tw = lw + sw
+        scores.append((lw - sw) / tw if tw > 0 else 0.0)
+    scores.sort()
+    return round(scores[int(0.05 * n_iter)], 4), round(scores[int(0.95 * n_iter)], 4)
+
+
 def _effective_n(votes: list[Vote]) -> float:
     """Inverse Herfindahl over capped family weight shares + an 'other' bucket.
     Returns 1.0 (one family dominates) → ~5-6 (fully spread)."""
@@ -168,6 +184,8 @@ class ActionCard:
     is_extended: bool = False
     entry_quality: str = "clean"
     stop_anchor: str = ""
+    score_ci_lo: float = 0.0         # bootstrap 5th-percentile score
+    score_ci_hi: float = 0.0         # bootstrap 95th-percentile score
     inflation_gap: float = 0.0       # agreement_pct/100 - weight_conviction; >0.15 = correlated inflation
     family_attribution: dict = field(default_factory=dict)  # LOO score delta per family
     family_votes: dict = field(default_factory=dict)         # per cap-family vote counts for bars
@@ -348,6 +366,8 @@ def build_action_card(symbol: str, df: pd.DataFrame) -> ActionCard:
     ret_20d = float(df["close"].pct_change(20).iloc[-1]) if len(df) >= 21 else 0.0
     is_extended = abs(ret_1d) > 0.05 or abs(ret_5d) > 0.15
 
+    df_ind.attrs['symbol'] = symbol.upper()
+
     ticker_regime = _detect_ticker_regime(df_ind)
 
     votes = run_all(df_ind)
@@ -389,6 +409,7 @@ def build_action_card(symbol: str, df: pd.DataFrame) -> ActionCard:
     weight_conviction = (1.0 + abs(score)) / 2.0
     inflation_gap = round(agreement - weight_conviction, 4)
 
+    score_ci_lo, score_ci_hi = _bootstrap_ci(votes)
     family_attribution = _loo_family_attribution(votes, score)
     family_votes_map = _family_vote_counts(votes)
     n_eff = _effective_n(votes)
@@ -432,6 +453,8 @@ def build_action_card(symbol: str, df: pd.DataFrame) -> ActionCard:
         is_extended=is_extended,
         entry_quality="extended" if is_extended else "clean",
         stop_anchor=stop_anchor,
+        score_ci_lo=score_ci_lo,
+        score_ci_hi=score_ci_hi,
         inflation_gap=inflation_gap,
         family_attribution=family_attribution,
         family_votes=family_votes_map,

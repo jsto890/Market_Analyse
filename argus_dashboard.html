@@ -784,6 +784,33 @@ function buildFamilyBars(familyVotes, verdict) {
   }).join('');
 }
 
+/* ═══════════════════════ STOP ANCHOR DESCRIPTIONS ═══════════════════════ */
+const STOP_ANCHOR_DESC = {
+  'psar':         'Parabolic SAR — trailing stop accelerates as trend extends',
+  'supertrend':   'Supertrend — volatility-adaptive band below trend direction',
+  'ema_50':       '50-day EMA — medium-term trend support',
+  'ema_200':      '200-day EMA — long-term trend support',
+  'sma_50':       '50-day SMA — medium-term support',
+  'sma_200':      '200-day SMA — long-term support',
+  'swing_low':    'Recent swing low — last significant support level',
+  'swing_high':   'Recent swing high — last significant resistance (short)',
+  'swing_low-buf':'Swing low with ATR buffer — wider protection below support',
+  'swing_high-buf':'Swing high with ATR buffer — wider protection above resistance',
+  'psar-buf':     'Parabolic SAR with ATR buffer',
+  'supertrend-buf':'Supertrend with ATR buffer',
+  'ema_50-buf':   '50-day EMA with ATR buffer',
+  'ema_200-buf':  '200-day EMA with ATR buffer',
+  'ATR':          'ATR-based flat stop — no technical level found; sized by volatility',
+};
+
+function stopAnchorHtml(anchor) {
+  if (!anchor) return '—';
+  const desc = STOP_ANCHOR_DESC[anchor];
+  return desc
+    ? `<span title="${desc}" style="cursor:help;border-bottom:1px dotted var(--muted)">${anchor}</span> <span style="color:var(--muted);font-size:10px">${desc}</span>`
+    : anchor;
+}
+
 /* ═══════════════════════ REGIME CHIP HELPER ═══════════════════════ */
 function regimeChip(regime, highVol) {
   const r = regime || 'neutral';
@@ -847,6 +874,10 @@ async function loadCard() {
       <div class="v"><span class="verdict ${card.verdict}">${card.verdict}</span></div>
       <div class="k">Score</div>
       <div class="v" id="${scoreBarId}"></div>
+      ${(card.score_ci_lo != null && card.score_ci_hi != null) ? `
+      <div class="k" style="color:var(--muted);font-size:10px">90% CI</div>
+      <div class="v" style="font-size:10px;color:var(--muted)">[${fmt(card.score_ci_lo,3)} → ${fmt(card.score_ci_hi,3)}]
+        ${Math.abs((card.score_ci_hi||0)-(card.score_ci_lo||0)) > 0.4 ? '<span style="color:var(--amber)">wide — low certainty</span>' : ''}</div>` : ''}
       <div class="k">Agreement</div>
       <div class="v">${fmt(card.agreement_pct,1)}%${card.inflation_gap > 0.15 ? ' <span style="color:var(--amber);font-size:10px">⚠ inflation +' + (card.inflation_gap*100).toFixed(0) + '%</span>' : ''}</div>
       <div class="k">Votes</div>
@@ -859,7 +890,15 @@ async function loadCard() {
       <div class="k">Entry / Stop / Target</div>
       <div class="v">${fmt(card.entry)} / <span class="neg">${fmt(card.stop)}</span> / <span class="pos">${fmt(card.target)}</span></div>
       <div class="k">Risk : Reward</div>
-      <div class="v">${fmt(card.risk_reward,2)}x</div>
+      <div class="v">${fmt(card.risk_reward,2)}x
+        ${(card.entry && card.stop && card.target && card.verdict !== 'WAIT') ? (() => {
+          const slip = card.verdict === 'LONG' ? card.entry * 1.005 : card.entry * 0.995;
+          const risk = card.verdict === 'LONG' ? slip - card.stop : card.stop - slip;
+          const rr   = risk > 0 ? Math.abs(card.target - slip) / risk : 0;
+          return ` <span style="color:var(--muted);font-size:10px">· slip 0.5%: ${fmt(slip)} entry, ${rr.toFixed(2)}x R:R</span>`;
+        })() : ''}</div>
+      <div class="k">Stop anchor</div>
+      <div class="v">${stopAnchorHtml(card.stop_anchor)}</div>
       <div class="k">Regime</div>
       <div class="v">${regimeChip(card.ticker_regime, card.high_vol_regime)}</div>
       <div class="k">Family breakdown</div>

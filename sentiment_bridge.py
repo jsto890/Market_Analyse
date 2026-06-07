@@ -166,8 +166,19 @@ def _action_emoji(r: dict) -> str:
     return "—"
 
 
+def _wilson_ci(k: int, n: int, z: float = 1.645) -> tuple[float, float]:
+    """Wilson score 90% CI for proportion k/n."""
+    if n == 0:
+        return 0.0, 1.0
+    p = k / n
+    denom = 1 + z * z / n
+    centre = (p + z * z / (2 * n)) / denom
+    margin = z * (p * (1 - p) / n + z * z / (4 * n * n)) ** 0.5 / denom
+    return max(0.0, centre - margin), min(1.0, centre + margin)
+
+
 def _format_trust(accounts_str: str, trust_lookup: dict) -> str:
-    """Top accounts with hit rate + n inline. Suppresses display when n < 5."""
+    """Top accounts with hit rate + Wilson 90% CI. Amber flag when n < 15."""
     parts = []
     for handle in (accounts_str or "").split(";")[:4]:
         handle = handle.strip()
@@ -175,12 +186,27 @@ def _format_trust(accounts_str: str, trust_lookup: dict) -> str:
             continue
         info = trust_lookup.get(handle)
         if info and info["n"] >= 5:
-            parts.append(f"{handle} {int(info['hit_rate_1d'] * 100)}%({info['n']})")
+            n = info["n"]
+            hr = info["hit_rate_1d"]
+            k = round(hr * n)
+            lo, hi = _wilson_ci(k, n)
+            ci_str = f"[{int(lo*100)}–{int(hi*100)}%]"
+            low_n_flag = " ⚠" if n < 15 else ""
+            parts.append(f"{handle} {int(hr * 100)}%{ci_str}({n}){low_n_flag}")
         elif info and info["n"] > 0:
             parts.append(f"{handle} ⟨n={info['n']}⟩")
         else:
             parts.append(handle)
     return " · ".join(parts) if parts else (accounts_str or "")[:60]
+
+
+def _get_sector(ticker: str) -> str:
+    """Best-effort yfinance sector lookup for concentration warnings."""
+    try:
+        import yfinance as yf
+        return yf.Ticker(ticker).info.get("sector", "") or ""
+    except Exception:
+        return ""
 
 
 def _write_markdown(
@@ -228,6 +254,21 @@ def _write_markdown(
                 cat_counts[cat.strip()] += 1
     top_cat, top_cat_n = cat_counts.most_common(1)[0] if cat_counts else ("", 0)
 
+    # Sector concentration across aligned picks (top 15, parallel lookup)
+    sector_warn = ""
+    aligned_sample = [r["ticker"] for r in aligned_all[:15]]
+    if aligned_sample:
+        import concurrent.futures as _cf
+        with _cf.ThreadPoolExecutor(max_workers=6) as _pool:
+            sector_map = dict(zip(aligned_sample, _pool.map(_get_sector, aligned_sample)))
+        sector_counts: _Counter = _Counter(s for s in sector_map.values() if s)
+        if sector_counts:
+            dom_sector, dom_n = sector_counts.most_common(1)[0]
+            if dom_n >= 3:
+                dom_tickers = [t for t in aligned_sample if sector_map.get(t) == dom_sector]
+                sector_warn = (f"⚠ **Sector concentration:** {dom_n}/{len(aligned_sample)} aligned picks "
+                               f"are **{dom_sector}** ({', '.join(dom_tickers[:6])})")
+
     short_hc_str = f" · **{len(short_hc)} HC short**" if short_hc else ""
     ext_str = f" · {len(extended_warn)} extended ⚠" if extended_warn else ""
     lines += [
@@ -243,6 +284,8 @@ def _write_markdown(
         lines.append(f"🔀 **{ticker}** {_sec.get(prev, prev)} → {_sec.get(curr, curr)}")
     if top_cat_n >= 5:
         lines.append(f"⚠ **Concentration:** {top_cat_n}/{min(len(aligned_hc), 10)} HC picks share **{top_cat}** catalyst")
+    if sector_warn:
+        lines.append(sector_warn)
     lines += ["---", ""]
 
     # ── Group tables ──────────────────────────────────────────────────────────

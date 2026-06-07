@@ -71,6 +71,7 @@ _AGENTS: List[Agent] = [
     Agent("S/R Test", "structure", S.support_resistance_test),
     Agent("Engulfing Pattern", "structure", S.candle_pattern_engulfing),
     Agent("Relative Strength vs SPY", "institutional", S.relative_strength_vs_spy),
+    Agent("RS vs Sector", "institutional", S.relative_strength_vs_sector),
     Agent("VIX Regime", "institutional", S.vix_regime),
     # Trend quality (3)
     Agent("Minervini Trend Template", "trend", S.minervini_trend_template),
