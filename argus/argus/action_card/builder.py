@@ -2,6 +2,7 @@
 plus entry / stop / target / risk-reward."""
 from __future__ import annotations
 
+import dataclasses
 from dataclasses import dataclass, field, asdict
 from typing import List
 import numpy as np
@@ -44,27 +45,30 @@ _AGENT_FAMILY: dict[str, str] = {
     name: fam for fam, members in _FAMILIES.items() for name in members
 }
 
-# Regime × family confidence multipliers.
-# Each family's agent confidences are scaled before _capped_weights.
-# Theory: trend-following agents (ma_trend, breakout) are reliable in trends but
-# generate whipsaws in ranges; mean-reversion oscillators are reliable in ranges
-# but generate false oversold/overbought signals in strong trends.
+# Regime × family confidence multipliers applied POST-cap.
+# Scaling per-vote confidence before the cap means boosters (>1.0) are silently
+# swallowed when a family already hits its cap, making amplification a no-op.
+# Applying the multiplier to the capped family total ensures both suppression
+# and amplification take effect consistently.
+#
+# Theory: trend agents (ma_trend, breakout) are reliable in trends but whipsaw
+# in ranges; oscillators are reliable in ranges but misfire in strong trends.
 _REGIME_FAMILY_MULT: dict[str, dict[str, float]] = {
     "trending": {
         "ma_trend":     1.0,   # MA crossovers valid in trend
-        "breakout":     1.1,   # breakouts follow through in trends
+        "breakout":     1.2,   # breakouts have follow-through in trends
         "squeeze":      0.7,   # squeezes ambiguous mid-trend
         "momentum_osc": 0.3,   # oversold in a trend = continuation trap
     },
     "ranging": {
         "ma_trend":     0.4,   # MAs whipsaw in chop
         "breakout":     0.4,   # most breakouts fail without trend
-        "squeeze":      1.2,   # squeezes resolve well from ranging bases
+        "squeeze":      1.3,   # squeezes resolve well from ranging bases
         "momentum_osc": 1.2,   # oscillators accurate in mean-reverting ranges
     },
     "gap_down_continuation": {
-        "ma_trend":     0.7,   # trend is down; MA agents may be lagging
-        "breakout":     0.3,   # gap-down is a breakdown, not a setup
+        "ma_trend":     0.7,   # trend is down; MAs may lag
+        "breakout":     0.3,   # gap-down is breakdown, not setup
         "squeeze":      0.5,   # ambiguous on gap-down day
         "momentum_osc": 0.3,   # oversold ≠ bounce when price < EMA50
     },
@@ -76,18 +80,12 @@ _REGIME_FAMILY_MULT: dict[str, dict[str, float]] = {
     },
 }
 
-
-def _apply_regime_scaling(votes: list[Vote], regime: str) -> list[Vote]:
-    """Scale agent confidences by regime × family multiplier."""
-    mults = _REGIME_FAMILY_MULT.get(regime)
-    if not mults:
-        return votes
-    out = []
-    for v in votes:
-        fam = _AGENT_FAMILY.get(v.agent)
-        m = mults.get(fam, 1.0) if fam else 1.0
-        out.append(Vote(v.agent, v.verdict, v.confidence * m, v.note, v.family))
-    return out
+# Family combos with negative expectancy in backtest — veto these to WATCH.
+# Combo string: ma_trend + breakout + squeeze + momentum_osc direction (L/S/N).
+# LNNL/LLNL: oscillator confirms LONG while trend is already up = "entering extended".
+_WEAK_COMBOS: frozenset[str] = frozenset({"LNNL", "LLNL"})
+# LSNS/LNLL/LSNL: highest expectancy combos — "dip in uptrend" pattern.
+_STRONG_COMBOS: frozenset[str] = frozenset({"LSNS", "LNLL", "LSNL"})
 
 
 def _detect_ticker_regime(df: pd.DataFrame) -> str:
@@ -115,43 +113,50 @@ def _detect_ticker_regime(df: pd.DataFrame) -> str:
     return 'neutral'
 
 
-def _capped_weights(votes: list[Vote]) -> tuple[float, float]:
-    """Confidence-weighted long/short sums with per-family caps."""
-    fam_long: dict[str, float] = {f: 0.0 for f in _FAMILIES}
+def _capped_weights(votes: list[Vote], regime: str = "neutral") -> tuple[float, float]:
+    """Confidence-weighted long/short sums with per-family caps + post-cap regime scaling.
+
+    Regime multipliers are applied AFTER the cap so that suppression and amplification
+    both take effect even when families are at their cap ceiling.
+    """
+    fam_long:  dict[str, float] = {f: 0.0 for f in _FAMILIES}
     fam_short: dict[str, float] = {f: 0.0 for f in _FAMILIES}
-    raw_long = 0.0
+    raw_long  = 0.0
     raw_short = 0.0
     for v in votes:
         fam = _AGENT_FAMILY.get(v.agent)
         if fam:
-            if v.verdict == Verdict.LONG:
-                fam_long[fam] += v.confidence
-            elif v.verdict == Verdict.SHORT:
-                fam_short[fam] += v.confidence
+            if v.verdict == Verdict.LONG:    fam_long[fam]  += v.confidence
+            elif v.verdict == Verdict.SHORT: fam_short[fam] += v.confidence
         else:
-            if v.verdict == Verdict.LONG:
-                raw_long += v.confidence
-            elif v.verdict == Verdict.SHORT:
-                raw_short += v.confidence
-    long_w = raw_long + sum(min(fam_long[f], _FAMILY_MAX[f]) for f in _FAMILIES)
-    short_w = raw_short + sum(min(fam_short[f], _FAMILY_MAX[f]) for f in _FAMILIES)
+            if v.verdict == Verdict.LONG:    raw_long  += v.confidence
+            elif v.verdict == Verdict.SHORT: raw_short += v.confidence
+    mults = _REGIME_FAMILY_MULT.get(regime, {})
+    long_w  = raw_long  + sum(
+        min(fam_long[f],  _FAMILY_MAX[f]) * mults.get(f, 1.0) for f in _FAMILIES
+    )
+    short_w = raw_short + sum(
+        min(fam_short[f], _FAMILY_MAX[f]) * mults.get(f, 1.0) for f in _FAMILIES
+    )
     return long_w, short_w
 
 
-def _loo_family_attribution(votes: list[Vote], base_score: float) -> dict[str, float]:
-    """Leave-one-family-out score delta per family."""
+def _loo_family_attribution(votes: list[Vote], base_score: float,
+                             regime: str = "neutral") -> dict[str, float]:
+    """Leave-one-family-out score delta per family (regime-aware)."""
     attrs = {}
     for fam in _FAMILIES:
         remaining = [v for v in votes if _AGENT_FAMILY.get(v.agent) != fam]
-        lw, sw = _capped_weights(remaining)
+        lw, sw = _capped_weights(remaining, regime)
         tw = lw + sw
         s_without = (lw - sw) / tw if tw > 0 else 0.0
         attrs[fam] = round(base_score - s_without, 4)
     return attrs
 
 
-def _bootstrap_ci(votes: list[Vote], n_iter: int = 1000) -> tuple[float, float]:
-    """Bootstrap 90% CI on score by resampling votes with replacement."""
+def _bootstrap_ci(votes: list[Vote], regime: str = "neutral",
+                  n_iter: int = 1000) -> tuple[float, float]:
+    """Bootstrap 90% CI on score by resampling votes with replacement (regime-aware)."""
     if not votes:
         return 0.0, 0.0
     n = len(votes)
@@ -159,7 +164,7 @@ def _bootstrap_ci(votes: list[Vote], n_iter: int = 1000) -> tuple[float, float]:
     scores = []
     for _ in range(n_iter):
         sample = [votes[i] for i in rng.integers(0, n, size=n)]
-        lw, sw = _capped_weights(sample)
+        lw, sw = _capped_weights(sample, regime)
         tw = lw + sw
         scores.append((lw - sw) / tw if tw > 0 else 0.0)
     scores.sort()
@@ -185,6 +190,108 @@ def _effective_n(votes: list[Vote]) -> float:
         return 0.0
     shares = [w / total for w in fam_w.values()] + [other / total]
     return round(1.0 / sum(p * p for p in shares if p > 0), 2)
+
+
+def _family_dominant(votes: list[Vote], fam: str) -> str:
+    """Return 'L', 'S', or 'N' (neutral/mixed) for a family's dominant direction.
+    Uses raw (unscaled) votes so combo reflects agent signal content, not regime distortion."""
+    fv = [v for v in votes if _AGENT_FAMILY.get(v.agent) == fam]
+    if not fv:
+        return "N"
+    lc = sum(v.confidence for v in fv if v.verdict == Verdict.LONG)
+    sc = sum(v.confidence for v in fv if v.verdict == Verdict.SHORT)
+    if lc > sc * 1.3:
+        return "L"
+    if sc > lc * 1.3:
+        return "S"
+    return "N"
+
+
+def _combo_string(votes: list[Vote]) -> str:
+    """ma_trend + breakout + squeeze + momentum_osc dominant directions."""
+    return "".join(_family_dominant(votes, f)
+                   for f in ("ma_trend", "breakout", "squeeze", "momentum_osc"))
+
+
+def _classify_action(
+    verdict: Verdict, score: float, regime: str, combo: str,
+    n_eff: float, inflation_gap: float, adx: float | None,
+) -> tuple[str, str]:
+    """Return (trade_style, action_label).
+
+    action_label tiers:
+      PRIME_LONG     — highest-expectancy setup (dip-in-uptrend, neutral/ranging regime)
+      BREAKOUT_LONG  — squeeze breakout in trending regime
+      STANDARD_LONG  — solid BULLISH_SETUP not meeting PRIME criteria
+      WATCH          — long signal but weak/extended setup
+      AVOID          — short signal or gap-down continuation
+      WAIT           — no actionable signal
+    """
+    if verdict == Verdict.WAIT:
+        return "NONE", "WAIT"
+    if verdict == Verdict.SHORT or regime == "gap_down_continuation":
+        return "NONE", "AVOID"
+
+    ma_dir = combo[0] if len(combo) >= 4 else "N"
+    mo_dir = combo[3] if len(combo) >= 4 else "N"
+    sq_dir = combo[2] if len(combo) >= 4 else "N"
+    br_dir = combo[1] if len(combo) >= 4 else "N"
+
+    # Extension veto: oscillators confirming LONG while trend is already up in ADX > 25
+    if (ma_dir == "L" and mo_dir == "L" and adx is not None and adx > 25
+            and regime == "trending"):
+        return "NONE", "WATCH"
+
+    # Oscillator-divergence score adjustment (affects tier logic only, not raw score)
+    adj = score
+    if ma_dir == "L" and mo_dir == "S":
+        adj += 0.08   # dip in uptrend: overbought oscillators = momentum continuation
+    elif ma_dir == "L" and mo_dir == "L":
+        adj -= 0.05   # extended entry penalty
+
+    # Weak combo veto
+    if combo in _WEAK_COMBOS:
+        return "MIXED", "WATCH"
+
+    # Trade style
+    if sq_dir == "L" and br_dir == "L" and regime in ("trending", "neutral"):
+        trade_style = "BREAKOUT"
+    elif ma_dir == "L" and mo_dir == "S" and regime in ("trending", "neutral"):
+        trade_style = "MOMENTUM"
+    elif regime in ("trending", "neutral") and ma_dir == "L":
+        trade_style = "SWING"
+    elif regime == "ranging" and mo_dir == "L":
+        trade_style = "MEAN_REVERT"
+    else:
+        trade_style = "MIXED"
+
+    # Tier assignment
+    is_prime = (
+        combo in _STRONG_COMBOS
+        and adj >= 0.40
+        and 1.4 <= n_eff <= 2.5
+        and regime in ("neutral", "ranging")
+    )
+    is_breakout = (
+        trade_style == "BREAKOUT"
+        and adj >= 0.35
+        and regime in ("trending", "neutral")
+    )
+    is_standard = (
+        adj >= 0.30
+        and n_eff > 1.4
+        and inflation_gap < 0.15
+        and regime in ("trending", "neutral")
+        and combo not in _WEAK_COMBOS
+    )
+
+    if is_prime:
+        return trade_style, "PRIME_LONG"
+    if is_breakout:
+        return trade_style, "BREAKOUT_LONG"
+    if is_standard:
+        return trade_style, "STANDARD_LONG"
+    return trade_style, "WATCH"
 
 
 def _family_vote_counts(votes: list[Vote]) -> dict[str, dict]:
@@ -237,6 +344,9 @@ class ActionCard:
     ticker_regime: str = "neutral"   # gap_down_continuation | trending | ranging | neutral
     n_eff: float = 0.0               # inverse Herfindahl over family weight shares
     high_vol_regime: bool = False    # 50d realized vol > 252d realized vol
+    combo: str = "NNNN"              # family dominant directions: ma+break+squeeze+mosc
+    trade_style: str = "NONE"        # MOMENTUM | SWING | BREAKOUT | MEAN_REVERT | MIXED | NONE
+    action_label: str = "WAIT"       # PRIME_LONG | BREAKOUT_LONG | STANDARD_LONG | WATCH | AVOID | WAIT
     votes: List[Vote] = field(default_factory=list)
     agreed: List[str] = field(default_factory=list)
     dissented: List[str] = field(default_factory=list)
@@ -416,23 +526,21 @@ def build_action_card(symbol: str, df: pd.DataFrame) -> ActionCard:
     ticker_regime = _detect_ticker_regime(df_ind)
 
     votes = run_all(df_ind)
+    # votes are kept RAW (unscaled) throughout — regime scaling is applied post-cap
+    # inside _capped_weights so amplification isn't swallowed by the cap ceiling.
 
-    # Regime-conditional scaling: adjust family confidences based on current regime.
-    # Trend agents are reliable in trends; oscillators are reliable in ranges.
-    votes = _apply_regime_scaling(votes, ticker_regime)
-
-    long_w, short_w = _capped_weights(votes)
+    long_w, short_w = _capped_weights(votes, ticker_regime)
     total_w = long_w + short_w
 
     long_n = sum(1 for v in votes if v.verdict == Verdict.LONG)
     short_n = sum(1 for v in votes if v.verdict == Verdict.SHORT)
-    wait_n = sum(1 for v in votes if v.verdict == Verdict.WAIT)
+    wait_n  = sum(1 for v in votes if v.verdict == Verdict.WAIT)
     actionable = long_n + short_n
-    agreement = (max(long_n, short_n) / actionable) if actionable else 0.0
+    agreement  = (max(long_n, short_n) / actionable) if actionable else 0.0
 
     if total_w == 0:
         verdict = Verdict.WAIT
-        score = 0.0
+        score   = 0.0
     else:
         net = (long_w - short_w) / total_w  # -1..+1
         if net > 0.15:
@@ -444,14 +552,26 @@ def build_action_card(symbol: str, df: pd.DataFrame) -> ActionCard:
         score = float(net)
 
     # Inflation gap: vote-count agreement vs weight-based conviction.
-    # A large positive gap means correlated families are driving the score.
     weight_conviction = (1.0 + abs(score)) / 2.0
     inflation_gap = round(agreement - weight_conviction, 4)
 
-    score_ci_lo, score_ci_hi = _bootstrap_ci(votes)
-    family_attribution = _loo_family_attribution(votes, score)
-    family_votes_map = _family_vote_counts(votes)
+    score_ci_lo, score_ci_hi = _bootstrap_ci(votes, ticker_regime)
+    family_attribution = _loo_family_attribution(votes, score, ticker_regime)
+    family_votes_map   = _family_vote_counts(votes)
     n_eff = _effective_n(votes)
+
+    # ADX for action classification
+    try:
+        _adx = float(df_ind["adx_14"].iloc[-1]) if "adx_14" in df_ind.columns else None
+        if _adx is not None and pd.isna(_adx):
+            _adx = None
+    except Exception:
+        _adx = None
+
+    combo_str  = _combo_string(votes)
+    trade_style, action_label = _classify_action(
+        verdict, score, ticker_regime, combo_str, n_eff, inflation_gap, _adx
+    )
 
     # High-vol regime: 50d annualised vol > 252d annualised vol.
     _ret = df["close"].pct_change().dropna()
@@ -500,6 +620,9 @@ def build_action_card(symbol: str, df: pd.DataFrame) -> ActionCard:
         ticker_regime=ticker_regime,
         n_eff=n_eff,
         high_vol_regime=high_vol_regime,
+        combo=combo_str,
+        trade_style=trade_style,
+        action_label=action_label,
         votes=votes,
         agreed=agreed,
         dissented=dissented,

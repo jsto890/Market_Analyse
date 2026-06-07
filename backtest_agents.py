@@ -34,7 +34,11 @@ from argus.action_card.builder import (
     _capped_weights,
     _detect_ticker_regime,
     _effective_n,
-    _apply_regime_scaling,
+    _family_dominant,
+    _combo_string,
+    _classify_action,
+    _WEAK_COMBOS,
+    _STRONG_COMBOS,
     _REGIME_FAMILY_MULT,
     _AGENT_FAMILY,
     _FAMILIES,
@@ -136,27 +140,12 @@ FAMILY_KEYS = ["ma_trend", "breakout", "squeeze", "momentum_osc"]
 
 # ── fast scoring with regime scaling ─────────────────────────────────────────
 
-def _family_dominant(votes: list[Vote], fam: str) -> str:
-    """Return 'L', 'S', or 'N' (neutral/mixed) for a family's dominant direction."""
-    fv = [v for v in votes if _AGENT_FAMILY.get(v.agent) == fam]
-    if not fv:
-        return "N"
-    lc = sum(v.confidence for v in fv if v.verdict == Verdict.LONG)
-    sc = sum(v.confidence for v in fv if v.verdict == Verdict.SHORT)
-    if lc > sc * 1.3:
-        return "L"
-    if sc > lc * 1.3:
-        return "S"
-    return "N"
-
-
 def _fast_score(df_slice: pd.DataFrame) -> dict:
-    """Score with regime-conditional scaling. Returns full signal dict."""
+    """Score with post-cap regime scaling. Votes kept raw; regime applied in _capped_weights."""
     regime = _detect_ticker_regime(df_slice)
-    raw_votes = [v for v in run_all(df_slice) if v.agent != "RS vs Sector"]
-    votes = _apply_regime_scaling(raw_votes, regime)
+    votes  = [v for v in run_all(df_slice) if v.agent != "RS vs Sector"]
 
-    lw, sw = _capped_weights(votes)
+    lw, sw = _capped_weights(votes, regime)   # post-cap scaling applied here
     tw = lw + sw
     score = (lw - sw) / tw if tw > 0 else 0.0
 
@@ -165,38 +154,39 @@ def _fast_score(df_slice: pd.DataFrame) -> dict:
     n_long  = sum(1 for v in votes if v.verdict == Verdict.LONG)
     n_short = sum(1 for v in votes if v.verdict == Verdict.SHORT)
     n_total = len(votes)
-    agreement = max(n_long, n_short) / n_total if n_total > 0 else 0.5
+    agreement     = max(n_long, n_short) / n_total if n_total > 0 else 0.5
     inflation_gap = round(agreement - (1.0 + abs(score)) / 2.0, 4)
-    n_eff = _effective_n(votes)
-
-    # Per-family dominant direction (use raw votes for combination analysis)
-    fam_dirs = {fam: _family_dominant(raw_votes, fam) for fam in FAMILY_KEYS}
+    n_eff         = _effective_n(votes)
+    combo         = _combo_string(votes)
 
     return {
-        "verdict":      verdict,
-        "score":        round(score, 4),
-        "regime":       regime,
-        "n_eff":        n_eff,
+        "verdict":       verdict,
+        "score":         round(score, 4),
+        "regime":        regime,
+        "n_eff":         n_eff,
         "inflation_gap": inflation_gap,
         "agreement_pct": round(agreement * 100, 1),
-        "fam_ma":       fam_dirs["ma_trend"],
-        "fam_break":    fam_dirs["breakout"],
-        "fam_squeeze":  fam_dirs["squeeze"],
-        "fam_mosc":     fam_dirs["momentum_osc"],
-        "combo":        "".join(fam_dirs[f] for f in FAMILY_KEYS),
+        "combo":         combo,
+        "fam_ma":        combo[0] if len(combo) >= 4 else "N",
+        "fam_break":     combo[1] if len(combo) >= 4 else "N",
+        "fam_squeeze":   combo[2] if len(combo) >= 4 else "N",
+        "fam_mosc":      combo[3] if len(combo) >= 4 else "N",
     }
 
 
-def _quality_tier(verdict: str, regime: str, score: float,
-                  n_eff: float, inflation_gap: float) -> str:
-    if verdict == "WAIT":
-        return "WAIT"
-    if verdict == "SHORT" or regime == "gap_down_continuation":
-        return "AVOID"
-    strong_regime = regime in ("trending", "neutral")
-    if strong_regime and abs(score) > 0.3 and n_eff > 1.8 and inflation_gap < 0.15:
+def _quality_tier(verdict: str, score: float, regime: str, combo: str,
+                  n_eff: float, inflation_gap: float, adx=None) -> str:
+    """Map to backtest tier using the same logic as _classify_action."""
+    v_enum = Verdict.LONG if verdict == "LONG" else (
+             Verdict.SHORT if verdict == "SHORT" else Verdict.WAIT)
+    _, label = _classify_action(v_enum, score, regime, combo, n_eff, inflation_gap, adx)
+    if label in ("PRIME_LONG", "BREAKOUT_LONG", "STANDARD_LONG"):
         return "BULLISH_SETUP"
-    return "WATCH"
+    if label == "AVOID":
+        return "AVOID"
+    if label == "WATCH":
+        return "WATCH"
+    return "WAIT"
 
 
 def _atr_exit(highs: np.ndarray, lows: np.ndarray, idx: int,
@@ -290,8 +280,9 @@ def backtest_ticker(meta: dict) -> list[dict]:
             regime        = sig["regime"]
             n_eff         = sig["n_eff"]
             inflation_gap = sig["inflation_gap"]
+            combo         = sig["combo"]
 
-            tier  = _quality_tier(verdict, regime, score, n_eff, inflation_gap)
+            tier  = _quality_tier(verdict, score, regime, combo, n_eff, inflation_gap)
             onset = prev_verdict != verdict and verdict in ("LONG", "SHORT")
             c0    = closes[idx]
             atr   = float(atrs[idx]) if not np.isnan(atrs[idx]) else 0.0
