@@ -55,39 +55,7 @@ def main() -> None:
     )
     console.print(f"   entry={card.entry:.2f}  stop={card.stop:.2f}  target={card.target:.2f}  RR={card.risk_reward:.2f}")
 
-    # 5. Backtest
-    from argus.backtest import backtest_signal, monte_carlo
-    bt = backtest_signal("AAPL", ind)
-    console.print(
-        f"[green]✓[/green] backtest: {bt.trades} trades  "
-        f"win_rate={bt.win_rate*100:.0f}%  PF={bt.profit_factor:.2f}  "
-        f"Sharpe={bt.sharpe:.2f}  MDD={bt.max_drawdown*100:.1f}%"
-    )
-
-    # 6. Monte Carlo
-    if bt.trade_returns:
-        mc = monte_carlo(bt.trade_returns, sims=2000)  # fewer sims to keep test fast
-        console.print(
-            f"[green]✓[/green] monte carlo: p5={mc.p5:.2f}  p50={mc.p50:.2f}  p95={mc.p95:.2f}  "
-            f"P(loss)={mc.prob_loss*100:.0f}%  P(ruin)={mc.prob_ruin*100:.0f}%"
-        )
-    else:
-        console.print("[yellow]–[/yellow] monte carlo skipped (no trades)")
-
-    # 7. Pre-trade stress
-    from argus.backtest.monte_carlo import pre_trade_stress
-    stress = pre_trade_stress(card.entry, card.stop, card.target, 0.55)
-    console.print(
-        f"[green]✓[/green] pre-trade stress: P(stop)={stress['prob_stop']*100:.0f}%  "
-        f"E[ret]={stress['expected_pct_return']:+.2f}%"
-    )
-
-    # 8. Hedge calc (uses yfinance for ETF prices)
-    from argus.portfolio import hedge_for_long_book
-    hedge = hedge_for_long_book(100_000, 0.5)
-    console.print(f"[green]✓[/green] hedge calc: {len(hedge['etf_hedges'])} ETF options + SPY put plan")
-
-    # 9. Flow (yfinance options chain — best-effort)
+    # 5. Flow (yfinance options chain — best-effort)
     from argus.flow import flow_summary
     try:
         flow = flow_summary("AAPL")
@@ -101,25 +69,7 @@ def main() -> None:
     except Exception as e:
         console.print(f"[yellow]–[/yellow] flow error (non-fatal): {e}")
 
-    # 10. Journal (in-memory tempfile)
-    from argus.journal import Journal, Trade
-    from datetime import datetime, timezone
-    j = Journal(path=":memory:")
-    tid = j.open_trade(Trade(
-        id=None,
-        ts=datetime.now(timezone.utc).isoformat(),
-        symbol="AAPL",
-        side="LONG",
-        qty=10,
-        entry=card.entry, stop=card.stop, target=card.target,
-        exit=None, pnl=None, rr=None,
-        status="OPEN",
-    ))
-    j.close_trade(tid, card.target)
-    stats = j.stats()
-    console.print(f"[green]✓[/green] journal: {stats['trades']} closed, total_pnl={stats['total_pnl']:.2f}")
-
-    # 11. Screener (small universe to keep test snappy)
+    # 6. Screener (small universe to keep test snappy)
     from argus.screener import screen_universe
     cards = screen_universe(["AAPL", "MSFT", "NVDA", "SPY", "QQQ"], min_conviction=0.0)
     console.print(f"[green]✓[/green] screener: {len(cards)} cards")

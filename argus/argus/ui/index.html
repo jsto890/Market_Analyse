@@ -65,11 +65,8 @@
   <button class="active" data-tab="card">Action Card</button>
   <button data-tab="screener">Screener</button>
   <button data-tab="flow">Flow</button>
-  <button data-tab="backtest">Backtest</button>
   <button data-tab="portfolio">Portfolio</button>
-  <button data-tab="hedge">Hedge</button>
   <button data-tab="chat">AI Chat</button>
-  <button data-tab="journal">Journal</button>
   <button data-tab="agents">Agents</button>
 </nav>
 <main>
@@ -124,22 +121,6 @@
     </div>
   </section>
 
-  <!-- Backtest -->
-  <section id="tab-backtest">
-    <div class="panel">
-      <div class="row">
-        <input id="bt-sym" placeholder="Symbol" style="width:160px">
-        <select id="bt-period">
-          <option>2y</option><option>5y</option><option>10y</option>
-        </select>
-        <button class="primary" onclick="runBacktest()">Backtest</button>
-        <button class="ghost" onclick="runMC()">Monte Carlo (5000)</button>
-      </div>
-      <div id="bt-out" class="kv"></div>
-      <pre id="bt-extra" style="margin-top:14px"></pre>
-    </div>
-  </section>
-
   <!-- Portfolio -->
   <section id="tab-portfolio">
     <div class="panel">
@@ -152,19 +133,6 @@
     </div>
   </section>
 
-  <!-- Hedge -->
-  <section id="tab-hedge">
-    <div class="panel">
-      <div class="row">
-        <input id="h-pv" type="number" placeholder="Portfolio value $" style="width:200px">
-        <input id="h-cov" type="number" step="0.05" value="0.5" style="width:120px">
-        <span style="color:var(--muted)">coverage (0..1)</span>
-        <button class="primary" onclick="runHedge()">Compute</button>
-      </div>
-      <pre id="hedge-out"></pre>
-    </div>
-  </section>
-
   <!-- Chat -->
   <section id="tab-chat">
     <div class="panel">
@@ -174,29 +142,6 @@
         <button class="primary" onclick="askChat()">Ask</button>
       </div>
       <div id="chat-log"></div>
-    </div>
-  </section>
-
-  <!-- Journal -->
-  <section id="tab-journal">
-    <div class="panel">
-      <h3 style="margin:0 0 8px">Open trade</h3>
-      <div class="row">
-        <input id="j-sym" placeholder="Symbol" style="width:120px">
-        <select id="j-side"><option>LONG</option><option>SHORT</option></select>
-        <input id="j-qty" type="number" placeholder="Qty" style="width:90px">
-        <input id="j-entry" type="number" placeholder="Entry" style="width:100px" step="0.01">
-        <input id="j-stop" type="number" placeholder="Stop" style="width:100px" step="0.01">
-        <input id="j-target" type="number" placeholder="Target" style="width:100px" step="0.01">
-        <input id="j-setup" placeholder="Setup tag" style="width:160px">
-        <button class="primary" onclick="openTrade()">Open</button>
-      </div>
-    </div>
-    <div class="panel">
-      <h3 style="margin:0 0 8px">Trades</h3>
-      <button class="ghost" onclick="loadJournal()">Refresh</button>
-      <div id="journal-out" style="margin-top:10px"></div>
-      <pre id="journal-stats"></pre>
     </div>
   </section>
 
@@ -280,34 +225,6 @@ async function loadFlow(){
   $("flow-out").textContent=JSON.stringify(r,null,2);
 }
 
-// ---- backtest ----
-let _lastBT=null;
-async function runBacktest(){
-  const sym=$("bt-sym").value.trim().toUpperCase(); if(!sym) return;
-  $("bt-out").innerHTML="running…";
-  const r=await fetch(`/api/backtest/${sym}?period=${$("bt-period").value}`).then(r=>r.json());
-  if(r.detail){$("bt-out").textContent=r.detail;return}
-  _lastBT=r;
-  $("bt-out").innerHTML=`
-    <div class="k">Symbol</div><div class="v">${r.symbol}</div>
-    <div class="k">Bars / Trades</div><div class="v">${r.bars} / ${r.trades}</div>
-    <div class="k">Win rate</div><div class="v">${fmtPct(r.win_rate)}</div>
-    <div class="k">Profit factor</div><div class="v">${fmt(r.profit_factor,2)}</div>
-    <div class="k">CAGR</div><div class="v">${fmtPct(r.cagr)}</div>
-    <div class="k">Sharpe / Sortino</div><div class="v">${fmt(r.sharpe,2)} / ${fmt(r.sortino,2)}</div>
-    <div class="k">Max DD</div><div class="v neg">${fmtPct(r.max_drawdown)}</div>
-    <div class="k">Final equity</div><div class="v">${fmt(r.final_equity,3)}</div>`;
-}
-async function runMC(){
-  if(!_lastBT||!_lastBT.trade_returns||!_lastBT.trade_returns.length){
-    $("bt-extra").textContent="run a backtest first";return;
-  }
-  $("bt-extra").textContent="simulating 5000 paths…";
-  const r=await fetch("/api/monte_carlo",{method:"POST",headers:{"Content-Type":"application/json"},
-    body:JSON.stringify({trade_returns:_lastBT.trade_returns,sims:5000})}).then(r=>r.json());
-  $("bt-extra").textContent=JSON.stringify(r,null,2);
-}
-
 // ---- portfolio ----
 async function loadPortfolio(){
   $("portfolio-out").innerHTML="loading…";
@@ -320,15 +237,6 @@ async function loadPortfolio(){
 async function loadAccount(){
   const r=await fetch("/api/account").then(r=>r.json());
   $("account-out").textContent=JSON.stringify(r,null,2);
-}
-
-// ---- hedge ----
-async function runHedge(){
-  const pv=parseFloat($("h-pv").value); const cov=parseFloat($("h-cov").value);
-  if(!pv) return;
-  const r=await fetch("/api/hedge",{method:"POST",headers:{"Content-Type":"application/json"},
-    body:JSON.stringify({portfolio_value:pv,coverage_pct:cov})}).then(r=>r.json());
-  $("hedge-out").textContent=JSON.stringify(r,null,2);
 }
 
 // ---- chat ----
@@ -345,29 +253,6 @@ async function askChat(){
   log.scrollTop=log.scrollHeight;
 }
 
-// ---- journal ----
-async function openTrade(){
-  const body={
-    symbol:$("j-sym").value.trim().toUpperCase(),
-    side:$("j-side").value,
-    qty:parseFloat($("j-qty").value),
-    entry:parseFloat($("j-entry").value)||null,
-    stop:parseFloat($("j-stop").value)||null,
-    target:parseFloat($("j-target").value)||null,
-    setup:$("j-setup").value||null,
-  };
-  await fetch("/api/journal/open",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});
-  loadJournal();
-}
-async function loadJournal(){
-  const r=await fetch("/api/journal").then(r=>r.json());
-  $("journal-out").innerHTML=`<table><thead><tr><th>ID</th><th>Date</th><th>Symbol</th><th>Side</th><th>Qty</th><th>Entry</th><th>Stop</th><th>Target</th><th>Exit</th><th>P&L</th><th>Status</th></tr></thead>
-  <tbody>${r.trades.map(t=>`<tr><td>${t.id}</td><td>${t.ts.slice(0,10)}</td><td>${t.symbol}</td><td>${t.side}</td><td>${t.qty}</td>
-  <td>${fmt(t.entry)}</td><td>${fmt(t.stop)}</td><td>${fmt(t.target)}</td><td>${fmt(t.exit)}</td>
-  <td class="${fmtSign(t.pnl)}">${fmt(t.pnl,2)}</td><td>${t.status}</td></tr>`).join("")}</tbody></table>`;
-  $("journal-stats").textContent=JSON.stringify(r.stats,null,2);
-}
-
 // ---- agents ----
 async function loadAgents(){
   const r=await fetch("/api/agents").then(r=>r.json());
@@ -377,7 +262,6 @@ async function loadAgents(){
     `<div style="margin-bottom:10px"><b style="color:var(--accent)">${fam}</b> · ${names.length}<br>${names.map(n=>`<span class="agent-pill WAIT">${n}</span>`).join(" ")}</div>`
   ).join("")+`<div style="color:var(--muted);margin-top:10px">Total: <b>${r.length}</b> agents</div>`;
 }
-loadJournal();
 </script>
 </body>
 </html>
