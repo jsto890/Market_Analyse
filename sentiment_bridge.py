@@ -76,9 +76,11 @@ def _analyse_ticker(row: pd.Series) -> Optional[dict]:
         df = get_history(fetch_sym, period="2y", interval="1d")
         if df is None or len(df) < min_bars:
             return None
-        ret_1d  = float(df["close"].pct_change(1).iloc[-1])  if len(df) >= 2  else float("nan")
-        ret_5d  = float(df["close"].pct_change(5).iloc[-1])  if len(df) >= 6  else float("nan")
-        ret_20d = float(df["close"].pct_change(20).iloc[-1]) if len(df) >= 21 else float("nan")
+        ret_1d   = float(df["close"].pct_change(1).iloc[-1])   if len(df) >= 2   else float("nan")
+        ret_5d   = float(df["close"].pct_change(5).iloc[-1])   if len(df) >= 6   else float("nan")
+        ret_20d  = float(df["close"].pct_change(20).iloc[-1])  if len(df) >= 21  else float("nan")
+        ret_126d = float(df["close"].pct_change(126).iloc[-1]) if len(df) >= 127 else float("nan")
+        ret_252d = float(df["close"].pct_change(252).iloc[-1]) if len(df) >= 253 else float("nan")
         card = build_action_card(fetch_sym, df)
     except Exception as exc:
         print(f"  [skip] {ticker}: {exc}", file=sys.stderr)
@@ -128,6 +130,8 @@ def _analyse_ticker(row: pd.Series) -> Optional[dict]:
         "ret_1d":            round(ret_1d * 100, 2),
         "ret_5d":            round(ret_5d * 100, 2),
         "ret_20d":           round(ret_20d * 100, 2),
+        "ret_126d":          round(ret_126d * 100, 2),
+        "ret_252d":          round(ret_252d * 100, 2),
         "argus_verdict":     card.verdict.value,
         "argus_score":       round(card.score, 3),
         "high_conviction":   card.high_conviction,
@@ -169,6 +173,40 @@ def _action_emoji(r: dict) -> str:
     if a == "CONTRARIAN":
         return "🔄 CONTRARIAN"
     return "—"
+
+
+_RET_PERIODS = [("1D", "ret_1d"), ("1W", "ret_5d"), ("1M", "ret_20d"),
+                ("6M", "ret_126d"), ("1Y", "ret_252d")]
+
+
+def _returns_pills(r: dict) -> str:
+    """Compact green/red pill strip of period returns for the Obsidian report."""
+    pills = []
+    for label, key in _RET_PERIODS:
+        v = r.get(key)
+        if v is None or pd.isna(v):
+            continue
+        color = "#22c55e" if v >= 0 else "#ef4444"
+        bg    = "#0d3b1e" if v >= 0 else "#3b1414"
+        pills.append(
+            f'<span style="background:{bg};color:{color};padding:1px 6px;'
+            f'border-radius:6px;font-family:monospace;font-size:0.85em">'
+            f'{label} {v:+.1f}%</span>'
+        )
+    return " ".join(pills) if pills else "—"
+
+
+def _returns_strip(r: dict) -> str:
+    """Compact green/red returns strip (1D/1W/1M/6M/1Y) for table cells."""
+    parts = []
+    for label, key in _RET_PERIODS:
+        v = r.get(key)
+        if v is None or pd.isna(v):
+            parts.append(f'<span style="color:#6b7280">{label} —</span>')
+            continue
+        color = "#22c55e" if v >= 0 else "#ef4444"
+        parts.append(f'<span style="color:{color}">{label} {v:+.0f}%</span>')
+    return " ".join(parts)
 
 
 def _wilson_ci(k: int, n: int, z: float = 1.645) -> tuple[float, float]:
@@ -308,8 +346,8 @@ def _write_markdown(
             continue
         lines += [f"## {icon} {title}", ""]
         lines += [
-            "| Ticker | Setup | Quality | Argus | Tier | Regime | Score | Entry | Agreement | Entry $ | Stop | Target | Catalysts |",
-            "|--------|-------|---------|-------|------|--------|-------|-------|-----------|---------|------|--------|-----------|",
+            "| Ticker | Setup | Quality | Argus | Tier | Regime | Score | Entry | Agreement | Entry $ | Stop | Target | Returns (1D/1W/1M/6M/1Y) | Catalysts |",
+            "|--------|-------|---------|-------|------|--------|-------|-------|-----------|---------|------|--------|--------------------------|-----------|",
         ]
         for r in subset:
             hc   = " ⚡" if r["high_conviction"] else ""
@@ -322,6 +360,7 @@ def _write_markdown(
                 f"| {r['argus_verdict']}{hc} | {tier} | {reg} | {r['combined_score']:+.3f} "
                 f"| {eq} | {r['agreement_pct']}% "
                 f"| {r['entry']:.2f} | {r['stop']:.2f} | {r['target']:.2f} "
+                f"| {_returns_strip(r)} "
                 f"| {(r['catalysts'] or '')[:40]} |"
             )
         lines.append("")
@@ -341,7 +380,7 @@ def _write_markdown(
                 f"- **Setup:** {r['setup_label']} | **Quality:** {r['quality_score']}/15{persist_str} | **Source score:** {r['source_score']}",
                 f"- **Accounts:** {r['accounts']} ({r['mentions']} mentions) — {trust_str}",
                 f"- **Catalysts:** {r['catalysts']}",
-                f"- **Price:** 1d {r['ret_1d']:+.1f}%  5d {r['ret_5d']:+.1f}%  20d {r['ret_20d']:+.1f}%  | Entry: {r['entry_quality']}{' ⚠️' if r['is_extended'] else ''}",
+                f"- **Returns:** {_returns_pills(r)} | Entry: {r['entry_quality']}{' ⚠️' if r['is_extended'] else ''}",
                 f"- **Argus:** {r['argus_verdict']} `{r.get('action_label','—')}` | Score {r['argus_score']:+.3f} | Agreement {r['agreement_pct']}% | N_eff {r.get('n_eff','—')} | Combo {r.get('combo','—')} | {r.get('ticker_regime','—')} | Votes L:{r['long_votes']} S:{r['short_votes']} W:{r['wait_votes']}",
                 f"- **Trade:** Entry {r['entry']:.2f}  Stop {r['stop']:.2f} *({anchor})*  Target {r['target']:.2f}  R:R {r['risk_reward']:.1f}x",
                 f"- **Combined score:** {r['combined_score']:+.3f}",
