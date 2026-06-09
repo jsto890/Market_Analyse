@@ -128,10 +128,14 @@ def _analyse_ticker(row: pd.Series) -> Optional[dict]:
     tech_raw   = float(card.score)                             # -1..+1 from Argus
     tech_score = tech_raw if card.verdict != Verdict.WAIT else 0.0
 
-    cat = catalyst_leg(
-        ticker, setups_row=row, ibkr=_catalyst_ibkr(),
-        api_key=settings.anthropic_api_key,
-    )
+    try:
+        cat = catalyst_leg(
+            ticker, setups_row=row, ibkr=_catalyst_ibkr(),
+            api_key=settings.anthropic_api_key,
+        )
+    except Exception:
+        from argus.catalyst.types import CatalystResult
+        cat = CatalystResult(score=None)
     catalyst_score = cat.score
     combined = blend_legs(sentiment_score, tech_score, catalyst_score)
     combined = apply_gates(combined, cat.gates)
@@ -313,7 +317,7 @@ def _write_markdown(
         "# Sentiment × Technical Bridge Report",
         f"*Generated {ts} | min_quality ≥ {min_quality} | {len(results)} tickers analysed{extra_note}*",
         "",
-        "Scoring: **40% sentiment** (quality × setup bias) + **60% technical** (Argus 70-agent ensemble)",
+        "Scoring: **35% sentiment** (quality × setup bias) + **45% technical** (Argus ensemble) + **20% catalyst** (fundamentals/events)",
         "",
     ]
 
