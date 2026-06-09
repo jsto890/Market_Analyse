@@ -106,11 +106,47 @@ def test_earnings_proximity_vote():
     assert v3.verdict == Verdict.WAIT
 
 
+def test_squeeze_setup_vote():
+    from argus.agents.base import Verdict
+    from argus.catalyst.types import CatalystPool
+    from argus.catalyst.agents import squeeze_setup_vote
+    v = squeeze_setup_vote(CatalystPool("XYZ", metrics={"short_pct_float": 28.0, "dtc": 7.0}), [])
+    assert v.verdict == Verdict.LONG and v.confidence > 0.5
+    v2 = squeeze_setup_vote(CatalystPool("XYZ", metrics={"short_pct_float": 4.0, "dtc": 1.0}), [])
+    assert v2.verdict == Verdict.WAIT
+    v3 = squeeze_setup_vote(CatalystPool("XYZ", metrics={}), [])
+    assert v3.verdict == Verdict.WAIT
+
+
+def test_growth_profitability_vote():
+    from argus.agents.base import Verdict
+    from argus.catalyst.types import CatalystPool
+    from argus.catalyst.agents import growth_profitability_vote
+    v = growth_profitability_vote(CatalystPool("XYZ", metrics={"revenue_growth": 0.45}), [])
+    assert v.verdict == Verdict.LONG
+    # pre-revenue / missing -> abstain (never penalize)
+    v2 = growth_profitability_vote(CatalystPool("XYZ", metrics={}), [])
+    assert v2.verdict == Verdict.WAIT
+
+
+def test_analyst_upside_vote():
+    from argus.agents.base import Verdict
+    from argus.catalyst.types import CatalystPool
+    from argus.catalyst.agents import analyst_upside_vote
+    v = analyst_upside_vote(CatalystPool("XYZ", metrics={"price": 10.0, "analyst_target": 15.0}), [])
+    assert v.verdict == Verdict.LONG and v.confidence > 0
+    v2 = analyst_upside_vote(CatalystPool("XYZ", metrics={"price": 10.0, "analyst_target": 8.0}), [])
+    assert v2.verdict == Verdict.SHORT
+    v3 = analyst_upside_vote(CatalystPool("XYZ", metrics={}), [])
+    assert v3.verdict == Verdict.WAIT
+
+
 def main():
     test_types_construct()
     test_keyword_fallback()
     test_classify_events_with_claude(); test_classify_events_falls_back_on_bad_json(); test_classify_events_no_client_uses_fallback()
     test_event_catalyst_vote(); test_earnings_proximity_vote()
+    test_squeeze_setup_vote(); test_growth_profitability_vote(); test_analyst_upside_vote()
     print("OK test_catalyst")
 
 

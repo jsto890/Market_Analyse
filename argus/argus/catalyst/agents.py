@@ -39,3 +39,51 @@ def earnings_proximity_vote(pool: CatalystPool, events: list[CatalystEvent]) -> 
         conf = _clamp(0.6 * (1.0 - d / EARNINGS_WINDOW_DAYS))
         return Vote("earnings_proximity", Verdict.LONG, conf, f"earnings in {d}d", FAMILY)
     return _abstain("earnings_proximity", f"earnings {d}d out")
+
+
+SQUEEZE_SHORT_PCT = 15.0
+SQUEEZE_DTC = 5.0
+ANALYST_UPSIDE_MIN = 0.10
+
+
+def squeeze_setup_vote(pool: CatalystPool, events: list[CatalystEvent]) -> Vote:
+    sp = pool.metrics.get("short_pct_float")
+    dtc = pool.metrics.get("dtc")
+    if sp is None and dtc is None:
+        return _abstain("squeeze_setup")
+    triggered = (sp is not None and sp >= SQUEEZE_SHORT_PCT) or (dtc is not None and dtc >= SQUEEZE_DTC)
+    if not triggered:
+        return _abstain("squeeze_setup", "no squeeze")
+    sp_conf = _clamp(0.5 + (sp - SQUEEZE_SHORT_PCT) / 40.0) if sp is not None else 0.0
+    dtc_conf = _clamp(0.5 + (dtc - SQUEEZE_DTC) / 15.0) if dtc is not None else 0.0
+    conf = max(sp_conf, dtc_conf)
+    return Vote("squeeze_setup", Verdict.LONG, conf,
+                f"short={sp}% dtc={dtc}", FAMILY)
+
+
+def growth_profitability_vote(pool: CatalystPool, events: list[CatalystEvent]) -> Vote:
+    rg = pool.metrics.get("revenue_growth")
+    pm = pool.metrics.get("profit_margin")
+    if rg is None and pm is None:
+        return _abstain("growth_profitability", "pre-revenue/no data")
+    score = 0.0
+    if rg is not None:
+        score += rg
+    if pm is not None and pm > 0:
+        score += pm
+    if score <= 0:
+        return _abstain("growth_profitability", "no growth")
+    return Vote("growth_profitability", Verdict.LONG, _clamp(score), f"rev_g={rg} margin={pm}", FAMILY)
+
+
+def analyst_upside_vote(pool: CatalystPool, events: list[CatalystEvent]) -> Vote:
+    price = pool.metrics.get("price")
+    target = pool.metrics.get("analyst_target")
+    if not price or not target:
+        return _abstain("analyst_upside")
+    upside = (target - price) / price
+    if upside >= ANALYST_UPSIDE_MIN:
+        return Vote("analyst_upside", Verdict.LONG, _clamp(upside), f"upside={upside:.0%}", FAMILY)
+    if upside <= -ANALYST_UPSIDE_MIN:
+        return Vote("analyst_upside", Verdict.SHORT, _clamp(-upside), f"downside={upside:.0%}", FAMILY)
+    return _abstain("analyst_upside", "fair value")
