@@ -141,12 +141,30 @@ def test_analyst_upside_vote():
     assert v3.verdict == Verdict.WAIT
 
 
+def test_meta_score_abstain_renorm():
+    from argus.agents.base import Vote, Verdict
+    from argus.catalyst.score import meta_score
+    # all abstain -> None
+    abst = [Vote("event_catalyst", Verdict.WAIT, 0.0, "", "catalyst")]
+    assert meta_score(abst) is None
+    # single LONG event -> positive score on its own renormalized weight
+    one = [Vote("event_catalyst", Verdict.LONG, 0.8, "", "catalyst"),
+           Vote("squeeze_setup", Verdict.WAIT, 0.0, "", "catalyst")]
+    s = meta_score(one)
+    assert s is not None and 0.79 <= s <= 0.81
+    # a SHORT pulls the score negative
+    mix = [Vote("event_catalyst", Verdict.LONG, 0.5, "", "catalyst"),
+           Vote("analyst_upside", Verdict.SHORT, 0.5, "", "catalyst")]
+    assert meta_score(mix) < 0.4
+
+
 def main():
     test_types_construct()
     test_keyword_fallback()
     test_classify_events_with_claude(); test_classify_events_falls_back_on_bad_json(); test_classify_events_no_client_uses_fallback()
     test_event_catalyst_vote(); test_earnings_proximity_vote()
     test_squeeze_setup_vote(); test_growth_profitability_vote(); test_analyst_upside_vote()
+    test_meta_score_abstain_renorm()
     print("OK test_catalyst")
 
 
