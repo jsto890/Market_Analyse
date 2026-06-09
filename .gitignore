@@ -33,3 +33,4 @@ runs/
 
 # Audit artifact (do not publish)
 GITHUB_READINESS.md
+.worktrees/
