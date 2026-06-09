@@ -214,6 +214,30 @@ def test_gather_pool_best_effort_on_failure():
     assert pool.is_empty() is True
 
 
+def test_catalyst_leg_orchestrates():
+    from argus.catalyst import catalyst_leg
+    from argus.catalyst.types import CatalystPool, CatalystEvent
+    pool = CatalystPool(
+        ticker="XYZ",
+        news_texts=["XYZ FDA approval"],
+        metrics={"short_pct_float": 25.0, "dtc": 8.0, "days_to_earnings": 5},
+    )
+    res = catalyst_leg(
+        "XYZ", pool=pool,
+        classify=lambda p: [CatalystEvent("fda", 1, 1.0, 0.9, "claude")],
+    )
+    assert res.score is not None and res.score > 0
+    assert "boost" in res.gates and "⚡" in res.flags
+    assert any("earnings" in f for f in res.flags)
+
+
+def test_catalyst_leg_empty_pool_returns_none():
+    from argus.catalyst import catalyst_leg
+    from argus.catalyst.types import CatalystPool
+    res = catalyst_leg("XYZ", pool=CatalystPool("XYZ"), classify=lambda p: [])
+    assert res.score is None
+
+
 def main():
     test_types_construct()
     test_keyword_fallback()
@@ -224,6 +248,7 @@ def main():
     test_evaluate_gates()
     test_parse_news_headlines()
     test_gather_pool_normalizes_metrics(); test_gather_pool_best_effort_on_failure()
+    test_catalyst_leg_orchestrates(); test_catalyst_leg_empty_pool_returns_none()
     print("OK test_catalyst")
 
 

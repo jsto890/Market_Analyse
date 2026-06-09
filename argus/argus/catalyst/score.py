@@ -58,3 +58,41 @@ def evaluate_gates(events: list[CatalystEvent], metrics: dict) -> tuple[list[str
     if d is not None and 0 <= d <= EARNINGS_FLAG_DAYS:
         flags.append(f"earnings≤{EARNINGS_FLAG_DAYS}d")
     return gates, flags
+
+
+from .agents import (  # noqa: E402
+    event_catalyst_vote, earnings_proximity_vote, squeeze_setup_vote,
+    growth_profitability_vote, analyst_upside_vote,
+)
+from .classify import classify_events  # noqa: E402
+from .sources import gather_pool        # noqa: E402
+from .types import CatalystPool, CatalystResult  # noqa: E402
+
+
+def catalyst_leg(
+    ticker: str,
+    *,
+    setups_row=None,
+    ibkr=None,
+    pool: CatalystPool | None = None,
+    classify=None,
+    api_key: str = "",
+) -> CatalystResult:
+    """Full catalyst leg for one ticker. Inject `pool`/`classify` for offline tests."""
+    if pool is None:
+        pool = gather_pool(ticker, setups_row, ibkr=ibkr)
+    if pool.is_empty():
+        return CatalystResult(score=None)
+    if classify is None:
+        classify = lambda p: classify_events(p, api_key=api_key)  # noqa: E731
+    events = classify(pool)
+    votes = [
+        event_catalyst_vote(pool, events),
+        earnings_proximity_vote(pool, events),
+        squeeze_setup_vote(pool, events),
+        growth_profitability_vote(pool, events),
+        analyst_upside_vote(pool, events),
+    ]
+    score = meta_score(votes)
+    gates, flags = evaluate_gates(events, pool.metrics)
+    return CatalystResult(score=score, votes=votes, events=events, gates=gates, flags=flags)
