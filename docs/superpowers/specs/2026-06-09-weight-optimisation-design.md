@@ -4,6 +4,34 @@
 
 ---
 
+## ⚠️ REVISION NOTE (post multi-agent review) — supersedes sections below
+
+A three-agent review (quant, data-science, architecture) found a fatal flaw in
+the original method, since corrected. **The implemented approach differs from the
+original design below; this note governs. See `docs/weight_optimisation/weight_decision.md`
+for the result.**
+
+What changed:
+- **Labels were wrong.** The bridge `ret_Nd` columns are *trailing* returns, not
+  forward. Fix: `tools/weight_opt/historical_bridge_dataset.py` rebuilds **true
+  forward** returns from price history, measured from each report date forward.
+- **Horizons.** Only 1d/5d/10d have elapsed forward data (33-day span). 20d is too
+  thin (27 rows); 126d/252d are impossible now. Deferred to the 6-week checkpoint.
+- **Objective.** Per-day **rank-IC** (not top-10 hit-rate/mean, which are too noisy
+  at ~5 effective dates), with top-10 metrics kept as secondary read-outs.
+- **Optimiser.** Grid search over the sentiment:technical blend *is* the constrained
+  optimiser. Ridge is demoted to a **sign-sanity check only** (normalising
+  coefficients to sum to 1 is invalid). A **permutation null** quantifies overfitting.
+- **Catalyst weight** cannot be learned (one date of data) — set from literature
+  prior, forward-validated at 6 weeks.
+- **Infrastructure.** Weights moved to `config/weights.yaml` (validated loader,
+  fallback to defaults); per-sub-agent catalyst votes now logged daily.
+
+**Verdict:** hold top-level weights at 35/45/20 — no blend beat the permutation
+null (p ≥ 0.069 at every horizon) and the per-horizon optima contradict each other.
+
+---
+
 ## Goal
 
 Optimise the scoring weights so that high-ranked tickers are the ones that go on to make large price moves. The system is an **entry signal** — the user wants to be in a stock before a large move happens, not at a fixed exit. Time horizon is flexible (1d–6m); magnitude matters more than timing.
