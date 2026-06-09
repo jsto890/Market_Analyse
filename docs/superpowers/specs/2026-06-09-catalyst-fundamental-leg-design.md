@@ -265,5 +265,10 @@ Following the existing `argus/tests/` style (offline/smoke, no network):
 
 - Insider-buying and institutional-ownership agents — considered, deferred (data
   reliability for micro-caps is poor; revisit after the 5-agent leg proves out).
-- Tuning of weights/thresholds after ~1 week of live runs.
+- **Weight-optimization phase (post-build):** once the leg is live and accumulating
+  results, optimize *both* weight sets — the intra-leg sub-agent weights (§5) and the
+  top-level sentiment/technical/catalyst blend (§8) — data-driven against the existing
+  selection-performance / backtest artifacts (`reports/selection_performance.csv`,
+  `reports/selection_backtest.csv`). All weights are already config constants to make
+  this a pure tuning exercise (no code changes). Separate spec when we get there.
 - Optional later: catalyst recency decay curve refinement.
