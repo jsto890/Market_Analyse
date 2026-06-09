@@ -1,14 +1,7 @@
 from __future__ import annotations
 
 from argus.agents.base import Vote, Verdict
-
-INTRA_WEIGHTS = {
-    "event_catalyst": 0.40,
-    "squeeze_setup": 0.20,
-    "earnings_proximity": 0.15,
-    "growth_profitability": 0.15,
-    "analyst_upside": 0.10,
-}
+from argus.weights_config import INTRA_WEIGHTS  # loaded from config/weights.yaml (with defaults)
 
 
 def meta_score(votes: list[Vote]) -> float | None:

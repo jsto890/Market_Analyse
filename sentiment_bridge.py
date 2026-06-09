@@ -33,15 +33,16 @@ from argus.action_card.builder import build_action_card  # noqa: E402
 from argus.agents.base import Verdict              # noqa: E402
 from argus.catalyst import catalyst_leg            # noqa: E402
 from argus.settings import settings               # noqa: E402
+from argus.weights_config import BRIDGE_WEIGHTS    # noqa: E402  loaded from config/weights.yaml
 
 
 # ── config ────────────────────────────────────────────────────────────────────
 ACTIONABLE_LABELS = {"fresh_watch", "building", "momentum_confirmed"}
 LATE_CHASE_LABEL  = "late_chase"
 MAX_WORKERS       = 6
-SENTIMENT_WEIGHT = 0.35
-TECHNICAL_WEIGHT = 0.45
-CATALYST_WEIGHT  = 0.20
+SENTIMENT_WEIGHT = BRIDGE_WEIGHTS["sentiment"]
+TECHNICAL_WEIGHT = BRIDGE_WEIGHTS["technical"]
+CATALYST_WEIGHT  = BRIDGE_WEIGHTS["catalyst"]
 BOOST_DELTA      = 0.10
 MAX_QUALITY      = 15.0  # normalisation ceiling
 
@@ -109,6 +110,10 @@ def _analyse_ticker(row: pd.Series) -> Optional[dict]:
         df = get_history(fetch_sym, period="2y", interval="1d")
         if df is None or len(df) < min_bars:
             return None
+        # TRAILING returns as of the report date (how much the name has ALREADY run) —
+        # shown in the report as momentum/extension context. NOT forward returns.
+        # The weight-optimisation backtest computes its own forward returns in
+        # tools/weight_opt/ and must never read these columns as labels.
         ret_1d   = float(df["close"].pct_change(1).iloc[-1])   if len(df) >= 2   else float("nan")
         ret_5d   = float(df["close"].pct_change(5).iloc[-1])   if len(df) >= 6   else float("nan")
         ret_20d  = float(df["close"].pct_change(20).iloc[-1])  if len(df) >= 21  else float("nan")
@@ -139,6 +144,14 @@ def _analyse_ticker(row: pd.Series) -> Optional[dict]:
     catalyst_score = cat.score
     combined = blend_legs(sentiment_score, tech_score, catalyst_score)
     combined = apply_gates(combined, cat.gates)
+
+    # Per-sub-agent signed vote confidence (LONG=+conf, SHORT=-conf, WAIT/abstain=0).
+    # Persisted so the intra-catalyst weights can be forward-validated against
+    # realised returns once enough daily snapshots accumulate.
+    vote_conf = {f"vote_{v.agent}": (v.confidence if v.verdict == Verdict.LONG
+                                     else -v.confidence if v.verdict == Verdict.SHORT
+                                     else 0.0)
+                 for v in cat.votes}
 
     # ── alignment label ───────────────────────────────────────────────────────
     s_bullish = sentiment_bias > 0.5
@@ -194,6 +207,11 @@ def _analyse_ticker(row: pd.Series) -> Optional[dict]:
         "tech_score":        round(tech_score, 3),
         "combined_score":    round(combined, 3),
         "catalyst_score":    round(catalyst_score, 3) if catalyst_score is not None else "",
+        "vote_event_catalyst":     round(vote_conf.get("vote_event_catalyst", 0.0), 3),
+        "vote_earnings_proximity": round(vote_conf.get("vote_earnings_proximity", 0.0), 3),
+        "vote_squeeze_setup":      round(vote_conf.get("vote_squeeze_setup", 0.0), 3),
+        "vote_growth_profitability": round(vote_conf.get("vote_growth_profitability", 0.0), 3),
+        "vote_analyst_upside":     round(vote_conf.get("vote_analyst_upside", 0.0), 3),
         "gate_flags":        " ".join(cat.flags),
         "alignment":         alignment,
         "action_label":      card.action_label,
@@ -317,7 +335,7 @@ def _write_markdown(
         "# Sentiment × Technical Bridge Report",
         f"*Generated {ts} | min_quality ≥ {min_quality} | {len(results)} tickers analysed{extra_note}*",
         "",
-        "Scoring: **35% sentiment** (quality × setup bias) + **45% technical** (Argus ensemble) + **20% catalyst** (fundamentals/events)",
+        f"Scoring: **{SENTIMENT_WEIGHT:.0%} sentiment** (quality × setup bias) + **{TECHNICAL_WEIGHT:.0%} technical** (Argus ensemble) + **{CATALYST_WEIGHT:.0%} catalyst** (fundamentals/events)",
         "",
     ]
 
