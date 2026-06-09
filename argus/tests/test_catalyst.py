@@ -175,6 +175,17 @@ def test_evaluate_gates():
     assert g4 == [] and any("earnings" in x for x in f4)
 
 
+def test_parse_news_headlines():
+    from argus.data.ibkr import parse_news_headlines
+    class _Item:
+        def __init__(self, h): self.headline = h
+    items = [_Item("AAA: FDA approval granted"), _Item("BBB: prices offering")]
+    out = parse_news_headlines(items)
+    assert out == ["AAA: FDA approval granted", "BBB: prices offering"]
+    assert parse_news_headlines(None) == []
+    assert parse_news_headlines([object()]) == []  # missing .headline -> skipped
+
+
 def main():
     test_types_construct()
     test_keyword_fallback()
@@ -183,6 +194,7 @@ def main():
     test_squeeze_setup_vote(); test_growth_profitability_vote(); test_analyst_upside_vote()
     test_meta_score_abstain_renorm()
     test_evaluate_gates()
+    test_parse_news_headlines()
     print("OK test_catalyst")
 
 
