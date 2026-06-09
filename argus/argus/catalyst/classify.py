@@ -42,6 +42,74 @@ _CHATTER_MAP: list[tuple[str, str]] = [
 ]
 
 
+import json
+
+_PROMPT = (
+    "You are a financial catalyst extractor. Given recent headlines/snippets for one "
+    "stock ticker, return a JSON array of catalyst events. Each item: "
+    '{"type": one of %s, "direction": 1 (bullish) / 0 / -1 (bearish), '
+    '"recency_days": integer days since the event, "confidence": 0..1, '
+    '"source_snippet": short quote}. Only include real, ticker-specific catalysts. '
+    "Return [] if none. Return ONLY the JSON array.\n\nTicker: %s\nHeadlines:\n%s"
+)
+_NEWS_CAP = 25
+
+
+def _build_client(api_key: str):
+    if not api_key:
+        return None
+    try:
+        import anthropic
+        return anthropic.Anthropic(api_key=api_key)
+    except Exception:
+        return None
+
+
+def _parse_events(text: str) -> list[CatalystEvent]:
+    data = json.loads(text)
+    out: list[CatalystEvent] = []
+    for item in data:
+        ctype = str(item.get("type", "other"))
+        if ctype not in ALL_TYPES:
+            ctype = "other"
+        out.append(CatalystEvent(
+            type=ctype,
+            direction=int(item.get("direction", 0)),
+            recency_days=float(item.get("recency_days", 3) or 3),
+            confidence=max(0.0, min(1.0, float(item.get("confidence", 0.5) or 0.5))),
+            source="claude",
+        ))
+    return out
+
+
+def classify_events(
+    pool: CatalystPool,
+    *,
+    client=None,
+    api_key: str = "",
+    model: str = "claude-haiku-4-5",
+) -> list[CatalystEvent]:
+    """Classify pooled text into typed catalyst events via Claude; keyword fallback on any failure."""
+    if not pool.news_texts and not pool.chatter_tags:
+        return []
+    if client is None:
+        client = _build_client(api_key)
+    if client is None:
+        return keyword_fallback(pool)
+    try:
+        headlines = "\n".join(f"- {t}" for t in pool.news_texts[:_NEWS_CAP])
+        prompt = _PROMPT % (sorted(ALL_TYPES), pool.ticker, headlines)
+        resp = client.messages.create(
+            model=model, max_tokens=1024,
+            messages=[{"role": "user", "content": prompt}],
+        )
+        text = resp.content[0].text.strip()
+        events = _parse_events(text)
+        return events if events else keyword_fallback(pool)
+    except Exception:
+        return keyword_fallback(pool)
+
+
 def keyword_fallback(pool: CatalystPool, *, recency_days: float = 3.0) -> list[CatalystEvent]:
     """Deterministic keyword classification over pooled news + chatter tags."""
     events: list[CatalystEvent] = []
