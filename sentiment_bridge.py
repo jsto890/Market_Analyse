@@ -130,7 +130,7 @@ def _analyse_ticker(row: pd.Series) -> Optional[dict]:
 
     try:
         cat = catalyst_leg(
-            ticker, setups_row=row, ibkr=_catalyst_ibkr(),
+            ticker, setups_row=row, ibkr=None,
             api_key=settings.anthropic_api_key,
         )
     except Exception:
