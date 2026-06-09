@@ -19,7 +19,7 @@ def _default_yf_news(ticker: str) -> list[str]:
 
 
 def _chatter_tags(setups_row) -> list[str]:
-    if not setups_row:
+    if setups_row is None:
         return []
     raw = setups_row.get("catalysts") or ""
     return [t.strip() for t in str(raw).replace(",", ";").split(";") if t.strip()]
