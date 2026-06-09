@@ -238,6 +238,22 @@ def test_catalyst_leg_empty_pool_returns_none():
     assert res.score is None
 
 
+def test_blend_and_gates():
+    sys.path.insert(0, str(Path(__file__).parent.parent.parent))  # repo root for sentiment_bridge
+    import sentiment_bridge as sb
+    # all three legs present: 0.35*1 + 0.45*1 + 0.20*1 = 1.0
+    assert abs(sb.blend_legs(1.0, 1.0, 1.0) - 1.0) < 1e-9
+    # catalyst absent -> renormalize over sentiment+technical (0.35/0.45 -> sums 0.8)
+    expected = (0.35 * 0.5 + 0.45 * 1.0) / 0.80
+    assert abs(sb.blend_legs(0.5, 1.0, None) - expected) < 1e-9
+    # derank caps to <= 0
+    assert sb.apply_gates(0.7, ["derank"]) <= 0.0
+    # veto caps to <= 0
+    assert sb.apply_gates(0.9, ["veto"]) <= 0.0
+    # boost lifts a positive score
+    assert sb.apply_gates(0.4, ["boost"]) > 0.4
+
+
 def main():
     test_types_construct()
     test_keyword_fallback()
@@ -249,6 +265,7 @@ def main():
     test_parse_news_headlines()
     test_gather_pool_normalizes_metrics(); test_gather_pool_best_effort_on_failure()
     test_catalyst_leg_orchestrates(); test_catalyst_leg_empty_pool_returns_none()
+    test_blend_and_gates()
     print("OK test_catalyst")
 
 

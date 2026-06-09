@@ -31,15 +31,40 @@ sys.path.insert(0, str(ARGUS_ROOT))
 from argus.data.market import get_history          # noqa: E402
 from argus.action_card.builder import build_action_card  # noqa: E402
 from argus.agents.base import Verdict              # noqa: E402
+from argus.catalyst import catalyst_leg            # noqa: E402
+from argus.settings import settings               # noqa: E402
 
 
 # ── config ────────────────────────────────────────────────────────────────────
 ACTIONABLE_LABELS = {"fresh_watch", "building", "momentum_confirmed"}
 LATE_CHASE_LABEL  = "late_chase"
 MAX_WORKERS       = 6
-SENTIMENT_WEIGHT  = 0.40
-TECHNICAL_WEIGHT  = 0.60
-MAX_QUALITY       = 15.0  # normalisation ceiling
+SENTIMENT_WEIGHT = 0.35
+TECHNICAL_WEIGHT = 0.45
+CATALYST_WEIGHT  = 0.20
+BOOST_DELTA      = 0.10
+MAX_QUALITY      = 15.0  # normalisation ceiling
+
+
+def blend_legs(sentiment_score, tech_score, catalyst_score):
+    """Weighted blend over the legs that are present; renormalize weights when one is None."""
+    legs = [(SENTIMENT_WEIGHT, sentiment_score),
+            (TECHNICAL_WEIGHT, tech_score),
+            (CATALYST_WEIGHT, catalyst_score)]
+    present = [(w, s) for w, s in legs if s is not None]
+    total_w = sum(w for w, _ in present)
+    if total_w == 0:
+        return 0.0
+    return sum(w * s for w, s in present) / total_w
+
+
+def apply_gates(combined, gates):
+    """Apply catalyst hard gates to a blended score."""
+    if "veto" in gates or "derank" in gates:
+        return min(combined, 0.0)
+    if "boost" in gates and combined > 0:
+        return min(1.0, combined + BOOST_DELTA)
+    return combined
 
 # Tickers that use a cashtag not directly fetchable from yfinance.
 # Maps the cashtag used in Market_Review → (yfinance_symbol, currency_note).
@@ -66,6 +91,14 @@ def _sentiment_bias(setup_label: str) -> float:
         "avoid_wait":        -0.50,
         "noise":              0.00,
     }.get(setup_label, 0.0)
+
+
+def _catalyst_ibkr():
+    try:
+        from argus.data.ibkr import IBKRClient
+        return IBKRClient.instance()
+    except Exception:
+        return None
 
 
 def _analyse_ticker(row: pd.Series) -> Optional[dict]:
@@ -95,7 +128,13 @@ def _analyse_ticker(row: pd.Series) -> Optional[dict]:
     tech_raw   = float(card.score)                             # -1..+1 from Argus
     tech_score = tech_raw if card.verdict != Verdict.WAIT else 0.0
 
-    combined = SENTIMENT_WEIGHT * sentiment_score + TECHNICAL_WEIGHT * tech_score
+    cat = catalyst_leg(
+        ticker, setups_row=row, ibkr=_catalyst_ibkr(),
+        api_key=settings.anthropic_api_key,
+    )
+    catalyst_score = cat.score
+    combined = blend_legs(sentiment_score, tech_score, catalyst_score)
+    combined = apply_gates(combined, cat.gates)
 
     # ── alignment label ───────────────────────────────────────────────────────
     s_bullish = sentiment_bias > 0.5
@@ -125,7 +164,8 @@ def _analyse_ticker(row: pd.Series) -> Optional[dict]:
         "source_score":      round(float(row.get("source_score", 0)), 2),
         "mentions":          int(row.get("mention_count", 0)),
         "accounts":          int(row.get("distinct_account_count", 0)),
-        "catalysts":         str(row.get("catalysts", "")),
+        "catalysts":         ", ".join(sorted({f"{e.type}{'+' if e.direction > 0 else '-'}"
+                                               for e in cat.events})) or str(row.get("catalysts", "")),
         "top_accounts":      str(row.get("top_accounts", "")),
         "ret_1d":            round(ret_1d * 100, 2),
         "ret_5d":            round(ret_5d * 100, 2),
@@ -149,6 +189,8 @@ def _analyse_ticker(row: pd.Series) -> Optional[dict]:
         "sentiment_score":   round(sentiment_score, 3),
         "tech_score":        round(tech_score, 3),
         "combined_score":    round(combined, 3),
+        "catalyst_score":    round(catalyst_score, 3) if catalyst_score is not None else "",
+        "gate_flags":        " ".join(cat.flags),
         "alignment":         alignment,
         "action_label":      card.action_label,
         "trade_style":       card.trade_style,
@@ -292,7 +334,7 @@ def _write_markdown(
     from collections import Counter as _Counter
     cat_counts: _Counter = _Counter()
     for r in aligned_hc[:10]:
-        for cat in (r["catalysts"] or "").split(";"):
+        for cat in (r["catalysts"] or "").replace(",", ";").split(";"):
             if cat.strip() and cat.strip() != "nan":
                 cat_counts[cat.strip()] += 1
     top_cat, top_cat_n = cat_counts.most_common(1)[0] if cat_counts else ("", 0)
