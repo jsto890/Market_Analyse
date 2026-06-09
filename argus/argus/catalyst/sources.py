@@ -22,7 +22,7 @@ def _chatter_tags(setups_row) -> list[str]:
     if not setups_row:
         return []
     raw = setups_row.get("catalysts") or ""
-    return [t for t in str(raw).replace(",", ";").split(";") if t.strip()]
+    return [t.strip() for t in str(raw).replace(",", ";").split(";") if t.strip()]
 
 
 def _safe(fn, ticker, default):
@@ -71,7 +71,7 @@ def gather_pool(
         if fund.get("market_cap"):
             metrics["market_cap"] = float(fund["market_cap"])
         if fund.get("short_pct_float") is not None:
-            metrics["short_pct_float"] = float(fund["short_pct_float"])
+            metrics["short_pct_float"] = float(fund["short_pct_float"])  # IBKR returns percent, not fraction
         if fund.get("dtc") is not None:
             metrics["dtc"] = float(fund["dtc"])
         if fund.get("days_to_earnings") is not None:
