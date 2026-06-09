@@ -24,8 +24,28 @@ def test_types_construct():
     assert res.score is None and res.votes == [] and res.gates == []
 
 
+def test_keyword_fallback():
+    from argus.catalyst.types import CatalystPool
+    from argus.catalyst.classify import keyword_fallback
+    pool = CatalystPool(
+        ticker="XYZ",
+        chatter_tags=["earnings"],
+        news_texts=["XYZ announces FDA approval for lead drug",
+                    "XYZ prices $50M registered direct offering"],
+    )
+    events = keyword_fallback(pool)
+    types = {e.type for e in events}
+    assert "fda" in types
+    assert "offering" in types
+    fda = next(e for e in events if e.type == "fda")
+    assert fda.direction == 1 and fda.source == "chatter"
+    off = next(e for e in events if e.type == "offering")
+    assert off.direction == -1
+
+
 def main():
     test_types_construct()
+    test_keyword_fallback()
     print("OK test_catalyst")
 
 
