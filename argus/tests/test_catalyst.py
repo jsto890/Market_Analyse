@@ -80,10 +80,37 @@ def test_classify_events_no_client_uses_fallback():
     assert any(e.type == "fda" for e in events)
 
 
+def test_event_catalyst_vote():
+    from argus.agents.base import Verdict
+    from argus.catalyst.types import CatalystPool, CatalystEvent
+    from argus.catalyst.agents import event_catalyst_vote
+    pool = CatalystPool(ticker="XYZ")
+    events = [CatalystEvent("fda", 1, 1.0, 0.9, "claude"),
+              CatalystEvent("dilution", -1, 1.0, 0.8, "claude")]
+    v = event_catalyst_vote(pool, events)
+    assert v.agent == "event_catalyst" and v.verdict == Verdict.LONG and v.confidence > 0.5
+    # no positive events -> abstain
+    v2 = event_catalyst_vote(pool, [CatalystEvent("dilution", -1, 1.0, 0.8, "claude")])
+    assert v2.verdict == Verdict.WAIT and v2.confidence == 0.0
+
+
+def test_earnings_proximity_vote():
+    from argus.agents.base import Verdict
+    from argus.catalyst.types import CatalystPool
+    from argus.catalyst.agents import earnings_proximity_vote
+    v = earnings_proximity_vote(CatalystPool("XYZ", metrics={"days_to_earnings": 5}), [])
+    assert v.verdict == Verdict.LONG and v.confidence > 0
+    v2 = earnings_proximity_vote(CatalystPool("XYZ", metrics={"days_to_earnings": 40}), [])
+    assert v2.verdict == Verdict.WAIT
+    v3 = earnings_proximity_vote(CatalystPool("XYZ", metrics={}), [])
+    assert v3.verdict == Verdict.WAIT
+
+
 def main():
     test_types_construct()
     test_keyword_fallback()
     test_classify_events_with_claude(); test_classify_events_falls_back_on_bad_json(); test_classify_events_no_client_uses_fallback()
+    test_event_catalyst_vote(); test_earnings_proximity_vote()
     print("OK test_catalyst")
 
 
