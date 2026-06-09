@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import math
+
 from argus.agents.base import Vote, Verdict
 
 from .classify import POSITIVE_TYPES
@@ -66,14 +68,14 @@ def growth_profitability_vote(pool: CatalystPool, events: list[CatalystEvent]) -
     pm = pool.metrics.get("profit_margin")
     if rg is None and pm is None:
         return _abstain("growth_profitability", "pre-revenue/no data")
-    score = 0.0
-    if rg is not None:
-        score += rg
-    if pm is not None and pm > 0:
-        score += pm
+    # tanh normalises growth: 50%→0.46, 100%→0.76, 200%→0.96 — prevents raw rg>1 overflow
+    rg_score = math.tanh(rg) if rg is not None else 0.0
+    # margin adds up to 0.5 bonus; pm is already a fraction so _clamp keeps it in [0,1]
+    pm_score = _clamp(pm) * 0.5 if (pm is not None and pm > 0) else 0.0
+    score = rg_score + pm_score
     if score <= 0:
         return _abstain("growth_profitability", "no growth")
-    return Vote("growth_profitability", Verdict.LONG, _clamp(score), f"rev_g={rg} margin={pm}", FAMILY)
+    return Vote("growth_profitability", Verdict.LONG, _clamp(score), f"rev_g={rg:.2f} margin={pm:.3f}", FAMILY)
 
 
 def analyst_upside_vote(pool: CatalystPool, events: list[CatalystEvent]) -> Vote:
