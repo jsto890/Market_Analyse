@@ -186,6 +186,34 @@ def test_parse_news_headlines():
     assert parse_news_headlines([object()]) == []  # missing .headline -> skipped
 
 
+def test_gather_pool_normalizes_metrics():
+    from argus.catalyst.sources import gather_pool
+    fake_info = {
+        "currentPrice": 10.0, "marketCap": 2.0e8, "shortPercentOfFloat": 0.22,
+        "revenueGrowth": 0.4, "profitMargins": -0.1, "targetMeanPrice": 18.0,
+        "recommendationKey": "buy",
+    }
+    pool = gather_pool(
+        "XYZ",
+        setups_row={"catalysts": "fda;biotech"},
+        yf_info_fn=lambda t: fake_info,
+        yf_news_fn=lambda t: ["XYZ gets FDA approval"],
+        ibkr=None,
+    )
+    assert pool.metrics["price"] == 10.0
+    assert pool.metrics["short_pct_float"] == 22.0       # fraction -> percent
+    assert pool.metrics["analyst_target"] == 18.0
+    assert pool.chatter_tags == ["fda", "biotech"]
+    assert pool.news_texts == ["XYZ gets FDA approval"]
+
+
+def test_gather_pool_best_effort_on_failure():
+    from argus.catalyst.sources import gather_pool
+    def boom(t): raise RuntimeError("offline")
+    pool = gather_pool("XYZ", setups_row=None, yf_info_fn=boom, yf_news_fn=boom, ibkr=None)
+    assert pool.is_empty() is True
+
+
 def main():
     test_types_construct()
     test_keyword_fallback()
@@ -195,6 +223,7 @@ def main():
     test_meta_score_abstain_renorm()
     test_evaluate_gates()
     test_parse_news_headlines()
+    test_gather_pool_normalizes_metrics(); test_gather_pool_best_effort_on_failure()
     print("OK test_catalyst")
 
 
