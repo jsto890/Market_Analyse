@@ -18,7 +18,7 @@ from pathlib import Path
 import pandas as pd
 
 sys.path.insert(0, str(Path(__file__).parent))
-from schema import FORWARD_HORIZONS, PANEL_COLUMNS, COLUMN_ALIASES  # noqa: E402
+from schema import FORWARD_HORIZONS, PANEL_COLUMNS, COLUMN_ALIASES, VOTE_COLUMNS  # noqa: E402
 
 REPO = Path(__file__).resolve().parents[2]
 REPORTS = REPO / "reports"
@@ -52,13 +52,13 @@ def _load_rows(files: dict[str, Path]) -> pd.DataFrame:
         df["date"] = iso
         df["source_file"] = path.name
         keep = ["date", "ticker", "source_file", "sentiment_score", "tech_score"]
-        for opt in ("fetch_symbol", "catalyst_score", "alignment", "gate_flags"):
+        for opt in ("fetch_symbol", "catalyst_score", "alignment", "gate_flags", *VOTE_COLUMNS):
             if opt in df:
                 keep.append(opt)
         frames.append(df[keep])
     panel = pd.concat(frames, ignore_index=True)
     panel["n_runs_date"] = panel.groupby("date")["ticker"].transform("size")
-    for col in ("fetch_symbol", "catalyst_score", "alignment", "gate_flags"):
+    for col in ("fetch_symbol", "catalyst_score", "alignment", "gate_flags", *VOTE_COLUMNS):
         if col not in panel:
             panel[col] = ""
     panel["fetch_symbol"] = panel["fetch_symbol"].fillna("").replace("", pd.NA)

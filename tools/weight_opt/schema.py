@@ -10,6 +10,16 @@ from __future__ import annotations
 # the dataset spans ~33 calendar days, so only short horizons have elapsed.
 FORWARD_HORIZONS = [1, 5, 10, 20]
 
+# Per-sub-agent catalyst vote confidences (signed). Logged from 2026-06-09;
+# empty for older rows. Used by vote_validation.py at the 6-week checkpoint.
+VOTE_COLUMNS = [
+    "vote_event_catalyst",
+    "vote_earnings_proximity",
+    "vote_squeeze_setup",
+    "vote_growth_profitability",
+    "vote_analyst_upside",
+]
+
 PANEL_COLUMNS = [
     "date",             # ISO YYYY-MM-DD, parsed from the bridge filename
     "ticker",           # upper-case
@@ -21,7 +31,7 @@ PANEL_COLUMNS = [
     "gate_flags",       # catalyst gate flags string (may be empty)
     "n_runs_date",      # provenance: how many bridge runs existed that date
     "source_file",      # provenance: which CSV this row came from
-] + [f"fwd_ret_{h}d" for h in FORWARD_HORIZONS]
+] + VOTE_COLUMNS + [f"fwd_ret_{h}d" for h in FORWARD_HORIZONS]
 
 # Historical schema drift: oldest CSVs used signa_* before the package rename.
 COLUMN_ALIASES = {
