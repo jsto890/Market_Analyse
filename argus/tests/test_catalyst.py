@@ -158,6 +158,23 @@ def test_meta_score_abstain_renorm():
     assert meta_score(mix) < 0.4
 
 
+def test_evaluate_gates():
+    from argus.catalyst.types import CatalystEvent
+    from argus.catalyst.score import evaluate_gates
+    # dilution -> derank
+    g, f = evaluate_gates([CatalystEvent("offering", -1, 2.0, 0.8, "claude")], {})
+    assert "derank" in g and any("DILUTION" in x for x in f)
+    # going concern -> veto
+    g2, f2 = evaluate_gates([CatalystEvent("going_concern", -1, 1.0, 0.9, "claude")], {})
+    assert "veto" in g2
+    # fresh FDA -> boost
+    g3, f3 = evaluate_gates([CatalystEvent("fda", 1, 1.0, 0.9, "claude")], {})
+    assert "boost" in g3 and "⚡" in f3
+    # earnings metric -> flag only, no gate
+    g4, f4 = evaluate_gates([], {"days_to_earnings": 5})
+    assert g4 == [] and any("earnings" in x for x in f4)
+
+
 def main():
     test_types_construct()
     test_keyword_fallback()
@@ -165,6 +182,7 @@ def main():
     test_event_catalyst_vote(); test_earnings_proximity_vote()
     test_squeeze_setup_vote(); test_growth_profitability_vote(); test_analyst_upside_vote()
     test_meta_score_abstain_renorm()
+    test_evaluate_gates()
     print("OK test_catalyst")
 
 
