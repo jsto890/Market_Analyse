@@ -23,7 +23,8 @@ _CONFIG_DIR = Path(__file__).parent / "config"
 _CONSTITUENTS_CACHE = _CONFIG_DIR / "sector_constituents.json"
 _CACHE_TTL_DAYS = 7
 _TOP_N = 50           # constituents per industry
-_BENCHMARK = "SPY"    # RRG benchmark — broad market (rotation = strength vs this)
+_BENCHMARK = "SPY"    # RRG benchmark — broad market (rotation = strength vs this).
+                      # QQQ gives near-identical ranks here (traded set ≈ QQQ components).
 _SHRINK_K = 5         # ranking shrinkage strength: w = n/(n+K) toward the cross-sectional mean
 _BREADTH_SMA = 50     # breadth = % of constituents above their N-day moving average
 _RANK_HYSTERESIS = 2  # only flag a Δrank move of at least this many positions (smaller = noise)
@@ -59,8 +60,39 @@ _WINDOWS = [("1W", 5), ("1M", 21), ("3M", 63)]
 
 
 # ── constituent membership (weekly cache) ────────────────────────────────────
+# Primary US listings only — excludes OTC/PNK and foreign cross-listings (the
+# screener otherwise returns ADRs/foreign shares of the same companies).
+_US_PRIMARY_EXCH = {"NMS", "NYQ", "NGM", "NCM", "ASE"}
+
+
+def _screen_industry_us(industry_name: str) -> list[str]:
+    """Primary-US-listed tickers in an industry, largest-cap first, via the screener.
+
+    yfinance's Industry.top_companies caps out below 50 for smaller industries;
+    the screener backfills the rest. Returns clean US symbols (no OTC, no foreign
+    cross-listings)."""
+    import yfinance as yf
+    try:
+        q = yf.EquityQuery("and", [
+            yf.EquityQuery("eq", ["industry", industry_name]),
+            yf.EquityQuery("eq", ["region", "us"]),
+        ])
+        res = yf.screen(q, size=250, sortField="intradaymarketcap", sortAsc=False)
+    except Exception:
+        return []
+    out: list[str] = []
+    for x in (res.get("quotes", []) if isinstance(res, dict) else []):
+        sym = x.get("symbol", "")
+        if x.get("exchange") in _US_PRIMARY_EXCH and sym and "." not in sym:
+            out.append(sym)
+    return out
+
+
 def _fetch_constituents() -> dict:
-    """Pull each sector's industries and their top-N constituents (symbol→weight)."""
+    """Pull each sector's industries and their top-N constituents (symbol→weight).
+
+    Weights are vestigial (the RRG is equal-weighted); only the symbol list is used.
+    Thin TRADED industries are backfilled toward _TOP_N via the US screener."""
     import yfinance as yf
     sectors: dict = {}
     for skey in _SECTOR_KEYS:
@@ -84,6 +116,12 @@ def _fetch_constituents() -> dict:
             for sym, crow in top.iterrows():
                 w = crow.get("market weight")
                 weights[str(sym)] = float(w) if pd.notna(w) else 0.0
+            # Backfill thin traded industries with more primary-US names (weekly cost).
+            if str(ikey) in _TRADED_INDUSTRIES and len(weights) < _TOP_N:
+                for sym in _screen_industry_us(str(irow.get("name", ikey))):
+                    if len(weights) >= _TOP_N:
+                        break
+                    weights.setdefault(sym, 0.0)
             if weights:
                 ind_map[str(ikey)] = {
                     "name": str(irow.get("name", ikey)),
@@ -358,8 +396,8 @@ def build_rotation_section(force_refresh: bool = False,
 
     lines = [
         "## Sector Rotation",
-        f"_Relative Rotation Graph vs {_BENCHMARK} — equal-weighted across the top ~50 "
-        "constituents per industry (breadth, not mega-cap dominated)._",
+        f"_Relative Rotation Graph vs {_BENCHMARK} — equal-weighted across each industry's "
+        "constituents (up to 50; fewer where yfinance lists fewer — breadth, not mega-cap dominated)._",
         "",
         "- **Quadrant** — 🟢 Leading (strong & still rising) · 🔵 Improving (weak but turning "
         "up — *early rotation in*) · 🟡 Weakening (strong but fading) · 🔴 Lagging (weak & falling).",

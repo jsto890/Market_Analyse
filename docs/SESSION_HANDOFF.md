@@ -152,8 +152,19 @@ Rotation is **relative** — capital moving *between* sectors. Unanimous finding
   breadth is an unconfirmed signal.
 
 ### Still-deferred RRG items
-- Benchmark choice: SPY (current) vs QQQ for the tech-heavy set — revisit.
-- Membership look-ahead: today's top-50 applied to trailing returns (mitigated by
+- Benchmark: **SPY** (`_BENCHMARK`). Compared SPY vs QQQ — near-identical ranks
+  (#1–#12 same, RS values within ~0.4) since the traded industries are largely
+  QQQ's components. Kept SPY (broad market).
+- **Thin industry coverage — DONE (screener backfill):** `_fetch_constituents` now
+  tops up thin TRADED industries toward 50 via the yfinance screener
+  (`EquityQuery` + `yf.screen`, primary US exchanges {NMS,NYQ,NGM,NCM,ASE} only,
+  no OTC/foreign cross-listings). Counts went e.g. Electronic Components 31→50,
+  Computer Hardware 22→43, Comm Equipment 32→46, Uranium 3→13. A few cap below 50
+  where the clean US universe is genuinely smaller (Semi Equipment 32 — most are
+  foreign like ASML/Tokyo Electron; **Uranium 13** — that's the whole liquid US
+  uranium universe, can't reach 50 without OTC/foreign junk). Runs on the weekly
+  cache refresh only.
+- Membership look-ahead: today's top-N applied to trailing returns (mitigated by
   weekly cache + equal-weight; lock membership quarterly for full rigor).
 
 ---

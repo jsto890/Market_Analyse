@@ -4,13 +4,13 @@
     "Software - Application": 2,
     "Information Technology Services": 3,
     "Software - Infrastructure": 4,
-    "Communication Equipment": 5,
-    "Electronic Components": 6,
-    "Uranium": 7,
+    "Uranium": 5,
+    "Semiconductor Equipment & Materials": 6,
+    "Communication Equipment": 7,
     "Computer Hardware": 8,
     "Aerospace & Defense": 9,
     "Semiconductors": 10,
-    "Semiconductor Equipment & Materials": 11,
+    "Electronic Components": 11,
     "Quantum Computing": 12
   }
 }
