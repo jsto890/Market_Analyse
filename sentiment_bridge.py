@@ -31,7 +31,8 @@ sys.path.insert(0, str(Path(__file__).parent))     # for sibling modules (sector
 
 from sector_rotation import build_rotation_section  # noqa: E402
 from argus.data.market import get_history          # noqa: E402
-from argus.action_card.builder import build_action_card, _distill_notes  # noqa: E402
+from argus.action_card.builder import build_action_card, _distill_notes, _detect_ticker_regime  # noqa: E402
+from argus.indicators.compute import compute_all   # noqa: E402
 from argus.agents.base import Verdict              # noqa: E402
 from argus.catalyst import catalyst_leg            # noqa: E402
 from argus.settings import settings               # noqa: E402
@@ -74,6 +75,37 @@ def apply_gates(combined, gates):
     if "boost" in gates and combined > 0:
         return min(1.0, combined + BOOST_DELTA)
     return combined
+
+
+def market_regime() -> tuple[str, bool]:
+    """Classify the broad tape by running Argus's regime detector on SPY + QQQ.
+
+    Returns (label, risk_on). Chasing extended/late_chase names pays off in a
+    risk-on (trending-up) tape and gets punished when it turns — so the chase
+    labels are gated on this. Defaults to risk-on if data can't be fetched, to
+    preserve prior behaviour rather than over-restrict on a transient failure."""
+    risk_on_count = total = 0
+    detail = []
+    for sym in ("SPY", "QQQ"):
+        try:
+            df = get_history(sym, period="1y", interval="1d")
+            if df is None or len(df) < 60:
+                continue
+            di = compute_all(df)
+            regime = _detect_ticker_regime(di)
+            last = float(di["close"].iloc[-1])
+            ema50 = float(di["ema_50"].iloc[-1])
+            uptrend = last > ema50
+            ron = uptrend and regime in ("trending", "trending_late", "neutral")
+            risk_on_count += int(ron)
+            total += 1
+            detail.append(f"{sym} {regime} {'↑' if uptrend else '↓'}")
+        except Exception:
+            continue
+    if total == 0:
+        return "unknown (fetch failed)", True
+    risk_on = risk_on_count == total  # require BOTH indices risk-on
+    return " · ".join(detail), risk_on
 
 # Tickers that use a cashtag not directly fetchable from yfinance.
 # Maps the cashtag used in Market_Review → (yfinance_symbol, currency_note).
@@ -663,6 +695,7 @@ def _write_markdown(
     out_path: Path,
     min_quality: float,
     full_setups_df: pd.DataFrame | None = None,
+    regime_note: str = "",
 ) -> None:
     ts = datetime.now().strftime("%Y-%m-%d %H:%M")
     lines = [
@@ -670,6 +703,8 @@ def _write_markdown(
         f"*Generated {ts}*",
         "",
     ]
+    if regime_note:
+        lines += [f"**Market regime:** {regime_note}", ""]
 
     # Section 1: Sector Rotation — broad-market, data-driven; fall back to the
     # watchlist-setup view only if the rotation data fetch fails.
@@ -757,9 +792,11 @@ def main() -> None:
     parser.add_argument("--min-quality", type=float, default=6.0,
                         help="Minimum quality_score from Market_Review (default 6)")
     parser.add_argument("--include-late-chase", action="store_true",
-                        help="(deprecated no-op: chase labels are included by default)")
+                        help="(deprecated no-op: chase labels are auto-gated by market regime)")
     parser.add_argument("--no-chase", action="store_true",
-                        help="Exclude extended/late_chase (use in a mean-reverting/risk-off tape)")
+                        help="Never include extended/late_chase, regardless of regime")
+    parser.add_argument("--force-chase", action="store_true",
+                        help="Always include extended/late_chase, ignoring the regime gate")
     parser.add_argument("--extra-tickers", type=str, default="",
                         help="Comma-separated tickers to force-include regardless of quality (pure technical, zero sentiment weight)")
     parser.add_argument("--out", type=str, default=str(OUT_DIR),
@@ -779,9 +816,20 @@ def main() -> None:
     # Keep reference to full df for sector rotation
     full_setups_df = df.copy()
 
+    # Chase labels (extended/late_chase) are gated on the market regime: included
+    # only in a risk-on tape, unless overridden. --no-chase off; --force-chase on.
+    regime_label, risk_on = market_regime()
+    if args.no_chase:
+        include_chase = False
+    elif args.force_chase:
+        include_chase = True
+    else:
+        include_chase = risk_on
     keep_labels = ACTIONABLE_LABELS.copy()
-    if not args.no_chase:
+    if include_chase:
         keep_labels |= CHASE_LABELS
+    print(f"Market regime: {regime_label} → risk_{'on' if risk_on else 'off'}; "
+          f"chase labels {'INCLUDED' if include_chase else 'EXCLUDED'}")
 
     filtered = df[
         df["setup_label"].isin(keep_labels) &
@@ -849,13 +897,15 @@ def main() -> None:
 
     # ── write outputs ─────────────────────────────────────────────────────────
     ts_tag = datetime.now().strftime("%Y%m%d_%H%M")
+    regime_note = (f"{regime_label} — risk-{'on' if risk_on else 'off'}; "
+                   f"chase entries {'ON' if include_chase else 'OFF'}")
     _write_markdown(results, out_dir / f"bridge_{ts_tag}.md", args.min_quality,
-                    full_setups_df=full_setups_df)
+                    full_setups_df=full_setups_df, regime_note=regime_note)
     _write_csv(results,      out_dir / f"bridge_{ts_tag}.csv")
 
     # also overwrite a stable "latest" copy
     _write_markdown(results, out_dir / "bridge_latest.md", args.min_quality,
-                    full_setups_df=full_setups_df)
+                    full_setups_df=full_setups_df, regime_note=regime_note)
     _write_csv(results,      out_dir / "bridge_latest.csv")
 
     # ── summary ───────────────────────────────────────────────────────────────
