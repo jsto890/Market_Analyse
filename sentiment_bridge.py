@@ -697,6 +697,25 @@ def _gate_marker(r: dict) -> str:
     return ""
 
 
+def _candidate_table(rows: list[dict]) -> list[str]:
+    """Render a candidate table (header + one row per result) shared across sections."""
+    out = [
+        "| Ticker | Signal | Conv | Sent | Tech | Cat | Combined | Sector |",
+        "|--------|--------|------|------|------|-----|----------|--------|",
+    ]
+    for r in rows:
+        conv = "⚡ STRONG" if r["high_conviction"] else "✅ GOOD"
+        cat_str = f"{r['catalyst_score']:+.2f}" if r["catalyst_score"] != "" else "—"
+        fam, sub = r.get("_sector", ("", ""))
+        sector_str = f"{fam} → {sub}" if fam and sub else fam or sub or "—"
+        tag = "🔸 " if r.get("near_aligned") else ""
+        out.append(
+            f"| {tag}**{r['ticker']}** | {conv} | {_conv_tag(r)} | {r['sentiment_score']:+.2f} | "
+            f"{r['tech_score']:+.2f} | {cat_str} | {r['combined_score']:+.2f}{_gate_marker(r)} | {sector_str} |"
+        )
+    return out
+
+
 def _write_markdown(
     results: list[dict],
     out_path: Path,
@@ -728,54 +747,48 @@ def _write_markdown(
 
     # Section 2: Aligned (group1)
     group1 = [r for r in results if r.get("group1")]
-    group2 = [r for r in results if r.get("group2")]
+    group2_all = [r for r in results if r.get("group2")]
+    # Pull high-conviction names whose sentiment is weak/negative (pulling back) into
+    # their own "quality on sale" bucket, so they're not buried among breakout names.
+    pullback = [r for r in group2_all
+                if str(r.get("conviction", "")).lower() == "high"
+                and r["sentiment_score"] < NEAR_SENT]
+    pullback_tickers = {r["ticker"] for r in pullback}
+    group2 = [r for r in group2_all if r["ticker"] not in pullback_tickers]
+    _by_combined = lambda r: r["combined_score"]  # noqa: E731
 
     lines += ["## Aligned — Sentiment + Technical + Catalyst all bullish", ""]
     if group1:
-        lines += [
-            "| Ticker | Signal | Conv | Sent | Tech | Cat | Combined | Sector |",
-            "|--------|--------|------|------|------|-----|----------|--------|",
-        ]
-        for r in group1:
-            conv = "⚡ STRONG" if r["high_conviction"] else "✅ GOOD"
-            cat_str = f"{r['catalyst_score']:+.2f}" if r["catalyst_score"] != "" else "—"
-            fam, sub = r.get("_sector", ("", ""))
-            sector_str = f"{fam} → {sub}" if fam and sub else fam or sub or "—"
-            lines.append(
-                f"| **{r['ticker']}** | {conv} | {_conv_tag(r)} | {r['sentiment_score']:+.2f} | {r['tech_score']:+.2f} | {cat_str} | {r['combined_score']:+.2f}{_gate_marker(r)} | {sector_str} |"
-            )
+        lines += _candidate_table(sorted(group1, key=_by_combined, reverse=True))
     else:
         lines.append("*No aligned candidates today.*")
     lines.append("")
 
-    # Section 3: Technical + Catalyst (group2). Near-aligned names (sentiment just
+    # Section 3: High conviction, pulling back — strong idea + catalyst, sentiment
+    # weak (recent dip). The dip-buy watchlist.
+    lines += ["## High conviction, pulling back", "",
+              "_Strong chatter quality (🟢) + catalyst, but sentiment is weak/negative "
+              "(name is dipping). Watch for the turn back up._", ""]
+    if pullback:
+        lines += _candidate_table(sorted(pullback, key=_by_combined, reverse=True))
+    else:
+        lines.append("*None today.*")
+    lines.append("")
+
+    # Section 4: Technical + Catalyst (group2). Near-aligned names (sentiment just
     # below the alignment line) are flagged 🔸 and floated to the top.
     lines += ["## Technical + Catalyst bullish", "",
               "_🔸 = near-aligned: would be fully aligned but sentiment is just below "
               f"{ALIGN_SENT:.2f} (≥ {NEAR_SENT:.2f})._", ""]
     if group2:
-        lines += [
-            "| Ticker | Signal | Conv | Sent | Tech | Cat | Combined | Sector |",
-            "|--------|--------|------|------|------|-----|----------|--------|",
-        ]
-        group2_sorted = sorted(
-            group2, key=lambda r: (r.get("near_aligned", False), r["combined_score"]), reverse=True
-        )
-        for r in group2_sorted:
-            conv = "⚡ STRONG" if r["high_conviction"] else "✅ GOOD"
-            cat_str = f"{r['catalyst_score']:+.2f}" if r["catalyst_score"] != "" else "—"
-            fam, sub = r.get("_sector", ("", ""))
-            sector_str = f"{fam} → {sub}" if fam and sub else fam or sub or "—"
-            tag = "🔸 " if r.get("near_aligned") else ""
-            lines.append(
-                f"| {tag}**{r['ticker']}** | {conv} | {_conv_tag(r)} | {r['sentiment_score']:+.2f} | {r['tech_score']:+.2f} | {cat_str} | {r['combined_score']:+.2f}{_gate_marker(r)} | {sector_str} |"
-            )
+        lines += _candidate_table(sorted(
+            group2, key=lambda r: (r.get("near_aligned", False), r["combined_score"]), reverse=True))
     else:
         lines.append("*No technical + catalyst candidates today.*")
     lines.append("")
 
-    # Section 4: Long Candidate Detail
-    all_longs = sorted(group1 + group2, key=lambda r: r["combined_score"], reverse=True)
+    # Section 5: Long Candidate Detail
+    all_longs = sorted(group1 + group2_all, key=lambda r: r["combined_score"], reverse=True)
     if all_longs:
         lines += ["## Long Candidate Detail", ""]
         for r in all_longs:
