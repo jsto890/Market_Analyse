@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import threading
 from pathlib import Path
 from typing import Any
 
@@ -13,30 +14,40 @@ _CACHE_PATH = _CONFIG_DIR / "sector_cache.json"
 
 _taxonomy: dict[str, Any] | None = None
 _cache: dict[str, dict[str, str]] | None = None
+_lock = threading.Lock()
 
 
 def _load_taxonomy() -> dict[str, Any]:
     global _taxonomy
     if _taxonomy is None:
-        with open(_TAXONOMY_PATH) as f:
-            _taxonomy = yaml.safe_load(f)
+        try:
+            with open(_TAXONOMY_PATH) as f:
+                _taxonomy = yaml.safe_load(f)
+        except Exception as e:
+            raise RuntimeError(f"Failed to load taxonomy from {_TAXONOMY_PATH}: {e}") from e
     return _taxonomy
 
 
 def _load_cache() -> dict[str, dict[str, str]]:
     global _cache
     if _cache is None:
-        if _CACHE_PATH.exists():
-            with open(_CACHE_PATH) as f:
-                _cache = json.load(f)
-        else:
-            _cache = {}
+        with _lock:
+            if _cache is None:
+                if _CACHE_PATH.exists():
+                    try:
+                        with open(_CACHE_PATH) as f:
+                            _cache = json.load(f)
+                    except (json.JSONDecodeError, IOError):
+                        _cache = {}
+                else:
+                    _cache = {}
     return _cache
 
 
 def _save_cache(cache: dict[str, dict[str, str]]) -> None:
-    with open(_CACHE_PATH, "w") as f:
-        json.dump(cache, f, indent=2)
+    with _lock:
+        with open(_CACHE_PATH, "w") as f:
+            json.dump(cache, f, indent=2)
 
 
 def _fetch_yfinance(ticker: str) -> dict[str, str]:
