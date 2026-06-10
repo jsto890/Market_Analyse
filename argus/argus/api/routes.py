@@ -8,16 +8,11 @@ Single-user, no auth (binds to 127.0.0.1 by default). Argus feature set:
   /api/action_card/{sym}     - the headline LONG/SHORT/WAIT card
   /api/screener              - run agents across the universe
   /api/flow/{sym}            - options-flow proxy
-  /api/backtest/{sym}        - signal backtest
-  /api/monte_carlo           - bootstrap MC on a list of trade returns
-  /api/pre_trade_stress      - per-trade stop-vs-target probability
   /api/portfolio             - live IBKR positions + edge overlay
   /api/account               - IBKR account summary
-  /api/hedge                 - hedge calculator
   /api/execute               - place market or bracket order via IBKR
   /api/chat/{sym}            - chart chat (Claude-grounded)
   /api/analysis/{sym}        - written analyst report
-  /api/journal               - list/open/close trades
   /api/alert                 - dispatch a manual alert
   /                          - minimal HTML UI
 """
@@ -45,33 +40,15 @@ from ..agents import all_agents
 from ..action_card import build_action_card
 from ..screener import screen_universe, DEFAULT_UNIVERSE
 from ..flow import flow_summary
-from ..backtest import backtest_signal, monte_carlo
-from ..backtest.monte_carlo import pre_trade_stress
-from ..portfolio import PortfolioTracker, hedge_for_long_book
+from ..portfolio import PortfolioTracker
 from ..chat import chart_chat, written_analysis
-from ..journal import Journal, Trade
-from ..alerts import dispatch_alert, AlertChannels
+from ..alerts import dispatch_alert, AlertChannels, AlertLog
 
 
 UI_DIR = Path(__file__).parent.parent / "ui"
 
 
 # ---------- request models ----------
-
-class HedgeReq(BaseModel):
-    portfolio_value: float
-    coverage_pct: float = 0.5
-
-class MCReq(BaseModel):
-    trade_returns: List[float]
-    sims: int = 5000
-    horizon: Optional[int] = None
-
-class StressReq(BaseModel):
-    entry: float
-    stop: float
-    target: float
-    historical_win_rate: float = 0.5
 
 class ChatReq(BaseModel):
     question: str
@@ -89,21 +66,6 @@ class ExecReq(BaseModel):
     stop: Optional[float] = None
     target: Optional[float] = None
 
-class TradeOpenReq(BaseModel):
-    symbol: str
-    side: str
-    qty: float
-    entry: Optional[float] = None
-    stop: Optional[float] = None
-    target: Optional[float] = None
-    setup: Optional[str] = None
-    notes: Optional[str] = None
-
-class TradeCloseReq(BaseModel):
-    trade_id: int
-    exit: float
-    notes: Optional[str] = None
-
 class AlertReq(BaseModel):
     title: str
     body: str
@@ -115,7 +77,7 @@ class AlertReq(BaseModel):
 
 def build_app() -> FastAPI:
     app = FastAPI(title="Argus", version="0.1.0")
-    journal = Journal()
+    alert_log = AlertLog()
 
     if UI_DIR.exists():
         app.mount("/ui", StaticFiles(directory=str(UI_DIR), html=True), name="ui")
@@ -198,30 +160,6 @@ def build_app() -> FastAPI:
     def options(symbol: str, expiration: Optional[str] = None):
         return get_options_chain(symbol, expiration)
 
-    @app.get("/api/backtest/{symbol}")
-    def backtest(symbol: str, period: str = "2y"):
-        df = get_history(symbol, period=period, interval="1d")
-        if df.empty:
-            raise HTTPException(404, "no data")
-        r = backtest_signal(symbol, df)
-        curve = r.equity_curve
-        if len(curve) > 500:
-            step = len(curve) // 500
-            curve = curve[::step]
-        return {
-            **{k: v for k, v in r.__dict__.items() if k != "equity_curve"},
-            "equity_curve": curve,
-        }
-
-    @app.post("/api/monte_carlo")
-    def mc(req: MCReq):
-        r = monte_carlo(req.trade_returns, sims=req.sims, horizon=req.horizon)
-        return r.__dict__
-
-    @app.post("/api/pre_trade_stress")
-    def stress(req: StressReq):
-        return pre_trade_stress(req.entry, req.stop, req.target, req.historical_win_rate)
-
     @app.get("/api/portfolio")
     def portfolio():
         return PortfolioTracker().positions_with_edge()
@@ -239,10 +177,6 @@ def build_app() -> FastAPI:
             return IBKRClient.instance().fundamentals(symbol.upper())
         except Exception as e:
             return {"error": str(e), "symbol": symbol.upper()}
-
-    @app.post("/api/hedge")
-    def hedge(req: HedgeReq):
-        return hedge_for_long_book(req.portfolio_value, req.coverage_pct)
 
     @app.post("/api/execute", dependencies=[Depends(_require_token)])
     def execute(req: ExecReq):
@@ -271,36 +205,6 @@ def build_app() -> FastAPI:
             raise HTTPException(404, "no data")
         return written_analysis(symbol, df)
 
-    @app.get("/api/journal")
-    def journal_list(status: Optional[str] = None, limit: int = 100):
-        return {
-            "trades": journal.list_trades(status=status, limit=limit),
-            "stats": journal.stats(),
-        }
-
-    @app.post("/api/journal/open", dependencies=[Depends(_require_token)])
-    def journal_open(req: TradeOpenReq):
-        t = Trade(
-            id=None,
-            ts=datetime.now(timezone.utc).isoformat(),
-            symbol=req.symbol.upper(),
-            side=req.side.upper(),
-            qty=req.qty,
-            entry=req.entry,
-            stop=req.stop,
-            target=req.target,
-            exit=None, pnl=None, rr=None,
-            status="OPEN",
-            setup=req.setup,
-            notes=req.notes,
-        )
-        return {"id": journal.open_trade(t)}
-
-    @app.post("/api/journal/close", dependencies=[Depends(_require_token)])
-    def journal_close(req: TradeCloseReq):
-        journal.close_trade(req.trade_id, req.exit, req.notes)
-        return {"ok": True}
-
     @app.get("/api/bridge")
     def bridge():
         """Return the latest sentiment × technical bridge CSV as JSON rows."""
@@ -320,8 +224,8 @@ def build_app() -> FastAPI:
     def alert(req: AlertReq):
         ch = AlertChannels(email=req.email, telegram=req.telegram, webhook=req.webhook)
         out = dispatch_alert(req.title, req.body, req.payload, channels=ch)
-        journal.log_alert(req.title, req.body, req.payload,
-                          {"results": out.results})
+        alert_log.log_alert(req.title, req.body, req.payload,
+                            {"results": out.results})
         return {"results": out.results}
 
     return app

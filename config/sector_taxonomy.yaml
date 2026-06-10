@@ -1,0 +1,60 @@
+# Family → Sub-sector taxonomy
+# Each sub-sector has:
+#   - overrides: list of tickers forced into this sub-sector regardless of yfinance
+#   - industries: list of yfinance industry name substrings (case-insensitive) that map here
+# Resolution order: override → industry match → Other
+
+families:
+  "AI / Compute":
+    "Semiconductors":
+      overrides: []
+      industries: ["Semiconductors"]
+    "Semi Equipment":
+      overrides: []
+      industries: ["Semiconductor Equipment"]
+    "GPU / Datacenter Compute":
+      overrides: ["NBIS", "CRWV", "SMCI", "DELL"]
+      industries: []
+    "Data Center REITs":
+      overrides: ["EQIX", "DLR"]
+      industries: []
+    "IPPs / Power / Utility":
+      overrides: ["VST", "CEG", "NRG", "TLN"]
+      industries: []
+    "Networking / Optical":
+      overrides: ["CRDO", "LITE", "COHR", "AAOI", "ANET"]
+      industries: []
+
+  "Software":
+    "Infrastructure / Security":
+      overrides: []
+      industries: ["Software-Infrastructure", "Software Infrastructure"]
+    "SaaS / Application":
+      overrides: []
+      industries: ["Software-Application", "Software Application"]
+
+  "Quantum":
+    "Quantum Computing":
+      overrides: ["IONQ", "RGTI", "QBTS", "QUBT"]
+      industries: []
+
+  "Nuclear / Uranium":
+    "Uranium Miners":
+      overrides: ["CCJ", "UEC", "LEU", "UUUU", "DNN"]
+      industries: []
+    "SMR / Nuclear Tech":
+      overrides: ["OKLO", "SMR", "NNE"]
+      industries: []
+
+  "Crypto":
+    "Crypto Miners":
+      overrides: ["IREN", "MARA", "CIFR", "RIOT"]
+      industries: []
+    "Exchanges / Treasury":
+      overrides: ["COIN", "HOOD", "MSTR"]
+      industries: []
+
+  "Space / Defense":
+    "Space":
+      overrides: ["RKLB", "ASTS", "LUNR", "RDW", "BKSY"]
+      industries: []

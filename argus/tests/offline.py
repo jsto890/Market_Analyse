@@ -1,8 +1,7 @@
 """Offline validation. No network required.
 
 Generates a synthetic OHLCV DataFrame and exercises every local code path:
-indicators, agents, action card, backtest, monte carlo, hedge math, journal,
-FastAPI app build, and MCP server build.
+indicators, agents, action card, FastAPI app build, and MCP server build.
 
 Run: python tests/offline.py
 """
@@ -97,54 +96,6 @@ def main() -> None:
         f"   entry={card.entry:.2f}  stop={card.stop:.2f}  "
         f"target={card.target:.2f}  RR={card.risk_reward:.2f}"
     )
-
-    # Backtest
-    from argus.backtest import backtest_signal, monte_carlo
-    bt = backtest_signal("SYN", ind)
-    console.print(
-        f"[green]✓[/green] backtest: {bt.trades} trades  "
-        f"win_rate={bt.win_rate*100:.0f}%  PF={bt.profit_factor:.2f}  "
-        f"Sharpe={bt.sharpe:.2f}  MDD={bt.max_drawdown*100:.1f}%"
-    )
-
-    # Monte Carlo (skip if no trades)
-    if bt.trade_returns:
-        mc = monte_carlo(bt.trade_returns, sims=2000)
-        console.print(
-            f"[green]✓[/green] monte carlo: p5={mc.p5:.2f}  p50={mc.p50:.2f}  p95={mc.p95:.2f}  "
-            f"P(loss)={mc.prob_loss*100:.0f}%  P(ruin)={mc.prob_ruin*100:.0f}%"
-        )
-    else:
-        console.print("[yellow]–[/yellow] monte carlo skipped (no trades in synthetic series)")
-
-    # Pre-trade stress
-    from argus.backtest.monte_carlo import pre_trade_stress
-    stress = pre_trade_stress(card.entry, card.stop, card.target, 0.55)
-    console.print(
-        f"[green]✓[/green] pre-trade stress: P(stop)={stress['prob_stop']*100:.0f}%  "
-        f"E[ret]={stress['expected_pct_return']:+.2f}%"
-    )
-
-    # Hedge calc — uses constants only, no network required
-    from argus.portfolio.hedge import INVERSE_ETFS
-    console.print(f"[green]✓[/green] hedge ETF map: {list(INVERSE_ETFS.keys())}")
-
-    # Journal
-    from argus.journal import Journal, Trade
-    from datetime import datetime, timezone
-    tmp = tempfile.NamedTemporaryFile(suffix=".db", delete=False)
-    tmp.close()
-    j = Journal(path=tmp.name)
-    tid = j.open_trade(Trade(
-        id=None,
-        ts=datetime.now(timezone.utc).isoformat(),
-        symbol="SYN", side="LONG", qty=10,
-        entry=card.entry, stop=card.stop, target=card.target,
-        exit=None, pnl=None, rr=None, status="OPEN",
-    ))
-    j.close_trade(tid, card.target)
-    stats = j.stats()
-    console.print(f"[green]✓[/green] journal: {stats['trades']} closed, total_pnl={stats['total_pnl']:.2f}")
 
     # FastAPI build
     from argus.api import build_app

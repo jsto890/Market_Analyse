@@ -30,8 +30,7 @@ of future results. The author accepts no liability for any financial loss.
 
 - **Action Card** — single-screen per-ticker verdict with entry, stop, target, R:R, agreement %, and high-conviction flag
 - **Screener** — run the full ensemble over a configurable ticker universe in parallel
-- **Backtest** — vectorised walk-forward backtest using the live agent ensemble; win rate, profit factor, CAGR, Sharpe, Sortino, max drawdown, equity curve
-- **Monte Carlo** — bootstrap-resampled equity-curve distribution → P5/P50/P95, P(loss), P(ruin), pre-trade stress estimator
+- **Period returns** — trailing 1D / 1W / 1M / 6M / 1Y price return per ticker, shown as a colour-coded graphic in the dashboard and reports
 - **Portfolio analysis** — connects to IBKR, labels each position HOLD/ADD, CONSIDER SELLING, or NEUTRAL
 - **Options flow** — PCR, IV skew, max-pain, unusual-volume strikes from EOD chains
 - **Alerts** — email (SMTP), Telegram, HMAC-signed webhook; all logged to SQLite

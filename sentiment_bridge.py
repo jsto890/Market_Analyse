@@ -29,17 +29,44 @@ OUT_DIR       = Path(__file__).parent / "reports"
 sys.path.insert(0, str(ARGUS_ROOT))
 
 from argus.data.market import get_history          # noqa: E402
-from argus.action_card.builder import build_action_card  # noqa: E402
+from argus.action_card.builder import build_action_card, _distill_notes  # noqa: E402
 from argus.agents.base import Verdict              # noqa: E402
+from argus.catalyst import catalyst_leg            # noqa: E402
+from argus.settings import settings               # noqa: E402
+from argus.weights_config import BRIDGE_WEIGHTS    # noqa: E402  loaded from config/weights.yaml
+from argus.sector_taxonomy import resolve_sector   # noqa: E402
 
 
 # ── config ────────────────────────────────────────────────────────────────────
 ACTIONABLE_LABELS = {"fresh_watch", "building", "momentum_confirmed"}
 LATE_CHASE_LABEL  = "late_chase"
 MAX_WORKERS       = 6
-SENTIMENT_WEIGHT  = 0.40
-TECHNICAL_WEIGHT  = 0.60
-MAX_QUALITY       = 15.0  # normalisation ceiling
+SENTIMENT_WEIGHT = BRIDGE_WEIGHTS["sentiment"]
+TECHNICAL_WEIGHT = BRIDGE_WEIGHTS["technical"]
+CATALYST_WEIGHT  = BRIDGE_WEIGHTS["catalyst"]
+BOOST_DELTA      = 0.10
+MAX_QUALITY      = 15.0  # normalisation ceiling
+
+
+def blend_legs(sentiment_score, tech_score, catalyst_score):
+    """Weighted blend over the legs that are present; renormalize weights when one is None."""
+    legs = [(SENTIMENT_WEIGHT, sentiment_score),
+            (TECHNICAL_WEIGHT, tech_score),
+            (CATALYST_WEIGHT, catalyst_score)]
+    present = [(w, s) for w, s in legs if s is not None]
+    total_w = sum(w for w, _ in present)
+    if total_w == 0:
+        return 0.0
+    return sum(w * s for w, s in present) / total_w
+
+
+def apply_gates(combined, gates):
+    """Apply catalyst hard gates to a blended score."""
+    if "veto" in gates or "derank" in gates:
+        return min(combined, 0.0)
+    if "boost" in gates and combined > 0:
+        return min(1.0, combined + BOOST_DELTA)
+    return combined
 
 # Tickers that use a cashtag not directly fetchable from yfinance.
 # Maps the cashtag used in Market_Review → (yfinance_symbol, currency_note).
@@ -68,6 +95,14 @@ def _sentiment_bias(setup_label: str) -> float:
     }.get(setup_label, 0.0)
 
 
+def _catalyst_ibkr():
+    try:
+        from argus.data.ibkr import IBKRClient
+        return IBKRClient.instance()
+    except Exception:
+        return None
+
+
 def _analyse_ticker(row: pd.Series) -> Optional[dict]:
     ticker = row["ticker"]
     alias_entry = TICKER_ALIASES.get(ticker.upper())
@@ -76,9 +111,15 @@ def _analyse_ticker(row: pd.Series) -> Optional[dict]:
         df = get_history(fetch_sym, period="2y", interval="1d")
         if df is None or len(df) < min_bars:
             return None
-        ret_1d  = float(df["close"].pct_change(1).iloc[-1])  if len(df) >= 2  else float("nan")
-        ret_5d  = float(df["close"].pct_change(5).iloc[-1])  if len(df) >= 6  else float("nan")
-        ret_20d = float(df["close"].pct_change(20).iloc[-1]) if len(df) >= 21 else float("nan")
+        # TRAILING returns as of the report date (how much the name has ALREADY run) —
+        # shown in the report as momentum/extension context. NOT forward returns.
+        # The weight-optimisation backtest computes its own forward returns in
+        # tools/weight_opt/ and must never read these columns as labels.
+        ret_1d   = float(df["close"].pct_change(1).iloc[-1])   if len(df) >= 2   else float("nan")
+        ret_5d   = float(df["close"].pct_change(5).iloc[-1])   if len(df) >= 6   else float("nan")
+        ret_20d  = float(df["close"].pct_change(20).iloc[-1])  if len(df) >= 21  else float("nan")
+        ret_126d = float(df["close"].pct_change(126).iloc[-1]) if len(df) >= 127 else float("nan")
+        ret_252d = float(df["close"].pct_change(252).iloc[-1]) if len(df) >= 253 else float("nan")
         card = build_action_card(fetch_sym, df)
     except Exception as exc:
         print(f"  [skip] {ticker}: {exc}", file=sys.stderr)
@@ -93,7 +134,25 @@ def _analyse_ticker(row: pd.Series) -> Optional[dict]:
     tech_raw   = float(card.score)                             # -1..+1 from Argus
     tech_score = tech_raw if card.verdict != Verdict.WAIT else 0.0
 
-    combined = SENTIMENT_WEIGHT * sentiment_score + TECHNICAL_WEIGHT * tech_score
+    try:
+        cat = catalyst_leg(
+            ticker, setups_row=row, ibkr=None,
+            api_key=settings.anthropic_api_key,
+        )
+    except Exception:
+        from argus.catalyst.types import CatalystResult
+        cat = CatalystResult(score=None)
+    catalyst_score = cat.score
+    combined = blend_legs(sentiment_score, tech_score, catalyst_score)
+    combined = apply_gates(combined, cat.gates)
+
+    # Per-sub-agent signed vote confidence (LONG=+conf, SHORT=-conf, WAIT/abstain=0).
+    # Persisted so the intra-catalyst weights can be forward-validated against
+    # realised returns once enough daily snapshots accumulate.
+    vote_conf = {f"vote_{v.agent}": (v.confidence if v.verdict == Verdict.LONG
+                                     else -v.confidence if v.verdict == Verdict.SHORT
+                                     else 0.0)
+                 for v in cat.votes}
 
     # ── alignment label ───────────────────────────────────────────────────────
     s_bullish = sentiment_bias > 0.5
@@ -112,6 +171,27 @@ def _analyse_ticker(row: pd.Series) -> Optional[dict]:
     else:
         alignment = "NEUTRAL"
 
+    # ── sector ────────────────────────────────────────────────────────────────
+    try:
+        sector_tuple = resolve_sector(fetch_sym)
+    except Exception:
+        sector_tuple = ("Other", "")
+
+    # ── group membership ──────────────────────────────────────────────────────
+    cat_score_present = catalyst_score is not None
+    group1 = (
+        card.verdict == Verdict.LONG
+        and sentiment_score > 0.3
+        and cat_score_present
+        and catalyst_score > 0
+    )
+    group2 = (
+        card.verdict == Verdict.LONG
+        and cat_score_present
+        and catalyst_score > 0
+        and not group1
+    )
+
     return {
         "ticker":            ticker,
         "fetch_symbol":      fetch_sym if fetch_sym != ticker else ticker,
@@ -123,11 +203,14 @@ def _analyse_ticker(row: pd.Series) -> Optional[dict]:
         "source_score":      round(float(row.get("source_score", 0)), 2),
         "mentions":          int(row.get("mention_count", 0)),
         "accounts":          int(row.get("distinct_account_count", 0)),
-        "catalysts":         str(row.get("catalysts", "")),
+        "catalysts":         ", ".join(sorted({f"{e.type}{'+' if e.direction > 0 else '-'}"
+                                               for e in cat.events})) or str(row.get("catalysts", "")),
         "top_accounts":      str(row.get("top_accounts", "")),
         "ret_1d":            round(ret_1d * 100, 2),
         "ret_5d":            round(ret_5d * 100, 2),
         "ret_20d":           round(ret_20d * 100, 2),
+        "ret_126d":          round(ret_126d * 100, 2),
+        "ret_252d":          round(ret_252d * 100, 2),
         "argus_verdict":     card.verdict.value,
         "argus_score":       round(card.score, 3),
         "high_conviction":   card.high_conviction,
@@ -145,12 +228,27 @@ def _analyse_ticker(row: pd.Series) -> Optional[dict]:
         "sentiment_score":   round(sentiment_score, 3),
         "tech_score":        round(tech_score, 3),
         "combined_score":    round(combined, 3),
+        "catalyst_score":    round(catalyst_score, 3) if catalyst_score is not None else "",
+        "vote_event_catalyst":     round(vote_conf.get("vote_event_catalyst", 0.0), 3),
+        "vote_earnings_proximity": round(vote_conf.get("vote_earnings_proximity", 0.0), 3),
+        "vote_squeeze_setup":      round(vote_conf.get("vote_squeeze_setup", 0.0), 3),
+        "vote_growth_profitability": round(vote_conf.get("vote_growth_profitability", 0.0), 3),
+        "vote_analyst_upside":     round(vote_conf.get("vote_analyst_upside", 0.0), 3),
+        "gate_flags":        " ".join(cat.flags),
         "alignment":         alignment,
         "action_label":      card.action_label,
         "trade_style":       card.trade_style,
         "combo":             card.combo,
         "ticker_regime":     card.ticker_regime,
         "n_eff":             round(card.n_eff, 1),
+        "group1":            group1,
+        "group2":            group2,
+        # private keys stripped from CSV
+        "_votes":            card.votes,
+        "_cat_events":       cat.events,
+        "_cat_metrics":      cat.metrics,
+        "_cat_flags":        cat.flags,
+        "_sector":           sector_tuple,
     }
 
 
@@ -169,6 +267,40 @@ def _action_emoji(r: dict) -> str:
     if a == "CONTRARIAN":
         return "🔄 CONTRARIAN"
     return "—"
+
+
+_RET_PERIODS = [("1D", "ret_1d"), ("1W", "ret_5d"), ("1M", "ret_20d"),
+                ("6M", "ret_126d"), ("1Y", "ret_252d")]
+
+
+def _returns_pills(r: dict) -> str:
+    """Compact green/red pill strip of period returns for the Obsidian report."""
+    pills = []
+    for label, key in _RET_PERIODS:
+        v = r.get(key)
+        if v is None or pd.isna(v):
+            continue
+        color = "#22c55e" if v >= 0 else "#ef4444"
+        bg    = "#0d3b1e" if v >= 0 else "#3b1414"
+        pills.append(
+            f'<span style="background:{bg};color:{color};padding:1px 6px;'
+            f'border-radius:6px;font-family:monospace;font-size:0.85em">'
+            f'{label} {v:+.1f}%</span>'
+        )
+    return " ".join(pills) if pills else "—"
+
+
+def _returns_strip(r: dict) -> str:
+    """Compact green/red returns strip (1D/1W/1M/6M/1Y) for table cells."""
+    parts = []
+    for label, key in _RET_PERIODS:
+        v = r.get(key)
+        if v is None or pd.isna(v):
+            parts.append(f'<span style="color:#6b7280">{label} —</span>')
+            continue
+        color = "#22c55e" if v >= 0 else "#ef4444"
+        parts.append(f'<span style="color:{color}">{label} {v:+.0f}%</span>')
+    return " ".join(parts)
 
 
 def _wilson_ci(k: int, n: int, z: float = 1.645) -> tuple[float, float]:
@@ -214,146 +346,361 @@ def _get_sector(ticker: str) -> str:
         return ""
 
 
+def _build_sector_rotation_section(full_df: pd.DataFrame) -> str:
+    # Map setup_label to direction arrow
+    _LABEL_ARROW = {
+        "fresh_watch": "↑",
+        "building":    "↑",
+        "momentum_confirmed": "↑",
+        "extended":    "→",
+        "late_chase":  "→",
+        "avoid_wait":  "↓",
+    }
+
+    # Build nested dict: family → subsector → direction → [tickers]
+    tree: dict[str, dict[str, dict[str, list[str]]]] = {}
+    for _, row in full_df.iterrows():
+        ticker = str(row.get("ticker", "")).strip()
+        label = str(row.get("setup_label", "")).strip()
+        arrow = _LABEL_ARROW.get(label)
+        if arrow is None:
+            continue
+        try:
+            family, subsector = resolve_sector(ticker)
+        except Exception:
+            family, subsector = "Other", ""
+        if not family:
+            family = "Other"
+        if family not in tree:
+            tree[family] = {}
+        if subsector not in tree[family]:
+            tree[family][subsector] = {"↑": [], "→": [], "↓": []}
+        tree[family][subsector][arrow].append(ticker)
+
+    # Sort families by total active interest (↑ + →) descending
+    def _family_score(fam: str) -> int:
+        total = 0
+        for sub_data in tree[fam].values():
+            total += len(sub_data["↑"]) + len(sub_data["→"])
+        return total
+
+    sorted_families = sorted(tree.keys(), key=_family_score, reverse=True)
+
+    lines = [
+        "## Sector Rotation",
+        "↑ rotating in · → running · ↓ cooling",
+        "",
+    ]
+
+    for family in sorted_families:
+        display_family = "Broader Market" if family == "Other" else family
+        subsectors = tree[family]
+
+        # Filter: only subsectors with at least one ↑ or →
+        active_subsectors = {
+            sub: data for sub, data in subsectors.items()
+            if data["↑"] or data["→"]
+        }
+        if not active_subsectors:
+            continue
+
+        # Sort subsectors: count(↑) DESC, then count(→) DESC
+        sorted_subs = sorted(
+            active_subsectors.keys(),
+            key=lambda s: (len(active_subsectors[s]["↑"]), len(active_subsectors[s]["→"])),
+            reverse=True,
+        )
+
+        lines.append(f"**{display_family}**")
+        for sub in sorted_subs:
+            data = active_subsectors[sub]
+            # Show dominant direction arrow(s) — no ticker names
+            arrows = []
+            if data["↑"]:
+                arrows.append("↑")
+            if data["→"]:
+                arrows.append("→")
+            if data["↓"] and not arrows:
+                arrows.append("↓")
+            lines.append(f"  {sub:<30} {'  '.join(arrows)}")
+        lines.append("")
+
+    return "\n".join(lines)
+
+
+import re as _re
+
+_EVENT_LABELS = {
+    "fda": "FDA approval", "acquisition": "acquisition", "contract": "contract win",
+    "partnership": "partnership", "breakthrough": "breakthrough",
+    "earnings_beat": "earnings beat", "earnings_miss": "earnings miss",
+    "upgrade": "analyst upgrade", "downgrade": "analyst downgrade",
+    "dilution": "dilution", "offering": "offering",
+    "going_concern": "going concern", "reverse_split": "reverse split",
+    "index_inclusion": "index inclusion", "other": "catalyst",
+}
+
+
+def _extract_catalyst_ctx(event_type: str, detail: str) -> str:
+    """Extract a short, meaningful context string from a catalyst headline."""
+    if not detail:
+        return ""
+    d = detail.strip()
+
+    if event_type == "earnings_beat":
+        m = _re.search(r'beat[s]?\s+(?:by\s+)?\$?([\d.]+)', d, _re.I)
+        if m:
+            return f"+${m.group(1)}"
+        m = _re.search(r'\$([\d.]+)\s+vs\.?\s+\$?([\d.]+)\s+(?:expected|est)', d, _re.I)
+        if m:
+            return f"${m.group(1)} vs ${m.group(2)} est"
+        m = _re.search(r'([\d.]+)%?\s+(?:beat|above)', d, _re.I)
+        if m:
+            return f"+{m.group(1)}%"
+
+    elif event_type == "earnings_miss":
+        m = _re.search(r'miss(?:ed|es)?\s+(?:by\s+)?\$?([\d.]+)', d, _re.I)
+        if m:
+            return f"-${m.group(1)}"
+
+    elif event_type in ("acquisition", "merger"):
+        # "acquires Eucalyptus" / "buyout of Company X" / "to buy XYZ"
+        m = _re.search(r'acquir(?:es?|ing|ed)\s+([A-Z][A-Za-z0-9 &]{1,25})', d)
+        if not m:
+            m = _re.search(r'(?:buyout of|to buy|acquired by)\s+([A-Z][A-Za-z0-9 &]{1,25})', d, _re.I)
+        if m:
+            return m.group(1).strip().rstrip(',.')[:25]
+
+    elif event_type == "partnership":
+        m = _re.search(
+            r'(?:partners? with|partnership with|teams? up with|collaborat\w+ with|alliance with)\s+([A-Z][A-Za-z0-9 &]{1,25})',
+            d, _re.I,
+        )
+        if m:
+            return m.group(1).strip().rstrip(',.')[:25]
+
+    elif event_type in ("upgrade", "downgrade"):
+        # "JPMorgan upgrades RDDT" or "Goldman Sachs raises PT to $225"
+        m = _re.search(r'^([A-Z][A-Za-z\s&]{2,20}?)\s+(?:upgrade|downgrade|raises?|cuts?)', d)
+        if not m:
+            m = _re.search(r'(?:upgrade|downgrade)d?\s+by\s+([A-Z][A-Za-z\s&]{2,20})', d, _re.I)
+        firm = m.group(1).strip()[:20] if m else ""
+        # also try to find a price target
+        pt = _re.search(r'(?:price target|PT|target)\s+(?:to|of)?\s+\$?([\d]+)', d, _re.I)
+        if firm and pt:
+            return f"{firm}, tgt ${pt.group(1)}"
+        if firm:
+            return firm
+        if pt:
+            return f"tgt ${pt.group(1)}"
+
+    elif event_type == "contract":
+        # "wins $X contract with Company"
+        m = _re.search(r'\$([0-9.]+[BMK]?\s*(?:billion|million|bn|m)?)', d, _re.I)
+        if m:
+            return m.group(1).strip()
+
+    return ""
+
+
+def _diverse_tech_notes(votes: list, verdict, limit: int = 5) -> list[str]:
+    """Pick family-diverse technical notes: best one per agent family, up to limit total."""
+    all_notes = _distill_notes(votes, verdict, 20)  # get large pool first
+    # Group by family, preserve rank order within each family
+    by_family: dict[str, list[str]] = {}
+    for d in all_notes:
+        fam = d.get("fam") or "other"
+        by_family.setdefault(fam, []).append(d["note"])
+
+    # Priority order for families
+    family_order = ["weekly_structure", "breakout", "squeeze", "ma_trend", "momentum_osc", "other"]
+    chosen: list[str] = []
+    seen_notes: set[str] = set()
+
+    # First pass: one per family in priority order
+    for fam in family_order:
+        if fam in by_family:
+            note = by_family[fam][0]
+            if note not in seen_notes:
+                chosen.append(note)
+                seen_notes.add(note)
+        if len(chosen) >= limit:
+            break
+
+    # Fill remaining slots with any leftover high-ranked notes
+    if len(chosen) < limit:
+        for d in all_notes:
+            if len(chosen) >= limit:
+                break
+            if d["note"] not in seen_notes:
+                chosen.append(d["note"])
+                seen_notes.add(d["note"])
+
+    return chosen
+
+
+def _build_detail_block(r: dict) -> list[str]:
+    conv = "⚡ STRONG" if r["high_conviction"] else "✅ GOOD"
+    header = f"### {r['ticker']} — {conv} ({r['combined_score']:+.2f})"
+
+    # Returns — colour-coded HTML spans
+    ret_parts = []
+    for label, key in _RET_PERIODS:
+        v = r.get(key)
+        if v is None or pd.isna(v):
+            continue
+        color = "#22c55e" if v >= 0 else "#ef4444"
+        ret_parts.append(f'<span style="color:{color}">{label} {v:+.0f}%</span>')
+    returns_cell = " · ".join(ret_parts) if ret_parts else "—"
+
+    # Technicals — family-diverse notes
+    votes = r.get("_votes") or []
+    if votes:
+        notes = _diverse_tech_notes(votes, Verdict.LONG, 5)
+        tech_bullets = "<br>".join(f"• {n}" for n in notes) if notes else "• —"
+    else:
+        tech_bullets = "• —"
+
+    # Fundamentals — bullet per present metric
+    metrics = r.get("_cat_metrics") or {}
+    fund_bullets_list = []
+    rev_growth = metrics.get("revenue_growth")
+    if rev_growth is not None:
+        pct = round(float(rev_growth) * 100) if abs(float(rev_growth)) < 10 else round(float(rev_growth))
+        fund_bullets_list.append(f"rev {pct:+d}%")
+    profit_margin = metrics.get("profit_margin")
+    if profit_margin is not None:
+        pct = round(float(profit_margin) * 100) if abs(float(profit_margin)) < 10 else round(float(profit_margin))
+        fund_bullets_list.append(f"margin {pct}%")
+    analyst_rating = metrics.get("analyst_rating")
+    analyst_target = metrics.get("analyst_target")
+    price = metrics.get("price")
+    if analyst_rating and analyst_target is not None and price is not None and float(price) > 0:
+        upside = (float(analyst_target) - float(price)) / float(price) * 100
+        fund_bullets_list.append(f"analyst {analyst_rating}, tgt ${float(analyst_target):.0f} ({upside:+.0f}%)")
+    short_pct = metrics.get("short_pct_float")
+    if short_pct is not None:
+        fund_bullets_list.append(f"short {float(short_pct):.1f}%")
+    dtc = metrics.get("dtc")
+    if dtc is not None:
+        fund_bullets_list.append(f"DTC {float(dtc):.1f}")
+    fund_bullets = "<br>".join(f"• {item}" for item in fund_bullets_list) if fund_bullets_list else "• none"
+
+    # Catalysts — bullet per event with context
+    cat_bullets_list = []
+    days_to_earnings = metrics.get("days_to_earnings")
+    if days_to_earnings is not None and days_to_earnings >= 0:
+        cat_bullets_list.append(f"earnings in {int(days_to_earnings)}d")
+    cat_events = r.get("_cat_events") or []
+    seen_types: set[str] = set()
+    for event in cat_events:
+        if event.type in seen_types:
+            continue
+        seen_types.add(event.type)
+        n_days = int(round(float(event.recency_days)))
+        label = _EVENT_LABELS.get(event.type, event.type.replace("_", " "))
+        prefix = "⚡" if event.direction > 0 else "⚠"
+        ctx = _extract_catalyst_ctx(event.type, getattr(event, "detail", ""))
+        age = f"{n_days}d ago" if n_days > 0 else "today"
+        if ctx:
+            cat_bullets_list.append(f"{prefix} {label} ({ctx}) · {age}")
+        else:
+            cat_bullets_list.append(f"{prefix} {label} · {age}")
+    for flag in (r.get("_cat_flags") or []):
+        if flag not in {"⚡"}:
+            cat_bullets_list.append(flag)
+    cat_bullets = "<br>".join(f"• {item}" for item in cat_bullets_list) if cat_bullets_list else "• none detected"
+
+    # 2-column table: label | content
+    table = [
+        "| | |",
+        "|---|---|",
+        f"| **Returns** | {returns_cell} |",
+        f"| **Technicals** | {tech_bullets} |",
+        f"| **Fundamentals** | {fund_bullets} |",
+        f"| **Catalysts** | {cat_bullets} |",
+    ]
+
+    return [header] + table
+
+
 def _write_markdown(
     results: list[dict],
     out_path: Path,
     min_quality: float,
-    trust_lookup: dict | None = None,
-    prev_sections: dict | None = None,
-    persistence_days: dict | None = None,
+    full_setups_df: pd.DataFrame | None = None,
 ) -> None:
-    trust_lookup = trust_lookup or {}
-    prev_sections = prev_sections or {}
-    persistence_days = persistence_days or {}
-
     ts = datetime.now().strftime("%Y-%m-%d %H:%M")
-    extra_count = sum(1 for r in results if r.get("extra"))
-    extra_note = f" | `[T]` = {extra_count} force-included (pure technical, no sentiment data)" if extra_count else ""
     lines = [
-        "# Sentiment × Technical Bridge Report",
-        f"*Generated {ts} | min_quality ≥ {min_quality} | {len(results)} tickers analysed{extra_note}*",
-        "",
-        "Scoring: **40% sentiment** (quality × setup bias) + **60% technical** (Argus 70-agent ensemble)",
+        "# Daily Report",
+        f"*Generated {ts}*",
         "",
     ]
 
-    # ── Summary header ────────────────────────────────────────────────────────
-    aligned_all = [r for r in results if r["alignment"] == "ALIGNED"]
-    aligned_hc  = [r for r in aligned_all if r["high_conviction"]]
-    short_hc    = [r for r in results if r["argus_verdict"] == "SHORT" and r["high_conviction"]]
-    extended_warn = [r for r in aligned_all if r.get("entry_quality") == "extended"]
-    new_today   = [r for r in aligned_all if r["ticker"].upper() not in prev_sections]
-    changed     = [
-        (r["ticker"], prev_sections[r["ticker"].upper()], r["alignment"])
-        for r in results
-        if r["ticker"].upper() in prev_sections
-        and prev_sections[r["ticker"].upper()] != r["alignment"]
-    ]
-
-    # Catalyst concentration across top HC picks
-    from collections import Counter as _Counter
-    cat_counts: _Counter = _Counter()
-    for r in aligned_hc[:10]:
-        for cat in (r["catalysts"] or "").split(";"):
-            if cat.strip() and cat.strip() != "nan":
-                cat_counts[cat.strip()] += 1
-    top_cat, top_cat_n = cat_counts.most_common(1)[0] if cat_counts else ("", 0)
-
-    # Sector concentration across aligned picks (top 15, parallel lookup)
-    sector_warn = ""
-    aligned_sample = [r["ticker"] for r in aligned_all[:15]]
-    if aligned_sample:
-        import concurrent.futures as _cf
-        with _cf.ThreadPoolExecutor(max_workers=6) as _pool:
-            sector_map = dict(zip(aligned_sample, _pool.map(_get_sector, aligned_sample)))
-        sector_counts: _Counter = _Counter(s for s in sector_map.values() if s)
-        if sector_counts:
-            dom_sector, dom_n = sector_counts.most_common(1)[0]
-            if dom_n >= 3:
-                dom_tickers = [t for t in aligned_sample if sector_map.get(t) == dom_sector]
-                sector_warn = (f"⚠ **Sector concentration:** {dom_n}/{len(aligned_sample)} aligned picks "
-                               f"are **{dom_sector}** ({', '.join(dom_tickers[:6])})")
-
-    short_hc_str = f" · **{len(short_hc)} HC short**" if short_hc else ""
-    ext_str = f" · {len(extended_warn)} extended ⚠" if extended_warn else ""
-    lines += [
-        "---",
-        f"**⚡ {len(aligned_hc)} HC longs{short_hc_str} · {len(aligned_all)} total aligned{ext_str}**",
-        "",
-    ]
-    if new_today:
-        lines.append(f"🆕 **New today:** {' · '.join(r['ticker'] for r in new_today[:8])}")
-    for ticker, prev, curr in changed[:5]:
-        _sec = {"ALIGNED": "✅ Aligned", "DIVERGING": "⚠ Diverging", "CONTRARIAN": "🔄 Contrarian",
-                "TECH_WAIT": "⏳ Wait", "NEUTRAL": "— Neutral"}
-        lines.append(f"🔀 **{ticker}** {_sec.get(prev, prev)} → {_sec.get(curr, curr)}")
-    if top_cat_n >= 5:
-        lines.append(f"⚠ **Concentration:** {top_cat_n}/{min(len(aligned_hc), 10)} HC picks share **{top_cat}** catalyst")
-    if sector_warn:
-        lines.append(sector_warn)
-    lines += ["---", ""]
-
-    # ── Group tables ──────────────────────────────────────────────────────────
-    groups = {
-        "ALIGNED":    ("Aligned — Sentiment + Technicals Both Bullish", "⚡✅"),
-        "TECH_WAIT":  ("Technical Hold — Sentiment Positive, Argus Waiting", "⏳"),
-        "DIVERGING":  ("Diverging — Sentiment Bullish, Argus Bearish", "⚠️"),
-        "CONTRARIAN": ("Contrarian — Sentiment Bearish, Argus Bullish", "🔄"),
-        "NEUTRAL":    ("Neutral / Mixed", "—"),
-    }
-
-    for key, (title, icon) in groups.items():
-        subset = [r for r in results if r["alignment"] == key]
-        if not subset:
-            continue
-        lines += [f"## {icon} {title}", ""]
-        lines += [
-            "| Ticker | Setup | Quality | Argus | Tier | Regime | Score | Entry | Agreement | Entry $ | Stop | Target | Catalysts |",
-            "|--------|-------|---------|-------|------|--------|-------|-------|-----------|---------|------|--------|-----------|",
-        ]
-        for r in subset:
-            hc   = " ⚡" if r["high_conviction"] else ""
-            tag  = " `[T]`" if r.get("extra") else ""
-            eq   = "⚠ ext" if r.get("entry_quality") == "extended" else "clean"
-            tier = r.get("action_label") or "—"
-            reg  = r.get("ticker_regime") or "—"
-            lines.append(
-                f"| **{r['ticker']}**{tag} | {r['setup_label']} | {r['quality_score']} "
-                f"| {r['argus_verdict']}{hc} | {tier} | {reg} | {r['combined_score']:+.3f} "
-                f"| {eq} | {r['agreement_pct']}% "
-                f"| {r['entry']:.2f} | {r['stop']:.2f} | {r['target']:.2f} "
-                f"| {(r['catalysts'] or '')[:40]} |"
-            )
+    # Section 1: Sector Rotation
+    if full_setups_df is not None and not full_setups_df.empty:
+        lines.append(_build_sector_rotation_section(full_setups_df))
         lines.append("")
 
-    # ── Top picks detail ──────────────────────────────────────────────────────
-    top = [r for r in results if r["alignment"] == "ALIGNED"][:5]
-    if top:
-        lines += ["## Top Picks — Detail", ""]
-        for r in top:
-            ticker_up = r["ticker"].upper()
-            persist = persistence_days.get(ticker_up, 0)
-            persist_str = f" | **{persist}d** in Aligned" if persist > 1 else ""
-            anchor = r.get("stop_anchor") or "ATR"
-            trust_str = _format_trust(r.get("top_accounts", ""), trust_lookup)
-            lines += [
-                f"### {r['ticker']}  `{_action_emoji(r)}`",
-                f"- **Setup:** {r['setup_label']} | **Quality:** {r['quality_score']}/15{persist_str} | **Source score:** {r['source_score']}",
-                f"- **Accounts:** {r['accounts']} ({r['mentions']} mentions) — {trust_str}",
-                f"- **Catalysts:** {r['catalysts']}",
-                f"- **Price:** 1d {r['ret_1d']:+.1f}%  5d {r['ret_5d']:+.1f}%  20d {r['ret_20d']:+.1f}%  | Entry: {r['entry_quality']}{' ⚠️' if r['is_extended'] else ''}",
-                f"- **Argus:** {r['argus_verdict']} `{r.get('action_label','—')}` | Score {r['argus_score']:+.3f} | Agreement {r['agreement_pct']}% | N_eff {r.get('n_eff','—')} | Combo {r.get('combo','—')} | {r.get('ticker_regime','—')} | Votes L:{r['long_votes']} S:{r['short_votes']} W:{r['wait_votes']}",
-                f"- **Trade:** Entry {r['entry']:.2f}  Stop {r['stop']:.2f} *({anchor})*  Target {r['target']:.2f}  R:R {r['risk_reward']:.1f}x",
-                f"- **Combined score:** {r['combined_score']:+.3f}",
-                "",
-            ]
+    # Section 2: Aligned (group1)
+    group1 = [r for r in results if r.get("group1")]
+    group2 = [r for r in results if r.get("group2")]
+
+    lines += ["## Aligned — Sentiment + Technical + Fundamental all bullish", ""]
+    if group1:
+        lines += [
+            "| Ticker | Conviction | Sent | Tech | Fund | Combined | Sector |",
+            "|--------|-----------|------|------|------|----------|--------|",
+        ]
+        for r in group1:
+            conv = "⚡ STRONG" if r["high_conviction"] else "✅ GOOD"
+            fund_str = f"{r['catalyst_score']:+.2f}" if r["catalyst_score"] != "" else "—"
+            fam, sub = r.get("_sector", ("", ""))
+            sector_str = f"{fam} → {sub}" if fam and sub else fam or sub or "—"
+            lines.append(
+                f"| **{r['ticker']}** | {conv} | {r['sentiment_score']:+.2f} | {r['tech_score']:+.2f} | {fund_str} | {r['combined_score']:+.2f} | {sector_str} |"
+            )
+    else:
+        lines.append("*No aligned candidates today.*")
+    lines.append("")
+
+    # Section 3: Technical + Fundamental (group2)
+    lines += ["## Technical + Fundamental bullish", ""]
+    if group2:
+        lines += [
+            "| Ticker | Conviction | Sent | Tech | Fund | Combined | Sector |",
+            "|--------|-----------|------|------|------|----------|--------|",
+        ]
+        for r in group2:
+            conv = "⚡ STRONG" if r["high_conviction"] else "✅ GOOD"
+            fund_str = f"{r['catalyst_score']:+.2f}" if r["catalyst_score"] != "" else "—"
+            fam, sub = r.get("_sector", ("", ""))
+            sector_str = f"{fam} → {sub}" if fam and sub else fam or sub or "—"
+            lines.append(
+                f"| **{r['ticker']}** | {conv} | {r['sentiment_score']:+.2f} | {r['tech_score']:+.2f} | {fund_str} | {r['combined_score']:+.2f} | {sector_str} |"
+            )
+    else:
+        lines.append("*No technical + fundamental candidates today.*")
+    lines.append("")
+
+    # Section 4: Long Candidate Detail
+    all_longs = sorted(group1 + group2, key=lambda r: r["combined_score"], reverse=True)
+    if all_longs:
+        lines += ["## Long Candidate Detail", ""]
+        for r in all_longs:
+            lines += _build_detail_block(r)
+            lines.append("")
+
+    # Footer
+    lines += ["---", "_Entry/stop/target intentionally omitted pending a separate exit-analysis — to be added later._"]
 
     out_path.write_text("\n".join(lines), encoding="utf-8")
     print(f"Markdown → {out_path}")
 
 
 def _write_csv(results: list[dict], out_path: Path) -> None:
-    pd.DataFrame(results).to_csv(out_path, index=False)
+    csv_rows = [{k: v for k, v in r.items() if not k.startswith("_")} for r in results]
+    pd.DataFrame(csv_rows).to_csv(out_path, index=False)
     print(f"CSV      → {out_path}")
 
 
@@ -379,6 +726,9 @@ def main() -> None:
 
     df = pd.read_csv(REVIEW_REPORT)
     df["quality_score"] = pd.to_numeric(df["quality_score"], errors="coerce").fillna(0)
+
+    # Keep reference to full df for sector rotation
+    full_setups_df = df.copy()
 
     keep_labels = ACTIONABLE_LABELS.copy()
     if args.include_late_chase:
@@ -448,59 +798,15 @@ def main() -> None:
     # ── sort by combined score descending ─────────────────────────────────────
     results.sort(key=lambda r: r["combined_score"], reverse=True)
 
-    # ── load account trust data ───────────────────────────────────────────────
-    trust_lookup: dict[str, dict] = {}
-    trust_path = Path(os.environ.get("MARKET_REVIEW_ROOT", "/Users/josephstorey/Market_Review")) / "reports" / "account_backtest.csv"
-    if trust_path.exists():
-        try:
-            trust_df = pd.read_csv(trust_path)
-            for _, trow in trust_df.iterrows():
-                trust_lookup[trow["account"]] = {
-                    "hit_rate_1d": float(trow.get("hit_rate_1d") or 0),
-                    "n": int(float(trow.get("complete_1d_count") or 0)),
-                }
-        except Exception as exc:
-            print(f"  [warn] Could not load trust data: {exc}", file=sys.stderr)
-
-    # ── load previous results for delta + persistence ─────────────────────────
-    prev_sections: dict[str, str] = {}  # ticker_upper -> alignment last run
-    persistence_days: dict[str, int] = {}  # ticker_upper -> consecutive days in current alignment
-
-    latest_csv = out_dir / "bridge_latest.csv"
-    if latest_csv.exists():
-        try:
-            prev_df = pd.read_csv(latest_csv)
-            prev_sections = {str(t).upper(): str(a) for t, a in zip(prev_df["ticker"], prev_df["alignment"])}
-        except Exception:
-            pass
-
-    # Count consecutive days in same alignment from dated reports (last 7)
-    dated_csvs = sorted(out_dir.glob("bridge_????????_????.csv"), reverse=True)[:7]
-    for r in results:
-        ticker_up = r["ticker"].upper()
-        current_alignment = r["alignment"]
-        count = 0
-        for dated_csv in dated_csvs:
-            try:
-                hist_df = pd.read_csv(dated_csv)
-                match = hist_df[hist_df["ticker"].str.upper() == ticker_up]
-                if not match.empty and match.iloc[0]["alignment"] == current_alignment:
-                    count += 1
-                else:
-                    break
-            except Exception:
-                break
-        persistence_days[ticker_up] = count
-
     # ── write outputs ─────────────────────────────────────────────────────────
     ts_tag = datetime.now().strftime("%Y%m%d_%H%M")
     _write_markdown(results, out_dir / f"bridge_{ts_tag}.md", args.min_quality,
-                    trust_lookup, prev_sections, persistence_days)
+                    full_setups_df=full_setups_df)
     _write_csv(results,      out_dir / f"bridge_{ts_tag}.csv")
 
     # also overwrite a stable "latest" copy
     _write_markdown(results, out_dir / "bridge_latest.md", args.min_quality,
-                    trust_lookup, prev_sections, persistence_days)
+                    full_setups_df=full_setups_df)
     _write_csv(results,      out_dir / "bridge_latest.csv")
 
     # ── summary ───────────────────────────────────────────────────────────────

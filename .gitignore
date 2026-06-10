@@ -33,3 +33,5 @@ runs/
 
 # Audit artifact (do not publish)
 GITHUB_READINESS.md
+.worktrees/
+docs/weight_optimisation/price_cache.parquet

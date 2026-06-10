@@ -283,11 +283,8 @@ footer{padding:5px 18px;color:var(--muted);font:10px var(--mono);border-top:1px 
   <button data-tab="screener">Screener</button>
   <button data-tab="bridge">Bridge Report</button>
   <button data-tab="flow">Options Flow</button>
-  <button data-tab="backtest">Backtest</button>
   <button data-tab="portfolio">Portfolio</button>
-  <button data-tab="hedge">Hedge</button>
   <button data-tab="chat">AI Chat</button>
-  <button data-tab="journal">Journal</button>
   <button data-tab="agents">Agents</button>
 </nav>
 
@@ -312,7 +309,6 @@ footer{padding:5px 18px;color:var(--muted);font:10px var(--mono);border-top:1px 
         <button class="primary" onclick="loadCard()">Run agents</button>
         <button class="ghost" onclick="loadAnalysis()">AI analysis</button>
         <button class="ghost" onclick="pinCurrentTicker()" id="pin-btn" style="display:none">📌 Pin</button>
-        <button class="ghost" id="enter-btn" style="display:none;color:var(--green)" onclick="enterFromCard()">Enter ›</button>
       </div>
       <div id="card-out" class="kv" style="min-height:36px"></div>
     </div>
@@ -418,37 +414,6 @@ footer{padding:5px 18px;color:var(--muted);font:10px var(--mono);border-top:1px 
     </div>
   </section>
 
-  <!-- ════ BACKTEST ════ -->
-  <section id="tab-backtest">
-    <div class="panel">
-      <div class="row">
-        <input id="bt-sym" placeholder="Symbol" style="width:155px" onkeydown="if(event.key==='Enter')runBacktest()">
-        <select id="bt-period">
-          <option>2y</option><option>5y</option><option>10y</option>
-        </select>
-        <button class="primary" onclick="runBacktest()">Backtest</button>
-        <button class="ghost" onclick="runMC()">+ Monte Carlo (5000)</button>
-      </div>
-      <div id="bt-out" class="kv"></div>
-      <pre id="bt-mc" style="margin-top:12px;display:none"></pre>
-    </div>
-    <div class="panel">
-      <h3>Pre-trade stress test</h3>
-      <div class="row">
-        <label style="font:11px var(--mono);color:var(--muted)">Entry $</label>
-        <input id="st-entry"  type="number" step="0.01" placeholder="0.00" style="width:90px">
-        <label style="font:11px var(--mono);color:var(--muted)">Stop $</label>
-        <input id="st-stop"   type="number" step="0.01" placeholder="0.00" style="width:90px">
-        <label style="font:11px var(--mono);color:var(--muted)">Target $</label>
-        <input id="st-target" type="number" step="0.01" placeholder="0.00" style="width:90px">
-        <label style="font:11px var(--mono);color:var(--muted)">Win rate</label>
-        <input id="st-wr"     type="number" step="0.01" value="0.50"        style="width:75px">
-        <button class="primary" onclick="runStress()">Run stress</button>
-      </div>
-      <div id="stress-out" class="stress-out" style="display:none"></div>
-    </div>
-  </section>
-
   <!-- ════ PORTFOLIO ════ -->
   <section id="tab-portfolio">
     <div class="panel">
@@ -458,43 +423,6 @@ footer{padding:5px 18px;color:var(--muted);font:10px var(--mono);border-top:1px 
       </div>
       <div id="portfolio-out" class="tbl-wrap"></div>
       <pre id="account-out" style="margin-top:12px;display:none"></pre>
-    </div>
-  </section>
-
-  <!-- ════ HEDGE ════ -->
-  <section id="tab-hedge">
-    <div class="panel">
-      <div class="row">
-        <label style="font:11px var(--mono);color:var(--muted)">Portfolio $</label>
-        <input id="h-pv" type="number" placeholder="e.g. 100000" style="width:165px">
-        <label style="font:11px var(--mono);color:var(--muted)">Coverage</label>
-        <input id="h-cov" type="number" step="0.05" value="0.5" style="width:75px">
-        <button class="primary" onclick="runHedge()">Compute hedge</button>
-      </div>
-      <pre id="hedge-out">(enter portfolio value and click Compute)</pre>
-    </div>
-  </section>
-
-  <!-- ════ JOURNAL ════ -->
-  <section id="tab-journal">
-    <div class="panel">
-      <h3>Open new trade</h3>
-      <div class="row">
-        <input id="j-sym" placeholder="Symbol" style="width:100px">
-        <select id="j-side"><option>LONG</option><option>SHORT</option></select>
-        <input id="j-qty"    type="number" placeholder="Qty"    style="width:75px">
-        <input id="j-entry"  type="number" placeholder="Entry"  style="width:85px" step="0.01">
-        <input id="j-stop"   type="number" placeholder="Stop"   style="width:85px" step="0.01">
-        <input id="j-target" type="number" placeholder="Target" style="width:85px" step="0.01">
-        <input id="j-setup"  placeholder="Setup tag"            style="width:130px">
-        <button class="primary" onclick="openTrade()">Open trade</button>
-      </div>
-    </div>
-    <div class="panel">
-      <h3>Trade log</h3>
-      <button class="ghost" onclick="loadJournal()">↺ Refresh</button>
-      <div id="journal-out" class="tbl-wrap" style="margin-top:10px"></div>
-      <pre id="journal-stats" style="margin-top:10px;display:none"></pre>
     </div>
   </section>
 
@@ -532,24 +460,6 @@ footer{padding:5px 18px;color:var(--muted);font:10px var(--mono);border-top:1px 
   </div>
 </section>
 
-<!-- ════ CLOSE TRADE MODAL ════ -->
-<div class="modal-overlay" id="close-modal" onclick="if(event.target===this)hideCloseModal()">
-  <div class="modal-box">
-    <h4>Close trade <span id="close-modal-sym" style="color:var(--accent)"></span></h4>
-    <div class="mrow">
-      <label>Exit $</label>
-      <input id="close-exit" type="number" step="0.01" placeholder="Exit price">
-    </div>
-    <div class="mrow">
-      <label>Notes</label>
-      <input id="close-notes" placeholder="Optional notes">
-    </div>
-    <div class="mbtns">
-      <button class="ghost" onclick="hideCloseModal()">Cancel</button>
-      <button class="primary" id="close-confirm-btn" onclick="confirmCloseTrade()">Confirm close</button>
-    </div>
-  </div>
-</div>
 
 <!-- ════ G-KEY SPOTLIGHT ════ -->
 <div id="spotlight" onclick="if(event.target===this)closeSpotlight()">
@@ -623,7 +533,6 @@ function switchTab(tab) {
     $('tab-'+tab).classList.add('active');
     if (tab === 'agents')  loadAgents();
     if (tab === 'bridge')  loadBridge();
-    if (tab === 'journal') loadJournal();
   }
 }
 
@@ -1367,8 +1276,6 @@ function renderMorningCards(rows) {
         <span class="verdict ${verd}" style="margin-bottom:4px">${verd}</span>
         <div class="cand-rr">${sc >= 0 ? '+' : ''}${sc.toFixed(3)}</div>
         <div class="cand-rr">${r.risk_reward}x R:R</div>
-        ${isNaN(ent)?'':
-          `<button class="cand-enter" onclick="event.stopPropagation();enterAtMarket('${r.ticker}','${verd}',${ent.toFixed(2)},${stp.toFixed(2)},${tgt.toFixed(2)})">Enter ›</button>`}
       </div>
     </div>`;
   };
@@ -1381,55 +1288,6 @@ function renderMorningCards(rows) {
   nonHcRows.forEach(r => { html += renderCard(r); });
   html += `</div>`;
   $('bridge-out').innerHTML = html;
-}
-
-let _pendingSnapshot = null;
-
-function enterAtMarket(ticker, verdict, entry, stop, target) {
-  $('j-sym').value   = ticker;
-  $('j-side').value  = verdict === 'SHORT' ? 'SHORT' : 'LONG';
-  $('j-entry').value = entry;
-  $('j-stop').value  = stop;
-  $('j-target').value= target;
-  const row  = (_bridgeRows||[]).find(r => r.ticker === ticker);
-  const card = (_lastCard && (_lastCard.symbol||'').toUpperCase() === ticker) ? _lastCard : null;
-  _pendingSnapshot = {
-    ts: new Date().toISOString(),
-    ticker, verdict, entry, stop, target,
-    // prefer action card data (richer) over bridge row fallback
-    score:           card ? parseFloat(card.score)||null           : row ? parseFloat(row.combined_score||row.quality_score)||null : null,
-    agreement_pct:   card ? parseFloat(card.agreement_pct)||null   : row ? parseFloat(row.agreement_pct)||null : null,
-    inflation_gap:   card ? parseFloat(card.inflation_gap)||null   : row ? parseFloat(row.inflation_gap)||null : null,
-    entry_quality:   card ? (card.entry_quality||null)             : row ? (row.setup_label||row.entry_quality||null) : null,
-    stop_anchor:     card ? (card.stop_anchor||null)               : row ? (row.stop_anchor||null) : null,
-    ticker_regime:   card ? (card.ticker_regime||null)             : row ? (row.ticker_regime||null) : null,
-    catalysts:       row  ? (row.catalysts||null) : null,
-    rr:              card ? parseFloat(card.risk_reward)||null      : row ? parseFloat(row.risk_reward)||null : null,
-    ret_1d:          card ? parseFloat(card.ret_1d)||null          : row ? parseFloat(row.ret_1d)||null : null,
-    ret_5d:          card ? parseFloat(card.ret_5d)||null          : row ? parseFloat(row.ret_5d)||null : null,
-    // signal snapshot fields (only from action card)
-    combo:           card ? (card.combo||null) : null,
-    n_eff:           card ? parseFloat(card.n_eff)||null : null,
-    action_label:    card ? (card.action_label||null) : null,
-    trade_style:     card ? (card.trade_style||null) : null,
-    family_votes:    card ? (card.family_votes||null) : null,
-    family_attribution: card ? (card.family_attribution||null) : null,
-    meta_coherence:  card ? parseFloat(card.meta_coherence)||null : null,
-    meta_note:       card ? (card.meta_note||null) : null,
-  };
-  switchTab('journal');
-}
-
-function enterFromCard() {
-  if (!_lastCard) return;
-  const c = _lastCard;
-  enterAtMarket(
-    (c.symbol||'').toUpperCase(),
-    c.verdict,
-    parseFloat(c.entry)||0,
-    parseFloat(c.stop)||0,
-    parseFloat(c.target)||0
-  );
 }
 
 /* ═══════════════════════ ALIGNMENT COMPASS ═══════════════════════ */
@@ -1490,88 +1348,6 @@ async function loadFlow() {
   } catch(e) { $('flow-out').textContent = 'Error: '+e.message; }
 }
 
-/* ═══════════════════════ BACKTEST ═══════════════════════ */
-let _lastBT = null;
-
-async function runBacktest() {
-  const sym = $('bt-sym').value.trim().toUpperCase();
-  if (!sym) { $('bt-sym').focus(); return; }
-  $('bt-out').innerHTML = '<span style="color:var(--muted)">running backtest…</span>';
-  $('bt-mc').style.display = 'none';
-  try {
-    const r = await fetch(`${API}/api/backtest/${sym}?period=${$('bt-period').value}`).then(r=>r.json());
-    if (r.detail) { $('bt-out').innerHTML = `<span class="neg">${r.detail}</span>`; return; }
-    _lastBT = r;
-    $('bt-out').innerHTML = `
-      <div class="k">Symbol</div>
-      <div class="v" style="font-weight:700">${r.symbol}</div>
-      <div class="k">Bars / Trades</div>
-      <div class="v">${r.bars} / ${r.trades}</div>
-      <div class="k">Win rate</div>
-      <div class="v">${fmtPct(r.win_rate)}</div>
-      <div class="k">Profit factor</div>
-      <div class="v">${fmt(r.profit_factor,2)}</div>
-      <div class="k">CAGR</div>
-      <div class="v ${signCls(r.cagr)}">${fmtPct(r.cagr)}</div>
-      <div class="k">Sharpe / Sortino</div>
-      <div class="v">${fmt(r.sharpe,2)} / ${fmt(r.sortino,2)}</div>
-      <div class="k">Max drawdown</div>
-      <div class="v neg">${fmtPct(r.max_drawdown)}</div>
-      <div class="k">Final equity</div>
-      <div class="v">${fmt(r.final_equity,3)}</div>`;
-  } catch(e) { $('bt-out').innerHTML = `<span class="neg">Error: ${e.message}</span>`; }
-}
-
-async function runMC() {
-  if (!_lastBT?.trade_returns?.length) { alert('Run a backtest first'); return; }
-  const mc = $('bt-mc');
-  mc.style.display = 'block';
-  mc.textContent = 'simulating 5000 paths…';
-  try {
-    const r = await fetch(`${API}/api/monte_carlo`,{
-      method:'POST', headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({trade_returns:_lastBT.trade_returns, sims:5000})
-    }).then(r=>r.json());
-    mc.textContent = JSON.stringify(r,null,2);
-  } catch(e) { mc.textContent = 'Error: '+e.message; }
-}
-
-/* ═══════════════════════ PRE-TRADE STRESS ═══════════════════════ */
-async function runStress() {
-  const entry = parseFloat($('st-entry').value);
-  const stop  = parseFloat($('st-stop').value);
-  const tgt   = parseFloat($('st-target').value);
-  const wr    = parseFloat($('st-wr').value)||0.5;
-  if (isNaN(entry)||isNaN(stop)||isNaN(tgt)) { alert('Enter entry, stop and target prices'); return; }
-  const out = $('stress-out');
-  out.style.display = 'none';
-  out.innerHTML = '';
-  try {
-    const r = await fetch(`${API}/api/pre_trade_stress`,{
-      method:'POST', headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({entry, stop, target:tgt, historical_win_rate:wr})
-    }).then(r=>r.json());
-    if (r.detail) { out.style.display='grid'; out.innerHTML=`<span class="neg">${r.detail}</span>`; return; }
-    const cards = [
-      {k:'R:R',          v: r.risk_reward!=null   ? fmt(r.risk_reward,2)+'x'    : '—',  cls:''},
-      {k:'Expected EV',  v: r.expected_value!=null ? fmt(r.expected_value,3)     : '—',  cls: r.expected_value>0?'pos':r.expected_value<0?'neg':''},
-      {k:'Win rate',     v: r.win_rate!=null       ? fmtPct(r.win_rate)          : '—',  cls:''},
-      {k:'Risk $',       v: r.risk_dollars!=null   ? '$'+fmt(r.risk_dollars,2)   : '—',  cls:'neg'},
-      {k:'Reward $',     v: r.reward_dollars!=null ? '$'+fmt(r.reward_dollars,2) : '—',  cls:'pos'},
-      {k:'Break-even WR',v: r.breakeven_wr!=null   ? fmtPct(r.breakeven_wr)      : '—',  cls:''},
-      {k:'P(profit)',    v: r.prob_profit!=null     ? fmtPct(r.prob_profit)       : '—',  cls: r.prob_profit>=0.5?'pos':'neg'},
-      {k:'Verdict',      v: r.verdict              || '—',                                cls: r.verdict==='TAKE'?'pos':r.verdict==='SKIP'?'neg':''},
-    ];
-    out.innerHTML = cards.map(c =>
-      `<div class="stress-card">
-        <div class="sl">${c.k}</div>
-        <div class="sv ${c.cls}" style="${!c.cls?'color:var(--text)':''}">${c.v}</div>
-      </div>`
-    ).join('');
-    out.style.display = 'grid';
-  } catch(e) { out.style.display='grid'; out.innerHTML=`<span class="neg">Error: ${e.message}</span>`; }
-}
-
 /* ═══════════════════════ PORTFOLIO ═══════════════════════ */
 async function loadPortfolio() {
   $('portfolio-out').innerHTML = '<span style="color:var(--muted)">connecting to IBKR…</span>';
@@ -1603,21 +1379,6 @@ async function loadAccount() {
     const r = await fetch(`${API}/api/account`).then(r=>r.json());
     el.textContent = JSON.stringify(r,null,2);
   } catch(e) { el.textContent = 'Error: '+e.message; }
-}
-
-/* ═══════════════════════ HEDGE ═══════════════════════ */
-async function runHedge() {
-  const pv  = parseFloat($('h-pv').value);
-  const cov = parseFloat($('h-cov').value)||0.5;
-  if (!pv||isNaN(pv)) { alert('Enter a portfolio value first'); return; }
-  $('hedge-out').textContent = 'computing…';
-  try {
-    const r = await fetch(`${API}/api/hedge`,{
-      method:'POST', headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({portfolio_value:pv, coverage_pct:cov})
-    }).then(r=>r.json());
-    $('hedge-out').textContent = JSON.stringify(r,null,2);
-  } catch(e) { $('hedge-out').textContent = 'Error: '+e.message; }
 }
 
 /* ═══════════════════════ AI CHAT ═══════════════════════ */
@@ -1676,112 +1437,6 @@ function escHtml(s) {
   return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
 
-/* ═══════════════════════ JOURNAL ═══════════════════════ */
-async function openTrade() {
-  const sym = $('j-sym').value.trim().toUpperCase();
-  if (!sym) { alert('Enter a symbol'); $('j-sym').focus(); return; }
-  let setup = $('j-setup').value.trim() || null;
-  if (_pendingSnapshot && _pendingSnapshot.ticker === sym) {
-    setup = JSON.stringify(_pendingSnapshot);
-    _pendingSnapshot = null;
-  }
-  const body = {
-    symbol: sym,
-    side:   $('j-side').value,
-    qty:    parseFloat($('j-qty').value)||1,
-    entry:  parseFloat($('j-entry').value)  ||null,
-    stop:   parseFloat($('j-stop').value)   ||null,
-    target: parseFloat($('j-target').value) ||null,
-    setup,
-  };
-  try {
-    await fetch(`${API}/api/journal/open`,{
-      method:'POST', headers:{'Content-Type':'application/json'},
-      body:JSON.stringify(body)
-    }).then(r=>r.json());
-    ['j-sym','j-qty','j-entry','j-stop','j-target','j-setup'].forEach(id => { $(id).value=''; });
-    loadJournal();
-  } catch(e) { alert('Error opening trade: '+e.message); }
-}
-
-let _closeTradeId = null;
-
-function showCloseModal(id, sym) {
-  _closeTradeId = id;
-  $('close-modal-sym').textContent = sym;
-  $('close-exit').value  = '';
-  $('close-notes').value = '';
-  $('close-modal').classList.add('show');
-  setTimeout(() => $('close-exit').focus(), 80);
-}
-
-function hideCloseModal() {
-  $('close-modal').classList.remove('show');
-  _closeTradeId = null;
-}
-
-async function confirmCloseTrade() {
-  const exit = parseFloat($('close-exit').value);
-  if (!_closeTradeId || isNaN(exit)) { $('close-exit').focus(); return; }
-  const btn = $('close-confirm-btn');
-  btn.disabled = true;
-  try {
-    const r = await fetch(`${API}/api/journal/close`, {
-      method:'POST', headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({trade_id:_closeTradeId, exit, notes:$('close-notes').value||null})
-    }).then(r=>r.json());
-    if (r.ok) {
-      hideCloseModal();
-      loadJournal();
-    } else {
-      alert('Error closing trade: ' + JSON.stringify(r));
-    }
-  } catch(e) {
-    alert('Error: ' + e.message);
-  } finally {
-    btn.disabled = false;
-  }
-}
-
-async function loadJournal() {
-  const out = $('journal-out');
-  try {
-    const r = await fetch(`${API}/api/journal`).then(r=>r.json());
-    if (!r.trades?.length) {
-      out.innerHTML = '<div style="color:var(--muted);padding:16px;text-align:center">No trades yet — open one above</div>';
-    } else {
-      out.innerHTML = `<table><thead><tr>
-        <th>ID</th><th>Date</th><th>Symbol</th><th>Side</th><th>Qty</th>
-        <th>Entry</th><th>Stop</th><th>Target</th><th>Exit</th><th>P&L</th><th>R:R</th><th>Status</th><th></th>
-      </tr></thead><tbody>${r.trades.map(t=>`<tr>
-        <td style="color:var(--muted)">${t.id}</td>
-        <td style="color:var(--muted)">${(t.ts||'').slice(0,10)}</td>
-        <td style="font-weight:700;cursor:pointer" onclick="drillTicker('${escHtml(t.symbol)}')">${t.symbol}</td>
-        <td class="${t.side==='LONG'?'pos':'neg'}">${t.side}</td>
-        <td>${t.qty}</td>
-        <td>${fmt(t.entry)}</td><td>${fmt(t.stop)}</td><td>${fmt(t.target)}</td>
-        <td>${fmt(t.exit)}</td>
-        <td class="${signCls(t.pnl)}">${t.pnl!=null?fmt(t.pnl,2):'—'}</td>
-        <td>${t.rr!=null?fmt(t.rr,2)+'x':'—'}</td>
-        <td style="color:${t.status==='OPEN'?'var(--amber)':'var(--muted)'}">${t.status}</td>
-        <td>${t.status==='OPEN'
-          ? `<button class="ghost" style="font-size:11px;padding:3px 7px;color:var(--red);border-color:rgba(224,69,90,.35)"
-               onclick="showCloseModal(${t.id},'${escHtml(t.symbol)}')">Close</button>`
-          : ''}</td>
-      </tr>`).join('')}</tbody></table>`;
-    }
-    const stats = $('journal-stats');
-    if (r.stats && Object.keys(r.stats).length) {
-      stats.style.display = 'block';
-      stats.textContent   = JSON.stringify(r.stats,null,2);
-    } else {
-      stats.style.display = 'none';
-    }
-  } catch {
-    out.innerHTML = '<div style="color:var(--muted);padding:16px;text-align:center">Journal unavailable — API offline</div>';
-  }
-}
-
 /* ═══════════════════════ AGENTS ═══════════════════════ */
 async function loadAgents() {
   const out = $('agents-out');
@@ -1801,7 +1456,6 @@ async function loadAgents() {
 
 /* ═══════════════════════ INIT ═══════════════════════ */
 loadBridge();
-loadJournal();
 </script>
 </body>
 </html>
