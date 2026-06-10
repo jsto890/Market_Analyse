@@ -601,12 +601,15 @@ def _build_detail_block(r: dict) -> list[str]:
         # Use actual earnings date for earnings events (news headline dates are unreliable)
         if event.type in ("earnings_beat", "earnings_miss") and metrics.get("last_earnings_ts"):
             n_days = int(round((_time.time() - metrics["last_earnings_ts"]) / 86400))
-        else:
+            age = f"{n_days}d ago" if n_days > 0 else "today"
+        elif getattr(event, "dated", True):
             n_days = int(round(float(event.recency_days)))
+            age = f"{n_days}d ago" if n_days > 0 else "today"
+        else:
+            age = "recent"  # no real timestamp — don't fabricate a day count
         label = _EVENT_LABELS.get(event.type, event.type.replace("_", " "))
         prefix = "⚡" if event.direction > 0 else "⚠"
         ctx = _extract_catalyst_ctx(event.type, getattr(event, "detail", ""), metrics)
-        age = f"{n_days}d ago" if n_days > 0 else "today"
         if ctx:
             cat_bullets_list.append(f"{prefix} {label} ({ctx}) · {age}")
         else:

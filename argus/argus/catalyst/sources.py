@@ -9,16 +9,32 @@ def _default_yf_info(ticker: str) -> dict:
 
 
 def _default_yf_news(ticker: str) -> list[dict]:
-    """Return list of {text, ts} dicts. ts is Unix timestamp or None."""
+    """Return list of {text, ts} dicts. ts is a Unix timestamp or None."""
     import yfinance as yf
+    from datetime import datetime
     out: list[dict] = []
     for item in (yf.Ticker(ticker).news or []):
-        title = item.get("title") or item.get("content", {}).get("title")
+        content = item.get("content") or {}
+        title = item.get("title") or content.get("title")
         if not (isinstance(title, str) and title.strip()):
             continue
-        ts = (item.get("providerPublishTime") or item.get("publishedAt")
-              or item.get("publish_time") or item.get("publishTime"))
-        out.append({"text": title.strip(), "ts": float(ts) if ts else None})
+        ts = None
+        # newer yfinance nests an ISO pubDate/displayTime under "content"
+        iso = content.get("pubDate") or content.get("displayTime")
+        if iso:
+            try:
+                ts = datetime.fromisoformat(str(iso).replace("Z", "+00:00")).timestamp()
+            except Exception:
+                ts = None
+        # older yfinance exposed a unix providerPublishTime at the top level
+        if ts is None:
+            raw = item.get("providerPublishTime") or content.get("providerPublishTime")
+            if raw:
+                try:
+                    ts = float(raw)
+                except (TypeError, ValueError):
+                    ts = None
+        out.append({"text": title.strip(), "ts": ts})
     return out
 
 

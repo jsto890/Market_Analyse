@@ -11,6 +11,7 @@ class CatalystEvent:
     confidence: float    # 0..1
     source: str = ""     # "news" | "chatter" | "claude"
     detail: str = ""     # quoted text or matched headline
+    dated: bool = True   # False when recency_days is a fallback guess, not a real timestamp
 
 
 @dataclass

@@ -179,12 +179,17 @@ def keyword_fallback(pool: CatalystPool, *, recency_days: float = 3.0) -> list[C
                 # For earnings events use the actual earnings date, not the news headline date
                 if ctype in ("earnings_beat", "earnings_miss") and pool.metrics.get("last_earnings_ts"):
                     actual_recency = _ts_to_recency(pool.metrics["last_earnings_ts"], now)
+                    dated = True
+                elif ts is not None:
+                    actual_recency = _ts_to_recency(ts, now)
+                    dated = True
                 else:
-                    actual_recency = _ts_to_recency(ts, now) if ts else recency_days
+                    actual_recency = recency_days  # fabricated fallback
+                    dated = False
                 events.append(CatalystEvent(
                     type=ctype, direction=_DIRECTION.get(ctype, 0),
-                    recency_days=actual_recency, confidence=0.6, source="chatter",
-                    detail=headline[:120],
+                    recency_days=actual_recency, confidence=0.6, source="news",
+                    detail=headline[:120], dated=dated,
                 ))
                 seen.add(ctype)
                 break
@@ -195,6 +200,7 @@ def keyword_fallback(pool: CatalystPool, *, recency_days: float = 3.0) -> list[C
                 events.append(CatalystEvent(
                     type=ctype, direction=_DIRECTION.get(ctype, 0),
                     recency_days=recency_days, confidence=0.5, source="chatter",
+                    dated=False,  # chatter tags carry no date
                 ))
                 seen.add(ctype)
     return events

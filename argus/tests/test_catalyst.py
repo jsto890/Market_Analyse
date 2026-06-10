@@ -38,7 +38,7 @@ def test_keyword_fallback():
     assert "fda" in types
     assert "offering" in types
     fda = next(e for e in events if e.type == "fda")
-    assert fda.direction == 1 and fda.source == "chatter"
+    assert fda.direction == 1 and fda.source == "news"
     off = next(e for e in events if e.type == "offering")
     assert off.direction == -1
 
