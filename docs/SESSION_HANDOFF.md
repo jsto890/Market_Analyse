@@ -139,11 +139,19 @@ Rotation is **relative** — capital moving *between* sectors. Unanimous finding
 - Sanity check: Semis showed 🔴 Lagging despite +92%/3M — relative strength is
   decelerating (ran hard, now underperforming SPY). Uranium 🔵 Improving.
 
-### Deferred RRG refinements (from the agents, not yet done)
-- **Vol-normalise / cross-sectional z-score** so high-vol baskets (uranium n=3,
-  quantum n=7) aren't over-promoted; **shrinkage** for tiny baskets.
-- **Δrank hysteresis** — data-scientist sim: ~72% of ±1 rank moves are noise.
-- **Breadth column** (% constituents > 50-day MA) as a rotation-confirmation filter.
+### RRG refinements (DONE — commit after RRG)
+- **Small-basket shrinkage** — ranking score is shrunk toward the cross-sectional
+  mean by basket size (`w = n/(n+5)`, James–Stein style), so thin baskets
+  (uranium n=3, quantum n=7) can't top/bottom the board on a few names' noise.
+  Displayed RS-Ratio/Mom are untouched — only rank order is size-adjusted. This
+  supersedes explicit vol-normalisation (RS-Ratio is already scale-centred at 100).
+- **Δrank hysteresis** — only moves of ≥2 positions are flagged (`_RANK_HYSTERESIS`);
+  ±1 shuffles show `•` (the ~72%-noise finding).
+- **Breadth column** — % of constituents above their 50-day MA (participation).
+  Confirms whether a move is broad or one name; e.g. an Improving quadrant with 0%
+  breadth is an unconfirmed signal.
+
+### Still-deferred RRG items
 - Benchmark choice: SPY (current) vs QQQ for the tech-heavy set — revisit.
 - Membership look-ahead: today's top-50 applied to trailing returns (mitigated by
   weekly cache + equal-weight; lock membership quarterly for full rigor).
@@ -154,7 +162,8 @@ Rotation is **relative** — capital moving *between* sectors. Unanimous finding
 1. **`prices.py` NaN-bar guard** — move/duplicate the NaN-close filter to the
    price-fetch/write stage so scoring/backtest/dashboard are protected (currently
    only `setups.py` is).
-2. **RRG refinements** above (vol-normalise, Δrank hysteresis, breadth filter).
+2. **RRG refinements** — DONE (shrinkage, Δrank hysteresis, breadth). Remaining:
+   benchmark choice (SPY vs QQQ) and quarterly membership lock.
 3. **Wire conviction into scoring** (currently display-only) — let high/low social
    conviction adjust the blend or gate candidates.
 4. **Validate the regime gate** — it's an unvalidated binary; backtest "chase only

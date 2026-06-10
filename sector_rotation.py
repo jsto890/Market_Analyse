@@ -24,6 +24,9 @@ _CONSTITUENTS_CACHE = _CONFIG_DIR / "sector_constituents.json"
 _CACHE_TTL_DAYS = 7
 _TOP_N = 50           # constituents per industry
 _BENCHMARK = "SPY"    # RRG benchmark — broad market (rotation = strength vs this)
+_SHRINK_K = 5         # ranking shrinkage strength: w = n/(n+K) toward the cross-sectional mean
+_BREADTH_SMA = 50     # breadth = % of constituents above their N-day moving average
+_RANK_HYSTERESIS = 2  # only flag a Δrank move of at least this many positions (smaller = noise)
 
 # yfinance sector keys (the 11 GICS-style sectors)
 _SECTOR_KEYS = [
@@ -195,6 +198,19 @@ def _returns_from_index(idx: pd.Series) -> dict[str, float]:
     return out
 
 
+def _breadth(members_df: pd.DataFrame) -> float | None:
+    """% of constituents trading above their N-day moving average (participation)."""
+    above = total = 0
+    for col in members_df.columns:
+        s = members_df[col].dropna()
+        if len(s) < _BREADTH_SMA:
+            continue
+        total += 1
+        if s.iloc[-1] > s.iloc[-_BREADTH_SMA:].mean():
+            above += 1
+    return (100.0 * above / total) if total else None
+
+
 def _rrg_row(name: str, sector: str, members: list[str],
              closes: pd.DataFrame, bench_idx: pd.Series) -> dict | None:
     present = [m for m in members if m in closes.columns]
@@ -208,12 +224,14 @@ def _rrg_row(name: str, sector: str, members: list[str],
     return {
         "sector": sector,
         "industry": name,
+        "n": len(present),                       # internal: drives ranking shrinkage
         "rs_ratio": ratio,
         "rs_mom": mom,
         "quadrant": _quadrant(ratio, mom),
+        "breadth": _breadth(closes[present]),
         "returns": _returns_from_index(sec_idx),
-        # composite for ranking: distance into the Leading corner
-        "score": (ratio - 100.0) + (mom - 100.0),
+        # raw composite: distance into the Leading corner (shrunk for ranking below)
+        "score_raw": (ratio - 100.0) + (mom - 100.0),
     }
 
 
@@ -256,6 +274,17 @@ def compute_rotation(force_refresh: bool = False,
         row = _rrg_row(name, "Custom", members, closes, bench_idx)
         if row:
             rows.append(row)
+
+    # Shrink the ranking score toward the cross-sectional mean by basket size
+    # (James–Stein style, w = n/(n+K)). A 3-name basket needs a much larger raw
+    # signal to rank high than a 50-name one, so thin baskets (uranium, quantum)
+    # stop topping/bottoming the board on sampling noise. Displayed RS-Ratio/Mom
+    # are untouched — only the rank order is size-adjusted.
+    if rows:
+        mean_raw = sum(r["score_raw"] for r in rows) / len(rows)
+        for r in rows:
+            w = r["n"] / (r["n"] + _SHRINK_K)
+            r["score"] = w * r["score_raw"] + (1.0 - w) * mean_raw
     return rows
 
 
@@ -286,15 +315,18 @@ def _save_rank_snapshot(today: str, ranks: dict[str, int]) -> None:
 
 
 def _rank_delta_tag(industry: str, cur_rank: int, baseline: dict[str, int]) -> str:
-    """Movement up/down the rotation leaderboard since the previous report."""
+    """Movement up/down the rotation leaderboard since the previous report.
+
+    Hysteresis: only flag a move of ≥ _RANK_HYSTERESIS positions — a ±1 shuffle on
+    a noisy continuous score carries no real information."""
     if industry not in baseline:
         return "🆕"
     delta = baseline[industry] - cur_rank   # +ve = climbed toward the top
+    if abs(delta) < _RANK_HYSTERESIS:
+        return "•"
     if delta > 0:
         return f"🟢▲{delta}"
-    if delta < 0:
-        return f"🔴▼{abs(delta)}"
-    return "•"
+    return f"🔴▼{abs(delta)}"
 
 
 # ── markdown rendering ───────────────────────────────────────────────────────
@@ -333,18 +365,21 @@ def build_rotation_section(force_refresh: bool = False,
         "up — *early rotation in*) · 🟡 Weakening (strong but fading) · 🔴 Lagging (weak & falling).",
         "- **RS-Ratio** — relative-strength **level** vs the market (>100 = outperforming).",
         "- **RS-Mom** — relative-strength **momentum** (>100 = that outperformance is accelerating).",
+        "- **Breadth** — % of constituents above their 50-day MA (participation; confirms a move is broad, not one name).",
         "- **1W / 1M / 3M** — equal-weighted % price return of the constituents (context).",
         "- **Δrank** — move up/down this leaderboard since the previous report "
-        "(🟢▲ climbed, 🔴▼ fell, • unchanged, 🆕 new).",
+        f"(🟢▲ climbed, 🔴▼ fell, • <{_RANK_HYSTERESIS} / unchanged, 🆕 new). "
+        "Ranking is size-adjusted, so thin baskets (uranium, quantum) aren't ranked on a few names' noise.",
         "",
-        "| Industry | Quadrant | RS-Ratio | RS-Mom | 1W | 1M | 3M | Δrank |",
-        "|----------|----------|----------|--------|----|----|----|-------|",
+        "| Industry | Quadrant | RS-Ratio | RS-Mom | Breadth | 1W | 1M | 3M | Δrank |",
+        "|----------|----------|----------|--------|---------|----|----|----|-------|",
     ]
     for r in scored:
         ret = r["returns"]
         delta = _rank_delta_tag(r["industry"], cur_ranks[r["industry"]], baseline)
+        breadth = f"{r['breadth']:.0f}%" if r.get("breadth") is not None else "—"
         lines.append(
-            f"| {r['industry']} | {r['quadrant']} | {r['rs_ratio']:.1f} | {r['rs_mom']:.1f} | "
+            f"| {r['industry']} | {r['quadrant']} | {r['rs_ratio']:.1f} | {r['rs_mom']:.1f} | {breadth} | "
             f"{_fmt_pct(ret.get('1W'))} | {_fmt_pct(ret.get('1M'))} | {_fmt_pct(ret.get('3M'))} | "
             f"{delta} |"
         )
