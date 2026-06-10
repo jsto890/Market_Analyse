@@ -27,7 +27,9 @@ REVIEW_REPORT = Path(os.environ.get("MARKET_REVIEW_REPORT", "<path-to-market-rev
 OUT_DIR       = Path(__file__).parent / "reports"
 
 sys.path.insert(0, str(ARGUS_ROOT))
+sys.path.insert(0, str(Path(__file__).parent))     # for sibling modules (sector_rotation)
 
+from sector_rotation import build_rotation_section  # noqa: E402
 from argus.data.market import get_history          # noqa: E402
 from argus.action_card.builder import build_action_card, _distill_notes  # noqa: E402
 from argus.agents.base import Verdict              # noqa: E402
@@ -664,9 +666,17 @@ def _write_markdown(
         "",
     ]
 
-    # Section 1: Sector Rotation
-    if full_setups_df is not None and not full_setups_df.empty:
-        lines.append(_build_sector_rotation_section(full_setups_df))
+    # Section 1: Sector Rotation — broad-market, data-driven; fall back to the
+    # watchlist-setup view only if the rotation data fetch fails.
+    try:
+        rotation_md = build_rotation_section()
+    except Exception:
+        rotation_md = ""
+    if (not rotation_md or "unavailable" in rotation_md) and \
+            full_setups_df is not None and not full_setups_df.empty:
+        rotation_md = _build_sector_rotation_section(full_setups_df)
+    if rotation_md:
+        lines.append(rotation_md)
         lines.append("")
 
     # Section 2: Aligned (group1)
