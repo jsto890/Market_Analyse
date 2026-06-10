@@ -235,6 +235,7 @@ def _analyse_ticker(row: pd.Series) -> Optional[dict]:
         "ticker":            ticker,
         "fetch_symbol":      fetch_sym if fetch_sym != ticker else ticker,
         "setup_label":       row.get("setup_label", ""),
+        "conviction":        str(row.get("conviction", "") or ""),
         "quality_score":     round(float(row.get("quality_score", 0)), 2),
         "cluster_overlap":   int(float(row.get("cluster_overlap", 0) or 0)),
         "cluster_confirmed": str(row.get("cluster_confirmed", "false")),
@@ -675,6 +676,14 @@ def _build_detail_block(r: dict) -> list[str]:
     return [header] + table
 
 
+_CONV_TAG = {"high": "🟢 high", "med": "🟡 med", "low": "⚪ low"}
+
+
+def _conv_tag(r: dict) -> str:
+    """Social-signal conviction (chatter quality), distinct from the ⚡/✅ technical badge."""
+    return _CONV_TAG.get(str(r.get("conviction", "")).lower(), "—")
+
+
 def _gate_marker(r: dict) -> str:
     """Marker explaining why Combined ≠ the weighted blend of the shown legs.
 
@@ -726,8 +735,8 @@ def _write_markdown(
     lines += ["## Aligned — Sentiment + Technical + Catalyst all bullish", ""]
     if group1:
         lines += [
-            "| Ticker | Conviction | Sent | Tech | Cat | Combined | Sector |",
-            "|--------|-----------|------|------|-----|----------|--------|",
+            "| Ticker | Signal | Conv | Sent | Tech | Cat | Combined | Sector |",
+            "|--------|--------|------|------|------|-----|----------|--------|",
         ]
         for r in group1:
             conv = "⚡ STRONG" if r["high_conviction"] else "✅ GOOD"
@@ -735,7 +744,7 @@ def _write_markdown(
             fam, sub = r.get("_sector", ("", ""))
             sector_str = f"{fam} → {sub}" if fam and sub else fam or sub or "—"
             lines.append(
-                f"| **{r['ticker']}** | {conv} | {r['sentiment_score']:+.2f} | {r['tech_score']:+.2f} | {cat_str} | {r['combined_score']:+.2f}{_gate_marker(r)} | {sector_str} |"
+                f"| **{r['ticker']}** | {conv} | {_conv_tag(r)} | {r['sentiment_score']:+.2f} | {r['tech_score']:+.2f} | {cat_str} | {r['combined_score']:+.2f}{_gate_marker(r)} | {sector_str} |"
             )
     else:
         lines.append("*No aligned candidates today.*")
@@ -745,8 +754,8 @@ def _write_markdown(
     lines += ["## Technical + Catalyst bullish", ""]
     if group2:
         lines += [
-            "| Ticker | Conviction | Sent | Tech | Cat | Combined | Sector |",
-            "|--------|-----------|------|------|-----|----------|--------|",
+            "| Ticker | Signal | Conv | Sent | Tech | Cat | Combined | Sector |",
+            "|--------|--------|------|------|------|-----|----------|--------|",
         ]
         for r in group2:
             conv = "⚡ STRONG" if r["high_conviction"] else "✅ GOOD"
@@ -754,7 +763,7 @@ def _write_markdown(
             fam, sub = r.get("_sector", ("", ""))
             sector_str = f"{fam} → {sub}" if fam and sub else fam or sub or "—"
             lines.append(
-                f"| **{r['ticker']}** | {conv} | {r['sentiment_score']:+.2f} | {r['tech_score']:+.2f} | {cat_str} | {r['combined_score']:+.2f}{_gate_marker(r)} | {sector_str} |"
+                f"| **{r['ticker']}** | {conv} | {_conv_tag(r)} | {r['sentiment_score']:+.2f} | {r['tech_score']:+.2f} | {cat_str} | {r['combined_score']:+.2f}{_gate_marker(r)} | {sector_str} |"
             )
     else:
         lines.append("*No technical + catalyst candidates today.*")
@@ -771,7 +780,7 @@ def _write_markdown(
     # Footer
     lines += [
         "---",
-        "_Conviction (⚡ STRONG / ✅ GOOD) = technical-agreement strength, not the Combined score._  ",
+        "_Signal (⚡ STRONG / ✅ GOOD) = Argus technical-agreement strength. Conv (🟢/🟡/⚪) = social-signal conviction (chatter quality), independent of price._  ",
         "_Combined markers: ⚡ catalyst boost · ⚠ derank · ⛔ veto._  ",
         "_Entry/stop/target intentionally omitted pending a separate exit-analysis — to be added later._",
     ]
