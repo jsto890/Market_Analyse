@@ -700,7 +700,7 @@ def _gate_marker(r: dict) -> str:
 def _candidate_table(rows: list[dict]) -> list[str]:
     """Render a candidate table (header + one row per result) shared across sections."""
     out = [
-        "| Ticker | Signal | Conv | Sent | Tech | Cat | Combined | Sector |",
+        "| Ticker | Signal | Conv | Sent | Tech | Fund | Combined | Sector |",
         "|--------|--------|------|------|------|-----|----------|--------|",
     ]
     for r in rows:
@@ -757,7 +757,7 @@ def _write_markdown(
     group2 = [r for r in group2_all if r["ticker"] not in pullback_tickers]
     _by_combined = lambda r: r["combined_score"]  # noqa: E731
 
-    lines += ["## Aligned — Sentiment + Technical + Catalyst all bullish", ""]
+    lines += ["## Aligned — Sentiment + Technical + Fundamental all bullish", ""]
     if group1:
         lines += _candidate_table(sorted(group1, key=_by_combined, reverse=True))
     else:
@@ -777,14 +777,14 @@ def _write_markdown(
 
     # Section 4: Technical + Catalyst (group2). Near-aligned names (sentiment just
     # below the alignment line) are flagged 🔸 and floated to the top.
-    lines += ["## Technical + Catalyst bullish", "",
+    lines += ["## Technical + Fundamental bullish", "",
               "_🔸 = near-aligned: would be fully aligned but sentiment is just below "
               f"{ALIGN_SENT:.2f} (≥ {NEAR_SENT:.2f})._", ""]
     if group2:
         lines += _candidate_table(sorted(
             group2, key=lambda r: (r.get("near_aligned", False), r["combined_score"]), reverse=True))
     else:
-        lines.append("*No technical + catalyst candidates today.*")
+        lines.append("*No technical + fundamental candidates today.*")
     lines.append("")
 
     # Section 5: Long Candidate Detail
