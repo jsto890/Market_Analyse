@@ -48,6 +48,8 @@ ACTIONABLE_LABELS = {"fresh_watch", "building", "momentum_confirmed"}
 # mean-reverting tape.
 CHASE_LABELS      = {"extended", "late_chase"}
 LATE_CHASE_LABEL  = "late_chase"
+ALIGN_SENT        = 0.30   # sentiment ≥ this → fully aligned (group1)
+NEAR_SENT         = 0.20   # sentiment in [NEAR, ALIGN) → near-aligned (flagged, still group2)
 MAX_WORKERS       = 6
 SENTIMENT_WEIGHT = BRIDGE_WEIGHTS["sentiment"]
 TECHNICAL_WEIGHT = BRIDGE_WEIGHTS["technical"]
@@ -217,19 +219,14 @@ def _analyse_ticker(row: pd.Series) -> Optional[dict]:
         sector_tuple = ("Other", "")
 
     # ── group membership ──────────────────────────────────────────────────────
+    # Soft sentiment band instead of a hard cliff: ≥ ALIGN_SENT is fully aligned;
+    # [NEAR_SENT, ALIGN_SENT) is "near-aligned" (flagged), so a name like CGEH at
+    # 0.289 isn't dropped to plain tech+catalyst by 0.011.
     cat_score_present = catalyst_score is not None
-    group1 = (
-        card.verdict == Verdict.LONG
-        and sentiment_score > 0.3
-        and cat_score_present
-        and catalyst_score > 0
-    )
-    group2 = (
-        card.verdict == Verdict.LONG
-        and cat_score_present
-        and catalyst_score > 0
-        and not group1
-    )
+    long_with_cat = card.verdict == Verdict.LONG and cat_score_present and catalyst_score > 0
+    group1 = long_with_cat and sentiment_score >= ALIGN_SENT
+    near_aligned = long_with_cat and not group1 and sentiment_score >= NEAR_SENT
+    group2 = long_with_cat and not group1
 
     return {
         "ticker":            ticker,
@@ -283,6 +280,7 @@ def _analyse_ticker(row: pd.Series) -> Optional[dict]:
         "n_eff":             round(card.n_eff, 1),
         "group1":            group1,
         "group2":            group2,
+        "near_aligned":      near_aligned,
         # private keys stripped from CSV
         "_votes":            card.votes,
         "_cat_events":       cat.events,
@@ -750,20 +748,27 @@ def _write_markdown(
         lines.append("*No aligned candidates today.*")
     lines.append("")
 
-    # Section 3: Technical + Catalyst (group2)
-    lines += ["## Technical + Catalyst bullish", ""]
+    # Section 3: Technical + Catalyst (group2). Near-aligned names (sentiment just
+    # below the alignment line) are flagged 🔸 and floated to the top.
+    lines += ["## Technical + Catalyst bullish", "",
+              "_🔸 = near-aligned: would be fully aligned but sentiment is just below "
+              f"{ALIGN_SENT:.2f} (≥ {NEAR_SENT:.2f})._", ""]
     if group2:
         lines += [
             "| Ticker | Signal | Conv | Sent | Tech | Cat | Combined | Sector |",
             "|--------|--------|------|------|------|-----|----------|--------|",
         ]
-        for r in group2:
+        group2_sorted = sorted(
+            group2, key=lambda r: (r.get("near_aligned", False), r["combined_score"]), reverse=True
+        )
+        for r in group2_sorted:
             conv = "⚡ STRONG" if r["high_conviction"] else "✅ GOOD"
             cat_str = f"{r['catalyst_score']:+.2f}" if r["catalyst_score"] != "" else "—"
             fam, sub = r.get("_sector", ("", ""))
             sector_str = f"{fam} → {sub}" if fam and sub else fam or sub or "—"
+            tag = "🔸 " if r.get("near_aligned") else ""
             lines.append(
-                f"| **{r['ticker']}** | {conv} | {_conv_tag(r)} | {r['sentiment_score']:+.2f} | {r['tech_score']:+.2f} | {cat_str} | {r['combined_score']:+.2f}{_gate_marker(r)} | {sector_str} |"
+                f"| {tag}**{r['ticker']}** | {conv} | {_conv_tag(r)} | {r['sentiment_score']:+.2f} | {r['tech_score']:+.2f} | {cat_str} | {r['combined_score']:+.2f}{_gate_marker(r)} | {sector_str} |"
             )
     else:
         lines.append("*No technical + catalyst candidates today.*")
