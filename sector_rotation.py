@@ -30,6 +30,18 @@ _SECTOR_KEYS = [
     "basic-materials", "real-estate", "utilities",
 ]
 
+# The yfinance industries we actually trade — AI/Compute, Software, networking/
+# optical, hardware, defense/space, uranium. (Crypto and Quantum have no native
+# yfinance industry; they're override-baskets handled elsewhere.) The rotation
+# view is restricted to these so it isn't diluted by random sectors.
+_TRADED_INDUSTRIES = {
+    "semiconductors", "semiconductor-equipment-materials",
+    "communication-equipment", "computer-hardware", "electronic-components",
+    "scientific-technical-instruments", "information-technology-services",
+    "software-infrastructure", "software-application",
+    "aerospace-defense", "uranium",
+}
+
 # Trading-day windows. 1W/1M/3M are shown; 6M is a background input to the
 # rotation score only (1D and 1Y add noise/aren't informative for rotation).
 _WINDOWS = [("1W", 5), ("1M", 21), ("3M", 63), ("6M", 126)]
@@ -149,17 +161,25 @@ def _rotation_score(rets: dict[str, float]) -> float | None:
     return r1m - baseline
 
 
-def compute_rotation(force_refresh: bool = False) -> list[dict]:
-    """Return a list of per-industry rows with weighted returns + rotation score."""
+def compute_rotation(force_refresh: bool = False,
+                     industries: set[str] | None = _TRADED_INDUSTRIES) -> list[dict]:
+    """Return a list of per-industry rows with weighted returns + rotation score.
+
+    `industries` restricts to a set of yfinance industry keys (default: the ones
+    we trade). Pass None to compute every industry."""
     sectors = _load_constituents(force_refresh=force_refresh)
     if not sectors:
         return []
 
-    # collect every unique ticker across all industries
+    def _included(ikey: str) -> bool:
+        return industries is None or ikey in industries
+
+    # collect unique tickers only from the industries we'll actually report
     all_tickers: set[str] = set()
     for sec in sectors.values():
-        for ind in sec["industries"].values():
-            all_tickers.update(ind["constituents"].keys())
+        for ikey, ind in sec["industries"].items():
+            if _included(ikey):
+                all_tickers.update(ind["constituents"].keys())
     closes = _download_closes(sorted(all_tickers))
     if closes.empty:
         return []
@@ -177,6 +197,8 @@ def compute_rotation(force_refresh: bool = False) -> list[dict]:
     rows: list[dict] = []
     for skey, sec in sectors.items():
         for ikey, ind in sec["industries"].items():
+            if not _included(ikey):
+                continue
             weighted: dict[str, float] = {}
             for label, _ in _WINDOWS:
                 num = den = 0.0
@@ -206,10 +228,11 @@ def _fmt_pct(v: float | None) -> str:
     return f"{v:+.0f}"
 
 
-def build_rotation_section(top_n: int = 12, force_refresh: bool = False) -> str:
-    """Markdown section: industries ranked by rotation score (inflows + outflows)."""
+def build_rotation_section(force_refresh: bool = False,
+                           industries: set[str] | None = _TRADED_INDUSTRIES) -> str:
+    """Markdown section: traded industries ranked by rotation score."""
     try:
-        rows = compute_rotation(force_refresh=force_refresh)
+        rows = compute_rotation(force_refresh=force_refresh, industries=industries)
     except Exception:
         rows = []
     if not rows:
@@ -218,34 +241,24 @@ def build_rotation_section(top_n: int = 12, force_refresh: bool = False) -> str:
 
     scored = [r for r in rows if r["score"] is not None]
     scored.sort(key=lambda r: r["score"], reverse=True)
-    inflow = scored[:top_n]
-    outflow = scored[-top_n:][::-1] if len(scored) > top_n else []
 
     lines = [
         "## Sector Rotation",
-        "_Market-cap-weighted returns of the top ~20 names per industry, ranked by "
-        "Rot = 1M − ⅙·6M (change in pace). Ranks by acceleration, not level — a "
-        "still-rising industry can be 'cooling' if it's decelerating off a big run._",
+        "_Sectors we trade, ranked by Rot = 1M − ⅙·6M (momentum acceleration). "
+        "Market-cap-weighted over the top ~20 names per industry. Top = heating up, "
+        "bottom = cooling. Ranks by change in pace, not level._",
         "",
+        "| Industry | 1W | 1M | 3M | Rot |",
+        "|----------|----|----|----|-----|",
     ]
-
-    def _table(title: str, data: list[dict]) -> list[str]:
-        out = [f"**{title}**", "",
-               "| Industry | 1W | 1M | 3M | Rot |",
-               "|----------|----|----|----|-----|"]
-        for r in data:
-            ret = r["returns"]
-            out.append(
-                f"| {r['industry']} ({r['sector']}) | {_fmt_pct(ret.get('1W'))} | "
-                f"{_fmt_pct(ret.get('1M'))} | {_fmt_pct(ret.get('3M'))} | "
-                f"{r['score']:+.1f} |"
-            )
-        out.append("")
-        return out
-
-    lines += _table("Heating up — momentum accelerating", inflow)
-    if outflow:
-        lines += _table("Cooling down — momentum fading", outflow)
+    for r in scored:
+        ret = r["returns"]
+        lines.append(
+            f"| {r['industry']} | {_fmt_pct(ret.get('1W'))} | "
+            f"{_fmt_pct(ret.get('1M'))} | {_fmt_pct(ret.get('3M'))} | "
+            f"{r['score']:+.1f} |"
+        )
+    lines.append("")
     return "\n".join(lines)
 
 
