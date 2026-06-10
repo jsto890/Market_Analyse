@@ -198,6 +198,8 @@ def test_gather_pool_normalizes_metrics():
         setups_row={"catalysts": "fda;biotech"},
         yf_info_fn=lambda t: fake_info,
         yf_news_fn=lambda t: ["XYZ gets FDA approval"],
+        yf_earnings_fn=lambda t: {},
+        yf_upgrades_fn=lambda t: {},
         ibkr=None,
     )
     assert pool.metrics["price"] == 10.0
@@ -210,7 +212,8 @@ def test_gather_pool_normalizes_metrics():
 def test_gather_pool_best_effort_on_failure():
     from argus.catalyst.sources import gather_pool
     def boom(t): raise RuntimeError("offline")
-    pool = gather_pool("XYZ", setups_row=None, yf_info_fn=boom, yf_news_fn=boom, ibkr=None)
+    pool = gather_pool("XYZ", setups_row=None, yf_info_fn=boom, yf_news_fn=boom,
+                       yf_earnings_fn=boom, yf_upgrades_fn=boom, ibkr=None)
     assert pool.is_empty() is True
 
 

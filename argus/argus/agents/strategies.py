@@ -1288,15 +1288,18 @@ def high_tight_flag(df):
     vol_dry = len(pre_v) > 0 and flag_v.mean() < pre_v.mean() * 0.85
 
     surge_pct = htf_surge * 100
+    # Textbook HTF is +100-200% in 4-8 weeks; far larger surges are parabolic
+    # continuations, not flags — label honestly so the note isn't misleading.
+    tag = "parabolic" if surge_pct > 300 else "HTF"
 
     if pullback < 0.25 and vol_dry:
         return _vote("High Tight Flag", Verdict.LONG, 0.90,
-                     f"HTF: +{surge_pct:.0f}% surge, {pullback*100:.0f}% flag, vol dry")
+                     f"{tag}: +{surge_pct:.0f}% surge, {pullback*100:.0f}% flag, vol dry")
     if pullback < 0.25:
         return _vote("High Tight Flag", Verdict.LONG, 0.65,
-                     f"HTF: +{surge_pct:.0f}% surge, flag forming")
+                     f"{tag}: +{surge_pct:.0f}% surge, flag forming")
     return _vote("High Tight Flag", Verdict.WAIT, 0.3,
-                 f"HTF surge +{surge_pct:.0f}% but flag {pullback*100:.0f}% deep")
+                 f"{tag} surge +{surge_pct:.0f}% but flag {pullback*100:.0f}% deep")
 
 
 # ---------------- WEEKLY MULTI-TIMEFRAME ----------------
@@ -1308,7 +1311,9 @@ def _weekly_bars(df: pd.DataFrame) -> pd.DataFrame:
     """Resample daily OHLCV to weekly bars + weekly indicators. Cached per ticker-run."""
     if not isinstance(df.index, pd.DatetimeIndex) or df.empty:
         return df.iloc[0:0]
-    key = (df.index[-1], len(df))
+    # Key must fingerprint the actual price series — (last_date, len) alone
+    # collides across every ticker with the same trading calendar.
+    key = (df.index[-1], len(df), hash(df["close"].values.tobytes()))
     cached = _WEEKLY_CACHE.get(key)
     if cached is not None:
         return cached
@@ -1368,7 +1373,8 @@ def weekly_rsi_zone(df):
         return _vote("Weekly RSI Zone", Verdict.WAIT, 0.0)
     conf = min(1.1, 0.6 + abs(r - 50) / 30)
     if r >= 55:
-        return _vote("Weekly RSI Zone", Verdict.LONG, conf, f"weekly RSI {r:.0f}")
+        note = f"weekly RSI {r:.0f}" + (" (extended)" if r >= 80 else "")
+        return _vote("Weekly RSI Zone", Verdict.LONG, conf, note)
     if r <= 45:
         return _vote("Weekly RSI Zone", Verdict.SHORT, conf, f"weekly RSI {r:.0f}")
     return _vote("Weekly RSI Zone", Verdict.WAIT, 0.3, f"weekly RSI {r:.0f} neutral")

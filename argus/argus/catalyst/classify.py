@@ -25,6 +25,45 @@ ALL_TYPES = POSITIVE_TYPES | NEGATIVE_TYPES | frozenset({"other"})
 
 _DIRECTION = {t: 1 for t in POSITIVE_TYPES} | {t: -1 for t in NEGATIVE_TYPES}
 
+
+from dataclasses import replace  # noqa: E402
+
+
+def reconcile_events(events: list[CatalystEvent], metrics: dict) -> list[CatalystEvent]:
+    """Reconcile keyword/LLM-derived events against structured fundamentals.
+
+    - earnings_beat/earnings_miss are flipped to match the sign of the actual
+      EPS surprise (a negative surprise must not render or vote as a beat).
+    - keyword/LLM analyst upgrade/downgrade events (which frequently match
+      headlines about *other* companies) are discarded in favour of a single
+      authoritative event built from yfinance's upgrades_downgrades feed.
+    """
+    eps_surprise = metrics.get("eps_surprise")
+    has_ud = bool(metrics.get("recent_ud_action"))
+    out: list[CatalystEvent] = []
+    for e in events:
+        if e.type in ("earnings_beat", "earnings_miss") and eps_surprise is not None:
+            if eps_surprise < 0 and e.type == "earnings_beat":
+                e = replace(e, type="earnings_miss", direction=-1)
+            elif eps_surprise > 0 and e.type == "earnings_miss":
+                e = replace(e, type="earnings_beat", direction=1)
+        if e.type in ("upgrade", "downgrade") and has_ud:
+            continue  # replaced by authoritative event below
+        out.append(e)
+
+    if has_ud:
+        action = str(metrics.get("recent_ud_action", "")).lower()
+        ud_ts = metrics.get("recent_ud_ts")
+        recency = _ts_to_recency(ud_ts, time.time()) if ud_ts else 3.0
+        # Only "up"/"down" are directional catalysts; "main"/"reit"/"init" are not.
+        if action == "up":
+            out.append(CatalystEvent(type="upgrade", direction=1, recency_days=recency,
+                                     confidence=0.7, source="yfinance"))
+        elif action == "down":
+            out.append(CatalystEvent(type="downgrade", direction=-1, recency_days=recency,
+                                     confidence=0.7, source="yfinance"))
+    return out
+
 # Ordered keyword patterns -> catalyst type. First match per text wins per type.
 _PATTERNS: list[tuple[str, str]] = [
     ("fda", r"\bfda\b|approval|clearance|breakthrough therapy|pdufa|phase\s*[123]"),

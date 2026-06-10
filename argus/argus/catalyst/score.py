@@ -57,7 +57,7 @@ from .agents import (  # noqa: E402
     event_catalyst_vote, earnings_proximity_vote, squeeze_setup_vote,
     growth_profitability_vote, analyst_upside_vote,
 )
-from .classify import classify_events  # noqa: E402
+from .classify import classify_events, reconcile_events  # noqa: E402
 from .sources import gather_pool        # noqa: E402
 from .types import CatalystPool, CatalystResult  # noqa: E402
 
@@ -78,7 +78,7 @@ def catalyst_leg(
         return CatalystResult(score=None)
     if classify is None:
         classify = lambda p: classify_events(p, api_key=api_key)  # noqa: E731
-    events = classify(pool)
+    events = reconcile_events(classify(pool), pool.metrics)
     votes = [
         event_catalyst_vote(pool, events),
         earnings_proximity_vote(pool, events),

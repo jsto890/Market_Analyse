@@ -134,13 +134,15 @@ def gather_pool(
     ibkr=None,
     yf_info_fn=_default_yf_info,
     yf_news_fn=_default_yf_news,
+    yf_earnings_fn=_earnings_from_yf,
+    yf_upgrades_fn=_upgrades_from_yf,
 ) -> CatalystPool:
     """Pool free catalyst/fundamental data for one ticker. All sources best-effort."""
     info = _safe(yf_info_fn, ticker, {})
-    raw_news: list[dict] = list(_safe(yf_news_fn, ticker, []))
+    raw_news = list(_safe(yf_news_fn, ticker, []))
     metrics = _metrics_from_yf(info) if info else {}
-    metrics.update(_safe(_earnings_from_yf, ticker, {}))
-    metrics.update(_safe(_upgrades_from_yf, ticker, {}))
+    metrics.update(_safe(yf_earnings_fn, ticker, {}) or {})
+    metrics.update(_safe(yf_upgrades_fn, ticker, {}) or {})
 
     if ibkr is not None:
         fund = _safe(lambda t: ibkr.fundamentals(t), ticker, {}) or {}
@@ -156,16 +158,19 @@ def gather_pool(
             metrics["analyst_target"] = float(fund["analyst_target"])
         if fund.get("analyst_rating"):
             metrics["analyst_rating"] = str(fund["analyst_rating"])
-        for h in _safe(lambda t: ibkr.historical_news(t), ticker, []):
-            raw_news.append({"text": str(h), "ts": None})
+        raw_news += _safe(lambda t: ibkr.historical_news(t), ticker, [])
 
+    # Normalise news items: accept either dicts ({text, ts}) or plain strings.
     seen: set[str] = set()
     unique_news: list[dict] = []
     for item in raw_news:
-        t = item["text"]
-        if t not in seen:
+        if isinstance(item, dict):
+            t, ts = item.get("text", ""), item.get("ts")
+        else:
+            t, ts = str(item), None
+        if t and t not in seen:
             seen.add(t)
-            unique_news.append(item)
+            unique_news.append({"text": t, "ts": ts})
 
     return CatalystPool(
         ticker=ticker,

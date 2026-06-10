@@ -1,0 +1,1162 @@
+{
+  "META": {
+    "sector": "Communication Services",
+    "industry": "Internet Content & Information"
+  },
+  "TSLA": {
+    "sector": "Consumer Cyclical",
+    "industry": "Auto Manufacturers"
+  },
+  "INTC": {
+    "sector": "Technology",
+    "industry": "Semiconductors"
+  },
+  "SNDK": {
+    "sector": "Technology",
+    "industry": "Computer Hardware"
+  },
+  "RDDT": {
+    "sector": "Communication Services",
+    "industry": "Internet Content & Information"
+  },
+  "NVDA": {
+    "sector": "Technology",
+    "industry": "Semiconductors"
+  },
+  "TSM": {
+    "sector": "Technology",
+    "industry": "Semiconductors"
+  },
+  "SIVE.ST": {
+    "sector": "Technology",
+    "industry": "Semiconductors"
+  },
+  "AMZN": {
+    "sector": "Consumer Cyclical",
+    "industry": "Internet Retail"
+  },
+  "HIMS": {
+    "sector": "Healthcare",
+    "industry": "Drug Manufacturers - Specialty & Generic"
+  },
+  "SPCE": {
+    "sector": "Industrials",
+    "industry": "Aerospace & Defense"
+  },
+  "SOFI": {
+    "sector": "Financial Services",
+    "industry": "Credit Services"
+  },
+  "GOOGL": {
+    "sector": "Communication Services",
+    "industry": "Internet Content & Information"
+  },
+  "AAPL": {
+    "sector": "Technology",
+    "industry": "Consumer Electronics"
+  },
+  "DOCN": {
+    "sector": "Technology",
+    "industry": "Software - Infrastructure"
+  },
+  "PYPL": {
+    "sector": "Financial Services",
+    "industry": "Credit Services"
+  },
+  "CGEH": {
+    "sector": "Industrials",
+    "industry": "Specialty Industrial Machinery"
+  },
+  "ALAB": {
+    "sector": "Technology",
+    "industry": "Semiconductors"
+  },
+  "MU": {
+    "sector": "Technology",
+    "industry": "Semiconductors"
+  },
+  "AMD": {
+    "sector": "Technology",
+    "industry": "Semiconductors"
+  },
+  "MRVL": {
+    "sector": "Technology",
+    "industry": "Semiconductors"
+  },
+  "PLTR": {
+    "sector": "Technology",
+    "industry": "Software - Infrastructure"
+  },
+  "AVGO": {
+    "sector": "Technology",
+    "industry": "Semiconductors"
+  },
+  "MSFT": {
+    "sector": "Technology",
+    "industry": "Software - Infrastructure"
+  },
+  "NOW": {
+    "sector": "Technology",
+    "industry": "Software - Application"
+  },
+  "OUST": {
+    "sector": "Technology",
+    "industry": "Electronic Components"
+  },
+  "ONDS": {
+    "sector": "Technology",
+    "industry": "Communication Equipment"
+  },
+  "BE": {
+    "sector": "Industrials",
+    "industry": "Electrical Equipment & Parts"
+  },
+  "NOK": {
+    "sector": "Technology",
+    "industry": "Communication Equipment"
+  },
+  "ARM": {
+    "sector": "Technology",
+    "industry": "Semiconductors"
+  },
+  "FLNC": {
+    "sector": "Utilities",
+    "industry": "Utilities - Renewable"
+  },
+  "QCOM": {
+    "sector": "Technology",
+    "industry": "Semiconductors"
+  },
+  "CRWD": {
+    "sector": "Technology",
+    "industry": "Software - Infrastructure"
+  },
+  "TE": {
+    "sector": "Industrials",
+    "industry": "Electrical Equipment & Parts"
+  },
+  "CRM": {
+    "sector": "Technology",
+    "industry": "Software - Application"
+  },
+  "ORCL": {
+    "sector": "Technology",
+    "industry": "Software - Infrastructure"
+  },
+  "SPCX": {
+    "sector": "Industrials",
+    "industry": "Aerospace & Defense"
+  },
+  "NET": {
+    "sector": "Technology",
+    "industry": "Software - Infrastructure"
+  },
+  "CRCL": {
+    "sector": "Financial Services",
+    "industry": "Capital Markets"
+  },
+  "PENG": {
+    "sector": "Technology",
+    "industry": "Information Technology Services"
+  },
+  "ADBE": {
+    "sector": "Technology",
+    "industry": "Software - Application"
+  },
+  "ZM": {
+    "sector": "Technology",
+    "industry": "Software - Application"
+  },
+  "PANW": {
+    "sector": "Technology",
+    "industry": "Software - Infrastructure"
+  },
+  "USAR": {
+    "sector": "Basic Materials",
+    "industry": "Other Industrial Metals & Mining"
+  },
+  "GOOG": {
+    "sector": "Communication Services",
+    "industry": "Internet Content & Information"
+  },
+  "ZETA": {
+    "sector": "Technology",
+    "industry": "Software - Infrastructure"
+  },
+  "VLN": {
+    "sector": "Technology",
+    "industry": "Semiconductors"
+  },
+  "FCEL": {
+    "sector": "Industrials",
+    "industry": "Electrical Equipment & Parts"
+  },
+  "AMAT": {
+    "sector": "Technology",
+    "industry": "Semiconductor Equipment & Materials"
+  },
+  "NFLX": {
+    "sector": "Communication Services",
+    "industry": "Entertainment"
+  },
+  "POET": {
+    "sector": "Technology",
+    "industry": "Semiconductors"
+  },
+  "UNH": {
+    "sector": "Healthcare",
+    "industry": "Healthcare Plans"
+  },
+  "ZS": {
+    "sector": "Technology",
+    "industry": "Software - Infrastructure"
+  },
+  "AXTI": {
+    "sector": "Technology",
+    "industry": "Semiconductor Equipment & Materials"
+  },
+  "PGY": {
+    "sector": "Technology",
+    "industry": "Software - Infrastructure"
+  },
+  "APP": {
+    "sector": "Communication Services",
+    "industry": "Advertising Agencies"
+  },
+  "RCAT": {
+    "sector": "Industrials",
+    "industry": "Aerospace & Defense"
+  },
+  "SLNH": {
+    "sector": "Financial Services",
+    "industry": "Capital Markets"
+  },
+  "BRUN": {
+    "sector": "Technology",
+    "industry": "Software - Infrastructure"
+  },
+  "RBRK": {
+    "sector": "Technology",
+    "industry": "Software - Infrastructure"
+  },
+  "EOSE": {
+    "sector": "Industrials",
+    "industry": "Electrical Equipment & Parts"
+  },
+  "MDB": {
+    "sector": "Technology",
+    "industry": "Software - Infrastructure"
+  },
+  "GME": {
+    "sector": "Consumer Cyclical",
+    "industry": "Specialty Retail"
+  },
+  "BB": {
+    "sector": "Technology",
+    "industry": "Software - Infrastructure"
+  },
+  "GEV": {
+    "sector": "Industrials",
+    "industry": "Specialty Industrial Machinery"
+  },
+  "INFQ": {
+    "sector": "Technology",
+    "industry": "Software - Infrastructure"
+  },
+  "DUOL": {
+    "sector": "Technology",
+    "industry": "Software - Application"
+  },
+  "HPE": {
+    "sector": "Technology",
+    "industry": "Communication Equipment"
+  },
+  "FSLR": {
+    "sector": "Technology",
+    "industry": "Solar"
+  },
+  "PATH": {
+    "sector": "Technology",
+    "industry": "Software - Infrastructure"
+  },
+  "SNOW": {
+    "sector": "Technology",
+    "industry": "Software - Application"
+  },
+  "TTD": {
+    "sector": "Communication Services",
+    "industry": "Advertising Agencies"
+  },
+  "SIVEF": {
+    "sector": "Technology",
+    "industry": "Semiconductors"
+  },
+  "EOS.AX": {
+    "sector": "Industrials",
+    "industry": "Aerospace & Defense"
+  },
+  "TEM": {
+    "sector": "Healthcare",
+    "industry": "Health Information Services"
+  },
+  "AMPX": {
+    "sector": "Industrials",
+    "industry": "Electrical Equipment & Parts"
+  },
+  "LASR": {
+    "sector": "Technology",
+    "industry": "Semiconductors"
+  },
+  "FPS": {
+    "sector": "Industrials",
+    "industry": "Electrical Equipment & Parts"
+  },
+  "RTX": {
+    "sector": "Industrials",
+    "industry": "Aerospace & Defense"
+  },
+  "AEHR": {
+    "sector": "Technology",
+    "industry": "Semiconductor Equipment & Materials"
+  },
+  "JBL": {
+    "sector": "Technology",
+    "industry": "Electronic Components"
+  },
+  "LMT": {
+    "sector": "Industrials",
+    "industry": "Aerospace & Defense"
+  },
+  "MA": {
+    "sector": "Financial Services",
+    "industry": "Credit Services"
+  },
+  "V": {
+    "sector": "Financial Services",
+    "industry": "Credit Services"
+  },
+  "WIX": {
+    "sector": "Technology",
+    "industry": "Software - Infrastructure"
+  },
+  "FIG": {
+    "sector": "Technology",
+    "industry": "Software - Application"
+  },
+  "STX": {
+    "sector": "Technology",
+    "industry": "Computer Hardware"
+  },
+  "JNJ": {
+    "sector": "Healthcare",
+    "industry": "Drug Manufacturers - General"
+  },
+  "DDOG": {
+    "sector": "Technology",
+    "industry": "Software - Application"
+  },
+  "HUT": {
+    "sector": "Financial Services",
+    "industry": "Capital Markets"
+  },
+  "CAT": {
+    "sector": "Industrials",
+    "industry": "Farm & Heavy Construction Machinery"
+  },
+  "AOSL": {
+    "sector": "Technology",
+    "industry": "Semiconductors"
+  },
+  "CIEN": {
+    "sector": "Technology",
+    "industry": "Communication Equipment"
+  },
+  "TXN": {
+    "sector": "Technology",
+    "industry": "Semiconductors"
+  },
+  "GOLD": {
+    "sector": "Financial Services",
+    "industry": "Capital Markets"
+  },
+  "WMT": {
+    "sector": "Consumer Defensive",
+    "industry": "Discount Stores"
+  },
+  "DARE": {
+    "sector": "Healthcare",
+    "industry": "Biotechnology"
+  },
+  "BMNR": {
+    "sector": "Financial Services",
+    "industry": "Capital Markets"
+  },
+  "CXDO": {
+    "sector": "Communication Services",
+    "industry": "Telecom Services"
+  },
+  "MP": {
+    "sector": "Basic Materials",
+    "industry": "Other Industrial Metals & Mining"
+  },
+  "AVAV": {
+    "sector": "Industrials",
+    "industry": "Aerospace & Defense"
+  },
+  "PL": {
+    "sector": "Industrials",
+    "industry": "Aerospace & Defense"
+  },
+  "TEAM": {
+    "sector": "Technology",
+    "industry": "Software - Application"
+  },
+  "GRAB": {
+    "sector": "Technology",
+    "industry": "Software - Application"
+  },
+  "JOBY": {
+    "sector": "Industrials",
+    "industry": "Airports & Air Services"
+  },
+  "NOTV": {
+    "sector": "Healthcare",
+    "industry": "Diagnostics & Research"
+  },
+  "ALMU": {
+    "sector": "Technology",
+    "industry": "Semiconductors"
+  },
+  "OSS": {
+    "sector": "Technology",
+    "industry": "Computer Hardware"
+  },
+  "SEDG": {
+    "sector": "Technology",
+    "industry": "Solar"
+  },
+  "WDC": {
+    "sector": "Technology",
+    "industry": "Computer Hardware"
+  },
+  "BKKT": {
+    "sector": "Technology",
+    "industry": "Software - Infrastructure"
+  },
+  "LAES": {
+    "sector": "Technology",
+    "industry": "Semiconductors"
+  },
+  "OPTX": {
+    "sector": "Technology",
+    "industry": "Electronic Components"
+  },
+  "OSCR": {
+    "sector": "Healthcare",
+    "industry": "Healthcare Plans"
+  },
+  "NIO": {
+    "sector": "Consumer Cyclical",
+    "industry": "Auto Manufacturers"
+  },
+  "VIAV": {
+    "sector": "Technology",
+    "industry": "Communication Equipment"
+  },
+  "BABA": {
+    "sector": "Consumer Cyclical",
+    "industry": "Internet Retail"
+  },
+  "CPSH": {
+    "sector": "Technology",
+    "industry": "Electronic Components"
+  },
+  "CSIQ": {
+    "sector": "Technology",
+    "industry": "Solar"
+  },
+  "VRT": {
+    "sector": "Industrials",
+    "industry": "Electrical Equipment & Parts"
+  },
+  "BIDU": {
+    "sector": "Communication Services",
+    "industry": "Internet Content & Information"
+  },
+  "GTLB": {
+    "sector": "Technology",
+    "industry": "Software - Infrastructure"
+  },
+  "TSEM": {
+    "sector": "Technology",
+    "industry": "Semiconductors"
+  },
+  "ABCL": {
+    "sector": "Healthcare",
+    "industry": "Biotechnology"
+  },
+  "ASX": {
+    "sector": "Technology",
+    "industry": "Semiconductors"
+  },
+  "IBM": {
+    "sector": "Technology",
+    "industry": "Information Technology Services"
+  },
+  "MTSI": {
+    "sector": "Technology",
+    "industry": "Semiconductors"
+  },
+  "PURR": {
+    "sector": "Financial Services",
+    "industry": "Capital Markets"
+  },
+  "RXRX": {
+    "sector": "Healthcare",
+    "industry": "Biotechnology"
+  },
+  "UMAC": {
+    "sector": "Technology",
+    "industry": "Computer Hardware"
+  },
+  "XYZ": {
+    "sector": "Technology",
+    "industry": "Software - Infrastructure"
+  },
+  "AMPG": {
+    "sector": "Technology",
+    "industry": "Communication Equipment"
+  },
+  "SOUN": {
+    "sector": "Technology",
+    "industry": "Software - Application"
+  },
+  "UAMY": {
+    "sector": "Basic Materials",
+    "industry": "Other Industrial Metals & Mining"
+  },
+  "BOT": {
+    "sector": "Financial Services",
+    "industry": "Asset Management"
+  },
+  "USAS": {
+    "sector": "Basic Materials",
+    "industry": "Other Industrial Metals & Mining"
+  },
+  "DJT": {
+    "sector": "Communication Services",
+    "industry": "Internet Content & Information"
+  },
+  "MITK": {
+    "sector": "Technology",
+    "industry": "Software - Application"
+  },
+  "TMDX": {
+    "sector": "Healthcare",
+    "industry": "Medical Devices"
+  },
+  "FIGR": {
+    "sector": "Financial Services",
+    "industry": "Capital Markets"
+  },
+  "ALB": {
+    "sector": "Basic Materials",
+    "industry": "Specialty Chemicals"
+  },
+  "AVEX": {
+    "sector": "Industrials",
+    "industry": "Aerospace & Defense"
+  },
+  "DGXX": {
+    "sector": "Utilities",
+    "industry": "Utilities - Independent Power Producers"
+  },
+  "ELMT": {
+    "sector": "Industrials",
+    "industry": "Aerospace & Defense"
+  },
+  "ENPH": {
+    "sector": "Technology",
+    "industry": "Solar"
+  },
+  "EOPSF": {
+    "sector": "Industrials",
+    "industry": "Aerospace & Defense"
+  },
+  "KRMN": {
+    "sector": "Industrials",
+    "industry": "Aerospace & Defense"
+  },
+  "AMSC": {
+    "sector": "Industrials",
+    "industry": "Specialty Industrial Machinery"
+  },
+  "ASPI": {
+    "sector": "Basic Materials",
+    "industry": "Chemicals"
+  },
+  "AUR": {
+    "sector": "Consumer Cyclical",
+    "industry": "Auto Parts"
+  },
+  "BETA": {
+    "sector": "Industrials",
+    "industry": "Aerospace & Defense"
+  },
+  "CAMT": {
+    "sector": "Technology",
+    "industry": "Semiconductor Equipment & Materials"
+  },
+  "CLFD": {
+    "sector": "Technology",
+    "industry": "Communication Equipment"
+  },
+  "ERIC": {
+    "sector": "Technology",
+    "industry": "Communication Equipment"
+  },
+  "FIVN": {
+    "sector": "Technology",
+    "industry": "Software - Infrastructure"
+  },
+  "FLY": {
+    "sector": "Industrials",
+    "industry": "Aerospace & Defense"
+  },
+  "FN": {
+    "sector": "Technology",
+    "industry": "Electronic Components"
+  },
+  "GFS": {
+    "sector": "Technology",
+    "industry": "Semiconductors"
+  },
+  "GLW": {
+    "sector": "Technology",
+    "industry": "Electronic Components"
+  },
+  "GOGO": {
+    "sector": "Communication Services",
+    "industry": "Telecom Services"
+  },
+  "HIMX": {
+    "sector": "Technology",
+    "industry": "Semiconductors"
+  },
+  "HON": {
+    "sector": "Industrials",
+    "industry": "Conglomerates"
+  },
+  "IPGP": {
+    "sector": "Technology",
+    "industry": "Semiconductor Equipment & Materials"
+  },
+  "IPWR": {
+    "sector": "Technology",
+    "industry": "Semiconductors"
+  },
+  "IRDM": {
+    "sector": "Communication Services",
+    "industry": "Telecom Services"
+  },
+  "KRKNF": {
+    "sector": "Technology",
+    "industry": "Scientific & Technical Instruments"
+  },
+  "KTOS": {
+    "sector": "Industrials",
+    "industry": "Aerospace & Defense"
+  },
+  "LUMN": {
+    "sector": "Communication Services",
+    "industry": "Telecom Services"
+  },
+  "MXL": {
+    "sector": "Technology",
+    "industry": "Semiconductors"
+  },
+  "NRGV": {
+    "sector": "Utilities",
+    "industry": "Utilities - Renewable"
+  },
+  "PLAB": {
+    "sector": "Technology",
+    "industry": "Semiconductor Equipment & Materials"
+  },
+  "RDCM": {
+    "sector": "Communication Services",
+    "industry": "Telecom Services"
+  },
+  "RNG": {
+    "sector": "Technology",
+    "industry": "Software - Application"
+  },
+  "SHMD": {
+    "sector": "Industrials",
+    "industry": "Specialty Industrial Machinery"
+  },
+  "SIMO": {
+    "sector": "Technology",
+    "industry": "Semiconductors"
+  },
+  "SKYT": {
+    "sector": "Technology",
+    "industry": "Semiconductors"
+  },
+  "SRTA": {
+    "sector": "Healthcare",
+    "industry": "Medical Care Facilities"
+  },
+  "SYM": {
+    "sector": "Industrials",
+    "industry": "Specialty Industrial Machinery"
+  },
+  "SYNA": {
+    "sector": "Technology",
+    "industry": "Semiconductors"
+  },
+  "TRT": {
+    "sector": "Technology",
+    "industry": "Semiconductor Equipment & Materials"
+  },
+  "VRNS": {
+    "sector": "Technology",
+    "industry": "Software - Infrastructure"
+  },
+  "YSS": {
+    "sector": "Industrials",
+    "industry": "Aerospace & Defense"
+  },
+  "AMTX": {
+    "sector": "Basic Materials",
+    "industry": "Specialty Chemicals"
+  },
+  "ASYS": {
+    "sector": "Technology",
+    "industry": "Semiconductor Equipment & Materials"
+  },
+  "BBAI": {
+    "sector": "Technology",
+    "industry": "Information Technology Services"
+  },
+  "BRZE": {
+    "sector": "Technology",
+    "industry": "Software - Application"
+  },
+  "BZAI": {
+    "sector": "Technology",
+    "industry": "Software - Application"
+  },
+  "HBM": {
+    "sector": "Basic Materials",
+    "industry": "Copper"
+  },
+  "INTT": {
+    "sector": "Technology",
+    "industry": "Semiconductor Equipment & Materials"
+  },
+  "IOT": {
+    "sector": "Technology",
+    "industry": "Software - Infrastructure"
+  },
+  "SWMR": {
+    "sector": "Technology",
+    "industry": "Software - Infrastructure"
+  },
+  "CLOV": {
+    "sector": "Healthcare",
+    "industry": "Healthcare Plans"
+  },
+  "IMSR": {
+    "sector": "Utilities",
+    "industry": "Utilities - Regulated Electric"
+  },
+  "LAC": {
+    "sector": "Basic Materials",
+    "industry": "Other Industrial Metals & Mining"
+  },
+  "LYSDY": {
+    "sector": "Basic Materials",
+    "industry": "Other Industrial Metals & Mining"
+  },
+  "MBLY": {
+    "sector": "Consumer Cyclical",
+    "industry": "Auto Parts"
+  },
+  "TMC": {
+    "sector": "Basic Materials",
+    "industry": "Other Industrial Metals & Mining"
+  },
+  "APLD": {
+    "sector": "Technology",
+    "industry": "Information Technology Services"
+  },
+  "FOUR": {
+    "sector": "Technology",
+    "industry": "Software - Infrastructure"
+  },
+  "FUBO": {
+    "sector": "Communication Services",
+    "industry": "Broadcasting"
+  },
+  "IMOS": {
+    "sector": "Technology",
+    "industry": "Semiconductors"
+  },
+  "OPEN": {
+    "sector": "Real Estate",
+    "industry": "Real Estate Services"
+  },
+  "VEEV": {
+    "sector": "Healthcare",
+    "industry": "Health Information Services"
+  },
+  "CENX": {
+    "sector": "Basic Materials",
+    "industry": "Aluminum"
+  },
+  "ENAFF": {
+    "sector": "Technology",
+    "industry": "Communication Equipment"
+  },
+  "FRVO": {
+    "sector": "Utilities",
+    "industry": "Utilities - Renewable"
+  },
+  "FSLY": {
+    "sector": "Technology",
+    "industry": "Software - Application"
+  },
+  "MRAM": {
+    "sector": "Technology",
+    "industry": "Semiconductors"
+  },
+  "MX": {
+    "sector": "Technology",
+    "industry": "Semiconductors"
+  },
+  "NXPI": {
+    "sector": "Technology",
+    "industry": "Semiconductors"
+  },
+  "SLOIF": {
+    "sector": "Technology",
+    "industry": "Semiconductor Equipment & Materials"
+  },
+  "TWLO": {
+    "sector": "Technology",
+    "industry": "Software - Infrastructure"
+  },
+  "BW": {
+    "sector": "Industrials",
+    "industry": "Specialty Industrial Machinery"
+  },
+  "KOPN": {
+    "sector": "Technology",
+    "industry": "Electronic Components"
+  },
+  "LPTH": {
+    "sector": "Technology",
+    "industry": "Electronic Components"
+  },
+  "LWLG": {
+    "sector": "Basic Materials",
+    "industry": "Specialty Chemicals"
+  },
+  "SFTBY": {
+    "sector": "Communication Services",
+    "industry": "Telecom Services"
+  },
+  "VELO": {
+    "sector": "Technology",
+    "industry": "Computer Hardware"
+  },
+  "HUBC": {
+    "sector": "Technology",
+    "industry": "Software - Infrastructure"
+  },
+  "WOLF": {
+    "sector": "Technology",
+    "industry": "Semiconductors"
+  },
+  "RVI": {
+    "sector": "Financial Services",
+    "industry": "Asset Management"
+  },
+  "AFRM": {
+    "sector": "Financial Services",
+    "industry": "Credit Services"
+  },
+  "ASST": {
+    "sector": "Financial Services",
+    "industry": "Asset Management"
+  },
+  "BIRD": {
+    "sector": "Consumer Cyclical",
+    "industry": "Apparel Retail"
+  },
+  "CAN": {
+    "sector": "Technology",
+    "industry": "Computer Hardware"
+  },
+  "FMCC": {
+    "sector": "Financial Services",
+    "industry": "Mortgage Finance"
+  },
+  "FNMA": {
+    "sector": "Financial Services",
+    "industry": "Mortgage Finance"
+  },
+  "INUV": {
+    "sector": "Technology",
+    "industry": "Software - Application"
+  },
+  "KVYO": {
+    "sector": "Technology",
+    "industry": "Software - Application"
+  },
+  "LINK": {
+    "sector": "Technology",
+    "industry": "Electronic Components"
+  },
+  "MNDY": {
+    "sector": "Technology",
+    "industry": "Software - Application"
+  },
+  "NLST": {
+    "sector": "Technology",
+    "industry": "Electronics & Computer Distribution"
+  },
+  "ON": {
+    "sector": "Technology",
+    "industry": "Semiconductors"
+  },
+  "SKYX": {
+    "sector": "Industrials",
+    "industry": "Electrical Equipment & Parts"
+  },
+  "TDWRF": {
+    "sector": "Basic Materials",
+    "industry": "Specialty Chemicals"
+  },
+  "UWMC": {
+    "sector": "Financial Services",
+    "industry": "Mortgage Finance"
+  },
+  "XE": {
+    "sector": "Industrials",
+    "industry": "Specialty Industrial Machinery"
+  },
+  "GLXY": {
+    "sector": "Financial Services",
+    "industry": "Capital Markets"
+  },
+  "POWI": {
+    "sector": "Technology",
+    "industry": "Semiconductors"
+  },
+  "SRAD": {
+    "sector": "Technology",
+    "industry": "Software - Application"
+  },
+  "AMBA": {
+    "sector": "Technology",
+    "industry": "Semiconductor Equipment & Materials"
+  },
+  "XPEV": {
+    "sector": "Consumer Cyclical",
+    "industry": "Auto Manufacturers"
+  },
+  "CLX": {
+    "sector": "Consumer Defensive",
+    "industry": "Household & Personal Products"
+  },
+  "HUM": {
+    "sector": "Healthcare",
+    "industry": "Healthcare Plans"
+  },
+  "DKNG": {
+    "sector": "Consumer Cyclical",
+    "industry": "Gambling"
+  },
+  "VSCO": {
+    "sector": "Consumer Cyclical",
+    "industry": "Apparel Retail"
+  },
+  "NVTS": {
+    "sector": "Technology",
+    "industry": "Semiconductors"
+  },
+  "PM": {
+    "sector": "Consumer Defensive",
+    "industry": "Tobacco"
+  },
+  "CMPS": {
+    "sector": "Healthcare",
+    "industry": "Medical Care Facilities"
+  },
+  "KULR": {
+    "sector": "Technology",
+    "industry": "Electronic Components"
+  },
+  "ABVX": {
+    "sector": "Healthcare",
+    "industry": "Biotechnology"
+  },
+  "EOS": {
+    "sector": "Financial Services",
+    "industry": "Asset Management"
+  },
+  "INDI": {
+    "sector": "Technology",
+    "industry": "Semiconductors"
+  },
+  "QQQ": {
+    "sector": "",
+    "industry": ""
+  },
+  "BTC": {
+    "sector": "",
+    "industry": ""
+  },
+  "DRAM": {
+    "sector": "",
+    "industry": ""
+  },
+  "SPY": {
+    "sector": "",
+    "industry": ""
+  },
+  "NASA": {
+    "sector": "",
+    "industry": ""
+  },
+  "IGV": {
+    "sector": "",
+    "industry": ""
+  },
+  "DLO": {
+    "sector": "Technology",
+    "industry": "Software - Infrastructure"
+  },
+  "ETH": {
+    "sector": "",
+    "industry": ""
+  },
+  "SOI": {
+    "sector": "",
+    "industry": ""
+  },
+  "SMH": {
+    "sector": "",
+    "industry": ""
+  },
+  "SPX": {
+    "sector": "",
+    "industry": ""
+  },
+  "BRK.A": {
+    "sector": "",
+    "industry": ""
+  },
+  "EWY": {
+    "sector": "",
+    "industry": ""
+  },
+  "RPI": {
+    "sector": "",
+    "industry": ""
+  },
+  "SOXL": {
+    "sector": "",
+    "industry": ""
+  },
+  "XFAB": {
+    "sector": "",
+    "industry": ""
+  },
+  "LPK": {
+    "sector": "",
+    "industry": ""
+  },
+  "IQE": {
+    "sector": "",
+    "industry": ""
+  },
+  "HPS.A": {
+    "sector": "",
+    "industry": ""
+  },
+  "TAN": {
+    "sector": "",
+    "industry": ""
+  },
+  "ETHA": {
+    "sector": "",
+    "industry": ""
+  },
+  "IBIT": {
+    "sector": "",
+    "industry": ""
+  },
+  "MUU": {
+    "sector": "",
+    "industry": ""
+  },
+  "BUG": {
+    "sector": "",
+    "industry": ""
+  },
+  "HACK": {
+    "sector": "",
+    "industry": ""
+  },
+  "UFO": {
+    "sector": "",
+    "industry": ""
+  },
+  "VIX": {
+    "sector": "",
+    "industry": ""
+  },
+  "SNXX": {
+    "sector": "",
+    "industry": ""
+  },
+  "AVL": {
+    "sector": "",
+    "industry": ""
+  },
+  "BULZ": {
+    "sector": "",
+    "industry": ""
+  },
+  "PALU": {
+    "sector": "",
+    "industry": ""
+  },
+  "TQQQ": {
+    "sector": "",
+    "industry": ""
+  },
+  "VGT": {
+    "sector": "",
+    "industry": ""
+  },
+  "VCX": {
+    "sector": "",
+    "industry": ""
+  },
+  "SOL": {
+    "sector": "",
+    "industry": ""
+  },
+  "JEDI": {
+    "sector": "",
+    "industry": ""
+  },
+  "SQQQ": {
+    "sector": "",
+    "industry": ""
+  }
+}

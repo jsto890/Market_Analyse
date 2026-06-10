@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 import threading
 from pathlib import Path
 from typing import Any
@@ -14,59 +15,73 @@ _CACHE_PATH = _CONFIG_DIR / "sector_cache.json"
 
 _taxonomy: dict[str, Any] | None = None
 _cache: dict[str, dict[str, str]] | None = None
-_lock = threading.Lock()
+_lock = threading.RLock()  # reentrant: _get_yf_data nests _load_cache under the lock
 
 
 def _load_taxonomy() -> dict[str, Any]:
     global _taxonomy
-    if _taxonomy is None:
-        try:
-            with open(_TAXONOMY_PATH) as f:
-                _taxonomy = yaml.safe_load(f)
-        except Exception as e:
-            raise RuntimeError(f"Failed to load taxonomy from {_TAXONOMY_PATH}: {e}") from e
-    return _taxonomy
+    with _lock:
+        if _taxonomy is None:
+            try:
+                with open(_TAXONOMY_PATH) as f:
+                    _taxonomy = yaml.safe_load(f)
+            except Exception as e:
+                raise RuntimeError(f"Failed to load taxonomy from {_TAXONOMY_PATH}: {e}") from e
+        return _taxonomy
 
 
 def _load_cache() -> dict[str, dict[str, str]]:
     global _cache
-    if _cache is None:
-        with _lock:
-            if _cache is None:
-                if _CACHE_PATH.exists():
-                    try:
-                        with open(_CACHE_PATH) as f:
-                            _cache = json.load(f)
-                    except (json.JSONDecodeError, IOError):
-                        _cache = {}
-                else:
-                    _cache = {}
-    return _cache
-
-
-def _save_cache(cache: dict[str, dict[str, str]]) -> None:
     with _lock:
-        with open(_CACHE_PATH, "w") as f:
-            json.dump(cache, f, indent=2)
+        if _cache is None:
+            if _CACHE_PATH.exists():
+                try:
+                    with open(_CACHE_PATH) as f:
+                        _cache = json.load(f)
+                except (json.JSONDecodeError, IOError):
+                    _cache = {}
+            else:
+                _cache = {}
+        return _cache
 
 
-def _fetch_yfinance(ticker: str) -> dict[str, str]:
+def _save_cache_locked(cache: dict[str, dict[str, str]]) -> None:
+    """Atomic write (temp + rename). Caller must hold _lock."""
+    tmp = _CACHE_PATH.with_suffix(".json.tmp")
+    with open(tmp, "w") as f:
+        json.dump(cache, f, indent=2)
+    os.replace(tmp, _CACHE_PATH)
+
+
+def _fetch_yfinance(ticker: str) -> dict[str, str] | None:
+    """Return {sector, industry} on success, or None on fetch failure.
+
+    None signals a transient error so the caller does NOT cache it — otherwise a
+    single network/auth blip would freeze the ticker as ('Other', '') forever."""
     try:
         info = yf.Ticker(ticker).info
-        return {
-            "sector": info.get("sector", "") or "",
-            "industry": info.get("industry", "") or "",
-        }
     except Exception:
-        return {"sector": "", "industry": ""}
+        return None
+    return {
+        "sector": info.get("sector", "") or "",
+        "industry": info.get("industry", "") or "",
+    }
 
 
 def _get_yf_data(ticker: str) -> dict[str, str]:
-    cache = _load_cache()
-    if ticker not in cache:
-        cache[ticker] = _fetch_yfinance(ticker)
-        _save_cache(cache)
-    return cache[ticker]
+    with _lock:
+        cache = _load_cache()
+        if ticker in cache:
+            return cache[ticker]
+    # Network call outside the lock — don't block other threads on slow IO.
+    data = _fetch_yfinance(ticker)
+    if data is None:
+        return {"sector": "", "industry": ""}  # not cached; retried next run
+    with _lock:
+        cache = _load_cache()
+        cache[ticker] = data
+        _save_cache_locked(cache)
+    return data
 
 
 def resolve_sector(ticker: str) -> tuple[str, str]:

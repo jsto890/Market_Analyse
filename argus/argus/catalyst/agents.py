@@ -75,7 +75,9 @@ def growth_profitability_vote(pool: CatalystPool, events: list[CatalystEvent]) -
     score = rg_score + pm_score
     if score <= 0:
         return _abstain("growth_profitability", "no growth")
-    return Vote("growth_profitability", Verdict.LONG, _clamp(score), f"rev_g={rg:.2f} margin={pm:.3f}", FAMILY)
+    rg_str = f"{rg:.2f}" if rg is not None else "n/a"
+    pm_str = f"{pm:.3f}" if pm is not None else "n/a"
+    return Vote("growth_profitability", Verdict.LONG, _clamp(score), f"rev_g={rg_str} margin={pm_str}", FAMILY)
 
 
 def analyst_upside_vote(pool: CatalystPool, events: list[CatalystEvent]) -> Vote:

@@ -357,74 +357,68 @@ def _build_sector_rotation_section(full_df: pd.DataFrame) -> str:
         "avoid_wait":  "↓",
     }
 
-    # Build nested dict: family → subsector → direction → [tickers]
-    tree: dict[str, dict[str, dict[str, list[str]]]] = {}
+    # Build nested dict: family → subsector → direction → count
+    tree: dict[str, dict[str, dict[str, int]]] = {}
     for _, row in full_df.iterrows():
         ticker = str(row.get("ticker", "")).strip()
         label = str(row.get("setup_label", "")).strip()
         arrow = _LABEL_ARROW.get(label)
         if arrow is None:
             continue
+        # Resolve via the same alias map the detail tables use, so a ticker
+        # can't land in two different families across the report.
+        alias = TICKER_ALIASES.get(ticker.upper())
+        fetch_sym = alias[0] if alias else ticker
         try:
-            family, subsector = resolve_sector(ticker)
+            family, subsector = resolve_sector(fetch_sym)
         except Exception:
             family, subsector = "Other", ""
         if not family:
             family = "Other"
-        if family not in tree:
-            tree[family] = {}
-        if subsector not in tree[family]:
-            tree[family][subsector] = {"↑": [], "→": [], "↓": []}
-        tree[family][subsector][arrow].append(ticker)
+        if not subsector:
+            continue  # skip unclassified (ETFs, crypto, missing industry) — not real sectors
+        tree.setdefault(family, {}).setdefault(subsector, {"↑": 0, "→": 0, "↓": 0})
+        tree[family][subsector][arrow] += 1
 
-    # Sort families by total active interest (↑ + →) descending
+    _DIR_RANK = {"↑": 0, "→": 1}
+
     def _family_score(fam: str) -> int:
-        total = 0
-        for sub_data in tree[fam].values():
-            total += len(sub_data["↑"]) + len(sub_data["→"])
-        return total
+        return sum(c["↑"] + c["→"] for c in tree[fam].values())
 
-    sorted_families = sorted(tree.keys(), key=_family_score, reverse=True)
+    # Curated families first (by activity); the "Other" catch-all always last.
+    real = sorted((f for f in tree if f != "Other"), key=_family_score, reverse=True)
+    ordered = real + (["Other"] if "Other" in tree else [])
 
     lines = [
         "## Sector Rotation",
-        "↑ rotating in · → running · ↓ cooling",
+        "_Where fresh money is moving — inflow (↑) and running (→). Dormant/cooling names omitted._",
         "",
+        "```",
     ]
 
-    for family in sorted_families:
+    any_rows = False
+    for family in ordered:
         display_family = "Broader Market" if family == "Other" else family
-        subsectors = tree[family]
-
-        # Filter: only subsectors with at least one ↑ or →
-        active_subsectors = {
-            sub: data for sub, data in subsectors.items()
-            if data["↑"] or data["→"]
-        }
-        if not active_subsectors:
+        rows = []
+        for sub, counts in tree[family].items():
+            # snapshot of inflow/running only; ↓-only (avoid_wait) sub-sectors are dormant
+            if counts["↑"] == 0 and counts["→"] == 0:
+                continue
+            dom = "↑" if counts["↑"] >= counts["→"] else "→"
+            rows.append((sub, dom, counts[dom]))
+        if not rows:
             continue
-
-        # Sort subsectors: count(↑) DESC, then count(→) DESC
-        sorted_subs = sorted(
-            active_subsectors.keys(),
-            key=lambda s: (len(active_subsectors[s]["↑"]), len(active_subsectors[s]["→"])),
-            reverse=True,
-        )
-
-        lines.append(f"**{display_family}**")
-        for sub in sorted_subs:
-            data = active_subsectors[sub]
-            # Show dominant direction arrow(s) — no ticker names
-            arrows = []
-            if data["↑"]:
-                arrows.append("↑")
-            if data["→"]:
-                arrows.append("→")
-            if data["↓"] and not arrows:
-                arrows.append("↓")
-            lines.append(f"  {sub:<30} {'  '.join(arrows)}")
+        rows.sort(key=lambda r: (_DIR_RANK[r[1]], -r[2]))
+        lines.append(display_family)
+        for sub, dom, n in rows:
+            lines.append(f"  {dom} {sub} ({n})")
         lines.append("")
+        any_rows = True
 
+    if not any_rows:
+        lines.append("No inflow/running activity today.")
+        lines.append("")
+    lines.append("```")
     return "\n".join(lines)
 
 
@@ -459,10 +453,10 @@ def _extract_catalyst_ctx(event_type: str, detail: str, metrics: dict | None = N
         firm   = metrics.get("recent_ud_firm", "")
         to_g   = metrics.get("recent_ud_to", "")
         from_g = metrics.get("recent_ud_from", "")
-        if firm and to_g and from_g:
+        if firm and to_g and from_g and from_g != to_g:
             return f"{firm}: {from_g} → {to_g}"
         if firm and to_g:
-            return f"{firm} → {to_g}"
+            return f"{firm} → {to_g}" if (from_g and from_g != to_g) else f"{firm} ({to_g})"
         if firm:
             return firm
 
@@ -494,27 +488,42 @@ def _extract_catalyst_ctx(event_type: str, detail: str, metrics: dict | None = N
     return ""
 
 
+# Notes that carry no discriminating signal (saturated/constant) — pushed to the
+# back of their family so a more specific note takes the slot.
+_LOW_VALUE_NOTE = _re.compile(r"^ICS=(100|0)$")
+
+# Family priority: surface specific structural / relative-strength / event signals
+# before generic trend confirmations. Covers both the cap-families used for the 38
+# mapped agents and the registry families (structure, institutional, momentum, …)
+# that the remaining agents fall back to.
+_FAMILY_ORDER = [
+    "structure", "breakout", "institutional", "weekly_structure",
+    "squeeze", "momentum_osc", "momentum", "ma_trend", "trend",
+    "volume", "volatility", "risk_filter", "prefilter", "other",
+]
+
+
 def _diverse_tech_notes(votes: list, verdict, limit: int = 5) -> list[str]:
     """Pick family-diverse technical notes: best one per agent family, up to limit total."""
-    all_notes = _distill_notes(votes, verdict, 20)  # get large pool first
-    # Group by family, preserve rank order within each family
+    all_notes = _distill_notes(votes, verdict, 25)  # large pool first
     by_family: dict[str, list[str]] = {}
     for d in all_notes:
         fam = d.get("fam") or "other"
         by_family.setdefault(fam, []).append(d["note"])
+    # within each family, demote low-value/saturated notes (stable sort keeps rank)
+    for notes in by_family.values():
+        notes.sort(key=lambda n: 1 if _LOW_VALUE_NOTE.match(n.strip()) else 0)
 
-    # Priority order for families
-    family_order = ["weekly_structure", "breakout", "squeeze", "ma_trend", "momentum_osc", "other"]
     chosen: list[str] = []
     seen_notes: set[str] = set()
 
-    # First pass: one per family in priority order
-    for fam in family_order:
-        if fam in by_family:
-            note = by_family[fam][0]
+    # First pass: one note per family in priority order
+    for fam in _FAMILY_ORDER:
+        for note in by_family.get(fam, []):
             if note not in seen_notes:
                 chosen.append(note)
                 seen_notes.add(note)
+                break
         if len(chosen) >= limit:
             break
 
@@ -607,17 +616,36 @@ def _build_detail_block(r: dict) -> list[str]:
             cat_bullets_list.append(flag)
     cat_bullets = "<br>".join(f"• {item}" for item in cat_bullets_list) if cat_bullets_list else "• none detected"
 
-    # 2-column table: label | content
+    # 2-column table: label | content. Escape any literal pipe in cell content —
+    # an unescaped | is parsed as a column delimiter and shatters the row.
+    def _cell(s: str) -> str:
+        return s.replace("|", "\\|")
+
     table = [
         "| | |",
         "|---|---|",
-        f"| **Returns** | {returns_cell} |",
-        f"| **Technicals** | {tech_bullets} |",
-        f"| **Fundamentals** | {fund_bullets} |",
-        f"| **Catalysts** | {cat_bullets} |",
+        f"| **Returns** | {_cell(returns_cell)} |",
+        f"| **Technicals** | {_cell(tech_bullets)} |",
+        f"| **Fundamentals** | {_cell(fund_bullets)} |",
+        f"| **Catalysts** | {_cell(cat_bullets)} |",
     ]
 
     return [header] + table
+
+
+def _gate_marker(r: dict) -> str:
+    """Marker explaining why Combined ≠ the weighted blend of the shown legs.
+
+    ⚡ catalyst boost (+) · ⚠ derank (dilution/offering) · ⛔ veto (structural).
+    Without this the headline Combined can't be reconciled from the leg columns."""
+    flags = r.get("gate_flags") or ""
+    if "⛔" in flags:
+        return " ⛔"
+    if "DILUTION" in flags or "⚠" in flags:
+        return " ⚠"
+    if "⚡" in flags:
+        return " ⚡"
+    return ""
 
 
 def _write_markdown(
@@ -642,41 +670,41 @@ def _write_markdown(
     group1 = [r for r in results if r.get("group1")]
     group2 = [r for r in results if r.get("group2")]
 
-    lines += ["## Aligned — Sentiment + Technical + Fundamental all bullish", ""]
+    lines += ["## Aligned — Sentiment + Technical + Catalyst all bullish", ""]
     if group1:
         lines += [
-            "| Ticker | Conviction | Sent | Tech | Fund | Combined | Sector |",
-            "|--------|-----------|------|------|------|----------|--------|",
+            "| Ticker | Conviction | Sent | Tech | Cat | Combined | Sector |",
+            "|--------|-----------|------|------|-----|----------|--------|",
         ]
         for r in group1:
             conv = "⚡ STRONG" if r["high_conviction"] else "✅ GOOD"
-            fund_str = f"{r['catalyst_score']:+.2f}" if r["catalyst_score"] != "" else "—"
+            cat_str = f"{r['catalyst_score']:+.2f}" if r["catalyst_score"] != "" else "—"
             fam, sub = r.get("_sector", ("", ""))
             sector_str = f"{fam} → {sub}" if fam and sub else fam or sub or "—"
             lines.append(
-                f"| **{r['ticker']}** | {conv} | {r['sentiment_score']:+.2f} | {r['tech_score']:+.2f} | {fund_str} | {r['combined_score']:+.2f} | {sector_str} |"
+                f"| **{r['ticker']}** | {conv} | {r['sentiment_score']:+.2f} | {r['tech_score']:+.2f} | {cat_str} | {r['combined_score']:+.2f}{_gate_marker(r)} | {sector_str} |"
             )
     else:
         lines.append("*No aligned candidates today.*")
     lines.append("")
 
-    # Section 3: Technical + Fundamental (group2)
-    lines += ["## Technical + Fundamental bullish", ""]
+    # Section 3: Technical + Catalyst (group2)
+    lines += ["## Technical + Catalyst bullish", ""]
     if group2:
         lines += [
-            "| Ticker | Conviction | Sent | Tech | Fund | Combined | Sector |",
-            "|--------|-----------|------|------|------|----------|--------|",
+            "| Ticker | Conviction | Sent | Tech | Cat | Combined | Sector |",
+            "|--------|-----------|------|------|-----|----------|--------|",
         ]
         for r in group2:
             conv = "⚡ STRONG" if r["high_conviction"] else "✅ GOOD"
-            fund_str = f"{r['catalyst_score']:+.2f}" if r["catalyst_score"] != "" else "—"
+            cat_str = f"{r['catalyst_score']:+.2f}" if r["catalyst_score"] != "" else "—"
             fam, sub = r.get("_sector", ("", ""))
             sector_str = f"{fam} → {sub}" if fam and sub else fam or sub or "—"
             lines.append(
-                f"| **{r['ticker']}** | {conv} | {r['sentiment_score']:+.2f} | {r['tech_score']:+.2f} | {fund_str} | {r['combined_score']:+.2f} | {sector_str} |"
+                f"| **{r['ticker']}** | {conv} | {r['sentiment_score']:+.2f} | {r['tech_score']:+.2f} | {cat_str} | {r['combined_score']:+.2f}{_gate_marker(r)} | {sector_str} |"
             )
     else:
-        lines.append("*No technical + fundamental candidates today.*")
+        lines.append("*No technical + catalyst candidates today.*")
     lines.append("")
 
     # Section 4: Long Candidate Detail
@@ -688,7 +716,12 @@ def _write_markdown(
             lines.append("")
 
     # Footer
-    lines += ["---", "_Entry/stop/target intentionally omitted pending a separate exit-analysis — to be added later._"]
+    lines += [
+        "---",
+        "_Conviction (⚡ STRONG / ✅ GOOD) = technical-agreement strength, not the Combined score._  ",
+        "_Combined markers: ⚡ catalyst boost · ⚠ derank · ⛔ veto._  ",
+        "_Entry/stop/target intentionally omitted pending a separate exit-analysis — to be added later._",
+    ]
 
     out_path.write_text("\n".join(lines), encoding="utf-8")
     print(f"Markdown → {out_path}")
