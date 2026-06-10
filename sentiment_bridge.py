@@ -715,6 +715,7 @@ def _write_markdown(
     min_quality: float,
     full_setups_df: pd.DataFrame | None = None,
     regime_note: str = "",
+    rotation_md: str | None = None,
 ) -> None:
     ts = datetime.now().strftime("%Y-%m-%d %H:%M")
     lines = [
@@ -725,12 +726,13 @@ def _write_markdown(
     if regime_note:
         lines += [f"**Market regime:** {regime_note}", ""]
 
-    # Section 1: Sector Rotation — broad-market, data-driven; fall back to the
-    # watchlist-setup view only if the rotation data fetch fails.
-    try:
-        rotation_md = build_rotation_section()
-    except Exception:
-        rotation_md = ""
+    # Section 1: Sector Rotation. Computed once by the caller and passed in (it
+    # fetches prices and writes a rank snapshot, so it must run only once per run).
+    if rotation_md is None:  # standalone safety: compute if not supplied
+        try:
+            rotation_md = build_rotation_section()
+        except Exception:
+            rotation_md = ""
     if (not rotation_md or "unavailable" in rotation_md) and \
             full_setups_df is not None and not full_setups_df.empty:
         rotation_md = _build_sector_rotation_section(full_setups_df)
@@ -919,13 +921,21 @@ def main() -> None:
     ts_tag = datetime.now().strftime("%Y%m%d_%H%M")
     regime_note = (f"{regime_label} — risk-{'on' if risk_on else 'off'}; "
                    f"chase entries {'ON' if include_chase else 'OFF'}")
+    # Compute the rotation section ONCE (it fetches prices + writes a rank
+    # snapshot) and reuse it for both output files.
+    try:
+        rotation_md = build_rotation_section()
+    except Exception:
+        rotation_md = ""
     _write_markdown(results, out_dir / f"bridge_{ts_tag}.md", args.min_quality,
-                    full_setups_df=full_setups_df, regime_note=regime_note)
+                    full_setups_df=full_setups_df, regime_note=regime_note,
+                    rotation_md=rotation_md)
     _write_csv(results,      out_dir / f"bridge_{ts_tag}.csv")
 
     # also overwrite a stable "latest" copy
     _write_markdown(results, out_dir / "bridge_latest.md", args.min_quality,
-                    full_setups_df=full_setups_df, regime_note=regime_note)
+                    full_setups_df=full_setups_df, regime_note=regime_note,
+                    rotation_md=rotation_md)
     _write_csv(results,      out_dir / "bridge_latest.csv")
 
     # ── summary ───────────────────────────────────────────────────────────────

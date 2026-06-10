@@ -48,9 +48,9 @@ _CUSTOM_BASKETS = {
     "Quantum Computing": ["IONQ", "RGTI", "QBTS", "QUBT", "ARQQ", "QSI", "LAES"],
 }
 
-# Trading-day windows. 1W/1M/3M are shown; 6M is a background input to the
-# rotation score only (1D and 1Y add noise/aren't informative for rotation).
-_WINDOWS = [("1W", 5), ("1M", 21), ("3M", 63), ("6M", 126)]
+# Trading-day windows. All three are shown AND used in the rotation score
+# (1D/1Y/6M dropped — noise or not informative for rotation).
+_WINDOWS = [("1W", 5), ("1M", 21), ("3M", 63)]
 
 
 # ── constituent membership (weekly cache) ────────────────────────────────────
@@ -155,16 +155,21 @@ def _returns_for(close: pd.Series) -> dict[str, float]:
 
 # ── aggregation + scoring ────────────────────────────────────────────────────
 def _rotation_score(rets: dict[str, float]) -> float | None:
-    """Acceleration of the 1-month pace vs the trailing 6-month average monthly pace.
+    """Momentum acceleration in monthly % points: this month vs the quarter's pace.
 
-    score = r_1M − r_6M/6 . Positive ⇒ money rotating in faster than the longer
-    trend (inflow accelerating); negative ⇒ cooling."""
+        Rot = 1M − 3M/3
+
+    i.e. the last month's return minus the average month over the trailing quarter.
+    >0 ⇒ the recent month is hotter than the quarterly trend (money flowing in
+    faster, heating up); <0 ⇒ decelerating/cooling. 1W is shown as a leading
+    "this week" read but kept out of the score — annualising it would let one
+    noisy week dominate a multi-week rotation signal."""
     r1m = rets.get("1M")
-    r6m = rets.get("6M")
+    r3m = rets.get("3M")
     if r1m is None:
         return None
-    baseline = (r6m / 6.0) if r6m is not None else 0.0
-    return r1m - baseline
+    base = (r3m / 3.0) if r3m is not None else 0.0
+    return r1m - base
 
 
 def compute_rotation(force_refresh: bool = False,
@@ -247,11 +252,49 @@ def compute_rotation(force_refresh: bool = False,
     return rows
 
 
+# ── rank-movement snapshots ──────────────────────────────────────────────────
+_RANKS_PATH = _CONFIG_DIR / "rotation_ranks.json"
+
+
+def _load_rank_snapshots() -> dict:
+    if _RANKS_PATH.exists():
+        try:
+            return json.loads(_RANKS_PATH.read_text())
+        except Exception:
+            return {}
+    return {}
+
+
+def _save_rank_snapshot(today: str, ranks: dict[str, int]) -> None:
+    snaps = _load_rank_snapshots()
+    snaps[today] = ranks
+    for old in sorted(snaps)[:-10]:   # keep the last 10 dated snapshots
+        snaps.pop(old, None)
+    try:
+        tmp = _RANKS_PATH.with_suffix(".json.tmp")
+        tmp.write_text(json.dumps(snaps, indent=2))
+        tmp.replace(_RANKS_PATH)
+    except Exception:
+        pass
+
+
+def _rank_delta_tag(industry: str, cur_rank: int, baseline: dict[str, int]) -> str:
+    """Movement up/down the rotation leaderboard since the previous report."""
+    if industry not in baseline:
+        return "🆕"
+    delta = baseline[industry] - cur_rank   # +ve = climbed toward the top
+    if delta > 0:
+        return f"🟢▲{delta}"
+    if delta < 0:
+        return f"🔴▼{abs(delta)}"
+    return "•"
+
+
 # ── markdown rendering ───────────────────────────────────────────────────────
 def _fmt_pct(v: float | None) -> str:
     if v is None:
         return "—"
-    return f"{v:+.0f}"
+    return f"{v:+.0f}%"
 
 
 def build_rotation_section(force_refresh: bool = False,
@@ -268,24 +311,40 @@ def build_rotation_section(force_refresh: bool = False,
     scored = [r for r in rows if r["score"] is not None]
     scored.sort(key=lambda r: r["score"], reverse=True)
 
+    today = time.strftime("%Y-%m-%d")
+    snaps = _load_rank_snapshots()
+    prior_dates = [d for d in snaps if d < today]
+    baseline = snaps[max(prior_dates)] if prior_dates else {}
+    cur_ranks = {r["industry"]: i + 1 for i, r in enumerate(scored)}
+
     lines = [
         "## Sector Rotation",
-        "_Sectors we trade, ranked by Rot = 1M − ⅙·6M (momentum acceleration). "
-        "Market-cap-weighted over the top ~50 names per industry (Quantum is an "
-        "equal-weighted pure-play basket). Top = heating up, bottom = cooling. "
-        "Ranks by change in pace, not level._",
+        "_The industries we trade, ranked by **Rot** (momentum acceleration)._",
         "",
-        "| Industry | 1W | 1M | 3M | Rot |",
-        "|----------|----|----|----|-----|",
+        "- **n** — how many of the industry's top ~50 constituents had usable price data.",
+        "- **1W / 1M / 3M** — market-cap-weighted **% price return** of those constituents "
+        "over the trailing 1 week / 1 month / 3 months.",
+        "- **Rot** — momentum acceleration in **monthly % points** = 1M − (3M ÷ 3): "
+        "the last month's return minus the average month over the quarter. "
+        "Positive = heating up (money flowing in faster than the quarter's trend), negative = cooling. "
+        "(1W is shown as a leading read but kept out of Rot — one noisy week shouldn't drive a multi-week signal.)",
+        "- **Δrank** — move up/down this leaderboard since the previous report "
+        "(🟢▲ climbed, 🔴▼ fell, • unchanged, 🆕 new).",
+        "",
+        "| Industry | n | 1W | 1M | 3M | Rot | Δrank |",
+        "|----------|---|----|----|----|-----|-------|",
     ]
     for r in scored:
         ret = r["returns"]
+        delta = _rank_delta_tag(r["industry"], cur_ranks[r["industry"]], baseline)
         lines.append(
-            f"| {r['industry']} | {_fmt_pct(ret.get('1W'))} | "
+            f"| {r['industry']} | {r.get('n', '')} | {_fmt_pct(ret.get('1W'))} | "
             f"{_fmt_pct(ret.get('1M'))} | {_fmt_pct(ret.get('3M'))} | "
-            f"{r['score']:+.1f} |"
+            f"{r['score']:+.1f} | {delta} |"
         )
     lines.append("")
+
+    _save_rank_snapshot(today, cur_ranks)
     return "\n".join(lines)
 
 
