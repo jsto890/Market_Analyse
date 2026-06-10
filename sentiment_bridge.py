@@ -246,7 +246,7 @@ def _analyse_ticker(row: pd.Series) -> Optional[dict]:
         # private keys stripped from CSV
         "_votes":            card.votes,
         "_cat_events":       cat.events,
-        "_cat_metrics":      cat.metrics if hasattr(cat, "metrics") else {},
+        "_cat_metrics":      cat.metrics,
         "_cat_flags":        cat.flags,
         "_sector":           sector_tuple,
     }
@@ -393,6 +393,7 @@ def _build_sector_rotation_section(full_df: pd.DataFrame) -> str:
     ]
 
     for family in sorted_families:
+        display_family = "Broader Market" if family == "Other" else family
         subsectors = tree[family]
 
         # Filter: only subsectors with at least one ↑ or →
@@ -410,93 +411,217 @@ def _build_sector_rotation_section(full_df: pd.DataFrame) -> str:
             reverse=True,
         )
 
-        lines.append(f"**{family}**")
+        lines.append(f"**{display_family}**")
         for sub in sorted_subs:
             data = active_subsectors[sub]
-            arrow_parts = []
+            # Show dominant direction arrow(s) — no ticker names
+            arrows = []
             if data["↑"]:
-                arrow_parts.append(f"↑ {', '.join(data['↑'])}")
+                arrows.append("↑")
             if data["→"]:
-                arrow_parts.append(f"→ {', '.join(data['→'])}")
-            if data["↓"]:
-                arrow_parts.append(f"↓ {', '.join(data['↓'])}")
-            arrows_str = "  ".join(arrow_parts)
-            lines.append(f"  {sub:<26} {arrows_str}")
+                arrows.append("→")
+            if data["↓"] and not arrows:
+                arrows.append("↓")
+            lines.append(f"  {sub:<30} {'  '.join(arrows)}")
         lines.append("")
 
     return "\n".join(lines)
 
 
+import re as _re
+
+_EVENT_LABELS = {
+    "fda": "FDA approval", "acquisition": "acquisition", "contract": "contract win",
+    "partnership": "partnership", "breakthrough": "breakthrough",
+    "earnings_beat": "earnings beat", "earnings_miss": "earnings miss",
+    "upgrade": "analyst upgrade", "downgrade": "analyst downgrade",
+    "dilution": "dilution", "offering": "offering",
+    "going_concern": "going concern", "reverse_split": "reverse split",
+    "index_inclusion": "index inclusion", "other": "catalyst",
+}
+
+
+def _extract_catalyst_ctx(event_type: str, detail: str) -> str:
+    """Extract a short, meaningful context string from a catalyst headline."""
+    if not detail:
+        return ""
+    d = detail.strip()
+
+    if event_type == "earnings_beat":
+        m = _re.search(r'beat[s]?\s+(?:by\s+)?\$?([\d.]+)', d, _re.I)
+        if m:
+            return f"+${m.group(1)}"
+        m = _re.search(r'\$([\d.]+)\s+vs\.?\s+\$?([\d.]+)\s+(?:expected|est)', d, _re.I)
+        if m:
+            return f"${m.group(1)} vs ${m.group(2)} est"
+        m = _re.search(r'([\d.]+)%?\s+(?:beat|above)', d, _re.I)
+        if m:
+            return f"+{m.group(1)}%"
+
+    elif event_type == "earnings_miss":
+        m = _re.search(r'miss(?:ed|es)?\s+(?:by\s+)?\$?([\d.]+)', d, _re.I)
+        if m:
+            return f"-${m.group(1)}"
+
+    elif event_type in ("acquisition", "merger"):
+        # "acquires Eucalyptus" / "buyout of Company X" / "to buy XYZ"
+        m = _re.search(r'acquir(?:es?|ing|ed)\s+([A-Z][A-Za-z0-9 &]{1,25})', d)
+        if not m:
+            m = _re.search(r'(?:buyout of|to buy|acquired by)\s+([A-Z][A-Za-z0-9 &]{1,25})', d, _re.I)
+        if m:
+            return m.group(1).strip().rstrip(',.')[:25]
+
+    elif event_type == "partnership":
+        m = _re.search(
+            r'(?:partners? with|partnership with|teams? up with|collaborat\w+ with|alliance with)\s+([A-Z][A-Za-z0-9 &]{1,25})',
+            d, _re.I,
+        )
+        if m:
+            return m.group(1).strip().rstrip(',.')[:25]
+
+    elif event_type in ("upgrade", "downgrade"):
+        # "JPMorgan upgrades RDDT" or "Goldman Sachs raises PT to $225"
+        m = _re.search(r'^([A-Z][A-Za-z\s&]{2,20}?)\s+(?:upgrade|downgrade|raises?|cuts?)', d)
+        if not m:
+            m = _re.search(r'(?:upgrade|downgrade)d?\s+by\s+([A-Z][A-Za-z\s&]{2,20})', d, _re.I)
+        firm = m.group(1).strip()[:20] if m else ""
+        # also try to find a price target
+        pt = _re.search(r'(?:price target|PT|target)\s+(?:to|of)?\s+\$?([\d]+)', d, _re.I)
+        if firm and pt:
+            return f"{firm}, tgt ${pt.group(1)}"
+        if firm:
+            return firm
+        if pt:
+            return f"tgt ${pt.group(1)}"
+
+    elif event_type == "contract":
+        # "wins $X contract with Company"
+        m = _re.search(r'\$([0-9.]+[BMK]?\s*(?:billion|million|bn|m)?)', d, _re.I)
+        if m:
+            return m.group(1).strip()
+
+    return ""
+
+
+def _diverse_tech_notes(votes: list, verdict, limit: int = 5) -> list[str]:
+    """Pick family-diverse technical notes: best one per agent family, up to limit total."""
+    all_notes = _distill_notes(votes, verdict, 20)  # get large pool first
+    # Group by family, preserve rank order within each family
+    by_family: dict[str, list[str]] = {}
+    for d in all_notes:
+        fam = d.get("fam") or "other"
+        by_family.setdefault(fam, []).append(d["note"])
+
+    # Priority order for families
+    family_order = ["weekly_structure", "breakout", "squeeze", "ma_trend", "momentum_osc", "other"]
+    chosen: list[str] = []
+    seen_notes: set[str] = set()
+
+    # First pass: one per family in priority order
+    for fam in family_order:
+        if fam in by_family:
+            note = by_family[fam][0]
+            if note not in seen_notes:
+                chosen.append(note)
+                seen_notes.add(note)
+        if len(chosen) >= limit:
+            break
+
+    # Fill remaining slots with any leftover high-ranked notes
+    if len(chosen) < limit:
+        for d in all_notes:
+            if len(chosen) >= limit:
+                break
+            if d["note"] not in seen_notes:
+                chosen.append(d["note"])
+                seen_notes.add(d["note"])
+
+    return chosen
+
+
 def _build_detail_block(r: dict) -> list[str]:
     conv = "⚡ STRONG" if r["high_conviction"] else "✅ GOOD"
-    score_str = f"{r['combined_score']:+.2f}"
-    header = f"### {r['ticker']} — {conv} ({score_str})"
+    header = f"### {r['ticker']} — {conv} ({r['combined_score']:+.2f})"
 
-    # Returns line
+    # Returns — colour-coded HTML spans
     ret_parts = []
     for label, key in _RET_PERIODS:
         v = r.get(key)
-        if v is not None and not pd.isna(v):
-            ret_parts.append(f"{label} {v:+.0f}%")
-    returns_line = f"Returns        {' · '.join(ret_parts)}" if ret_parts else "Returns        —"
+        if v is None or pd.isna(v):
+            continue
+        color = "#22c55e" if v >= 0 else "#ef4444"
+        ret_parts.append(f'<span style="color:{color}">{label} {v:+.0f}%</span>')
+    returns_cell = " · ".join(ret_parts) if ret_parts else "—"
 
-    # Why technical: distill votes
+    # Technicals — family-diverse notes
     votes = r.get("_votes") or []
     if votes:
-        distilled = _distill_notes(votes, Verdict.LONG, 5)
-        tech_notes = " · ".join(d["note"] for d in distilled) if distilled else "—"
+        notes = _diverse_tech_notes(votes, Verdict.LONG, 5)
+        tech_bullets = "<br>".join(f"• {n}" for n in notes) if notes else "• —"
     else:
-        tech_notes = "—"
-    tech_line = f"Why technical  {tech_notes}"
+        tech_bullets = "• —"
 
-    # Why fundamental: build from _cat_metrics
+    # Fundamentals — bullet per present metric
     metrics = r.get("_cat_metrics") or {}
-    fund_parts = []
+    fund_bullets_list = []
     rev_growth = metrics.get("revenue_growth")
     if rev_growth is not None:
         pct = round(float(rev_growth) * 100) if abs(float(rev_growth)) < 10 else round(float(rev_growth))
-        fund_parts.append(f"rev {pct:+d}%")
+        fund_bullets_list.append(f"rev {pct:+d}%")
     profit_margin = metrics.get("profit_margin")
     if profit_margin is not None:
         pct = round(float(profit_margin) * 100) if abs(float(profit_margin)) < 10 else round(float(profit_margin))
-        fund_parts.append(f"margin {pct}%")
+        fund_bullets_list.append(f"margin {pct}%")
     analyst_rating = metrics.get("analyst_rating")
     analyst_target = metrics.get("analyst_target")
     price = metrics.get("price")
     if analyst_rating and analyst_target is not None and price is not None and float(price) > 0:
         upside = (float(analyst_target) - float(price)) / float(price) * 100
-        n_analysts = metrics.get("analyst_count")
-        analyst_str = f"analyst {analyst_rating}, tgt ${float(analyst_target):.0f} ({upside:+.0f}%)"
-        if n_analysts is not None:
-            analyst_str += f" ({int(n_analysts)})"
-        fund_parts.append(analyst_str)
+        fund_bullets_list.append(f"analyst {analyst_rating}, tgt ${float(analyst_target):.0f} ({upside:+.0f}%)")
     short_pct = metrics.get("short_pct_float")
     if short_pct is not None:
-        fund_parts.append(f"short {float(short_pct):.1f}%")
+        fund_bullets_list.append(f"short {float(short_pct):.1f}%")
     dtc = metrics.get("dtc")
     if dtc is not None:
-        fund_parts.append(f"DTC {float(dtc):.1f}")
-    fund_line = f"Why fundamental {' · '.join(fund_parts)}" if fund_parts else "Why fundamental — none"
+        fund_bullets_list.append(f"DTC {float(dtc):.1f}")
+    fund_bullets = "<br>".join(f"• {item}" for item in fund_bullets_list) if fund_bullets_list else "• none"
 
-    # Why catalyst
-    cat_parts = []
+    # Catalysts — bullet per event with context
+    cat_bullets_list = []
     days_to_earnings = metrics.get("days_to_earnings")
-    if days_to_earnings is not None:
-        cat_parts.append(f"earnings in {int(days_to_earnings)}d")
+    if days_to_earnings is not None and days_to_earnings >= 0:
+        cat_bullets_list.append(f"earnings in {int(days_to_earnings)}d")
     cat_events = r.get("_cat_events") or []
+    seen_types: set[str] = set()
     for event in cat_events:
+        if event.type in seen_types:
+            continue
+        seen_types.add(event.type)
         n_days = int(round(float(event.recency_days)))
-        emoji = "⚡" if event.direction > 0 else "⚠"
-        detail_snippet = ""
-        if event.detail:
-            detail_snippet = f" {event.detail[:60]}"
-        cat_parts.append(f"{emoji} {event.type}{detail_snippet} ({n_days}d ago)")
-    cat_flags = r.get("_cat_flags") or []
-    for flag in cat_flags:
-        cat_parts.append(flag)
-    cat_line = f"Why catalyst   {' · '.join(cat_parts)}" if cat_parts else "Why catalyst   — none detected"
+        label = _EVENT_LABELS.get(event.type, event.type.replace("_", " "))
+        prefix = "⚡" if event.direction > 0 else "⚠"
+        ctx = _extract_catalyst_ctx(event.type, getattr(event, "detail", ""))
+        age = f"{n_days}d ago" if n_days > 0 else "today"
+        if ctx:
+            cat_bullets_list.append(f"{prefix} {label} ({ctx}) · {age}")
+        else:
+            cat_bullets_list.append(f"{prefix} {label} · {age}")
+    for flag in (r.get("_cat_flags") or []):
+        if flag not in {"⚡"}:
+            cat_bullets_list.append(flag)
+    cat_bullets = "<br>".join(f"• {item}" for item in cat_bullets_list) if cat_bullets_list else "• none detected"
 
-    return [header, returns_line, tech_line, fund_line, cat_line]
+    # 2-column table: label | content
+    table = [
+        "| | |",
+        "|---|---|",
+        f"| **Returns** | {returns_cell} |",
+        f"| **Technicals** | {tech_bullets} |",
+        f"| **Fundamentals** | {fund_bullets} |",
+        f"| **Catalysts** | {cat_bullets} |",
+    ]
+
+    return [header] + table
 
 
 def _write_markdown(

@@ -88,4 +88,5 @@ def catalyst_leg(
     ]
     score = meta_score(votes)
     gates, flags = evaluate_gates(events, pool.metrics)
-    return CatalystResult(score=score, votes=votes, events=events, gates=gates, flags=flags)
+    return CatalystResult(score=score, votes=votes, events=events, gates=gates, flags=flags,
+                          metrics=pool.metrics)

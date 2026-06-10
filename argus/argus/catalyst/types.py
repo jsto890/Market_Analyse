@@ -16,9 +16,10 @@ class CatalystEvent:
 @dataclass
 class CatalystPool:
     ticker: str
-    chatter_tags: list = field(default_factory=list)   # list[str] from ticker_setups.csv
-    news_texts: list = field(default_factory=list)      # list[str] headlines/snippets
-    metrics: dict = field(default_factory=dict)         # normalized numeric fundamentals
+    chatter_tags: list = field(default_factory=list)    # list[str] from ticker_setups.csv
+    news_texts: list = field(default_factory=list)       # list[str] headlines/snippets
+    news_timestamps: list = field(default_factory=list)  # list[float|None] Unix timestamps parallel to news_texts
+    metrics: dict = field(default_factory=dict)          # normalized numeric fundamentals
 
     def is_empty(self) -> bool:
         return not (self.chatter_tags or self.news_texts or self.metrics)
@@ -31,3 +32,4 @@ class CatalystResult:
     events: list = field(default_factory=list)          # list[CatalystEvent]
     gates: list = field(default_factory=list)           # machine codes: veto/derank/boost
     flags: list = field(default_factory=list)           # display flags: ⚡ / ⚠ DILUTION / ...
+    metrics: dict = field(default_factory=dict)         # fundamentals from CatalystPool

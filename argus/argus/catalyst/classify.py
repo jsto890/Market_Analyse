@@ -1,8 +1,17 @@
 from __future__ import annotations
 
 import re
+import time
 
 from .types import CatalystEvent, CatalystPool
+
+
+def _ts_to_recency(ts: float | None, now: float) -> float:
+    """Convert a Unix publish timestamp to days-ago float. Returns 3.0 if unknown."""
+    if ts is None:
+        return 3.0
+    days = (now - ts) / 86400.0
+    return max(0.0, round(days, 1))
 
 POSITIVE_TYPES = frozenset({
     "acquisition", "fda", "contract", "partnership",
@@ -98,7 +107,13 @@ def classify_events(
     if client is None:
         return keyword_fallback(pool)
     try:
-        headlines = "\n".join(f"- {t}" for t in pool.news_texts[:_NEWS_CAP])
+        now = time.time()
+        headline_lines = []
+        for i, t in enumerate(pool.news_texts[:_NEWS_CAP]):
+            ts = pool.news_timestamps[i] if i < len(pool.news_timestamps) else None
+            age = f"{int(_ts_to_recency(ts, now))}d ago" if ts else "age unknown"
+            headline_lines.append(f"- [{age}] {t}")
+        headlines = "\n".join(headline_lines)
         prompt = _PROMPT % (sorted(ALL_TYPES), pool.ticker, headlines)
         resp = client.messages.create(
             model=model, max_tokens=1024,
@@ -113,25 +128,23 @@ def classify_events(
 
 def keyword_fallback(pool: CatalystPool, *, recency_days: float = 3.0) -> list[CatalystEvent]:
     """Deterministic keyword classification over pooled news + chatter tags."""
+    now = time.time()
     events: list[CatalystEvent] = []
     seen: set[str] = set()
-    blob = " \n ".join(pool.news_texts).lower()
     for ctype, pattern in _PATTERNS:
         if ctype in seen:
             continue
-        if re.search(pattern, blob):
-            # Find first headline matching the pattern for detail
-            detail = ""
-            for headline in pool.news_texts:
-                if re.search(pattern, headline.lower()):
-                    detail = headline[:120]
-                    break
-            events.append(CatalystEvent(
-                type=ctype, direction=_DIRECTION.get(ctype, 0),
-                recency_days=recency_days, confidence=0.6, source="chatter",
-                detail=detail,
-            ))
-            seen.add(ctype)
+        for i, headline in enumerate(pool.news_texts):
+            if re.search(pattern, headline.lower()):
+                ts = pool.news_timestamps[i] if i < len(pool.news_timestamps) else None
+                actual_recency = _ts_to_recency(ts, now) if ts else recency_days
+                events.append(CatalystEvent(
+                    type=ctype, direction=_DIRECTION.get(ctype, 0),
+                    recency_days=actual_recency, confidence=0.6, source="chatter",
+                    detail=headline[:120],
+                ))
+                seen.add(ctype)
+                break
     for tag in pool.chatter_tags:
         low = str(tag).lower()
         for needle, ctype in _CHATTER_MAP:
