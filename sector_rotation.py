@@ -16,12 +16,14 @@ import json
 import time
 from pathlib import Path
 
+import numpy as np
 import pandas as pd
 
 _CONFIG_DIR = Path(__file__).parent / "config"
 _CONSTITUENTS_CACHE = _CONFIG_DIR / "sector_constituents.json"
 _CACHE_TTL_DAYS = 7
-_TOP_N = 50  # constituents per industry
+_TOP_N = 50           # constituents per industry
+_BENCHMARK = "SPY"    # RRG benchmark — broad market (rotation = strength vs this)
 
 # yfinance sector keys (the 11 GICS-style sectors)
 _SECTOR_KEYS = [
@@ -141,43 +143,83 @@ def _download_closes(tickers: list[str]) -> pd.DataFrame:
     return pd.concat(frames, axis=1)
 
 
-def _returns_for(close: pd.Series) -> dict[str, float]:
-    """Period returns (%) for one constituent; missing windows omitted."""
-    close = close.dropna()
+# ── RRG engine (Relative Rotation Graph) ─────────────────────────────────────
+# Equal-weighted (breadth, not mega-cap dominated) sector index vs a broad-market
+# benchmark; JdK-style RS-Ratio (relative-strength level) + RS-Momentum (whether
+# that strength is accelerating). This is a *relative* rotation measure — it
+# isolates genuine rotation from market beta, unlike absolute momentum.
+def _equal_weight_index(members_df: pd.DataFrame) -> pd.Series:
+    """Chained equal-weighted index from member close series (mean daily return)."""
+    daily = members_df.pct_change(fill_method=None)
+    ew = daily.mean(axis=1)            # average over names that have data each day
+    return (1.0 + ew.fillna(0.0)).cumprod()
+
+
+def _wma(s: pd.Series, n: int) -> pd.Series:
+    w = np.arange(1, n + 1, dtype=float)
+    return s.rolling(n).apply(lambda x: np.dot(x, w) / w.sum(), raw=True)
+
+
+def _rrg(rs: pd.Series) -> tuple[float | None, float | None]:
+    """JdK RS-Ratio and RS-Momentum (centred at 100) for a relative-strength line."""
+    rs = rs.dropna()
+    if len(rs) < 35:
+        return None, None
+    rs_smooth = _wma(rs, 10)
+    rs_bench = _wma(rs_smooth, 10)
+    rs_ratio = 100.0 * rs_smooth / rs_bench
+    rs_mom = 100.0 * rs_ratio / rs_ratio.shift(10)
+    ratio, mom = rs_ratio.iloc[-1], rs_mom.iloc[-1]
+    if pd.isna(ratio) or pd.isna(mom):
+        return None, None
+    return float(ratio), float(mom)
+
+
+def _quadrant(ratio: float, mom: float) -> str:
+    if ratio >= 100 and mom >= 100:
+        return "🟢 Leading"
+    if ratio >= 100 and mom < 100:
+        return "🟡 Weakening"
+    if ratio < 100 and mom < 100:
+        return "🔴 Lagging"
+    return "🔵 Improving"
+
+
+def _returns_from_index(idx: pd.Series) -> dict[str, float]:
+    """Trailing % returns of an index series over the display windows."""
+    idx = idx.dropna()
     out: dict[str, float] = {}
     for label, n in _WINDOWS:
-        if len(close) > n:
-            prev = close.iloc[-1 - n]
-            if prev and prev > 0:
-                out[label] = (close.iloc[-1] / prev - 1.0) * 100.0
+        if len(idx) > n and idx.iloc[-1 - n] > 0:
+            out[label] = (idx.iloc[-1] / idx.iloc[-1 - n] - 1.0) * 100.0
     return out
 
 
-# ── aggregation + scoring ────────────────────────────────────────────────────
-def _rotation_score(rets: dict[str, float]) -> float | None:
-    """Momentum acceleration in monthly % points: this month vs the quarter's pace.
-
-        Rot = 1M − 3M/3
-
-    i.e. the last month's return minus the average month over the trailing quarter.
-    >0 ⇒ the recent month is hotter than the quarterly trend (money flowing in
-    faster, heating up); <0 ⇒ decelerating/cooling. 1W is shown as a leading
-    "this week" read but kept out of the score — annualising it would let one
-    noisy week dominate a multi-week rotation signal."""
-    r1m = rets.get("1M")
-    r3m = rets.get("3M")
-    if r1m is None:
+def _rrg_row(name: str, sector: str, members: list[str],
+             closes: pd.DataFrame, bench_idx: pd.Series) -> dict | None:
+    present = [m for m in members if m in closes.columns]
+    if not present:
         return None
-    base = (r3m / 3.0) if r3m is not None else 0.0
-    return r1m - base
+    sec_idx = _equal_weight_index(closes[present])
+    rs = (sec_idx / bench_idx).dropna()
+    ratio, mom = _rrg(rs)
+    if ratio is None:
+        return None
+    return {
+        "sector": sector,
+        "industry": name,
+        "rs_ratio": ratio,
+        "rs_mom": mom,
+        "quadrant": _quadrant(ratio, mom),
+        "returns": _returns_from_index(sec_idx),
+        # composite for ranking: distance into the Leading corner
+        "score": (ratio - 100.0) + (mom - 100.0),
+    }
 
 
 def compute_rotation(force_refresh: bool = False,
                      industries: set[str] | None = _TRADED_INDUSTRIES) -> list[dict]:
-    """Return a list of per-industry rows with weighted returns + rotation score.
-
-    `industries` restricts to a set of yfinance industry keys (default: the ones
-    we trade). Pass None to compute every industry."""
+    """RRG rows (RS-Ratio, RS-Momentum, quadrant, returns) per traded industry."""
     sectors = _load_constituents(force_refresh=force_refresh)
     if not sectors:
         return []
@@ -185,70 +227,35 @@ def compute_rotation(force_refresh: bool = False,
     def _included(ikey: str) -> bool:
         return industries is None or ikey in industries
 
-    # collect unique tickers only from the industries we'll actually report
-    all_tickers: set[str] = set()
+    all_tickers: set[str] = {_BENCHMARK}
     for sec in sectors.values():
         for ikey, ind in sec["industries"].items():
             if _included(ikey):
                 all_tickers.update(ind["constituents"].keys())
     for basket in _CUSTOM_BASKETS.values():
         all_tickers.update(basket)
-    closes = _download_closes(sorted(all_tickers))
-    if closes.empty:
-        return []
 
-    # per-ticker returns
-    tret: dict[str, dict[str, float]] = {}
-    for tkr in closes.columns:
-        s = closes[tkr]
-        if isinstance(s, pd.DataFrame):  # duplicate column guard
-            s = s.iloc[:, 0]
-        r = _returns_for(s)
-        if r:
-            tret[tkr] = r
+    closes = _download_closes(sorted(all_tickers))
+    if closes.empty or _BENCHMARK not in closes.columns:
+        return []
+    bench = closes[_BENCHMARK]
+    if isinstance(bench, pd.DataFrame):
+        bench = bench.iloc[:, 0]
+    bench_idx = (1.0 + bench.pct_change(fill_method=None).fillna(0.0)).cumprod()
 
     rows: list[dict] = []
-    for skey, sec in sectors.items():
+    for sec in sectors.values():
         for ikey, ind in sec["industries"].items():
             if not _included(ikey):
                 continue
-            weighted: dict[str, float] = {}
-            for label, _ in _WINDOWS:
-                num = den = 0.0
-                for sym, w in ind["constituents"].items():
-                    r = tret.get(sym, {}).get(label)
-                    if r is not None and w > 0:
-                        num += w * r
-                        den += w
-                if den > 0:
-                    weighted[label] = num / den
-            if not weighted:
-                continue
-            rows.append({
-                "sector": sec["name"],
-                "industry": ind["name"],
-                "n": sum(1 for sym in ind["constituents"] if sym in tret),
-                "returns": weighted,
-                "score": _rotation_score(weighted),
-            })
-
-    # custom equal-weighted baskets (themes with no yfinance industry)
+            row = _rrg_row(ind["name"], sec["name"],
+                           list(ind["constituents"].keys()), closes, bench_idx)
+            if row:
+                rows.append(row)
     for name, members in _CUSTOM_BASKETS.items():
-        weighted = {}
-        for label, _ in _WINDOWS:
-            vals = [tret[sym][label] for sym in members
-                    if sym in tret and label in tret[sym]]
-            if vals:
-                weighted[label] = sum(vals) / len(vals)
-        if not weighted:
-            continue
-        rows.append({
-            "sector": "Custom",
-            "industry": name,
-            "n": sum(1 for sym in members if sym in tret),
-            "returns": weighted,
-            "score": _rotation_score(weighted),
-        })
+        row = _rrg_row(name, "Custom", members, closes, bench_idx)
+        if row:
+            rows.append(row)
     return rows
 
 
@@ -319,27 +326,27 @@ def build_rotation_section(force_refresh: bool = False,
 
     lines = [
         "## Sector Rotation",
-        "_The industries we trade, ranked by **Rot** (momentum acceleration)._",
+        f"_Relative Rotation Graph vs {_BENCHMARK} — equal-weighted across the top ~50 "
+        "constituents per industry (breadth, not mega-cap dominated)._",
         "",
-        "- **1W / 1M / 3M** — market-cap-weighted **% price return** of the top ~50 constituents "
-        "over the trailing 1 week / 1 month / 3 months.",
-        "- **Rot** — momentum acceleration in **monthly % points** = 1M − (3M ÷ 3): "
-        "the last month's return minus the average month over the quarter. "
-        "Positive = heating up (money flowing in faster than the quarter's trend), negative = cooling. "
-        "(1W is shown as a leading read but kept out of Rot — one noisy week shouldn't drive a multi-week signal.)",
+        "- **Quadrant** — 🟢 Leading (strong & still rising) · 🔵 Improving (weak but turning "
+        "up — *early rotation in*) · 🟡 Weakening (strong but fading) · 🔴 Lagging (weak & falling).",
+        "- **RS-Ratio** — relative-strength **level** vs the market (>100 = outperforming).",
+        "- **RS-Mom** — relative-strength **momentum** (>100 = that outperformance is accelerating).",
+        "- **1W / 1M / 3M** — equal-weighted % price return of the constituents (context).",
         "- **Δrank** — move up/down this leaderboard since the previous report "
         "(🟢▲ climbed, 🔴▼ fell, • unchanged, 🆕 new).",
         "",
-        "| Industry | 1W | 1M | 3M | Rot | Δrank |",
-        "|----------|----|----|----|-----|-------|",
+        "| Industry | Quadrant | RS-Ratio | RS-Mom | 1W | 1M | 3M | Δrank |",
+        "|----------|----------|----------|--------|----|----|----|-------|",
     ]
     for r in scored:
         ret = r["returns"]
         delta = _rank_delta_tag(r["industry"], cur_ranks[r["industry"]], baseline)
         lines.append(
-            f"| {r['industry']} | {_fmt_pct(ret.get('1W'))} | "
-            f"{_fmt_pct(ret.get('1M'))} | {_fmt_pct(ret.get('3M'))} | "
-            f"{r['score']:+.1f} | {delta} |"
+            f"| {r['industry']} | {r['quadrant']} | {r['rs_ratio']:.1f} | {r['rs_mom']:.1f} | "
+            f"{_fmt_pct(ret.get('1W'))} | {_fmt_pct(ret.get('1M'))} | {_fmt_pct(ret.get('3M'))} | "
+            f"{delta} |"
         )
     lines.append("")
 

@@ -1,16 +1,16 @@
 {
   "2026-06-10": {
-    "Information Technology Services": 1,
-    "Aerospace & Defense": 2,
-    "Communication Equipment": 3,
-    "Quantum Computing": 4,
-    "Software - Application": 5,
-    "Software - Infrastructure": 6,
-    "Semiconductor Equipment & Materials": 7,
-    "Scientific & Technical Instruments": 8,
-    "Electronic Components": 9,
+    "Scientific & Technical Instruments": 1,
+    "Software - Application": 2,
+    "Information Technology Services": 3,
+    "Software - Infrastructure": 4,
+    "Communication Equipment": 5,
+    "Electronic Components": 6,
+    "Uranium": 7,
+    "Aerospace & Defense": 8,
+    "Computer Hardware": 9,
     "Semiconductors": 10,
-    "Computer Hardware": 11,
-    "Uranium": 12
+    "Semiconductor Equipment & Materials": 11,
+    "Quantum Computing": 12
   }
 }
