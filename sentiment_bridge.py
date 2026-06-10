@@ -351,6 +351,7 @@ def _build_sector_rotation_section(full_df: pd.DataFrame) -> str:
     _LABEL_ARROW = {
         "fresh_watch": "↑",
         "building":    "↑",
+        "momentum_confirmed": "↑",
         "extended":    "→",
         "late_chase":  "→",
         "avoid_wait":  "↓",
@@ -465,7 +466,7 @@ def _build_detail_block(r: dict) -> list[str]:
     if analyst_rating and analyst_target is not None and price is not None and float(price) > 0:
         upside = (float(analyst_target) - float(price)) / float(price) * 100
         n_analysts = metrics.get("analyst_count")
-        analyst_str = f"analyst {analyst_rating}, tgt {upside:+.0f}%"
+        analyst_str = f"analyst {analyst_rating}, tgt ${float(analyst_target):.0f} ({upside:+.0f}%)"
         if n_analysts is not None:
             analyst_str += f" ({int(n_analysts)})"
         fund_parts.append(analyst_str)
