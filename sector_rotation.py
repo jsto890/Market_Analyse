@@ -21,7 +21,7 @@ import pandas as pd
 _CONFIG_DIR = Path(__file__).parent / "config"
 _CONSTITUENTS_CACHE = _CONFIG_DIR / "sector_constituents.json"
 _CACHE_TTL_DAYS = 7
-_TOP_N = 20  # constituents per industry
+_TOP_N = 50  # constituents per industry
 
 # yfinance sector keys (the 11 GICS-style sectors)
 _SECTOR_KEYS = [
@@ -40,6 +40,12 @@ _TRADED_INDUSTRIES = {
     "scientific-technical-instruments", "information-technology-services",
     "software-infrastructure", "software-application",
     "aerospace-defense", "uranium",
+}
+
+# Themes with no native yfinance industry — equal-weighted custom baskets of
+# pure-play tickers. Rendered alongside the industry rows.
+_CUSTOM_BASKETS = {
+    "Quantum Computing": ["IONQ", "RGTI", "QBTS", "QUBT", "ARQQ", "QSI", "LAES"],
 }
 
 # Trading-day windows. 1W/1M/3M are shown; 6M is a background input to the
@@ -180,6 +186,8 @@ def compute_rotation(force_refresh: bool = False,
         for ikey, ind in sec["industries"].items():
             if _included(ikey):
                 all_tickers.update(ind["constituents"].keys())
+    for basket in _CUSTOM_BASKETS.values():
+        all_tickers.update(basket)
     closes = _download_closes(sorted(all_tickers))
     if closes.empty:
         return []
@@ -218,6 +226,24 @@ def compute_rotation(force_refresh: bool = False,
                 "returns": weighted,
                 "score": _rotation_score(weighted),
             })
+
+    # custom equal-weighted baskets (themes with no yfinance industry)
+    for name, members in _CUSTOM_BASKETS.items():
+        weighted = {}
+        for label, _ in _WINDOWS:
+            vals = [tret[sym][label] for sym in members
+                    if sym in tret and label in tret[sym]]
+            if vals:
+                weighted[label] = sum(vals) / len(vals)
+        if not weighted:
+            continue
+        rows.append({
+            "sector": "Custom",
+            "industry": name,
+            "n": sum(1 for sym in members if sym in tret),
+            "returns": weighted,
+            "score": _rotation_score(weighted),
+        })
     return rows
 
 
@@ -245,8 +271,9 @@ def build_rotation_section(force_refresh: bool = False,
     lines = [
         "## Sector Rotation",
         "_Sectors we trade, ranked by Rot = 1M − ⅙·6M (momentum acceleration). "
-        "Market-cap-weighted over the top ~20 names per industry. Top = heating up, "
-        "bottom = cooling. Ranks by change in pace, not level._",
+        "Market-cap-weighted over the top ~50 names per industry (Quantum is an "
+        "equal-weighted pure-play basket). Top = heating up, bottom = cooling. "
+        "Ranks by change in pace, not level._",
         "",
         "| Industry | 1W | 1M | 3M | Rot |",
         "|----------|----|----|----|-----|",
