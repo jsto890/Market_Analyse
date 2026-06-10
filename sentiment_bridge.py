@@ -455,7 +455,7 @@ def _build_detail_block(r: dict) -> list[str]:
     rev_growth = metrics.get("revenue_growth")
     if rev_growth is not None:
         pct = round(float(rev_growth) * 100) if abs(float(rev_growth)) < 10 else round(float(rev_growth))
-        fund_parts.append(f"rev +{pct}%")
+        fund_parts.append(f"rev {pct:+d}%")
     profit_margin = metrics.get("profit_margin")
     if profit_margin is not None:
         pct = round(float(profit_margin) * 100) if abs(float(profit_margin)) < 10 else round(float(profit_margin))
