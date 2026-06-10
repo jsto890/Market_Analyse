@@ -41,6 +41,11 @@ from argus.sector_taxonomy import resolve_sector   # noqa: E402
 
 # ── config ────────────────────────────────────────────────────────────────────
 ACTIONABLE_LABELS = {"fresh_watch", "building", "momentum_confirmed"}
+# Backtest (1 May–10 Jun): extended/late_chase were the *strongest* forward
+# performers (+10%/+23% median 20d). Don't hard-drop them — let them reach Argus,
+# which applies the technical/regime filter. Disable with --no-chase in a
+# mean-reverting tape.
+CHASE_LABELS      = {"extended", "late_chase"}
 LATE_CHASE_LABEL  = "late_chase"
 MAX_WORKERS       = 6
 SENTIMENT_WEIGHT = BRIDGE_WEIGHTS["sentiment"]
@@ -752,7 +757,9 @@ def main() -> None:
     parser.add_argument("--min-quality", type=float, default=6.0,
                         help="Minimum quality_score from Market_Review (default 6)")
     parser.add_argument("--include-late-chase", action="store_true",
-                        help="Also analyse late_chase tickers (lower priority)")
+                        help="(deprecated no-op: chase labels are included by default)")
+    parser.add_argument("--no-chase", action="store_true",
+                        help="Exclude extended/late_chase (use in a mean-reverting/risk-off tape)")
     parser.add_argument("--extra-tickers", type=str, default="",
                         help="Comma-separated tickers to force-include regardless of quality (pure technical, zero sentiment weight)")
     parser.add_argument("--out", type=str, default=str(OUT_DIR),
@@ -773,8 +780,8 @@ def main() -> None:
     full_setups_df = df.copy()
 
     keep_labels = ACTIONABLE_LABELS.copy()
-    if args.include_late_chase:
-        keep_labels.add(LATE_CHASE_LABEL)
+    if not args.no_chase:
+        keep_labels |= CHASE_LABELS
 
     filtered = df[
         df["setup_label"].isin(keep_labels) &
