@@ -10,6 +10,7 @@ class CatalystEvent:
     recency_days: float  # days since the event/headline
     confidence: float    # 0..1
     source: str = ""     # "news" | "chatter" | "claude"
+    detail: str = ""     # quoted text or matched headline
 
 
 @dataclass

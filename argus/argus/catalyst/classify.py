@@ -78,6 +78,7 @@ def _parse_events(text: str) -> list[CatalystEvent]:
             recency_days=float(item.get("recency_days", 3) or 3),
             confidence=max(0.0, min(1.0, float(item.get("confidence", 0.5) or 0.5))),
             source="claude",
+            detail=str(item.get("source_snippet", "") or ""),
         ))
     return out
 
@@ -119,9 +120,16 @@ def keyword_fallback(pool: CatalystPool, *, recency_days: float = 3.0) -> list[C
         if ctype in seen:
             continue
         if re.search(pattern, blob):
+            # Find first headline matching the pattern for detail
+            detail = ""
+            for headline in pool.news_texts:
+                if re.search(pattern, headline.lower()):
+                    detail = headline[:120]
+                    break
             events.append(CatalystEvent(
                 type=ctype, direction=_DIRECTION.get(ctype, 0),
                 recency_days=recency_days, confidence=0.6, source="chatter",
+                detail=detail,
             ))
             seen.add(ctype)
     for tag in pool.chatter_tags:
