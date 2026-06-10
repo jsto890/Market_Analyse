@@ -127,7 +127,9 @@ Why catalyst    earnings in 8d · ⚡ contract win 3d ago · ⚠ dilution risk
 - **Returns:** trailing context returns (the existing `ret_Nd` columns), colour-coded as today. Moved out of the summary table into here.
 - **Why technical:** top 5 LONG-voting Argus agents by confidence, shown as their cleaned `note` text (raw agent names hidden). Reuses the existing `_distill_notes` ranking logic against `card.votes`.
 - **Why fundamental (metrics only):** revenue growth, profit margin, analyst rating + target upside (+ # analysts), short %-float, days-to-cover — from the catalyst leg's `metrics`. Show whichever are present.
-- **Why catalyst (events/flags only):** detected events with direction + recency (`cat.events`: "M&A rumour", "FDA approval 3d ago", "contract win"), gate flags (`cat.flags`: ⚡ hard-positive, ⚠ DILUTION, ⛔ STRUCTURAL), and earnings proximity ("earnings in 8d"). Shows "— none detected" when empty.
+- **Why catalyst (events/flags only):** detected events with direction, **source detail**, and recency (`cat.events`), gate flags (`cat.flags`: ⚡ hard-positive, ⚠ DILUTION, ⛔ STRUCTURAL), and earnings proximity ("earnings in 8d"). Each event shows its short source snippet so the "who/what" is visible, e.g. `contract win — "AMD signs $5B datacenter deal with Oracle" (3d ago)`, `M&A rumour — "Reuters: X in talks to acquire Y"`, `FDA approval — "Phase 3 for [drug] met endpoint" (3d ago)`. Falls back to the bare label when no snippet exists. Shows "— none detected" when empty.
+
+  **Required change to capture the snippet** (currently discarded): add a `detail: str = ""` field to `CatalystEvent` (`argus/catalyst/types.py`); in `classify.py` `_parse_events`, store the LLM's already-returned `source_snippet` into `detail`; in `keyword_fallback`, attach the matched headline text. The classifier prompt already requests `source_snippet` — only the parsing/storage is missing.
 
 The split: **fundamentals are the metrics, catalysts are the events/flags/timing.**
 
@@ -144,7 +146,8 @@ Per-ticker verbose detail blocks (old format), and the table columns: setup_labe
 ## Data availability (verified)
 - `card.votes: List[Vote]` — all 70 technical agent votes (agent, verdict, confidence, note). ✓
 - `_distill_notes(votes, verdict, limit)` — existing ranking by agreement+confidence. ✓
-- `cat.votes` (5 sub-agents), `cat.events` (type/direction/recency), `cat.flags` (gate flags), `cat.metrics` (rev growth, margin, analyst target/rating, short%, dtc, days_to_earnings). ✓
+- `cat.votes` (5 sub-agents), `cat.events` (type/direction/recency — `detail` field to be added), `cat.flags` (gate flags), `cat.metrics` (rev growth, margin, analyst target/rating, short%, dtc, days_to_earnings). ✓
+- `source_snippet` already produced by the Claude classifier prompt but discarded in `_parse_events`; only storage is missing. ✓
 - `card.sector` (yfinance sector) present; `industry` to be added to `gather_pool`. ✓
 
 ## Out of scope
