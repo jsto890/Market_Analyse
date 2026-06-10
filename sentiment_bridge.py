@@ -581,15 +581,8 @@ def _build_detail_block(r: dict) -> list[str]:
     conv = "⚡ STRONG" if r["high_conviction"] else "✅ GOOD"
     header = f"### {r['ticker']} — {conv} ({r['combined_score']:+.2f})"
 
-    # Returns — colour-coded HTML spans
-    ret_parts = []
-    for label, key in _RET_PERIODS:
-        v = r.get(key)
-        if v is None or pd.isna(v):
-            continue
-        color = "#22c55e" if v >= 0 else "#ef4444"
-        ret_parts.append(f'<span style="color:{color}">{label} {v:+.0f}%</span>')
-    returns_cell = " · ".join(ret_parts) if ret_parts else "—"
+    # Returns — colour-coded pills (background + monospace, one decimal)
+    returns_cell = _returns_pills(r)
 
     # Technicals — family-diverse notes
     votes = r.get("_votes") or []
