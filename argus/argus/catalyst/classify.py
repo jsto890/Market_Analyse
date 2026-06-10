@@ -137,7 +137,11 @@ def keyword_fallback(pool: CatalystPool, *, recency_days: float = 3.0) -> list[C
         for i, headline in enumerate(pool.news_texts):
             if re.search(pattern, headline.lower()):
                 ts = pool.news_timestamps[i] if i < len(pool.news_timestamps) else None
-                actual_recency = _ts_to_recency(ts, now) if ts else recency_days
+                # For earnings events use the actual earnings date, not the news headline date
+                if ctype in ("earnings_beat", "earnings_miss") and pool.metrics.get("last_earnings_ts"):
+                    actual_recency = _ts_to_recency(pool.metrics["last_earnings_ts"], now)
+                else:
+                    actual_recency = _ts_to_recency(ts, now) if ts else recency_days
                 events.append(CatalystEvent(
                     type=ctype, direction=_DIRECTION.get(ctype, 0),
                     recency_days=actual_recency, confidence=0.6, source="chatter",

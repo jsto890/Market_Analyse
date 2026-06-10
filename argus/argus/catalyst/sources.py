@@ -36,6 +36,76 @@ def _safe(fn, ticker, default):
         return default
 
 
+def _earnings_from_yf(ticker: str) -> dict:
+    """Last earnings date + EPS actual/estimate from yfinance earnings_dates."""
+    try:
+        import yfinance as yf
+        import math
+        from datetime import datetime, timezone
+        hist = yf.Ticker(ticker).earnings_dates
+        if hist is None or hist.empty:
+            return {}
+        now = datetime.now(timezone.utc)
+        try:
+            past = hist[hist.index < now]
+        except TypeError:
+            past = hist[hist.index < now.replace(tzinfo=None)]
+        if past.empty:
+            return {}
+        row = past.iloc[0]
+        result: dict = {}
+        try:
+            result["last_earnings_ts"] = row.name.timestamp()
+        except Exception:
+            pass
+        def _f(v):
+            return None if v is None or (isinstance(v, float) and math.isnan(v)) else float(v)
+        eps_act = _f(row.get("Reported EPS"))
+        eps_est = _f(row.get("EPS Estimate"))
+        if eps_act is not None:
+            result["eps_actual"] = eps_act
+        if eps_est is not None:
+            result["eps_estimate"] = eps_est
+        if eps_act is not None and eps_est is not None and eps_est != 0:
+            result["eps_surprise"] = eps_act - eps_est
+        return result
+    except Exception:
+        return {}
+
+
+def _upgrades_from_yf(ticker: str) -> dict:
+    """Most recent analyst upgrade/downgrade within 90 days."""
+    try:
+        import yfinance as yf
+        from datetime import datetime, timezone, timedelta
+        ud = yf.Ticker(ticker).upgrades_downgrades
+        if ud is None or ud.empty:
+            return {}
+        now = datetime.now(timezone.utc)
+        cutoff = now - timedelta(days=90)
+        try:
+            recent = ud[ud.index >= cutoff]
+        except Exception:
+            recent = ud.head(5)
+        if recent.empty:
+            return {}
+        row = recent.iloc[0]
+        result: dict = {}
+        firm = str(row.get("Firm", "") or "").strip()
+        if firm:
+            result["recent_ud_firm"] = firm
+        result["recent_ud_action"] = str(row.get("Action", "") or "").strip()
+        result["recent_ud_to"] = str(row.get("ToGrade", "") or "").strip()
+        result["recent_ud_from"] = str(row.get("FromGrade", "") or "").strip()
+        try:
+            result["recent_ud_ts"] = recent.index[0].timestamp()
+        except Exception:
+            pass
+        return result
+    except Exception:
+        return {}
+
+
 def _metrics_from_yf(info: dict) -> dict:
     m: dict = {}
     price = info.get("currentPrice") or info.get("regularMarketPrice")
@@ -69,6 +139,8 @@ def gather_pool(
     info = _safe(yf_info_fn, ticker, {})
     raw_news: list[dict] = list(_safe(yf_news_fn, ticker, []))
     metrics = _metrics_from_yf(info) if info else {}
+    metrics.update(_safe(_earnings_from_yf, ticker, {}))
+    metrics.update(_safe(_upgrades_from_yf, ticker, {}))
 
     if ibkr is not None:
         fund = _safe(lambda t: ibkr.fundamentals(t), ticker, {}) or {}

@@ -441,62 +441,53 @@ _EVENT_LABELS = {
 }
 
 
-def _extract_catalyst_ctx(event_type: str, detail: str) -> str:
-    """Extract a short, meaningful context string from a catalyst headline."""
+def _extract_catalyst_ctx(event_type: str, detail: str, metrics: dict | None = None) -> str:
+    """Extract a short, meaningful context string from a catalyst headline + metrics."""
+    metrics = metrics or {}
+
+    if event_type in ("earnings_beat", "earnings_miss"):
+        eps_surprise = metrics.get("eps_surprise")
+        eps_actual   = metrics.get("eps_actual")
+        eps_estimate = metrics.get("eps_estimate")
+        if eps_surprise is not None and eps_estimate is not None:
+            sign = "+" if eps_surprise >= 0 else ""
+            return f"EPS ${eps_actual:.2f} vs est ${eps_estimate:.2f} ({sign}${eps_surprise:.2f})"
+        if eps_actual is not None:
+            return f"EPS ${eps_actual:.2f}"
+
+    elif event_type in ("upgrade", "downgrade"):
+        firm   = metrics.get("recent_ud_firm", "")
+        to_g   = metrics.get("recent_ud_to", "")
+        from_g = metrics.get("recent_ud_from", "")
+        if firm and to_g and from_g:
+            return f"{firm}: {from_g} → {to_g}"
+        if firm and to_g:
+            return f"{firm} → {to_g}"
+        if firm:
+            return firm
+
     if not detail:
         return ""
     d = detail.strip()
 
-    if event_type == "earnings_beat":
-        m = _re.search(r'beat[s]?\s+(?:by\s+)?\$?([\d.]+)', d, _re.I)
+    if event_type in ("acquisition", "merger"):
+        m = (_re.search(r'acquir(?:es?|ing|ed)\s+([A-Z][A-Za-z0-9 &]{1,25})', d)
+             or _re.search(r'(?:buyout of|to buy|acquired by)\s+([A-Z][A-Za-z0-9 &]{1,25})', d, _re.I)
+             or _re.search(r'([A-Z][A-Za-z0-9]{2,20})\s+(?:Buyout|Acquisition|Merger)\b', d)
+             or _re.search(r'(?:merger with|acquisition of)\s+([A-Z][A-Za-z0-9 &]{1,25})', d, _re.I))
         if m:
-            return f"+${m.group(1)}"
-        m = _re.search(r'\$([\d.]+)\s+vs\.?\s+\$?([\d.]+)\s+(?:expected|est)', d, _re.I)
-        if m:
-            return f"${m.group(1)} vs ${m.group(2)} est"
-        m = _re.search(r'([\d.]+)%?\s+(?:beat|above)', d, _re.I)
-        if m:
-            return f"+{m.group(1)}%"
-
-    elif event_type == "earnings_miss":
-        m = _re.search(r'miss(?:ed|es)?\s+(?:by\s+)?\$?([\d.]+)', d, _re.I)
-        if m:
-            return f"-${m.group(1)}"
-
-    elif event_type in ("acquisition", "merger"):
-        # "acquires Eucalyptus" / "buyout of Company X" / "to buy XYZ"
-        m = _re.search(r'acquir(?:es?|ing|ed)\s+([A-Z][A-Za-z0-9 &]{1,25})', d)
-        if not m:
-            m = _re.search(r'(?:buyout of|to buy|acquired by)\s+([A-Z][A-Za-z0-9 &]{1,25})', d, _re.I)
-        if m:
-            return m.group(1).strip().rstrip(',.')[:25]
+            return m.group(1).strip().rstrip(',. ')[:25]
 
     elif event_type == "partnership":
         m = _re.search(
-            r'(?:partners? with|partnership with|teams? up with|collaborat\w+ with|alliance with)\s+([A-Z][A-Za-z0-9 &]{1,25})',
+            r'(?:partners? with|partnership with|teams? up with|collaborat\w+ with|alliance with|strategic\s+\w+\s+with)\s+([A-Z][A-Za-z0-9 &]{1,25})',
             d, _re.I,
         )
         if m:
-            return m.group(1).strip().rstrip(',.')[:25]
-
-    elif event_type in ("upgrade", "downgrade"):
-        # "JPMorgan upgrades RDDT" or "Goldman Sachs raises PT to $225"
-        m = _re.search(r'^([A-Z][A-Za-z\s&]{2,20}?)\s+(?:upgrade|downgrade|raises?|cuts?)', d)
-        if not m:
-            m = _re.search(r'(?:upgrade|downgrade)d?\s+by\s+([A-Z][A-Za-z\s&]{2,20})', d, _re.I)
-        firm = m.group(1).strip()[:20] if m else ""
-        # also try to find a price target
-        pt = _re.search(r'(?:price target|PT|target)\s+(?:to|of)?\s+\$?([\d]+)', d, _re.I)
-        if firm and pt:
-            return f"{firm}, tgt ${pt.group(1)}"
-        if firm:
-            return firm
-        if pt:
-            return f"tgt ${pt.group(1)}"
+            return m.group(1).strip().rstrip(',. ')[:25]
 
     elif event_type == "contract":
-        # "wins $X contract with Company"
-        m = _re.search(r'\$([0-9.]+[BMK]?\s*(?:billion|million|bn|m)?)', d, _re.I)
+        m = _re.search(r'\$([0-9.]+\s*(?:billion|million|bn|m|B|M)?)', d, _re.I)
         if m:
             return m.group(1).strip()
 
@@ -591,16 +582,21 @@ def _build_detail_block(r: dict) -> list[str]:
     days_to_earnings = metrics.get("days_to_earnings")
     if days_to_earnings is not None and days_to_earnings >= 0:
         cat_bullets_list.append(f"earnings in {int(days_to_earnings)}d")
+    import time as _time
     cat_events = r.get("_cat_events") or []
     seen_types: set[str] = set()
     for event in cat_events:
         if event.type in seen_types:
             continue
         seen_types.add(event.type)
-        n_days = int(round(float(event.recency_days)))
+        # Use actual earnings date for earnings events (news headline dates are unreliable)
+        if event.type in ("earnings_beat", "earnings_miss") and metrics.get("last_earnings_ts"):
+            n_days = int(round((_time.time() - metrics["last_earnings_ts"]) / 86400))
+        else:
+            n_days = int(round(float(event.recency_days)))
         label = _EVENT_LABELS.get(event.type, event.type.replace("_", " "))
         prefix = "⚡" if event.direction > 0 else "⚠"
-        ctx = _extract_catalyst_ctx(event.type, getattr(event, "detail", ""))
+        ctx = _extract_catalyst_ctx(event.type, getattr(event, "detail", ""), metrics)
         age = f"{n_days}d ago" if n_days > 0 else "today"
         if ctx:
             cat_bullets_list.append(f"{prefix} {label} ({ctx}) · {age}")
