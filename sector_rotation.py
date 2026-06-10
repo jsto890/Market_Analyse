@@ -321,8 +321,7 @@ def build_rotation_section(force_refresh: bool = False,
         "## Sector Rotation",
         "_The industries we trade, ranked by **Rot** (momentum acceleration)._",
         "",
-        "- **n** — how many of the industry's top ~50 constituents had usable price data.",
-        "- **1W / 1M / 3M** — market-cap-weighted **% price return** of those constituents "
+        "- **1W / 1M / 3M** — market-cap-weighted **% price return** of the top ~50 constituents "
         "over the trailing 1 week / 1 month / 3 months.",
         "- **Rot** — momentum acceleration in **monthly % points** = 1M − (3M ÷ 3): "
         "the last month's return minus the average month over the quarter. "
@@ -331,14 +330,14 @@ def build_rotation_section(force_refresh: bool = False,
         "- **Δrank** — move up/down this leaderboard since the previous report "
         "(🟢▲ climbed, 🔴▼ fell, • unchanged, 🆕 new).",
         "",
-        "| Industry | n | 1W | 1M | 3M | Rot | Δrank |",
-        "|----------|---|----|----|----|-----|-------|",
+        "| Industry | 1W | 1M | 3M | Rot | Δrank |",
+        "|----------|----|----|----|-----|-------|",
     ]
     for r in scored:
         ret = r["returns"]
         delta = _rank_delta_tag(r["industry"], cur_ranks[r["industry"]], baseline)
         lines.append(
-            f"| {r['industry']} | {r.get('n', '')} | {_fmt_pct(ret.get('1W'))} | "
+            f"| {r['industry']} | {_fmt_pct(ret.get('1W'))} | "
             f"{_fmt_pct(ret.get('1M'))} | {_fmt_pct(ret.get('3M'))} | "
             f"{r['score']:+.1f} | {delta} |"
         )
