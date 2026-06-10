@@ -616,10 +616,10 @@ def _build_detail_block(r: dict) -> list[str]:
             cat_bullets_list.append(flag)
     cat_bullets = "<br>".join(f"• {item}" for item in cat_bullets_list) if cat_bullets_list else "• none detected"
 
-    # 2-column table: label | content. Escape any literal pipe in cell content —
-    # an unescaped | is parsed as a column delimiter and shatters the row.
+    # 2-column table: label | content. Escape pipes (else parsed as a column
+    # delimiter) and dollar signs (else Obsidian pairs them as LaTeX math).
     def _cell(s: str) -> str:
-        return s.replace("|", "\\|")
+        return s.replace("|", "\\|").replace("$", "\\$")
 
     table = [
         "| | |",
