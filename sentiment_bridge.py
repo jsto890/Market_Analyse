@@ -136,12 +136,66 @@ def _sentiment_bias(setup_label: str) -> float:
     }.get(setup_label, 0.0)
 
 
-def _catalyst_ibkr():
+# IBKR news enrichment. Fundamentals need a Reuters subscription the paper account
+# lacks (Error 10358), so IBKR is used ONLY for news headlines — prefetched on the
+# main thread (ib_insync is not thread-safe) and served to the Argus worker threads
+# via a read-only shim. Falls back to yfinance-only if the gateway is unreachable.
+_IBKR = None  # set in main() to an _IBKRNewsShim, else stays None
+
+
+class _IBKRNewsShim:
+    """Read-only stand-in for catalyst_leg's `ibkr` arg — prefetched news only."""
+    def __init__(self, news_by_sym: dict):
+        self._news = news_by_sym
+
+    def fundamentals(self, symbol: str) -> dict:
+        return {}  # no fundamentals subscription on the paper account — keep yfinance
+
+    def historical_news(self, symbol: str) -> list:
+        return self._news.get(symbol.upper(), [])
+
+
+def _prefetch_ibkr_news(symbols: list[str]):
+    """Pull recent IBKR news (timestamped) per symbol on the main thread. Best-effort."""
+    import re as _re
+    from datetime import datetime, timezone
     try:
         from argus.data.ibkr import IBKRClient
-        return IBKRClient.instance()
-    except Exception:
+        from ib_insync import Stock
+        client = IBKRClient.instance()
+        client.connect()
+        provs = "+".join(p.code for p in client.ib.reqNewsProviders())
+    except Exception as exc:
+        print(f"IBKR news unavailable ({str(exc)[:80]}) — yfinance only", file=sys.stderr)
         return None
+    if not provs:
+        return None
+    news_by_sym: dict[str, list] = {}
+    for sym in symbols:
+        try:
+            c = Stock(sym, "SMART", "USD")
+            client.ib.qualifyContracts(c)
+            items = client.ib.reqHistoricalNews(c.conId, provs, "", "", 10)
+            out = []
+            for it in items:
+                h = _re.sub(r"^\{[^}]*\}", "", getattr(it, "headline", "") or "").lstrip("* ").strip()
+                if not h:
+                    continue
+                ts = None
+                tstr = getattr(it, "time", "")
+                if tstr:
+                    try:
+                        ts = datetime.fromisoformat(str(tstr).replace("Z", "")).replace(
+                            tzinfo=timezone.utc).timestamp()
+                    except Exception:
+                        ts = None
+                out.append({"text": h, "ts": ts})
+            news_by_sym[sym.upper()] = out
+        except Exception:
+            news_by_sym[sym.upper()] = []
+    n_with = sum(1 for v in news_by_sym.values() if v)
+    print(f"IBKR news: {n_with}/{len(symbols)} symbols returned headlines")
+    return _IBKRNewsShim(news_by_sym)
 
 
 def _analyse_ticker(row: pd.Series) -> Optional[dict]:
@@ -177,7 +231,7 @@ def _analyse_ticker(row: pd.Series) -> Optional[dict]:
 
     try:
         cat = catalyst_leg(
-            ticker, setups_row=row, ibkr=None,
+            ticker, setups_row=row, ibkr=_IBKR,
             api_key=settings.anthropic_api_key,
         )
     except Exception:
@@ -888,6 +942,17 @@ def main() -> None:
     # ── run Argus analysis in parallel ────────────────────────────────────────
     rows = [row for _, row in filtered.iterrows()]
     results = []
+
+    # Prefetch IBKR news on the main thread (ib_insync is not thread-safe) and
+    # expose it to the workers via the read-only shim. No-ops to yfinance-only if
+    # the gateway is unreachable.
+    global _IBKR
+    news_symbols = sorted({
+        str(row["ticker"]).strip().upper() for row in rows
+        if str(row.get("ticker", "")).strip()
+    })
+    _IBKR = _prefetch_ibkr_news(news_symbols)
+
     print(f"Running Argus analysis on {len(rows)} tickers ({MAX_WORKERS} workers)…")
 
     with concurrent.futures.ThreadPoolExecutor(max_workers=MAX_WORKERS) as pool:

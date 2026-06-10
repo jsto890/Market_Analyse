@@ -14,7 +14,7 @@ class Settings(BaseSettings):
 
     # IBKR
     ibkr_host: str = "127.0.0.1"
-    ibkr_port: int = 7497
+    ibkr_port: int = 4002   # IB Gateway paper (7497 = TWS paper, 4001 = Gateway live)
     ibkr_client_id: int = 11
     ibkr_live_trading: bool = False
 
