@@ -4,8 +4,6 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import type { ScreenerResult } from "@/types/argus";
 
-const fetcher = (url: string) => fetch(url).then((r) => r.json());
-
 function verdictColor(v: string): string {
   if (v === "LONG") return "text-green-400";
   if (v === "SHORT") return "text-red-400";
