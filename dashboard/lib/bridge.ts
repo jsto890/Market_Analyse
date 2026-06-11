@@ -14,8 +14,16 @@ export function loadBridgeSignals(): BridgeRow[] {
     header: true,
     dynamicTyping: true,
     skipEmptyLines: true,
-    transform: (v) => (v === "True" ? true : v === "False" ? false : v),
+    transform: (v) => (v === "True" ? true : v === "False" ? false : v === "nan" ? null : v),
   });
 
-  return result.data as unknown as BridgeRow[];
+  return result.data.map((row) => {
+    const r = row as Record<string, unknown>;
+    return {
+      ...r,
+      conviction: r["conviction"] === "" ? null : r["conviction"],
+      next_earnings_date: r["next_earnings_date"] === "" ? null : r["next_earnings_date"],
+      earnings_in_days: r["earnings_in_days"] === "" ? null : r["earnings_in_days"],
+    } as unknown as BridgeRow;
+  });
 }

@@ -1,11 +1,14 @@
 export type Alignment = "ALIGNED" | "CONTRARIAN" | "DIVERGING" | "TECH_WAIT" | "NEUTRAL";
 export type Verdict = "LONG" | "SHORT" | "WAIT" | "NEUTRAL";
 export type EntryQuality = "clean" | "extended" | "pullback";
+export type Conviction = "high" | "med" | "low" | null;
+export type ReportGroup = "aligned" | "pullback" | "tech_fund" | "other";
 
 export interface BridgeRow {
   ticker: string;
   fetch_symbol: string;
   setup_label: string;
+  conviction: Conviction;
   quality_score: number;
   cluster_overlap: number;
   cluster_confirmed: boolean;
@@ -37,13 +40,27 @@ export interface BridgeRow {
   sentiment_score: number;
   tech_score: number;
   combined_score: number;
+  catalyst_score: number;
+  vote_event_catalyst: number;
+  vote_earnings_proximity: number;
+  vote_squeeze_setup: number;
+  vote_growth_profitability: number;
+  vote_analyst_upside: number;
+  gate_flags: string;
   alignment: Alignment;
   action_label: string;
   trade_style: string;
-  conviction: string;
+  combo: string;
+  ticker_regime: string;
+  n_eff: number;
   group1: boolean;
   group2: boolean;
   near_aligned: boolean;
+  report_group: ReportGroup;
+  theme: string;
+  industry: string;
+  next_earnings_date: string | null;
+  earnings_in_days: number | null;
   extra: string;
 }
 
