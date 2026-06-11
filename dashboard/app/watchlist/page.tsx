@@ -1,8 +1,6 @@
+import { MEDIAN_DAYS_TO_PEAK } from "@/lib/perf-constants";
+import WatchlistClient from "./WatchlistClient";
+
 export default function WatchlistPage() {
-  return (
-    <main className="max-w-5xl mx-auto px-4 py-6">
-      <h1 className="text-2xl font-bold text-white mb-2">Watchlist</h1>
-      <p className="text-sm text-muted">Coming soon</p>
-    </main>
-  );
+  return <WatchlistClient medianDaysToPeak={MEDIAN_DAYS_TO_PEAK} />;
 }
