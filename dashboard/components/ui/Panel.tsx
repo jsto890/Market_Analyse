@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, ReactNode } from "react";
+import { useState, useEffect, useId, ReactNode } from "react";
 import { ChevronDown } from "lucide-react";
 
 interface PanelProps {
@@ -22,6 +22,7 @@ export default function Panel({
   actions,
   children,
 }: PanelProps) {
+  const id = useId();
   const storageKey = persistKey ? `dash:panel:${persistKey}` : null;
 
   const [open, setOpen] = useState(defaultOpen);
@@ -54,6 +55,7 @@ export default function Panel({
             onClick={toggle}
             className="flex flex-1 items-center gap-2 text-left min-w-0"
             aria-expanded={open}
+            aria-controls={id}
           >
             <span className="font-medium text-[13px] truncate">{title}</span>
             {subtitle && (
@@ -61,7 +63,7 @@ export default function Panel({
             )}
             <ChevronDown
               size={14}
-              className="ml-auto shrink-0 text-muted transition-transform duration-200"
+              className="shrink-0 text-muted transition-transform duration-200"
               style={{ transform: open ? "rotate(0deg)" : "rotate(-90deg)" }}
             />
           </button>
@@ -73,9 +75,10 @@ export default function Panel({
             )}
           </div>
         )}
-        {actions && <div className="ml-auto flex items-center gap-2 shrink-0">{actions}</div>}
+        {actions && <div className="flex items-center gap-2 shrink-0">{actions}</div>}
       </div>
       <div
+        id={id}
         className="overflow-hidden transition-[max-height] duration-200"
         style={{
           maxHeight:

@@ -4,6 +4,10 @@ interface ScoreBarProps {
 }
 
 export default function ScoreBar({ value, showValue }: ScoreBarProps) {
+  if (!Number.isFinite(value)) {
+    return <span className="font-mono text-[13px] tabular-nums text-muted">—</span>;
+  }
+
   const clamped = Math.max(-1, Math.min(1, value));
   const isPos = clamped > 0;
   const pct = Math.abs(clamped) * 50;

@@ -41,23 +41,21 @@ export default function ConvictionDot({ value }: ConvictionDotProps) {
   }
 
   return (
-    <Tooltip.Provider delayDuration={300}>
-      <Tooltip.Root>
-        <Tooltip.Trigger asChild>
-          <span className="inline-flex cursor-default">
-            <Dots value={value} />
-          </span>
-        </Tooltip.Trigger>
-        <Tooltip.Portal>
-          <Tooltip.Content
-            className="rounded bg-elevated px-2 py-1 text-[12px] text-muted shadow-lg border border-line z-50"
-            sideOffset={4}
-          >
-            {TOOLTIP_TEXT}
-            <Tooltip.Arrow className="fill-elevated" />
-          </Tooltip.Content>
-        </Tooltip.Portal>
-      </Tooltip.Root>
-    </Tooltip.Provider>
+    <Tooltip.Root>
+      <Tooltip.Trigger asChild>
+        <span className="inline-flex cursor-default">
+          <Dots value={value} />
+        </span>
+      </Tooltip.Trigger>
+      <Tooltip.Portal>
+        <Tooltip.Content
+          className="rounded bg-elevated px-2 py-1 text-[12px] text-muted shadow-lg border border-line z-50"
+          sideOffset={4}
+        >
+          {TOOLTIP_TEXT}
+          <Tooltip.Arrow className="fill-elevated" />
+        </Tooltip.Content>
+      </Tooltip.Portal>
+    </Tooltip.Root>
   );
 }

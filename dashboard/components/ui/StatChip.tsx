@@ -29,21 +29,19 @@ export default function StatChip({ label, value, tone, tooltip }: StatChipProps)
   if (!tooltip) return inner;
 
   return (
-    <Tooltip.Provider delayDuration={300}>
-      <Tooltip.Root>
-        <Tooltip.Trigger asChild>
-          <span className="cursor-default">{inner}</span>
-        </Tooltip.Trigger>
-        <Tooltip.Portal>
-          <Tooltip.Content
-            className="rounded bg-elevated px-2 py-1 text-[12px] text-muted shadow-lg border border-line z-50"
-            sideOffset={4}
-          >
-            {tooltip}
-            <Tooltip.Arrow className="fill-elevated" />
-          </Tooltip.Content>
-        </Tooltip.Portal>
-      </Tooltip.Root>
-    </Tooltip.Provider>
+    <Tooltip.Root>
+      <Tooltip.Trigger asChild>
+        <span className="cursor-default">{inner}</span>
+      </Tooltip.Trigger>
+      <Tooltip.Portal>
+        <Tooltip.Content
+          className="rounded bg-elevated px-2 py-1 text-[12px] text-muted shadow-lg border border-line z-50"
+          sideOffset={4}
+        >
+          {tooltip}
+          <Tooltip.Arrow className="fill-elevated" />
+        </Tooltip.Content>
+      </Tooltip.Portal>
+    </Tooltip.Root>
   );
 }

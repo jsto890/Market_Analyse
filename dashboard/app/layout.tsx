@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 import Nav from "@/components/Nav";
 import GKeySpotlight from "@/components/GKeySpotlight";
+import TooltipProvider from "@/components/ui/TooltipProvider";
 
 export const metadata: Metadata = {
   title: "Argus Dashboard",
@@ -16,9 +17,11 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body style={{ fontFamily: "system-ui, sans-serif" }}>
-        <Nav />
-        <GKeySpotlight />
-        {children}
+        <TooltipProvider>
+          <Nav />
+          <GKeySpotlight />
+          {children}
+        </TooltipProvider>
       </body>
     </html>
   );

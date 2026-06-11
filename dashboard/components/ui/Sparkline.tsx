@@ -5,17 +5,19 @@ interface SparklineProps {
 }
 
 export default function Sparkline({ values, w = 120, h = 32 }: SparklineProps) {
-  if (values.length < 2) {
+  const clean = values.filter(Number.isFinite);
+
+  if (clean.length < 2) {
     return <svg width={w} height={h} aria-hidden="true" />;
   }
 
-  const min = Math.min(...values);
-  const max = Math.max(...values);
+  const min = Math.min(...clean);
+  const max = Math.max(...clean);
   const range = max - min || 1;
 
-  const points = values
+  const points = clean
     .map((v, i) => {
-      const x = (i / (values.length - 1)) * w;
+      const x = (i / (clean.length - 1)) * w;
       const y = h - ((v - min) / range) * (h - 2) - 1;
       return `${x.toFixed(1)},${y.toFixed(1)}`;
     })
