@@ -3,7 +3,7 @@ import path from "path";
 
 declare global { var __argusDb: Database.Database | undefined }
 
-const NEW_COLS: Record<string, string> = {
+export const NEW_COLS: Record<string, string> = {
   conviction: "TEXT", action_label: "TEXT", trade_style: "TEXT", combo: "TEXT",
   ticker_regime: "TEXT", n_eff: "REAL", report_group: "TEXT", near_aligned: "INTEGER",
   sector: "TEXT", industry: "TEXT", theme: "TEXT", mentions: "INTEGER",
@@ -30,7 +30,7 @@ export function openDb(dbPath: string): Database.Database {
     );
   `);
   const existing = new Set(
-    db.prepare("PRAGMA table_info(signals)").all().map((r: any) => r.name)
+    db.prepare("PRAGMA table_info(signals)").all().map((r) => (r as { name: string }).name)
   );
   for (const [c, t] of Object.entries(NEW_COLS))
     if (!existing.has(c)) db.exec(`ALTER TABLE signals ADD COLUMN ${c} ${t}`);
