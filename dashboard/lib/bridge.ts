@@ -17,5 +17,5 @@ export function loadBridgeSignals(): BridgeRow[] {
     transform: (v) => (v === "True" ? true : v === "False" ? false : v),
   });
 
-  return result.data as BridgeRow[];
+  return result.data as unknown as BridgeRow[];
 }
