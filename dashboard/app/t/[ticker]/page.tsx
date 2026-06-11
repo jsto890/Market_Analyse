@@ -10,6 +10,7 @@ import OptionsPanel from "@/components/ticker/OptionsPanel";
 import AiPanel from "@/components/ticker/AiPanel";
 import { loadBridgeSignals } from "@/lib/bridge";
 import { signalHistory } from "@/lib/signals";
+import { MEDIAN_PEAK_PCT, MEDIAN_DAYS_TO_PEAK } from "@/lib/perf-constants";
 
 async function fetchHistory(ticker: string): Promise<Bar[]> {
   try {
@@ -90,6 +91,8 @@ export default async function TickerPage({
           bridgeRow={bridgeRow}
           signalHistory={history}
           lastClose={lastClose}
+          medianPeakPct={MEDIAN_PEAK_PCT}
+          medianDaysToPeak={MEDIAN_DAYS_TO_PEAK}
         />
       </section>
 

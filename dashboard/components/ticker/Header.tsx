@@ -5,7 +5,6 @@ import useSWR from "swr";
 import * as Tooltip from "@radix-ui/react-tooltip";
 import Badge from "@/components/ui/Badge";
 import ConvictionDot from "@/components/ui/ConvictionDot";
-import { MEDIAN_PEAK_PCT, MEDIAN_DAYS_TO_PEAK } from "@/lib/perf-constants";
 import type { BridgeRow, Conviction } from "@/types/bridge";
 
 interface SignalRow {
@@ -21,6 +20,8 @@ interface HeaderProps {
   bridgeRow: BridgeRow | null;
   signalHistory: SignalRow[];
   lastClose: number | null; // from server-fetched history bars
+  medianPeakPct?: number;
+  medianDaysToPeak?: number;
 }
 
 interface QuoteData {
@@ -121,6 +122,8 @@ export default function Header({
   bridgeRow,
   signalHistory,
   lastClose,
+  medianPeakPct = 23,
+  medianDaysToPeak = 7,
 }: HeaderProps) {
   const { data: quote } = useSWR<QuoteData>(
     `/api/argus/quote/${ticker}`,
@@ -166,7 +169,7 @@ export default function Header({
         ) : null}
         {" · "}
         <span className="text-muted">
-          median pick peaks +{MEDIAN_PEAK_PCT}% @ ~{MEDIAN_DAYS_TO_PEAK}d
+          median pick peaks +{medianPeakPct}% @ ~{medianDaysToPeak}d
         </span>
       </p>
     );
