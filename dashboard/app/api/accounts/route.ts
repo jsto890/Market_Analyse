@@ -9,6 +9,8 @@ import {
   TIER_ORDER,
 } from "@/types/accounts";
 
+export const dynamic = "force-dynamic";
+
 const CSV_PATH = path.join(
   "/Users/josephstorey/Market_Review/reports/account_backtest.csv"
 );
