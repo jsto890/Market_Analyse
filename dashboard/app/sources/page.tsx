@@ -132,11 +132,7 @@ export default function SourcesPage() {
           if (!rows || rows.length === 0) return null;
           return (
             <Panel key={tier} title={TIER_LABEL[tier]} persistKey={`sources-panel-${tier}`}>
-              {rows.length === 0 ? (
-                <EmptyState message="No accounts in this tier" />
-              ) : (
-                <TierSection accounts={rows} />
-              )}
+              <TierSection accounts={rows} />
             </Panel>
           );
         })}

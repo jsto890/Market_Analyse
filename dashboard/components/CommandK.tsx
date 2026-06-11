@@ -26,12 +26,12 @@ export function isEditableTarget(): boolean {
   );
 }
 
-function readWatchlist(): string[] {
+async function fetchWatchlistTickers(): Promise<string[]> {
   try {
-    const raw = localStorage.getItem("argus_watchlist");
-    if (!raw) return [];
-    const parsed = JSON.parse(raw) as WatchlistEntry[] | string[];
-    return parsed.map((e) => (typeof e === "string" ? e : e.ticker)).filter(Boolean);
+    const r = await fetch("/api/watchlist");
+    if (!r.ok) return [];
+    const data: { watchlist: WatchlistEntry[] } = await r.json();
+    return (data.watchlist ?? []).map((e) => e.ticker).filter(Boolean);
   } catch {
     return [];
   }
@@ -89,6 +89,7 @@ export default function CommandK() {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [bridgeRows, setBridgeRows] = useState<BridgeRow[]>([]);
+  const [watchlistTickers, setWatchlistTickers] = useState<string[]>([]);
   const [selectedIdx, setSelectedIdx] = useState(0);
   const router = useRouter();
   const inputRef = useRef<HTMLInputElement>(null);
@@ -145,12 +146,12 @@ export default function CommandK() {
           .then((d: { signals: BridgeRow[] }) => setBridgeRows(d.signals ?? []))
           .catch(() => {});
       }
+      fetchWatchlistTickers().then(setWatchlistTickers).catch(() => {});
       return () => clearTimeout(id);
     }
   }, [open]);
 
-  const watchlist = open ? readWatchlist() : [];
-  const results = buildResults(query, bridgeRows, watchlist);
+  const results = buildResults(query, bridgeRows, watchlistTickers);
 
   useEffect(() => {
     setSelectedIdx(0);

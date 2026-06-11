@@ -128,9 +128,11 @@ interface PinnedRowEnriched extends WatchlistEntry {
 function PinnedSection({
   entries,
   onUnpin,
+  onAdded,
 }: {
   entries: WatchlistEntry[];
   onUnpin: (ticker: string) => Promise<void>;
+  onAdded: () => void;
 }) {
   const { data: bridgeData } = useSWR<{ signals: Array<{ ticker: string; action_label: string }> }>(
     "/api/bridge",
@@ -149,34 +151,44 @@ function PinnedSection({
   // Fetch histories for pinned tickers
   useEffect(() => {
     if (tickers.length === 0) return;
+    let cancelled = false;
     const results = new Map<string, HistoryResult>();
     fetchHistoriesWithConcurrency(tickers, (ticker, bars) => {
+      if (cancelled) return;
       results.set(ticker, extractHistory(bars));
       setHistMap(new Map(results));
     });
+    return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tickersKey]);
 
   // Fetch last signal for each pinned ticker
   useEffect(() => {
     if (tickers.length === 0) return;
+    let cancelled = false;
     const sigMap = new Map<string, string>();
-    let resolved = 0;
-    for (const ticker of tickers) {
-      fetch(`/api/signals/history?ticker=${ticker}`)
-        .then((r) => r.json())
-        .then((rows: Array<{ date: string }>) => {
-          if (rows && rows.length > 0) {
-            const maxDate = rows.reduce((m, r) => (r.date > m ? r.date : m), "");
-            sigMap.set(ticker, maxDate);
+    async function fetchLastSignals() {
+      let idx = 0;
+      async function worker() {
+        while (idx < tickers.length) {
+          const ticker = tickers[idx++];
+          try {
+            const r = await fetch(`/api/signals/history?ticker=${ticker}`);
+            const rows: Array<{ date: string }> = await r.json();
+            if (!cancelled && rows && rows.length > 0) {
+              const maxDate = rows.reduce((m, row) => (row.date > m ? row.date : m), "");
+              sigMap.set(ticker, maxDate);
+            }
+          } catch {
+            // ignore
           }
-        })
-        .catch(() => {})
-        .finally(() => {
-          resolved++;
-          if (resolved === tickers.length) setLastSigMap(new Map(sigMap));
-        });
+        }
+      }
+      await Promise.all(Array.from({ length: CONCURRENCY }, () => worker()));
+      if (!cancelled) setLastSigMap(new Map(sigMap));
     }
+    fetchLastSignals();
+    return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tickersKey]);
 
@@ -229,6 +241,7 @@ function PinnedSection({
         setAddError(body?.error ?? "Failed to add ticker");
       } else {
         setAddInput("");
+        onAdded();
       }
     } catch {
       setAddError("Network error");
@@ -361,7 +374,7 @@ function PinnedSection({
           {best && best.sincePin !== null && (
             <StatChip
               label={`best (${best.ticker})`}
-              value={`+${best.sincePin.toFixed(1)}%`}
+              value={`${best.sincePin >= 0 ? "+" : ""}${best.sincePin.toFixed(1)}%`}
               tone="pos"
             />
           )}
@@ -412,11 +425,14 @@ function RecentPicksSection({ medianDaysToPeak }: { medianDaysToPeak: number }) 
 
   useEffect(() => {
     if (tickers.length === 0) return;
+    let cancelled = false;
     const results = new Map<string, number | null>();
     fetchHistoriesWithConcurrency(tickers, (ticker, bars) => {
+      if (cancelled) return;
       results.set(ticker, lastCloseFromBars(bars));
       setNowMap(new Map(results));
     });
+    return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tickersKey]);
 
@@ -549,7 +565,7 @@ export default function WatchlistClient({
       const tickers = (JSON.parse(raw) as unknown[]).map((e) =>
         typeof e === "string" ? e : (e as { ticker?: string }).ticker
       );
-      Promise.all(
+      Promise.allSettled(
         tickers
           .filter(Boolean)
           .map((t) =>
@@ -557,10 +573,11 @@ export default function WatchlistClient({
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({ ticker: t }),
-            })
+            }).then((r) => { if (!r.ok) throw new Error(r.statusText); })
           )
-      ).then(() => {
-        localStorage.removeItem("argus_watchlist");
+      ).then((results) => {
+        const allOk = results.every((r) => r.status === "fulfilled");
+        if (allOk) localStorage.removeItem("argus_watchlist");
         mutate();
       });
     } catch {
@@ -584,7 +601,7 @@ export default function WatchlistClient({
   return (
     <main className="max-w-5xl mx-auto px-4 py-6 space-y-4">
       <h1 className="text-2xl font-bold">Watchlist</h1>
-      <PinnedSection entries={entries} onUnpin={handleUnpin} />
+      <PinnedSection entries={entries} onUnpin={handleUnpin} onAdded={mutate} />
       <RecentPicksSection medianDaysToPeak={medianDaysToPeak} />
     </main>
   );
