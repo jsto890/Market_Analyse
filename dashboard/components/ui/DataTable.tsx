@@ -50,6 +50,7 @@ export default function DataTable<T>({
   const [sort, setSort] = useState<SortState | null>(defaultSort ?? null);
   const [hydrated, setHydrated] = useState(false);
   const [expandedKeys, setExpandedKeys] = useState<Set<string>>(new Set());
+  const [everExpandedKeys, setEverExpandedKeys] = useState<Set<string>>(new Set());
   const [focusedKey, setFocusedKey] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const rowRefs = useRef<Map<string, HTMLTableRowElement>>(new Map());
@@ -106,13 +107,11 @@ export default function DataTable<T>({
   function toggleExpand(key: string) {
     setExpandedKeys((prev) => {
       const next = new Set(prev);
-      if (next.has(key)) {
-        next.delete(key);
-      } else {
-        next.add(key);
-      }
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
       return next;
     });
+    setEverExpandedKeys((prev) => new Set(prev).add(key));
   }
 
   const handleContainerKeyDown = useCallback(
@@ -252,19 +251,21 @@ export default function DataTable<T>({
                   <tr>
                     <td
                       colSpan={columns.length}
-                      className="border-b border-line bg-elevated"
+                      className={isExpanded ? "border-b border-line bg-elevated" : ""}
                       style={{ padding: isExpanded ? undefined : "0" }}
                     >
-                      <div
-                        style={{
-                          maxHeight: isExpanded ? "600px" : "0px",
-                          overflow: "hidden",
-                          transition: "max-height 150ms ease-out",
-                        }}
-                        className={isExpanded ? "px-3" : ""}
-                      >
-                        {expandedRender(row)}
-                      </div>
+                      {everExpandedKeys.has(key) && (
+                        <div
+                          style={{
+                            maxHeight: isExpanded ? "600px" : "0px",
+                            overflow: "hidden",
+                            transition: "max-height 150ms ease-out",
+                          }}
+                          className={isExpanded ? "px-3" : ""}
+                        >
+                          {expandedRender(row)}
+                        </div>
+                      )}
                     </td>
                   </tr>
                 )}
