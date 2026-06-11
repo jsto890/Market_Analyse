@@ -184,27 +184,28 @@ def _next_earnings(fetch_sym: str) -> tuple[str, str]:
                             except Exception:
                                 continue
                 elif hasattr(cal, "columns"):
-                    # DataFrame layout: index = field names, single column of values
+                    # DataFrame layout: index = field names, columns = candidate dates
                     if "Earnings Date" in cal.index:
-                        raw = cal.loc["Earnings Date"].iloc[0]
-                        try:
-                            if isinstance(raw, datetime):
-                                d = raw.date()
-                            elif isinstance(raw, date):
-                                d = raw
-                            else:
-                                d = pd.Timestamp(raw).date()
-                            if d >= today:
-                                days = (d - today).days
-                                return d.isoformat(), str(days)
-                        except Exception:
-                            pass
+                        row_vals = cal.loc["Earnings Date"]
+                        candidates = row_vals.tolist() if hasattr(row_vals, "tolist") else [row_vals]
+                        for raw in candidates:
+                            try:
+                                if isinstance(raw, datetime):
+                                    d = raw.date()
+                                elif isinstance(raw, date):
+                                    d = raw
+                                else:
+                                    d = pd.Timestamp(raw).date()
+                                if d >= today:
+                                    days = (d - today).days
+                                    return d.isoformat(), str(days)
+                            except Exception:
+                                continue
         except Exception:
             pass
 
         # Fallback: get_earnings_dates
         try:
-            now_tz = datetime.now(timezone.utc)
             hist = tkr.get_earnings_dates(limit=8)
             if hist is not None and not hist.empty:
                 for idx in hist.index:
@@ -430,7 +431,7 @@ def _analyse_ticker(row: pd.Series) -> Optional[dict]:
         "group1":            group1,
         "group2":            group2,
         "near_aligned":      near_aligned,
-        "report_group":      _report_group(group1, group2, row.get("conviction", ""), sentiment_score),
+        "report_group":      _report_group(group1, group2, row.get("conviction") or "", sentiment_score),
         "theme":             sector_tuple[0] if sector_tuple[0] != "Other" else "",
         "industry":          sector_tuple[1],
         "next_earnings_date": next_earnings_date,
