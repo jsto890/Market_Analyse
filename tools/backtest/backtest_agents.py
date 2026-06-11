@@ -25,7 +25,8 @@ import numpy as np
 import pandas as pd
 import yfinance as yf
 
-ARGUS_ROOT = Path(__file__).parent / "argus"
+REPO_ROOT = Path(__file__).resolve().parents[2]
+ARGUS_ROOT = REPO_ROOT / "argus"
 sys.path.insert(0, str(ARGUS_ROOT))
 
 from argus.indicators import compute_all
@@ -44,7 +45,7 @@ from argus.action_card.builder import (
 )
 from argus.agents.base import Vote, Verdict
 
-OUT_CSV = Path(__file__).parent / "backtest_results.csv"
+OUT_CSV = REPO_ROOT / "reports" / "backtest_results.csv"
 
 # ── universe ──────────────────────────────────────────────────────────────────
 UNIVERSE: list[dict] = [
@@ -402,6 +403,7 @@ def main() -> None:
         return
 
     df = pd.DataFrame(all_records)
+    OUT_CSV.parent.mkdir(parents=True, exist_ok=True)
     df.to_csv(OUT_CSV, index=False)
     print(f"Saved → {OUT_CSV}\n")
 

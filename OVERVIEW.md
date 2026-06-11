@@ -1,6 +1,6 @@
 # Argus — Sentiment-Driven Long-Candidate Discovery
 
-**One line:** A local engine that monitors a curated set of market commentators, discovers the tickers they're talking about, and validates each one through a 70-agent technical ensemble plus a catalyst/fundamental leg — producing a daily, conviction-ranked shortlist of long candidates.
+**One line:** A local engine that discovers tickers from curated X accounts, broad cashtag/phrase timeline search, and on-demand cashtag lookup — then validates each candidate through a 70-agent technical ensemble plus a catalyst/fundamental leg, producing a daily conviction-ranked shortlist of long candidates.
 
 It is a **discovery and selection** tool. It surfaces and ranks ideas; entry timing, position sizing, and exits are left to the operator.
 
@@ -11,10 +11,12 @@ It is a **discovery and selection** tool. It surfaces and ranks ideas; entry tim
 A two-stage daily pipeline with a third scoring leg at validation time:
 
 **1. Sentiment discovery (Market Review — separate repo)**
-- Monitors **~24 curated X / Twitter accounts**, scored into **4 trust tiers** (core-alpha, swing-watchlist, long-term-research, sentiment-noise) by historical hit rate.
-- Extracts every cashtag mentioned and ranks each ticker by mention volume, distinct-account breadth, account trust, clustering/co-mention, and catalyst presence — roughly **~480 tickers surfaced per day**, labelled from `noise` up to `momentum_confirmed`.
+Three ingestion paths feed one ticker pool — not just the curated follow list:
+- **Curated accounts (~24)** — scored into **4 trust tiers** (core-alpha, swing-watchlist, long-term-research, sentiment-noise) by historical hit rate; recent-search queries pull cashtags from those handles only.
+- **Broad cashtag + phrase search** — daily scan across the full public timeline (`stock`, `breakout`, `small cap`, `earnings`, etc. + `has:cashtags`) to surface names outside the follow list; candidates are bucketed into emerging small/mid-caps (account breadth + recency) and running large-caps, then passed to the bridge as `--extra-tickers`.
+- **On-demand cashtag search** — `ticker_search.py` for any single `$TICKER` on the full timeline (flags which posters are in the curated list).
+- All paths extract cashtags and rank each ticker by mention volume, distinct-account breadth, account trust (where applicable), clustering/co-mention, and catalyst presence — roughly **~480 tickers surfaced per day**, labelled from `noise` up to `momentum_confirmed`.
 - Setup labels: `noise`, `avoid_wait`, `fresh_watch`, `building`, `momentum_confirmed`, `extended`, `late_chase`. Each ticker carries a **`conviction`** field (high/med/low) and the watchlist tracks an **`entry_signal`** on the watch→breakout transition.
-- Can also run on-demand cashtag search across the full public timeline for any single name.
 
 **2. Technical validation (Argus)**
 - Each qualifying ticker is run through **70 voting agents** across 9 families (prefilter, trend, momentum, volatility, volume, structure, institutional, weekly structure, risk filter), built on **65+ indicators** computed locally from daily market data (yfinance EOD).

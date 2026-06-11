@@ -1,6 +1,6 @@
 # Market Analyse — Sentiment × Technical Long-Candidate Discovery
 
-A local research stack that monitors curated market commentators, discovers tickers they're talking about, and validates each candidate through a **70-agent technical ensemble** plus a **5-vote catalyst/fundamental leg**. Output is a daily conviction-ranked shortlist, an Obsidian report, and a live Next.js dashboard.
+A local research stack that discovers tickers from curated X accounts, broad cashtag/phrase timeline search, and on-demand cashtag lookup — then validates each candidate through a **70-agent technical ensemble** plus a **5-vote catalyst/fundamental leg**. Output is a daily conviction-ranked shortlist, an Obsidian report, and a live Next.js dashboard.
 
 Runs entirely on your machine. No cloud hosting or auth. Optional integrations: **IBKR** (portfolio + execution), **Anthropic** (written analysis), and a companion **Market Review** repo for X/Twitter sentiment ingestion.
 
@@ -21,7 +21,7 @@ of future results. The author accepts no liability for any financial loss.
 
 | Stage | Module | Role |
 |-------|--------|------|
-| 1. Sentiment discovery | **Market Review** (separate repo) | Scrapes ~24 curated X accounts, extracts cashtags, classifies setup labels (`fresh_watch` → `momentum_confirmed`, etc.) |
+| 1. Sentiment discovery | **Market Review** (separate repo) | Curated X accounts **plus** broad cashtag/phrase timeline search and on-demand `$TICKER` search; extracts cashtags, classifies setup labels (`fresh_watch` → `momentum_confirmed`, etc.) |
 | 2. Technical validation | **Argus** (`argus/`) | 70 voting agents across 9 families on 65+ locally computed indicators |
 | 3. Fundamental leg | **Catalyst** (`argus/argus/catalyst/`) | 5 votes: event catalyst, earnings proximity, squeeze setup, growth/profitability, analyst upside |
 | 4. Blend + report | **`sentiment_bridge.py`** | Weighted 3-leg score, regime gating, sector rotation panel, Markdown + CSV |
@@ -33,6 +33,43 @@ Scoring weights live in [`config/weights.yaml`](config/weights.yaml) (default **
 
 ---
 
+## What you get automatically
+
+The daily pipeline is driven by **Market Review** (`run_daily.sh`, scheduled via **launchd at 08:00**). You do not need to run anything manually for the morning report.
+
+| When | What lands | Where |
+|------|------------|--------|
+| **Every morning ~08:00** | Full pipeline: X fetch → signal extract → price fetch → setup labels → broad cashtag discovery → Argus bridge → report copy | See steps below |
+| **Same run** | Daily report (Markdown) | `reports/bridge_latest.md` + dated `reports/bridge_YYYYMMDD_HHMM.md` |
+| **Same run** | Machine-readable bridge output (50+ columns) | `reports/bridge_latest.csv` + dated copy |
+| **Same run** | Obsidian note | `~/Documents/Obsidian Vault/Finance/Market Reports/<DATE> Daily Report.md` |
+| **When you open the dashboard** | Today's signals (from latest CSV) | `http://localhost:3000` — not pushed; reads local files |
+| **1st of each month** | Setup-label forward-return backtest | `docs/label_efficacy/` via `tools/label_efficacy.py` |
+
+**Not sent automatically:** email, Telegram, or webhook alerts. Those fire only when you explicitly call `POST /api/alert` or the MCP `argus_send_alert` tool (and only if SMTP / Telegram / webhook is configured in `argus/.env`).
+
+**Manual bridge runs** (e.g. `python sentiment_bridge.py` from the shell) skip broad cashtag discovery and produce fewer candidates than the scheduled daily run. Use `--extra-tickers` for parity — see [`docs/SESSION_HANDOFF.md`](docs/SESSION_HANDOFF.md).
+
+---
+
+## Sample daily report
+
+GitHub cannot render a PDF inline in README markdown. Below is a **scrollable preview** (one stitched image of the PDF pages inside a fixed-height box). [Download the full PDF](docs/assets/sample-daily-report.pdf).
+
+<div align="center">
+
+<div style="width: 100%; max-width: 720px; height: 480px; overflow-y: auto; overflow-x: hidden; border: 1px solid #30363d; border-radius: 8px; padding: 4px; background: #0d1117;">
+  <img src="docs/assets/report-preview/scroll-preview.png" alt="Sample daily report preview" width="100%" />
+</div>
+
+<p><a href="docs/assets/sample-daily-report.pdf"><strong>Download sample report (PDF)</strong></a></p>
+
+</div>
+
+To refresh the preview after replacing the PDF: `./scripts/render_report_preview.sh` (requires `poppler` + `imagemagick` — see [`docs/assets/README.md`](docs/assets/README.md)).
+
+---
+
 ## Repository layout
 
 ```
@@ -40,20 +77,21 @@ Market_Analyse/
 ├── sentiment_bridge.py      # daily report generator (Market Review → Argus → report)
 ├── sector_rotation.py       # RRG sector-rotation panel for the report
 ├── config/
-│   ├── weights.yaml         # bridge + catalyst_intra scoring weights
-│   ├── sector_taxonomy.yaml   # Family → sub-sector taxonomy
-│   ├── sector_cache.json      # ticker → yfinance sector cache
-│   └── rotation_ranks.json    # dated RRG rank snapshots (Δrank)
-├── reports/
-│   ├── bridge_latest.md       # latest daily report
-│   ├── bridge_latest.csv      # machine-readable bridge output
-│   └── selection_*.csv        # point-in-time selection backtests
-├── argus/                   # technical engine + REST API + MCP (see argus/README.md)
-├── dashboard/               # Next.js UI (see dashboard/README.md)
+│   ├── weights.yaml           # bridge + catalyst_intra scoring weights (committed)
+│   └── sector_taxonomy.yaml   # family → sub-sector taxonomy (committed)
+│   # sector_*.json caches are local-only (gitignored; regenerated by bridge)
+├── scripts/
+│   └── render_report_preview.sh  # README PDF → scroll PNG
+├── reports/                   # gitignored — bridge_*.md/csv, backtest outputs
+├── argus/                     # technical engine + REST API + MCP (see argus/README.md)
+├── dashboard/                 # Next.js UI (see dashboard/README.md)
 ├── tools/
-│   ├── label_efficacy.py    # monthly forward-return backtest by setup label
-│   └── weight_opt/          # weight optimisation experiments
-└── docs/                    # design specs, session handoffs, label efficacy
+│   ├── label_efficacy.py      # monthly forward-return backtest by setup label
+│   ├── analysis/              # selection / verdict research scripts
+│   ├── backtest/              # agent + selection backtests
+│   ├── validation/            # regime-gate validation
+│   └── weight_opt/            # weight optimisation experiments
+└── docs/                      # design specs, session handoffs, label efficacy, README assets
 ```
 
 ---

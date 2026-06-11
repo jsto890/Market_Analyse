@@ -12,11 +12,14 @@ research behind it, and the open follow-ups.
 
 Two repos feed one daily report:
 
-- **`~/Market_Review`** (Python pkg `stock_chatter`, `PYTHONPATH=src`) — scrapes X/Twitter
-  posts from followed accounts, extracts ticker signals, fetches prices, and
-  **classifies each ticker into a setup label** (`reports/ticker_setups.csv`,
-  `reports/watchlist_memory.csv`). Account list is in the **gitignored**
-  `src/stock_chatter/accounts_local.py`.
+- **`~/Market_Review`** (Python pkg `stock_chatter`, `PYTHONPATH=src`) — ingests X/Twitter
+  sentiment from **three paths**: (1) curated followed accounts, (2) daily **broad
+  cashtag + phrase search** across the full public timeline (`fetch_trending_cashtag_posts`
+  → `discovery.select_candidates`, merged into the bridge via `--extra-tickers`), and
+  (3) on-demand per-ticker cashtag search (`ticker_search.py`). All paths extract
+  ticker signals, fetch prices, and **classify each ticker into a setup label**
+  (`reports/ticker_setups.csv`, `reports/watchlist_memory.csv`). Account list is in the
+  **gitignored** `src/stock_chatter/accounts_local.py`.
 - **`~/Market_Analyse`** — `sentiment_bridge.py` reads `ticker_setups.csv`, runs each
   qualifying ticker through **Argus** (52-agent technical engine in `argus/`),
   adds a catalyst/fundamental leg, blends a score, and writes the daily report.

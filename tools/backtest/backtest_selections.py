@@ -20,12 +20,13 @@ from pathlib import Path
 
 import pandas as pd
 
-sys.path.insert(0, str(Path(__file__).parent / "argus"))
+REPO_ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(REPO_ROOT / "argus"))
 from argus.data.market import get_history
 from argus.action_card.builder import build_action_card
 from argus.agents.base import Verdict
 
-REPORTS = Path("reports")
+REPORTS = REPO_ROOT / "reports"
 ALIAS = {"SIVE": "SIVE.ST", "SIVEF": "SIVE.ST"}
 MIN_PIT_BARS = 250   # need ~1y of history before the signal for a stable card
 
