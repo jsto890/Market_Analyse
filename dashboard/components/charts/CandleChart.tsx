@@ -57,7 +57,9 @@ function computeEma(closes: number[], period: number): number[] {
 }
 
 function toUTC(ts: string): UTCTimestamp {
-  return (Date.parse(ts) / 1000) as UTCTimestamp;
+  const d = ts.slice(0, 10);
+  const [y, m, day] = d.split("-").map(Number);
+  return (Date.UTC(y, m - 1, day) / 1000) as UTCTimestamp;
 }
 
 interface Props {
@@ -103,6 +105,7 @@ export default function CandleChart({
   }>({ e20: null, e50: null, e200: null });
 
   const barsRef = useRef<Bar[]>(initialBars);
+  const aliveRef = useRef(true);
 
   const [activePeriod, setActivePeriod] = useState<Period>(
     initialPeriod ?? DEFAULT_PERSIST.period
@@ -212,6 +215,7 @@ export default function CandleChart({
         if (destroyed || !containerRef.current) return;
 
         const chart = createChart(containerRef.current, {
+          autoSize: true,
           height,
           layout: {
             background: { type: ColorType.Solid, color: "#0b0e14" },
@@ -236,6 +240,7 @@ export default function CandleChart({
           borderVisible: false,
         });
 
+        // levels are drawn once at mount — static per page load by design
         for (const l of levels) {
           candleSeries.createPriceLine({
             price: l.price,
@@ -300,6 +305,7 @@ export default function CandleChart({
 
     return () => {
       destroyed = true;
+      aliveRef.current = false;
       chartReady.current = false;
       chartRef.current?.remove();
       chartRef.current = null;
@@ -328,9 +334,11 @@ export default function CandleChart({
           `/api/argus/history/${encodeURIComponent(ticker)}?period=${PERIOD_PARAM[p]}`
         );
         if (!res.ok) throw new Error(`${res.status}`);
-        const json = (await res.json()) as { bars: Bar[] };
-        barsRef.current = json.bars;
-        applyData(json.bars);
+        const json = (await res.json()) as { bars?: Bar[] };
+        if (!aliveRef.current) return;
+        const bars = json.bars ?? [];
+        barsRef.current = bars;
+        applyData(bars);
         setActivePeriod(p);
       } catch {
         setFetchError(`failed to load ${p}`);

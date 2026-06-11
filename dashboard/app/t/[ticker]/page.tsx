@@ -6,7 +6,7 @@ async function fetchHistory(ticker: string): Promise<Bar[]> {
   try {
     const res = await fetch(
       `http://127.0.0.1:8088/api/history/${encodeURIComponent(ticker)}?period=6mo`,
-      { cache: "no-store" }
+      { cache: "no-store", signal: AbortSignal.timeout(5000) }
     );
     if (!res.ok) return [];
     const json = (await res.json()) as { bars: Bar[] };
