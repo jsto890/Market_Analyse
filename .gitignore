@@ -60,3 +60,6 @@ docs/assets/report-preview/page-*.png
 GITHUB_READINESS.md
 .worktrees/
 docs/weight_optimisation/price_cache.parquet
+argus.db
+argus.db-shm
+argus.db-wal
