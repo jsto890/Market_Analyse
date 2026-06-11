@@ -4,7 +4,11 @@ import useSWR from "swr";
 import Panel from "@/components/ui/Panel";
 import type { OptionsFlowData } from "@/types/argus";
 
-const fetcher = (url: string) => fetch(url).then((r) => r.json());
+const fetcher = (url: string) =>
+  fetch(url).then((r) => {
+    if (!r.ok) throw new Error(`${r.status}`);
+    return r.json();
+  });
 
 function fmt(n: number): string {
   return n.toLocaleString();
@@ -70,7 +74,7 @@ function UnusualTable({ rows, label }: { rows: unknown[]; label: string }) {
 type ApiResponse = OptionsFlowData | { error: string };
 
 function isErrorResponse(r: ApiResponse): r is { error: string } {
-  return "error" in r && !("symbol" in r);
+  return "error" in r && !("summary" in r);
 }
 
 export default function OptionsPanel({ ticker }: { ticker: string }) {
