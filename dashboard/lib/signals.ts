@@ -34,6 +34,12 @@ export const recentFirstFlags = (days: number) =>
               a.last_date
          FROM agg a
          JOIN signals f ON f.ticker=a.ticker AND f.date=a.first_date
+            AND f.report_group IN ('aligned','pullback','tech_fund')
+            AND f.rowid = (
+              SELECT MIN(rowid) FROM signals
+               WHERE ticker=a.ticker AND date=a.first_date
+                 AND report_group IN ('aligned','pullback','tech_fund')
+            )
         ORDER BY a.first_date DESC`
     )
     .all(`-${days} days`);

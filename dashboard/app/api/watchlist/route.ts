@@ -3,7 +3,7 @@ import { getDb } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
-const ARGUS_BASE = "http://127.0.0.1:8088/api";
+const ARGUS_BASE = (process.env.ARGUS_BASE ?? "http://127.0.0.1:8088") + "/api";
 const TICKER_RE = /^[A-Z][A-Z0-9.\-]{0,9}$/;
 
 function getWatchlist() {
@@ -47,9 +47,11 @@ export async function POST(req: NextRequest) {
 
 export async function DELETE(req: NextRequest) {
   const body = await req.json().catch(() => null);
-  const raw: string | undefined = body?.ticker;
+  const raw: unknown = body?.ticker;
   if (!raw) return Response.json({ error: "ticker required" }, { status: 400 });
+  if (typeof raw !== "string") return Response.json({ error: "invalid ticker" }, { status: 400 });
   const ticker = raw.trim().toUpperCase();
+  if (!TICKER_RE.test(ticker)) return Response.json({ error: "invalid ticker" }, { status: 400 });
   getDb().prepare("DELETE FROM watchlist WHERE ticker=?").run(ticker);
   return Response.json({ watchlist: getWatchlist() });
 }
