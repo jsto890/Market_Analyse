@@ -20,6 +20,7 @@ import numpy as np
 import pandas as pd
 
 _CONFIG_DIR = Path(__file__).parent / "config"
+_REPORTS_DIR = Path(__file__).parent / "reports"
 _CONSTITUENTS_CACHE = _CONFIG_DIR / "sector_constituents.json"
 _CACHE_TTL_DAYS = 7
 _TOP_N = 50           # constituents per industry
@@ -424,6 +425,35 @@ def build_rotation_section(force_refresh: bool = False,
     lines.append("")
 
     _save_rank_snapshot(today, cur_ranks)
+
+    _quadrant_plain = {
+        "🟢 Leading": "leading", "🟡 Weakening": "weakening",
+        "🔴 Lagging": "lagging", "🔵 Improving": "improving",
+    }
+    rotation_rows = []
+    for i, r in enumerate(scored):
+        ret = r["returns"]
+        rotation_rows.append({
+            "industry": r["industry"],
+            "quadrant":  _quadrant_plain.get(r["quadrant"], r["quadrant"].lower()),
+            "rs_ratio":  round(r["rs_ratio"], 3),
+            "rs_mom":    round(r["rs_mom"], 3),
+            "breadth":   round(r["breadth"], 1) if r.get("breadth") is not None else None,
+            "n":         r["n"],
+            "r1w":       round(ret["1W"], 2) if "1W" in ret else None,
+            "r1m":       round(ret["1M"], 2) if "1M" in ret else None,
+            "r3m":       round(ret["3M"], 2) if "3M" in ret else None,
+            "rank":      cur_ranks[r["industry"]],
+            "drank":     _rank_delta_tag(r["industry"], cur_ranks[r["industry"]], baseline),
+        })
+    try:
+        _REPORTS_DIR.mkdir(parents=True, exist_ok=True)
+        _tmp = _REPORTS_DIR / "rotation_latest.tmp.json"
+        _tmp.write_text(json.dumps(rotation_rows, indent=2))
+        _tmp.replace(_REPORTS_DIR / "rotation_latest.json")
+    except Exception:
+        pass
+
     return "\n".join(lines)
 
 

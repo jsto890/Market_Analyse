@@ -79,15 +79,14 @@ def apply_gates(combined, gates):
     return combined
 
 
-def market_regime() -> tuple[str, bool]:
+def market_regime() -> tuple[str, bool, dict]:
     """Classify the broad tape by running Argus's regime detector on SPY + QQQ.
 
-    Returns (label, risk_on). Chasing extended/late_chase names pays off in a
-    risk-on (trending-up) tape and gets punished when it turns — so the chase
-    labels are gated on this. Defaults to risk-on if data can't be fetched, to
-    preserve prior behaviour rather than over-restrict on a transient failure."""
+    Returns (label, risk_on, index_meta) where index_meta maps sym →
+    {verdict, score} for use in bridge_meta.json."""
     risk_on_count = total = 0
     detail = []
+    index_meta: dict[str, dict] = {}
     for sym in ("SPY", "QQQ"):
         try:
             df = get_history(sym, period="1y", interval="1d")
@@ -102,12 +101,17 @@ def market_regime() -> tuple[str, bool]:
             risk_on_count += int(ron)
             total += 1
             detail.append(f"{sym} {regime} {'↑' if uptrend else '↓'}")
+            card = build_action_card(sym, di)
+            index_meta[sym] = {
+                "verdict": card.verdict.value,
+                "score": round(card.score, 3),
+            }
         except Exception:
             continue
     if total == 0:
-        return "unknown (fetch failed)", True
+        return "unknown (fetch failed)", True, {}
     risk_on = risk_on_count == total  # require BOTH indices risk-on
-    return " · ".join(detail), risk_on
+    return " · ".join(detail), risk_on, index_meta
 
 # Tickers that use a cashtag not directly fetchable from yfinance.
 # Maps the cashtag used in Market_Review → (yfinance_symbol, currency_note).
@@ -990,7 +994,7 @@ def main() -> None:
 
     # Chase labels (extended/late_chase) are gated on the market regime: included
     # only in a risk-on tape, unless overridden. --no-chase off; --force-chase on.
-    regime_label, risk_on = market_regime()
+    regime_label, risk_on, index_meta = market_regime()
     if args.no_chase:
         include_chase = False
     elif args.force_chase:
@@ -1098,6 +1102,28 @@ def main() -> None:
                     full_setups_df=full_setups_df, regime_note=regime_note,
                     rotation_md=rotation_md)
     _write_csv(results,      out_dir / "bridge_latest.csv")
+
+    # ── bridge_meta.json (atomic) ─────────────────────────────────────────────
+    hc_count = sum(1 for r in results if r.get("high_conviction"))
+    meta = {
+        "generated_at": datetime.now().astimezone().isoformat(),
+        "regime": "risk_on" if risk_on else "risk_off",
+        "chase_enabled": include_chase,
+        "spy": index_meta.get("SPY"),
+        "qqq": index_meta.get("QQQ"),
+        "counts": {
+            "total":     len(results),
+            "aligned":   sum(1 for r in results if r.get("report_group") == "aligned"),
+            "pullback":  sum(1 for r in results if r.get("report_group") == "pullback"),
+            "tech_fund": sum(1 for r in results if r.get("report_group") == "tech_fund"),
+            "hc":        hc_count,
+        },
+    }
+    _tmp = out_dir / "bridge_meta.tmp.json"
+    with open(_tmp, "w") as _f:
+        json.dump(meta, _f)
+    os.replace(_tmp, out_dir / "bridge_meta.json")
+    print(f"Meta     → {out_dir / 'bridge_meta.json'}")
 
     # ── summary ───────────────────────────────────────────────────────────────
     aligned   = [r for r in results if r["alignment"] == "ALIGNED"]
