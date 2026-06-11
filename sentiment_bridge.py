@@ -1104,26 +1104,29 @@ def main() -> None:
     _write_csv(results,      out_dir / "bridge_latest.csv")
 
     # ── bridge_meta.json (atomic) ─────────────────────────────────────────────
-    hc_count = sum(1 for r in results if r.get("high_conviction"))
-    meta = {
-        "generated_at": datetime.now().astimezone().isoformat(),
-        "regime": "risk_on" if risk_on else "risk_off",
-        "chase_enabled": include_chase,
-        "spy": index_meta.get("SPY"),
-        "qqq": index_meta.get("QQQ"),
-        "counts": {
-            "total":     len(results),
-            "aligned":   sum(1 for r in results if r.get("report_group") == "aligned"),
-            "pullback":  sum(1 for r in results if r.get("report_group") == "pullback"),
-            "tech_fund": sum(1 for r in results if r.get("report_group") == "tech_fund"),
-            "hc":        hc_count,
-        },
-    }
-    _tmp = out_dir / "bridge_meta.tmp.json"
-    with open(_tmp, "w") as _f:
-        json.dump(meta, _f)
-    os.replace(_tmp, out_dir / "bridge_meta.json")
-    print(f"Meta     → {out_dir / 'bridge_meta.json'}")
+    try:
+        hc_count = sum(1 for r in results if r.get("high_conviction"))
+        meta = {
+            "generated_at": datetime.now().astimezone().isoformat(),
+            "regime": "risk_on" if risk_on else "risk_off",
+            "chase_enabled": include_chase,
+            "spy": index_meta.get("SPY") or {"verdict": None, "score": None},
+            "qqq": index_meta.get("QQQ") or {"verdict": None, "score": None},
+            "counts": {
+                "total":     len(results),
+                "aligned":   sum(1 for r in results if r.get("report_group") == "aligned"),
+                "pullback":  sum(1 for r in results if r.get("report_group") == "pullback"),
+                "tech_fund": sum(1 for r in results if r.get("report_group") == "tech_fund"),
+                "hc":        hc_count,
+            },
+        }
+        _tmp = out_dir / "bridge_meta.tmp.json"
+        with open(_tmp, "w") as _f:
+            json.dump(meta, _f)
+        os.replace(_tmp, out_dir / "bridge_meta.json")
+        print(f"Meta     → {out_dir / 'bridge_meta.json'}")
+    except Exception as e:
+        print(f"[bridge] meta sidecar failed: {e}")
 
     # ── summary ───────────────────────────────────────────────────────────────
     aligned   = [r for r in results if r["alignment"] == "ALIGNED"]

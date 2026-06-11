@@ -431,7 +431,7 @@ def build_rotation_section(force_refresh: bool = False,
         "🔴 Lagging": "lagging", "🔵 Improving": "improving",
     }
     rotation_rows = []
-    for i, r in enumerate(scored):
+    for r in scored:
         ret = r["returns"]
         ind = r["industry"]
         cur_rank = cur_ranks[ind]
@@ -454,8 +454,8 @@ def build_rotation_section(force_refresh: bool = False,
         _tmp = _REPORTS_DIR / "rotation_latest.tmp.json"
         _tmp.write_text(json.dumps(rotation_rows, indent=2))
         _tmp.replace(_REPORTS_DIR / "rotation_latest.json")
-    except Exception:
-        pass
+    except Exception as e:
+        print(f"[rotation] sidecar failed: {e}")
 
     return "\n".join(lines)
 
