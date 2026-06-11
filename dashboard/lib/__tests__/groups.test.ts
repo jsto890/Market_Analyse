@@ -30,4 +30,10 @@ describe("comboClass", () => {
     expect(comboClass("LNNL")).toBe("weak");
     expect(comboClass("LLNS")).toBe("neutral");
   });
+
+  it("classifies 5-char production combos on first 4 chars", () => {
+    expect(comboClass("LSNLL")).toBe("strong"); // prefix LSNL
+    expect(comboClass("LLNLL")).toBe("weak");   // prefix LLNL
+    expect(comboClass("LLLLL")).toBe("neutral");
+  });
 });

@@ -14,8 +14,9 @@ const WEAK = new Set(["LNNL", "LLNL"]);
 
 export function comboClass(combo: string | undefined | null): "strong" | "neutral" | "weak" {
   if (!combo) return "neutral";
-  if (STRONG.has(combo)) return "strong";
-  if (WEAK.has(combo)) return "weak";
+  const c4 = combo.slice(0, 4);
+  if (STRONG.has(c4)) return "strong";
+  if (WEAK.has(c4)) return "weak";
   return "neutral";
 }
 
@@ -32,9 +33,12 @@ export function tierSort(a: BridgeRow, b: BridgeRow): number {
   const cb = COMBO_CLASS_ORDER[comboClass(b.combo)];
   if (ca !== cb) return ca - cb;
 
-  const sa = Number.isFinite(a.combined_score) ? a.combined_score : -Infinity;
-  const sb = Number.isFinite(b.combined_score) ? b.combined_score : -Infinity;
-  return sb - sa;
+  const fa = Number.isFinite(a.combined_score);
+  const fb = Number.isFinite(b.combined_score);
+  if (!fa && !fb) return 0;
+  if (!fa) return 1;
+  if (!fb) return -1;
+  return b.combined_score - a.combined_score;
 }
 
 function deriveGroup(row: BridgeRow): ReportGroup {

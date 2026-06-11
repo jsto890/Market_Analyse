@@ -16,8 +16,8 @@ export interface BridgeRow {
   source_score: number;
   mentions: number;
   accounts: number;
-  catalysts: string;
-  top_accounts: string;
+  catalysts: string | null;
+  top_accounts: string | null;
   ret_1d: number | null;
   ret_5d: number | null;
   ret_20d: number | null;
@@ -46,7 +46,7 @@ export interface BridgeRow {
   vote_squeeze_setup: number;
   vote_growth_profitability: number;
   vote_analyst_upside: number;
-  gate_flags: string;
+  gate_flags: string | null;
   alignment: Alignment;
   action_label: string;
   trade_style: string;
@@ -56,9 +56,9 @@ export interface BridgeRow {
   group1: boolean;
   group2: boolean;
   near_aligned: boolean;
-  report_group: ReportGroup;
-  theme: string;
-  industry: string;
+  report_group: ReportGroup | null;
+  theme: string | null;
+  industry: string | null;
   next_earnings_date: string | null;
   earnings_in_days: number | null;
   extra: string;
