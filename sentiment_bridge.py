@@ -136,6 +136,98 @@ def _sentiment_bias(setup_label: str) -> float:
     }.get(setup_label, 0.0)
 
 
+def _report_group(group1: bool, group2: bool, conviction: str, sentiment_score: float) -> str:
+    if group1:
+        return "aligned"
+    if group2 and str(conviction).lower() == "high" and sentiment_score < NEAR_SENT:
+        return "pullback"
+    if group2:
+        return "tech_fund"
+    return "other"
+
+
+def _next_earnings(fetch_sym: str) -> tuple[str, str]:
+    """Return (ISO date string, days as int string) for the next earnings date.
+
+    Uses tkr.calendar first; falls back to get_earnings_dates(limit=8).
+    Returns ("", "") on any failure or when no future date is found."""
+    try:
+        import yfinance as yf
+        from datetime import date, datetime, timezone
+        today = date.today()
+        tkr = yf.Ticker(fetch_sym)
+
+        # Try calendar first
+        try:
+            cal = tkr.calendar
+            if cal is not None:
+                # May be a dict or DataFrame depending on yfinance version
+                if isinstance(cal, dict):
+                    raw = cal.get("Earnings Date")
+                    if raw is not None:
+                        # Could be a list/tuple of dates or a single value
+                        if hasattr(raw, "__iter__") and not isinstance(raw, str):
+                            candidates = list(raw)
+                        else:
+                            candidates = [raw]
+                        for c in candidates:
+                            try:
+                                if isinstance(c, datetime):
+                                    d = c.date() if hasattr(c, "date") else c
+                                elif isinstance(c, date):
+                                    d = c
+                                else:
+                                    d = pd.Timestamp(c).date()
+                                if d >= today:
+                                    days = (d - today).days
+                                    return d.isoformat(), str(days)
+                            except Exception:
+                                continue
+                elif hasattr(cal, "columns"):
+                    # DataFrame layout: index = field names, single column of values
+                    if "Earnings Date" in cal.index:
+                        raw = cal.loc["Earnings Date"].iloc[0]
+                        try:
+                            if isinstance(raw, datetime):
+                                d = raw.date()
+                            elif isinstance(raw, date):
+                                d = raw
+                            else:
+                                d = pd.Timestamp(raw).date()
+                            if d >= today:
+                                days = (d - today).days
+                                return d.isoformat(), str(days)
+                        except Exception:
+                            pass
+        except Exception:
+            pass
+
+        # Fallback: get_earnings_dates
+        try:
+            now_tz = datetime.now(timezone.utc)
+            hist = tkr.get_earnings_dates(limit=8)
+            if hist is not None and not hist.empty:
+                for idx in hist.index:
+                    try:
+                        ts = idx
+                        if hasattr(ts, "tzinfo") and ts.tzinfo is not None:
+                            d = ts.date()
+                        else:
+                            d = pd.Timestamp(ts).date()
+                        if d >= today:
+                            days = (d - today).days
+                            return d.isoformat(), str(days)
+                    except Exception:
+                        continue
+        except Exception:
+            pass
+
+    except Exception:
+        pass
+
+    return "", ""
+
+
 # IBKR news enrichment. Fundamentals need a Reuters subscription the paper account
 # lacks (Error 10358), so IBKR is used ONLY for news headlines — prefetched on the
 # main thread (ib_insync is not thread-safe) and served to the Argus worker threads
@@ -272,6 +364,9 @@ def _analyse_ticker(row: pd.Series) -> Optional[dict]:
     except Exception:
         sector_tuple = ("Other", "")
 
+    # ── next earnings ─────────────────────────────────────────────────────────
+    next_earnings_date, earnings_in_days = _next_earnings(fetch_sym)
+
     # ── group membership ──────────────────────────────────────────────────────
     # Soft sentiment band instead of a hard cliff: ≥ ALIGN_SENT is fully aligned;
     # [NEAR_SENT, ALIGN_SENT) is "near-aligned" (flagged), so a name like CGEH at
@@ -335,6 +430,11 @@ def _analyse_ticker(row: pd.Series) -> Optional[dict]:
         "group1":            group1,
         "group2":            group2,
         "near_aligned":      near_aligned,
+        "report_group":      _report_group(group1, group2, row.get("conviction", ""), sentiment_score),
+        "theme":             sector_tuple[0] if sector_tuple[0] != "Other" else "",
+        "industry":          sector_tuple[1],
+        "next_earnings_date": next_earnings_date,
+        "earnings_in_days":  earnings_in_days,
         # private keys stripped from CSV
         "_votes":            card.votes,
         "_cat_events":       cat.events,
@@ -795,15 +895,10 @@ def _write_markdown(
         lines.append("")
 
     # Section 2: Aligned (group1)
-    group1 = [r for r in results if r.get("group1")]
-    group2_all = [r for r in results if r.get("group2")]
-    # Pull high-conviction names whose sentiment is weak/negative (pulling back) into
-    # their own "quality on sale" bucket, so they're not buried among breakout names.
-    pullback = [r for r in group2_all
-                if str(r.get("conviction", "")).lower() == "high"
-                and r["sentiment_score"] < NEAR_SENT]
-    pullback_tickers = {r["ticker"] for r in pullback}
-    group2 = [r for r in group2_all if r["ticker"] not in pullback_tickers]
+    group1 = [r for r in results if r.get("report_group") == "aligned"]
+    pullback = [r for r in results if r.get("report_group") == "pullback"]
+    group2 = [r for r in results if r.get("report_group") == "tech_fund"]
+    group2_all = pullback + group2
     _by_combined = lambda r: r["combined_score"]  # noqa: E731
 
     lines += ["## Aligned — Sentiment + Technical + Fundamental all bullish", ""]
