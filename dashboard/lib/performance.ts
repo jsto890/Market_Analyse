@@ -17,16 +17,16 @@ export interface PerfStats {
   n: number;
   medianPeak: number;
   meanPeak: number;
-  reached10: { count: number; eligible: number };
-  reached25: { count: number; eligible: number };
-  reached50: { count: number; eligible: number };
+  reached10: { count: number; eligible: number; total: number };
+  reached25: { count: number; eligible: number; total: number };
+  reached50: { count: number; eligible: number; total: number };
   medianDaysToPeak: number;
   day0Count: number;
 }
 
 // Count weekdays (Mon-Fri) between two dates, inclusive of neither endpoint.
 // This matches the spec: C @ 1 calendar day excluded, A/B @ ~24/23 calendar days included.
-function weekdaysBetween(from: string, asOf: Date): number {
+export function weekdaysBetween(from: string, asOf: Date): number {
   const start = new Date(from + "T00:00:00Z");
   const end = new Date(
     `${asOf.getUTCFullYear()}-${String(asOf.getUTCMonth() + 1).padStart(2, "0")}-${String(asOf.getUTCDate()).padStart(2, "0")}T00:00:00Z`
@@ -43,7 +43,7 @@ function weekdaysBetween(from: string, asOf: Date): number {
   return count;
 }
 
-function median(values: number[]): number {
+export function median(values: number[]): number {
   if (values.length === 0) return 0;
   const sorted = [...values].sort((a, b) => a - b);
   const mid = Math.floor(sorted.length / 2);
@@ -52,7 +52,7 @@ function median(values: number[]): number {
     : Math.round((sorted[mid - 1] + sorted[mid]) / 2 * 10) / 10;
 }
 
-function mean(values: number[]): number {
+export function mean(values: number[]): number {
   if (values.length === 0) return 0;
   return Math.round((values.reduce((a, b) => a + b, 0) / values.length) * 10) / 10;
 }
@@ -67,14 +67,17 @@ export function perfStats(rows: PerfRow[], asOf: Date): PerfStats {
   const reached10 = {
     count: eligibleRows.filter((r) => r["peak_gain_%"] >= 10).length,
     eligible: eligibleRows.length,
+    total: n,
   };
   const reached25 = {
     count: eligibleRows.filter((r) => r["peak_gain_%"] >= 25).length,
     eligible: eligibleRows.length,
+    total: n,
   };
   const reached50 = {
     count: eligibleRows.filter((r) => r["peak_gain_%"] >= 50).length,
     eligible: eligibleRows.length,
+    total: n,
   };
 
   // Day-0 peaks: peaked same day as first_said (all rows, not just eligible)

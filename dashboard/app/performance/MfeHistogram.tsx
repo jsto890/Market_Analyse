@@ -22,10 +22,13 @@ interface Props {
 }
 
 export default function MfeHistogram({ buckets, medianPeak }: Props) {
-  // Find which bucket contains the median so we can highlight it
-  const medianBucketIndex = buckets.findIndex((b) => {
+  // Find which bucket contains the median so we can highlight it.
+  // The last bucket may be open-ended ("150%+") — treat it as [150, ∞).
+  const medianBucketIndex = buckets.findIndex((b, i) => {
+    if (b.label === "150%+") return medianPeak >= 150;
     const lo = parseInt(b.label.split("–")[0], 10);
-    return medianPeak >= lo && medianPeak < lo + 10;
+    const isLast = i === buckets.length - 1;
+    return isLast ? medianPeak >= lo : (medianPeak >= lo && medianPeak < lo + 10);
   });
 
   return (
@@ -55,17 +58,19 @@ export default function MfeHistogram({ buckets, medianPeak }: Props) {
             labelStyle={{ color: "var(--color-muted, #888)", marginBottom: 2 }}
             formatter={(value) => [value, "picks"]}
           />
-          <ReferenceLine
-            x={buckets[medianBucketIndex >= 0 ? medianBucketIndex : 0]?.label}
-            stroke="var(--color-warn, #f59e0b)"
-            strokeDasharray="4 2"
-            label={{
-              value: `median ${medianPeak}%`,
-              position: "top",
-              fontSize: 10,
-              fill: "var(--color-warn, #f59e0b)",
-            }}
-          />
+          {medianBucketIndex !== -1 && (
+            <ReferenceLine
+              x={buckets[medianBucketIndex]?.label}
+              stroke="var(--color-warn, #f59e0b)"
+              strokeDasharray="4 2"
+              label={{
+                value: `median ${medianPeak}%`,
+                position: "top",
+                fontSize: 10,
+                fill: "var(--color-warn, #f59e0b)",
+              }}
+            />
+          )}
           <Bar dataKey="count" radius={[2, 2, 0, 0]}>
             {buckets.map((_, i) => (
               <Cell

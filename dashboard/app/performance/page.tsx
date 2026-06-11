@@ -5,7 +5,7 @@ import Panel from "@/components/ui/Panel";
 import StatChip from "@/components/ui/StatChip";
 import EmptyState from "@/components/ui/EmptyState";
 import Badge from "@/components/ui/Badge";
-import { getPerfRows, perfStats } from "@/lib/performance";
+import { getPerfRows, perfStats, weekdaysBetween, median, mean } from "@/lib/performance";
 import { getDb } from "@/lib/db";
 import { comboClass } from "@/lib/groups";
 import MfeHistogram from "./MfeHistogram";
@@ -41,37 +41,8 @@ interface LabelRow {
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
-function median(vals: number[]): number {
-  if (vals.length === 0) return 0;
-  const s = [...vals].sort((a, b) => a - b);
-  const mid = Math.floor(s.length / 2);
-  return s.length % 2 === 1 ? s[mid] : Math.round((s[mid - 1] + s[mid]) / 2 * 10) / 10;
-}
-
-function mean(vals: number[]): number {
-  if (vals.length === 0) return 0;
-  return Math.round((vals.reduce((a, b) => a + b, 0) / vals.length) * 10) / 10;
-}
-
 function fmt(n: number, decimals = 1): string {
   return n.toFixed(decimals);
-}
-
-// Count weekdays between first_said and asOf (exclusive of both endpoints)
-function weekdaysBetween(from: string, asOf: Date): number {
-  const start = new Date(from + "T00:00:00Z");
-  const end = new Date(
-    `${asOf.getUTCFullYear()}-${String(asOf.getUTCMonth() + 1).padStart(2, "0")}-${String(asOf.getUTCDate()).padStart(2, "0")}T00:00:00Z`
-  );
-  let count = 0;
-  const cur = new Date(start);
-  cur.setUTCDate(cur.getUTCDate() + 1);
-  while (cur < end) {
-    const dow = cur.getUTCDay();
-    if (dow >= 1 && dow <= 5) count++;
-    cur.setUTCDate(cur.getUTCDate() + 1);
-  }
-  return count;
 }
 
 // ── Data loading ─────────────────────────────────────────────────────────────
@@ -84,13 +55,14 @@ function loadLabelEfficacy(): LabelRow[] | null {
     const raw = fs.readFileSync(path.join(dir, files[0]), "utf-8");
     const result = Papa.parse<Record<string, string>>(raw, { header: true, skipEmptyLines: true });
 
-    // Group by label
-    const byLabel = new Map<string, { f5: number[]; f10: number[]; f20: number[] }>();
+    // Group by label; n = raw row count (before f-field filtering)
+    const byLabel = new Map<string, { n: number; f5: number[]; f10: number[]; f20: number[] }>();
     for (const row of result.data) {
       const lbl = row.label;
       if (!lbl) continue;
-      if (!byLabel.has(lbl)) byLabel.set(lbl, { f5: [], f10: [], f20: [] });
+      if (!byLabel.has(lbl)) byLabel.set(lbl, { n: 0, f5: [], f10: [], f20: [] });
       const g = byLabel.get(lbl)!;
+      g.n++;
       if (row.f5 !== "" && row.f5 != null) g.f5.push(parseFloat(row.f5));
       if (row.f10 !== "" && row.f10 != null) g.f10.push(parseFloat(row.f10));
       if (row.f20 !== "" && row.f20 != null) g.f20.push(parseFloat(row.f20));
@@ -99,7 +71,7 @@ function loadLabelEfficacy(): LabelRow[] | null {
     return Array.from(byLabel.entries())
       .map(([label, g]) => ({
         label,
-        n: g.f5.length + g.f10.length > 0 ? Math.max(g.f5.length, g.f10.length, g.f20.length) : 0,
+        n: g.n,
         medianF5: g.f5.length > 0 ? Math.round(median(g.f5) * 10) / 10 : null,
         medianF10: g.f10.length > 0 ? Math.round(median(g.f10) * 10) / 10 : null,
         medianF20: g.f20.length > 0 ? Math.round(median(g.f20) * 10) / 10 : null,
@@ -117,7 +89,11 @@ function getFirstFlags(): Map<string, { action_label: string; combo: string }> {
       `SELECT ticker, action_label, combo
          FROM signals
         WHERE rowid IN (
-          SELECT MIN(rowid) FROM signals GROUP BY ticker
+          SELECT MIN(rowid) FROM signals
+           WHERE (ticker, date) IN (
+             SELECT ticker, MIN(date) FROM signals GROUP BY ticker
+           )
+           GROUP BY ticker
         )`
     )
     .all() as { ticker: string; action_label: string; combo: string }[];
@@ -144,17 +120,22 @@ export default function PerformancePage() {
   const stats = perfStats(rows, asOf);
   const firstFlags = getFirstFlags();
 
-  // Histogram buckets (10%-wide)
-  const buckets: { label: string; count: number }[] = [];
-  for (let lo = -10; lo <= 160; lo += 10) {
-    const hi = lo + 10;
-    buckets.push({
-      label: `${lo}–${hi}%`,
-      count: rows.filter((r) => r["peak_gain_%"] >= lo && r["peak_gain_%"] < hi).length,
+  // Histogram buckets (10%-wide); last bucket is open-ended (≥150%, no silent vanishing)
+  const allBuckets: { label: string; count: number }[] = [];
+  for (let lo = -10; lo < 150; lo += 10) {
+    allBuckets.push({
+      label: `${lo}–${lo + 10}%`,
+      count: rows.filter((r) => r["peak_gain_%"] >= lo && r["peak_gain_%"] < lo + 10).length,
     });
   }
-  // Trim trailing empty buckets
-  while (buckets.length > 1 && buckets[buckets.length - 1].count === 0) buckets.pop();
+  allBuckets.push({
+    label: "150%+",
+    count: rows.filter((r) => r["peak_gain_%"] >= 150).length,
+  });
+  // Find last bucket (before the open-ended one) that has data, then include everything up to 150%+
+  let lastNonEmpty = allBuckets.length - 2; // index of last fixed bucket
+  while (lastNonEmpty > 0 && allBuckets[lastNonEmpty].count === 0) lastNonEmpty--;
+  const buckets = allBuckets.slice(0, lastNonEmpty + 1).concat(allBuckets[allBuckets.length - 1]);
 
   // By action_label
   const tierMap = new Map<string, typeof rows>();
@@ -238,19 +219,21 @@ export default function PerformancePage() {
           />
           <StatChip
             label="reached +10%"
-            value={`${stats.reached10.count}/${stats.reached10.eligible} eligible`}
+            value={`${stats.reached10.count}/${stats.reached10.eligible}`}
             tone="pos"
-            tooltip={`${stats.reached10.eligible} picks ≥10 trading days old; younger picks excluded (right-censored)`}
+            tooltip={`${stats.reached10.eligible}/${stats.reached10.total} eligible (≥10 trading days); younger picks excluded (right-censored)`}
           />
           <StatChip
             label="reached +25%"
-            value={`${stats.reached25.count}/${stats.reached25.eligible} eligible`}
+            value={`${stats.reached25.count}/${stats.reached25.eligible}`}
             tone="pos"
+            tooltip={`${stats.reached25.eligible}/${stats.reached25.total} eligible (≥10 trading days)`}
           />
           <StatChip
             label="reached +50%"
-            value={`${stats.reached50.count}/${stats.reached50.eligible} eligible`}
+            value={`${stats.reached50.count}/${stats.reached50.eligible}`}
             tone="pos"
+            tooltip={`${stats.reached50.eligible}/${stats.reached50.total} eligible (≥10 trading days)`}
           />
           <StatChip
             label="median days-to-peak"
