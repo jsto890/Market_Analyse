@@ -93,13 +93,37 @@ export interface OptionsFlowData {
     pcr_oi: number;
     pcr_vol: number;
   };
-  iv_atm_call: number;
-  iv_atm_put: number;
-  iv_skew: number;
-  max_pain: number;
+  iv_atm_call: number | null;
+  iv_atm_put: number | null;
+  iv_skew: number | null;
+  max_pain: number | null;
   flags: string[];
   unusual_calls_top: unknown[];
   unusual_puts_top: unknown[];
+}
+
+export interface FundamentalsData {
+  symbol: string;
+  pe_ratio?: number | null;
+  eps_ttm?: number | null;
+  revenue_ttm?: number | null;
+  market_cap?: number | null;
+  analyst_target?: number | null;
+  analyst_rating?: string | null;
+  short_pct_float?: number | null;
+  dtc?: number | null;
+  week52_high?: number | null;
+  week52_low?: number | null;
+  iv_rank?: number | null;
+  earnings_date?: string | null;
+  days_to_earnings?: number | null;
+  error?: string;
+}
+
+export interface WrittenAnalysis {
+  mode: string;
+  report: string;
+  error?: string;
 }
 
 export interface ScreenerResult {

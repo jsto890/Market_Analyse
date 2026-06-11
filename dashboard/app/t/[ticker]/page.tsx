@@ -3,6 +3,11 @@ import Panel from "@/components/ui/Panel";
 import Header from "@/components/ticker/Header";
 import LevelsCard from "@/components/ticker/LevelsCard";
 import WhyPanel from "@/components/ticker/WhyPanel";
+import CatalystsCard from "@/components/ticker/CatalystsCard";
+import SentimentCard from "@/components/ticker/SentimentCard";
+import HistoryCard from "@/components/ticker/HistoryCard";
+import OptionsPanel from "@/components/ticker/OptionsPanel";
+import AiPanel from "@/components/ticker/AiPanel";
 import { loadBridgeSignals } from "@/lib/bridge";
 import { signalHistory } from "@/lib/signals";
 
@@ -56,6 +61,10 @@ export default async function TickerPage({
   // Last close from history bars (same-basis as chart)
   const lastClose = bars.length > 0 ? bars[bars.length - 1].close : null;
 
+  // Last-seen social signal date (max date in SQLite rows; null when none)
+  const lastSeen =
+    history.length > 0 ? history[history.length - 1].date : null;
+
   // Chart levels from bridge row
   const levels: Level[] = (() => {
     if (!bridgeRow) return [];
@@ -86,36 +95,32 @@ export default async function TickerPage({
 
       {/* Two-column layout */}
       <div className="grid grid-cols-[62fr_38fr] gap-4 max-[1100px]:grid-cols-1">
-        {/* Left: chart */}
-        <div className="min-h-[420px] 2xl:min-h-[560px]">
-          <Panel title="Chart">
-            <CandleChart
-              ticker={ticker}
-              initialBars={bars}
-              initialPeriod="6M"
-              levels={levels}
-              markers={markers}
-              height={420}
-              className="min-h-[420px] 2xl:min-h-[560px]"
-            />
-          </Panel>
+        {/* Left: chart + options */}
+        <div className="space-y-4">
+          <div className="min-h-[420px] 2xl:min-h-[560px]">
+            <Panel title="Chart">
+              <CandleChart
+                ticker={ticker}
+                initialBars={bars}
+                initialPeriod="6M"
+                levels={levels}
+                markers={markers}
+                height={420}
+                className="min-h-[420px] 2xl:min-h-[560px]"
+              />
+            </Panel>
+          </div>
+          <OptionsPanel ticker={ticker} />
         </div>
 
-        {/* Right: levels + scaffold panels */}
+        {/* Right: Levels → Why → Catalysts → Sentiment → History → AI */}
         <div className="space-y-4">
           {bridgeRow && <LevelsCard ticker={ticker} bridgeRow={bridgeRow} />}
-
           <WhyPanel ticker={ticker} />
-
-          <Panel title="Signal">
-            <p className="text-[12px] text-muted">Under construction</p>
-          </Panel>
-          <Panel title="Options Flow">
-            <p className="text-[12px] text-muted">Under construction</p>
-          </Panel>
-          <Panel title="Catalyst">
-            <p className="text-[12px] text-muted">Under construction</p>
-          </Panel>
+          <CatalystsCard ticker={ticker} bridgeRow={bridgeRow} />
+          <SentimentCard bridgeRow={bridgeRow} lastSeen={lastSeen} />
+          <HistoryCard rows={history} lastClose={lastClose} />
+          <AiPanel ticker={ticker} />
         </div>
       </div>
     </main>

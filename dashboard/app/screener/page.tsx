@@ -246,7 +246,7 @@ export default function ScreenerPage() {
               <div className="bg-[#161b22] border border-[#30363d] rounded p-4">
                 <ResultsTable
                   results={results}
-                  onDrill={(symbol) => router.push(`/action/${symbol}`)}
+                  onDrill={(symbol) => router.push(`/t/${symbol}`)}
                 />
               </div>
             )}

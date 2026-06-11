@@ -150,7 +150,7 @@ export default function PortfolioPage() {
                         </td>
                         <td className="py-1.5">
                           <button
-                            onClick={() => router.push(`/action/${pos.symbol}`)}
+                            onClick={() => router.push(`/t/${pos.symbol}`)}
                             className="text-xs text-blue-400 hover:text-blue-300 font-mono"
                           >
                             ›
