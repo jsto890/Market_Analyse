@@ -104,9 +104,9 @@ export default function ActionCardPage({
 
   function handlePinWatchlist() {
     const raw = localStorage.getItem("argus_watchlist");
-    const list: string[] = raw ? (JSON.parse(raw) as string[]) : [];
-    if (!list.includes(ticker)) {
-      list.push(ticker);
+    const list = raw ? (JSON.parse(raw) as unknown[]) : [];
+    if (!list.some((e) => (typeof e === "string" ? e === ticker : (e as { ticker: string }).ticker === ticker))) {
+      list.push({ ticker, pinned_at: new Date().toISOString() });
       localStorage.setItem("argus_watchlist", JSON.stringify(list));
     }
   }

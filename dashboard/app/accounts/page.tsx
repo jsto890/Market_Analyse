@@ -149,9 +149,6 @@ function WatchlistCard({
             S {signal.stop.toFixed(2)}{"  "}
             T {signal.target.toFixed(2)}
           </div>
-          <div className="text-xs text-gray-600">
-            Last signal: {new Date().toISOString().slice(0, 10)}
-          </div>
         </>
       ) : (
         <div className="text-xs text-gray-600">No signal today</div>
@@ -177,7 +174,10 @@ export default function AccountsPage() {
     try {
       const stored = localStorage.getItem(WATCHLIST_KEY);
       if (stored) {
-        setWatchlist(JSON.parse(stored) as WatchlistEntry[]);
+        const entries = (JSON.parse(stored) as unknown[]).map((e) =>
+          typeof e === "string" ? { ticker: e, pinned_at: "" } : (e as WatchlistEntry)
+        );
+        setWatchlist(entries);
       }
     } catch {
       // ignore parse errors
