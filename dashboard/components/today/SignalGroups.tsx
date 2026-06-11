@@ -243,6 +243,14 @@ function ExpandedRow({ row }: { row: BridgeRow }) {
         </span>
         <span className="text-muted">·</span>
         <span>R {fmtNum(row.risk_reward, 1)}x (indicative)</span>
+        {row.ret_1d != null && isFinite(row.ret_1d) && (
+          <>
+            <span className="text-muted">·</span>
+            <span>
+              ~{row.ret_1d >= 0 ? "+" : ""}{row.ret_1d.toFixed(1)}% vs entry (1d)
+            </span>
+          </>
+        )}
       </div>
       <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
         <span className="inline-flex items-center gap-1">
