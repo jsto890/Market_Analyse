@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useId } from "react";
 import useSWR from "swr";
 import { ChevronDown, AlertTriangle } from "lucide-react";
 import * as Tooltip from "@radix-ui/react-tooltip";
@@ -117,7 +117,7 @@ interface VoteRowProps {
   agent: string;
   direction: "LONG" | "SHORT" | "WAIT";
   confidence: number;
-  note: string;
+  note: string | null;
 }
 
 function VoteRow({ agent, direction, confidence, note }: VoteRowProps) {
@@ -150,6 +150,7 @@ function VoteRow({ agent, direction, confidence, note }: VoteRowProps) {
 
 export default function WhyPanel({ ticker }: { ticker: string }) {
   const [votesOpen, setVotesOpen] = useState(false);
+  const votesId = useId();
 
   const { data, error, isLoading, mutate } = useSWR<ActionCardData>(
     `/api/argus/action_card/${ticker}`,
@@ -219,7 +220,7 @@ export default function WhyPanel({ ticker }: { ticker: string }) {
   const ciHi = score_ci_hi ?? null;
   const ciWide = ciLo !== null && ciHi !== null && ciHi - ciLo > 0.25;
   const agrPct =
-    agreement_pct > 1 ? Math.round(agreement_pct) : Math.round(agreement_pct * 100);
+    agreement_pct >= 2 ? Math.round(agreement_pct) : Math.round(agreement_pct * 100);
   const inflationAbove = (inflation_gap ?? 0) > 0.15;
 
   const comboPrefix = combo ? combo.slice(0, 4) : null;
@@ -277,7 +278,6 @@ export default function WhyPanel({ ticker }: { ticker: string }) {
   const titleActions = (
     <div className="flex items-center gap-1.5 flex-wrap">
       <span className="font-mono text-[11px] tabular-nums text-muted">
-        WHY —{" "}
         <span
           className={
             verdict === "LONG"
@@ -293,6 +293,8 @@ export default function WhyPanel({ ticker }: { ticker: string }) {
         {ciStr && (
           <span className="text-muted">{ciStr}</span>
         )}
+        {" "}
+        <span className="text-foreground tabular-nums">{agrPct}%</span>
       </span>
       {ciWide && (
         <span className="inline-flex items-center rounded border border-warn/50 bg-warn/10 px-1.5 py-px font-mono text-[10px] text-warn">
@@ -303,21 +305,14 @@ export default function WhyPanel({ ticker }: { ticker: string }) {
   );
 
   return (
-    <Panel title="Why" actions={titleActions}>
+    <Panel title="WHY" actions={titleActions}>
       <div className="space-y-3">
-        {/* Agreement line */}
-        <div className="flex items-center gap-1.5 flex-wrap">
-          <span className="font-mono text-[11px] text-muted">
-            agree{" "}
-            <span className="text-foreground tabular-nums">{agrPct}%</span>
-          </span>
-          {inflationAbove && (
-            <span className="flex items-center gap-0.5">
-              <InfoTooltip text="High agreement inflation gap — consensus may be overstated; discount the agreement %" />
-              <span className="font-mono text-[11px] text-warn">(gap)</span>
-            </span>
-          )}
-        </div>
+        {/* Inflation warning */}
+        {inflationAbove && (
+          <div className="flex items-center gap-1">
+            <InfoTooltip text="correlated consensus — discount" />
+          </div>
+        )}
 
         {/* Combo headline */}
         {combo && (
@@ -385,6 +380,7 @@ export default function WhyPanel({ ticker }: { ticker: string }) {
             onClick={() => setVotesOpen((v) => !v)}
             className="flex items-center gap-1.5 text-left w-full"
             aria-expanded={votesOpen}
+            aria-controls={votesId}
           >
             <ChevronDown
               size={12}
@@ -400,19 +396,17 @@ export default function WhyPanel({ ticker }: { ticker: string }) {
             </span>
           </button>
 
-          {votesOpen && (
-            <div className="mt-2 space-y-0">
-              {allVotes.map((v) => (
-                <VoteRow
-                  key={v.agent}
-                  agent={v.agent}
-                  direction={v.verdict}
-                  confidence={v.confidence}
-                  note={v.note}
-                />
-              ))}
-            </div>
-          )}
+          <div id={votesId} hidden={!votesOpen} className="mt-2 space-y-0">
+            {allVotes.map((v) => (
+              <VoteRow
+                key={v.agent}
+                agent={v.agent}
+                direction={v.verdict}
+                confidence={v.confidence}
+                note={v.note}
+              />
+            ))}
+          </div>
         </div>
       </div>
     </Panel>

@@ -31,7 +31,7 @@ export interface AgentVote {
   agent: string;
   verdict: "LONG" | "SHORT" | "WAIT";
   confidence: number;
-  note: string;
+  note: string | null;
   family: AgentFamily;
 }
 
