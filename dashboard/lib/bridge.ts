@@ -1,21 +1,21 @@
 import fs from "fs";
+import path from "path";
 import Papa from "papaparse";
 import type { BridgeRow } from "@/types/bridge";
 
-const CSV_PATH = "/Users/josephstorey/Market_Analyse/reports/bridge_latest.csv";
+export function resolveBridgePath(dir = process.env.BRIDGE_DIR): string {
+  const base = dir ?? path.join(process.cwd(), "..", "reports");
+  return path.join(base, "bridge_latest.csv");
+}
 
 export function loadBridgeSignals(): BridgeRow[] {
-  const content = fs.readFileSync(CSV_PATH, "utf-8");
+  const content = fs.readFileSync(resolveBridgePath(), "utf-8");
   const result = Papa.parse<Record<string, unknown>>(content, {
     header: true,
     dynamicTyping: true,
     skipEmptyLines: true,
+    transform: (v) => (v === "True" ? true : v === "False" ? false : v),
   });
 
-  return result.data.map((row) => ({
-    ...row,
-    high_conviction: row.high_conviction === "True" || row.high_conviction === true,
-    cluster_confirmed: row.cluster_confirmed === "True" || row.cluster_confirmed === true,
-    is_extended: row.is_extended === "True" || row.is_extended === true,
-  })) as BridgeRow[];
+  return result.data as BridgeRow[];
 }
