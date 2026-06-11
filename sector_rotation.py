@@ -433,8 +433,11 @@ def build_rotation_section(force_refresh: bool = False,
     rotation_rows = []
     for i, r in enumerate(scored):
         ret = r["returns"]
+        ind = r["industry"]
+        cur_rank = cur_ranks[ind]
+        drank_int = (baseline[ind] - cur_rank) if ind in baseline else None
         rotation_rows.append({
-            "industry": r["industry"],
+            "industry": ind,
             "quadrant":  _quadrant_plain.get(r["quadrant"], r["quadrant"].lower()),
             "rs_ratio":  round(r["rs_ratio"], 3),
             "rs_mom":    round(r["rs_mom"], 3),
@@ -443,8 +446,8 @@ def build_rotation_section(force_refresh: bool = False,
             "r1w":       round(ret["1W"], 2) if "1W" in ret else None,
             "r1m":       round(ret["1M"], 2) if "1M" in ret else None,
             "r3m":       round(ret["3M"], 2) if "3M" in ret else None,
-            "rank":      cur_ranks[r["industry"]],
-            "drank":     _rank_delta_tag(r["industry"], cur_ranks[r["industry"]], baseline),
+            "rank":      cur_rank,
+            "drank":     drank_int,
         })
     try:
         _REPORTS_DIR.mkdir(parents=True, exist_ok=True)
