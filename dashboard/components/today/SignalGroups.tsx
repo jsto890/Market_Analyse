@@ -434,11 +434,9 @@ export default function SignalGroups({
   }, []);
 
   function update(patch: Partial<Filters>) {
-    setFilters((prev) => {
-      const next = { ...prev, ...patch };
-      localStorage.setItem(FILTERS_KEY, JSON.stringify(next));
-      return next;
-    });
+    const next = { ...filters, ...patch };
+    setFilters(next);
+    localStorage.setItem(FILTERS_KEY, JSON.stringify(next));
   }
 
   const active = hydrated ? filters : DEFAULT_FILTERS;

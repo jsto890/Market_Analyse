@@ -37,8 +37,9 @@ function loadRotation(): RotationRow[] | null {
 
 function isStale(generatedAt: string | null): boolean {
   if (!generatedAt) return false;
-  const ms = Date.now() - new Date(generatedAt).getTime();
-  return ms / 3_600_000 > 24;
+  const t = new Date(generatedAt).getTime();
+  if (!Number.isFinite(t)) return true;
+  return (Date.now() - t) / 3_600_000 > 24;
 }
 
 function formatTime(generatedAt: string | null): string {
@@ -62,7 +63,12 @@ function toDiffRow(row: BridgeRow, group: ReportGroup): DiffRow {
 }
 
 export default async function Home() {
-  const rows = loadBridgeSignals();
+  let rows: BridgeRow[] = [];
+  try {
+    rows = loadBridgeSignals();
+  } catch {
+    rows = [];
+  }
   const groups = groupSignals(rows);
 
   // Build today's diff rows from derived groups (CSV report_group is not the group name).
@@ -104,6 +110,11 @@ export default async function Home() {
 
   return (
     <main className="mx-auto max-w-6xl space-y-4 px-4 py-6">
+      {rows.length === 0 && (
+        <div className="rounded-lg border border-warn/50 bg-warn/10 px-4 py-2.5 text-[13px] text-warn">
+          No bridge data — run_daily may have failed
+        </div>
+      )}
       {stale && (
         <div className="rounded-lg border border-warn/50 bg-warn/10 px-4 py-2.5 text-[13px] text-warn">
           Bridge data is stale (generated {formatTime(meta.generated_at)}) — run_daily may
