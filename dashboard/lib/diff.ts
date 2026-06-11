@@ -110,11 +110,12 @@ export async function loadYesterdayRows(todayDate?: string): Promise<DiffRow[]> 
   if (rawDates.length >= 2) {
     let targetDate: string;
     if (todayDate) {
-      const before = rawDates.filter((r) => r.date < todayDate);
+      const before = rawDates.filter((r) => r.date < todayDate).sort((a, b) => b.date.localeCompare(a.date));
       if (before.length === 0) return [];
       targetDate = before[0].date;
     } else {
-      targetDate = rawDates[1].date;
+      const sorted = rawDates.sort((a, b) => b.date.localeCompare(a.date));
+      targetDate = sorted[1].date;
     }
 
     const dbRows = byDate(targetDate) as Array<Record<string, unknown>>;
@@ -161,5 +162,9 @@ export async function loadYesterdayRows(todayDate?: string): Promise<DiffRow[]> 
   const fileName = perDay.get(targetDay);
   if (!fileName) return [];
 
-  return loadCsvRows(path.join(reportsDir, fileName));
+  try {
+    return loadCsvRows(path.join(reportsDir, fileName));
+  } catch {
+    return [];
+  }
 }
