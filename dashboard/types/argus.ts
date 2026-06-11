@@ -35,6 +35,12 @@ export interface AgentVote {
   family: AgentFamily;
 }
 
+export interface FamilyVoteCounts {
+  long: number;
+  short: number;
+  wait: number;
+}
+
 export interface ActionCardData {
   symbol: string;
   verdict: "LONG" | "SHORT" | "WAIT";
@@ -57,6 +63,22 @@ export interface ActionCardData {
   agreed: string[];
   dissented: string[];
   notes: string;
+  // Extended fields from backend to_dict()
+  score_ci_lo?: number;
+  score_ci_hi?: number;
+  inflation_gap?: number;
+  family_attribution?: Record<string, number>;
+  family_votes?: Record<string, FamilyVoteCounts>;
+  ticker_regime?: string;
+  n_eff?: number;
+  combo?: string;
+  trade_style?: string;
+  action_label?: string;
+  adx_value?: number;
+  adx_slope?: string;
+  meta_coherence?: number;
+  meta_adjustment?: number;
+  meta_note?: string;
 }
 
 export interface OptionsFlowData {

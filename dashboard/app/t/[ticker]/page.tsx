@@ -2,6 +2,7 @@ import CandleChart, { type Bar, type Level, type Marker } from "@/components/cha
 import Panel from "@/components/ui/Panel";
 import Header from "@/components/ticker/Header";
 import LevelsCard from "@/components/ticker/LevelsCard";
+import WhyPanel from "@/components/ticker/WhyPanel";
 import { loadBridgeSignals } from "@/lib/bridge";
 import { signalHistory } from "@/lib/signals";
 
@@ -103,6 +104,8 @@ export default async function TickerPage({
         {/* Right: levels + scaffold panels */}
         <div className="space-y-4">
           {bridgeRow && <LevelsCard ticker={ticker} bridgeRow={bridgeRow} />}
+
+          <WhyPanel ticker={ticker} />
 
           <Panel title="Signal">
             <p className="text-[12px] text-muted">Under construction</p>
