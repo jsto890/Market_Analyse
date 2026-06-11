@@ -20,15 +20,15 @@ interface LevelsCardProps {
   bridgeRow: BridgeRow;
 }
 
-const STOP_ANCHOR_LABELS: Record<string, string> = {
-  ema_50: "Stop rides the 50-day EMA",
-  supertrend: "Stop tracks the SuperTrend line",
-  psar: "Stop at the parabolic SAR",
-  swing_low: "Stop under the last swing low",
-};
-
 function stopAnchorLabel(anchor: string): string {
-  return STOP_ANCHOR_LABELS[anchor] ?? anchor;
+  const n = anchor.toLowerCase().replace(/[^a-z0-9]/g, "");
+  if (n.startsWith("supertrend")) return "Stop tracks the SuperTrend line";
+  if (n.startsWith("psar")) return "Stop at the parabolic SAR";
+  if (n.startsWith("swinglow")) return "Stop under the last swing low";
+  if (n.startsWith("ema50") || n.startsWith("sma50")) return "Stop rides the 50-day moving average";
+  if (n.startsWith("ema200") || n.startsWith("sma200")) return "Stop rides the 200-day moving average";
+  if (n.startsWith("atr")) return "Stop set via ATR volatility band";
+  return anchor;
 }
 
 function InfoTooltip({ text }: { text: string }) {

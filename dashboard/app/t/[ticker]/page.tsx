@@ -76,10 +76,10 @@ export default async function TickerPage({
     return l;
   })();
 
-  // Chart markers from signal history
+  // Chart markers from signal history — no text labels to avoid glyph spam
   const markers: Marker[] = history.map((row) => ({
     date: row.date,
-    label: row.report_group ?? row.action_label ?? "",
+    label: "",
   }));
 
   return (

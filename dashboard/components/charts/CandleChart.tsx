@@ -162,7 +162,7 @@ export default function CandleChart({
         position: "belowBar" as const,
         shape: "arrowUp" as const,
         color: "#4c8dff",
-        text: m.label,
+        ...(m.label ? { text: m.label } : {}),
       }))
     );
 
