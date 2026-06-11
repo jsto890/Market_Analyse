@@ -319,7 +319,7 @@ export default function WhyPanel({ ticker }: { ticker: string }) {
           <div className="space-y-0.5">
             <span className="font-mono text-[12px] text-foreground">
               combo{" "}
-              <span className="text-accent">{combo}</span>
+              <span className="font-medium">{combo}</span>
             </span>
             {comboNote && (
               <p className="font-mono text-[11px] text-muted leading-snug">

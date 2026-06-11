@@ -22,7 +22,16 @@ function parseNullableFloat(value: unknown): number | null {
 }
 
 export async function GET(): Promise<NextResponse> {
-  const raw = fs.readFileSync(CSV_PATH, "utf-8");
+  let raw: string;
+  try {
+    raw = fs.readFileSync(CSV_PATH, "utf-8");
+  } catch {
+    const empty: AccountsData = {
+      accounts: [],
+      by_tier: Object.fromEntries(TIER_ORDER.map((t) => [t, []])) as unknown as Record<AccountTier, AccountStat[]>,
+    };
+    return NextResponse.json(empty);
+  }
 
   const { data } = Papa.parse<Record<string, unknown>>(raw, {
     header: true,
