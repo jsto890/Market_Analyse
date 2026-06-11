@@ -1,34 +1,121 @@
+import fs from "fs";
+import path from "path";
 import { loadBridgeSignals } from "@/lib/bridge";
-import FilterBar from "@/components/FilterBar";
-import SignalListBody from "@/components/SignalListBody";
-import AlignmentCompass from "@/components/AlignmentCompass";
+import { groupSignals } from "@/lib/groups";
+import { diffReports, loadYesterdayRows, type DiffRow } from "@/lib/diff";
+import type { BridgeRow, ReportGroup } from "@/types/bridge";
+import DiffStrip from "@/components/today/DiffStrip";
+import SignalGroups from "@/components/today/SignalGroups";
+import RotationPanel, { type RotationRow } from "@/components/today/RotationPanel";
 
-export default function Home() {
+export const dynamic = "force-dynamic";
+
+function reportsDir(): string {
+  return process.env.BRIDGE_DIR ?? path.join(process.cwd(), "..", "reports");
+}
+
+function loadMeta(): { generated_at: string | null } {
+  try {
+    const raw = fs.readFileSync(path.join(reportsDir(), "bridge_meta.json"), "utf-8");
+    const meta = JSON.parse(raw) as { generated_at?: string };
+    return { generated_at: meta.generated_at ?? null };
+  } catch {
+    return { generated_at: null };
+  }
+}
+
+function loadRotation(): RotationRow[] | null {
+  try {
+    const raw = fs.readFileSync(path.join(reportsDir(), "rotation_latest.json"), "utf-8");
+    const data = JSON.parse(raw);
+    if (Array.isArray(data)) return data as RotationRow[];
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+function isStale(generatedAt: string | null): boolean {
+  if (!generatedAt) return false;
+  const ms = Date.now() - new Date(generatedAt).getTime();
+  return ms / 3_600_000 > 24;
+}
+
+function formatTime(generatedAt: string | null): string {
+  if (!generatedAt) return "unknown";
+  const d = new Date(generatedAt);
+  return d.toLocaleString("en-NZ", {
+    day: "2-digit",
+    month: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  });
+}
+
+function toDiffRow(row: BridgeRow, group: ReportGroup): DiffRow {
+  return {
+    ticker: row.ticker.toUpperCase(),
+    report_group: group,
+    sentiment_score: Number.isFinite(row.sentiment_score) ? row.sentiment_score : 0,
+  };
+}
+
+export default async function Home() {
   const rows = loadBridgeSignals();
+  const groups = groupSignals(rows);
 
-  const hcRows = rows
-    .filter((r) => r.high_conviction)
-    .sort((a, b) => b.combined_score - a.combined_score);
+  // Build today's diff rows from derived groups (CSV report_group is not the group name).
+  const todayDiffRows: DiffRow[] = [];
+  (Object.keys(groups) as ReportGroup[]).forEach((g) => {
+    for (const row of groups[g]) todayDiffRows.push(toDiffRow(row, g));
+  });
 
-  const nonHcRows = rows
-    .filter((r) => !r.high_conviction)
-    .sort((a, b) => b.combined_score - a.combined_score);
+  let diffData = {
+    newTickers: [] as string[],
+    dropped: [] as { ticker: string; group: string }[],
+    groupMoves: [] as { ticker: string; from: string; to: string }[],
+    sentimentTurns: [] as string[],
+  };
+  let hasYesterday = false;
+  try {
+    const yesterday = await loadYesterdayRows();
+    if (yesterday.length > 0) {
+      hasYesterday = true;
+      const d = diffReports(todayDiffRows, yesterday);
+      diffData = {
+        newTickers: Array.from(d.newTickers),
+        dropped: d.dropped,
+        groupMoves: d.groupMoves,
+        sentimentTurns: Array.from(d.sentimentTurns),
+      };
+    }
+  } catch {
+    hasYesterday = false;
+  }
 
-  const allRows = [...hcRows, ...nonHcRows];
+  const meta = loadMeta();
+  const stale = isStale(meta.generated_at);
+  const rotation = loadRotation();
+
+  const sectors = Array.from(
+    new Set(rows.map((r) => r.industry).filter((s): s is string => !!s))
+  ).sort();
 
   return (
-    <main className="max-w-5xl mx-auto px-4 py-6">
-      <p className="text-sm text-gray-400 mb-4">
-        {hcRows.length} HC · {rows.length} signals
-      </p>
+    <main className="mx-auto max-w-6xl space-y-4 px-4 py-6">
+      {stale && (
+        <div className="rounded-lg border border-warn/50 bg-warn/10 px-4 py-2.5 text-[13px] text-warn">
+          Bridge data is stale (generated {formatTime(meta.generated_at)}) — run_daily may
+          have failed
+        </div>
+      )}
 
-      <FilterBar />
+      {hasYesterday && <DiffStrip diff={diffData} />}
 
-      <div className="mt-4">
-        <SignalListBody hcRows={hcRows} nonHcRows={nonHcRows} />
-      </div>
+      <SignalGroups groups={groups} newTickers={diffData.newTickers} sectors={sectors} />
 
-      <AlignmentCompass rows={allRows} />
+      {rotation && <RotationPanel rows={rotation} />}
     </main>
   );
 }
