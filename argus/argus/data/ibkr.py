@@ -46,7 +46,10 @@ class IBKRClient:
 
     def connect(self) -> None:
         if self.ib.isConnected():
-            return
+            self.ib.disconnect()
+        # Recreate IB() so its internal asyncio primitives bind to the
+        # current thread's loop rather than a stale one from a prior request.
+        self.ib = self._IB()
         self.ib.connect(
             host=settings.ibkr_host,
             port=settings.ibkr_port,
