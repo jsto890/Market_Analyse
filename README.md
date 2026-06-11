@@ -52,24 +52,6 @@ The daily pipeline is driven by **Market Review** (`run_daily.sh`, scheduled via
 
 ---
 
-## Sample daily report
-
-GitHub cannot render a PDF inline in README markdown. Below is a **scrollable preview** (one stitched image of the PDF pages inside a fixed-height box). [Download the full PDF](docs/assets/sample-daily-report.pdf).
-
-<div align="center">
-
-<div style="width: 100%; max-width: 720px; height: 480px; overflow-y: auto; overflow-x: hidden; border: 1px solid #30363d; border-radius: 8px; padding: 4px; background: #0d1117;">
-  <img src="docs/assets/report-preview/scroll-preview.png" alt="Sample daily report preview" width="100%" />
-</div>
-
-<p><a href="docs/assets/sample-daily-report.pdf"><strong>Download sample report (PDF)</strong></a></p>
-
-</div>
-
-To refresh the preview after replacing the PDF: `./scripts/render_report_preview.sh` (requires `poppler` + `imagemagick` — see [`docs/assets/README.md`](docs/assets/README.md)).
-
----
-
 ## Repository layout
 
 ```
