@@ -24,7 +24,8 @@ import numpy as np
 import pandas as pd
 import yfinance as yf
 
-ARGUS_ROOT = Path(__file__).parent / "argus"
+REPO_ROOT = Path(__file__).resolve().parents[2]
+ARGUS_ROOT = REPO_ROOT / "argus"
 sys.path.insert(0, str(ARGUS_ROOT))
 
 from argus.action_card.builder import (
@@ -36,7 +37,7 @@ from argus.agents.base import Vote, Verdict
 from argus.agents import run_all
 from argus.indicators import compute_all
 
-REPORTS_DIR = Path(__file__).parent / "reports"
+REPORTS_DIR = REPO_ROOT / "reports"
 
 # ── helpers ──────────────────────────────────────────────────────────────────
 

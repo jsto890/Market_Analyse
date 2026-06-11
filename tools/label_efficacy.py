@@ -20,6 +20,7 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import os
 import warnings
 from datetime import datetime
 from pathlib import Path
@@ -139,7 +140,11 @@ def render(df: pd.DataFrame) -> str:
 
 def main() -> None:
     ap = argparse.ArgumentParser(description="Monthly label-efficacy backtest")
-    ap.add_argument("--memory", default="/Users/josephstorey/Market_Review/reports/watchlist_memory.csv")
+    _default_memory = os.environ.get(
+        "MARKET_REVIEW_REPORT",
+        str(Path(__file__).resolve().parents[2].parent / "Market_Review" / "reports" / "watchlist_memory.csv"),
+    ).replace("ticker_setups.csv", "watchlist_memory.csv")
+    ap.add_argument("--memory", default=_default_memory)
     ap.add_argument("--out-dir", default=str(Path(__file__).parent.parent / "docs" / "label_efficacy"))
     args = ap.parse_args()
 

@@ -18,7 +18,8 @@ import pandas as pd
 import yfinance as yf
 from scipy import stats
 
-REPORTS = Path("/Users/josephstorey/Market_Analyse/reports")
+REPO_ROOT = Path(__file__).resolve().parents[2]
+REPORTS = REPO_ROOT / "reports"
 ALIAS = {"SIVE": "SIVE.ST", "SIVEF": "SIVE.ST"}
 TODAY = date(2026, 6, 8)
 

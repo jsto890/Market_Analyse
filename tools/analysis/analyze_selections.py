@@ -14,7 +14,8 @@ from pathlib import Path
 import pandas as pd
 import yfinance as yf
 
-REPORTS = Path("reports")
+REPO_ROOT = Path(__file__).resolve().parents[2]
+REPORTS = REPO_ROOT / "reports"
 ALIAS = {"SIVE": "SIVE.ST", "SIVEF": "SIVE.ST"}
 
 # ── collect first-ALIGNED date per ticker ──────────────────────────────────────
