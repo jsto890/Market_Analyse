@@ -8,11 +8,11 @@ export interface RotationRow {
   quadrant: "leading" | "improving" | "weakening" | "lagging" | string;
   rs_ratio: number;
   rs_mom: number;
-  breadth: number;
-  n: number;
-  r1w: number;
-  r1m: number;
-  r3m: number;
+  breadth: number | null;
+  n: number | null;
+  r1w: number | null;
+  r1m: number | null;
+  r3m: number | null;
   rank: number;
   drank: number | null;
 }
@@ -127,8 +127,8 @@ function DRank({ drank }: { drank: number | null }) {
   );
 }
 
-function Ret({ v }: { v: number }) {
-  if (!Number.isFinite(v)) return <span className="text-muted">—</span>;
+function Ret({ v }: { v: number | null }) {
+  if (v == null || !Number.isFinite(v)) return <span className="text-muted">—</span>;
   const sign = v >= 0 ? "+" : "";
   return (
     <span className={v >= 0 ? "text-pos" : "text-neg"}>
@@ -181,7 +181,7 @@ export default function RotationPanel({ rows }: RotationPanelProps) {
           </thead>
           <tbody>
             {sorted.map((r) => {
-              const thin = r.n < 20;
+              const thin = r.n != null && r.n < 20;
               const rowCls = thin ? "text-muted" : "";
               const industryCell = thin ? (
                 <Tooltip.Root>
@@ -219,9 +219,9 @@ export default function RotationPanel({ rows }: RotationPanelProps) {
                     {r.rs_mom.toFixed(1)}
                   </td>
                   <td className="px-2 py-1.5 text-right tabular-nums font-mono">
-                    {Math.round(r.breadth)}%
+                    {Number.isFinite(r.breadth) ? Math.round(r.breadth!) + "%" : "—"}
                   </td>
-                  <td className="px-2 py-1.5 text-right tabular-nums font-mono">{r.n}</td>
+                  <td className="px-2 py-1.5 text-right tabular-nums font-mono">{r.n ?? "—"}</td>
                   <td className="px-2 py-1.5 text-right tabular-nums font-mono">
                     <Ret v={r.r1w} />
                   </td>
