@@ -15,7 +15,7 @@ export default function NavActions({ statusDot }: NavActionsProps) {
   }
 
   return (
-    <div className="ml-auto flex items-center gap-3 flex-shrink-0">
+    <div className="flex items-center gap-3 flex-shrink-0">
       <a
         href="http://127.0.0.1:5173"
         target="_blank"

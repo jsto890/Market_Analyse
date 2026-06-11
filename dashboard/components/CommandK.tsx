@@ -55,9 +55,16 @@ function buildResults(
   for (const row of bridgeRows) {
     if (matchQuery(q, row.ticker)) {
       seen.add(row.ticker);
+      const group = row.group1
+        ? "aligned"
+        : row.group2 && row.conviction === "high" && row.sentiment_score < 0.2
+        ? "pullback"
+        : row.group2
+        ? "tech_fund"
+        : "other";
       results.push({
         ticker: row.ticker,
-        group: row.trade_style,
+        group,
         tier: row.action_label,
         source: "bridge",
       });
@@ -98,7 +105,7 @@ export default function CommandK() {
       const cmdK = (e.key === "k" && (e.metaKey || e.ctrlKey));
       const bareG = e.key === "g" && !e.metaKey && !e.ctrlKey && !e.altKey;
 
-      if (cmdK) {
+      if (cmdK && !isEditableTarget()) {
         e.preventDefault();
         setOpen((v) => !v);
         return;
@@ -202,6 +209,9 @@ export default function CommandK() {
               >
                 <span className="font-mono font-medium">{item.ticker}</span>
                 <span className="flex items-center gap-1.5 text-[11px]">
+                  {item.source === "bridge" && item.group && (
+                    <span className="text-muted uppercase tracking-wide">{item.group}</span>
+                  )}
                   {item.source === "bridge" && item.tier && (
                     <Badge variant="tier" value={item.tier} />
                   )}
