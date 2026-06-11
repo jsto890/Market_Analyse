@@ -75,9 +75,15 @@ export default function Panel({
         )}
         {actions && <div className="ml-auto flex items-center gap-2 shrink-0">{actions}</div>}
       </div>
-      {(!collapsible || (hydrated && open) || (!hydrated && defaultOpen)) && (
+      <div
+        className="overflow-hidden transition-[max-height] duration-200"
+        style={{
+          maxHeight:
+            !collapsible || (hydrated ? open : defaultOpen) ? "9999px" : "0px",
+        }}
+      >
         <div className="border-t border-line px-4 py-3">{children}</div>
-      )}
+      </div>
     </section>
   );
 }

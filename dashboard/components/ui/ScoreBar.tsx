@@ -5,7 +5,7 @@ interface ScoreBarProps {
 
 export default function ScoreBar({ value, showValue }: ScoreBarProps) {
   const clamped = Math.max(-1, Math.min(1, value));
-  const isPos = clamped >= 0;
+  const isPos = clamped > 0;
   const pct = Math.abs(clamped) * 50;
 
   return (
@@ -26,7 +26,7 @@ export default function ScoreBar({ value, showValue }: ScoreBarProps) {
       </span>
       {showValue && (
         <span className="font-mono text-[13px] tabular-nums text-muted w-[38px] text-right">
-          {clamped >= 0 ? "+" : ""}
+          {clamped > 0 ? "+" : ""}
           {clamped.toFixed(2)}
         </span>
       )}
