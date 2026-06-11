@@ -162,21 +162,42 @@ def build_app() -> FastAPI:
 
     @app.get("/api/portfolio")
     def portfolio():
-        return PortfolioTracker().positions_with_edge()
+        import asyncio
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        try:
+            return PortfolioTracker().positions_with_edge()
+        except Exception as e:
+            return {"error": str(e)}
+        finally:
+            loop.close()
+            asyncio.set_event_loop(None)
 
     @app.get("/api/account")
     def account():
+        import asyncio
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
         try:
             return IBKRClient.instance().account_summary()
         except Exception as e:
             return {"error": str(e)}
+        finally:
+            loop.close()
+            asyncio.set_event_loop(None)
 
     @app.get("/api/fundamentals/{symbol}")
     def fundamentals(symbol: str):
+        import asyncio
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
         try:
             return IBKRClient.instance().fundamentals(symbol.upper())
         except Exception as e:
             return {"error": str(e), "symbol": symbol.upper()}
+        finally:
+            loop.close()
+            asyncio.set_event_loop(None)
 
     @app.post("/api/execute", dependencies=[Depends(_require_token)])
     def execute(req: ExecReq):
