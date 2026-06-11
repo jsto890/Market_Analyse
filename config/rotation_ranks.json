@@ -12,5 +12,19 @@
     "Semiconductors": 10,
     "Electronic Components": 11,
     "Quantum Computing": 12
+  },
+  "2026-06-11": {
+    "Software - Application": 1,
+    "Software - Infrastructure": 2,
+    "Information Technology Services": 3,
+    "Scientific & Technical Instruments": 4,
+    "Semiconductor Equipment & Materials": 5,
+    "Communication Equipment": 6,
+    "Electronic Components": 7,
+    "Aerospace & Defense": 8,
+    "Uranium": 9,
+    "Computer Hardware": 10,
+    "Semiconductors": 11,
+    "Quantum Computing": 12
   }
 }

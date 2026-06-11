@@ -1158,5 +1158,17 @@
   "SQQQ": {
     "sector": "",
     "industry": ""
+  },
+  "BWXT": {
+    "sector": "Industrials",
+    "industry": "Aerospace & Defense"
+  },
+  "SATL": {
+    "sector": "Industrials",
+    "industry": "Aerospace & Defense"
+  },
+  "APPS": {
+    "sector": "Technology",
+    "industry": "Software - Application"
   }
 }
