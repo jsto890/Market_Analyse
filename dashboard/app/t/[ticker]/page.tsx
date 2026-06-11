@@ -1,6 +1,9 @@
+import CandleChart, { type Bar, type Level, type Marker } from "@/components/charts/CandleChart";
 import Panel from "@/components/ui/Panel";
-import CandleChart, { type Bar, type Level } from "@/components/charts/CandleChart";
+import Header from "@/components/ticker/Header";
+import LevelsCard from "@/components/ticker/LevelsCard";
 import { loadBridgeSignals } from "@/lib/bridge";
+import { signalHistory } from "@/lib/signals";
 
 async function fetchHistory(ticker: string): Promise<Bar[]> {
   try {
@@ -16,54 +19,102 @@ async function fetchHistory(ticker: string): Promise<Bar[]> {
   }
 }
 
-function bridgeLevels(ticker: string): Level[] {
-  try {
-    const rows = loadBridgeSignals();
-    const row = rows.find(
-      (r) => r.ticker.toUpperCase() === ticker.toUpperCase()
-    );
-    if (!row) return [];
-    const levels: Level[] = [];
-    if (row.entry) levels.push({ price: row.entry, kind: "entry" });
-    if (row.stop) levels.push({ price: row.stop, kind: "stop" });
-    if (row.target) levels.push({ price: row.target, kind: "target" });
-    return levels;
-  } catch {
-    return [];
-  }
-}
-
 export default async function TickerPage({
   params,
 }: {
   params: { ticker: string };
 }) {
   const ticker = params.ticker.toUpperCase();
-  const [bars, levels] = await Promise.all([
-    fetchHistory(ticker),
-    Promise.resolve(bridgeLevels(ticker)),
-  ]);
+
+  // Server data
+  const [bars] = await Promise.all([fetchHistory(ticker)]);
+
+  const bridgeRow = (() => {
+    try {
+      const rows = loadBridgeSignals();
+      return rows.find((r) => r.ticker.toUpperCase() === ticker) ?? null;
+    } catch {
+      return null;
+    }
+  })();
+
+  const history = (() => {
+    try {
+      return signalHistory(ticker) as {
+        date: string;
+        report_group: string | null;
+        action_label: string | null;
+        combined_score: number | null;
+        entry: number | null;
+      }[];
+    } catch {
+      return [];
+    }
+  })();
+
+  // Last close from history bars (same-basis as chart)
+  const lastClose = bars.length > 0 ? bars[bars.length - 1].close : null;
+
+  // Chart levels from bridge row
+  const levels: Level[] = (() => {
+    if (!bridgeRow) return [];
+    const l: Level[] = [];
+    if (bridgeRow.entry) l.push({ price: bridgeRow.entry, kind: "entry" });
+    if (bridgeRow.stop) l.push({ price: bridgeRow.stop, kind: "stop" });
+    if (bridgeRow.target) l.push({ price: bridgeRow.target, kind: "target" });
+    return l;
+  })();
+
+  // Chart markers from signal history
+  const markers: Marker[] = history.map((row) => ({
+    date: row.date,
+    label: row.report_group ?? row.action_label ?? "",
+  }));
 
   return (
-    <main className="max-w-5xl mx-auto px-4 py-6 space-y-4">
-      <h1 className="text-3xl font-bold text-white tracking-tight">{ticker}</h1>
-      <Panel title="Signal">
-        <p className="text-sm text-muted">Under construction</p>
-      </Panel>
-      <Panel title="Options Flow">
-        <p className="text-sm text-muted">Under construction</p>
-      </Panel>
-      <Panel title="Catalyst">
-        <p className="text-sm text-muted">Under construction</p>
-      </Panel>
-      <Panel title="Chart">
-        <CandleChart
+    <main className="max-w-[1400px] mx-auto px-4 py-4 space-y-4">
+      {/* Header: server-rendered shell, client SWR for quote */}
+      <section className="rounded-lg border border-line bg-surface">
+        <Header
           ticker={ticker}
-          initialBars={bars}
-          initialPeriod="6M"
-          levels={levels}
+          bridgeRow={bridgeRow}
+          signalHistory={history}
+          lastClose={lastClose}
         />
-      </Panel>
+      </section>
+
+      {/* Two-column layout */}
+      <div className="grid grid-cols-[62fr_38fr] gap-4 max-[1100px]:grid-cols-1">
+        {/* Left: chart */}
+        <div className="min-h-[420px] 2xl:min-h-[560px]">
+          <Panel title="Chart">
+            <CandleChart
+              ticker={ticker}
+              initialBars={bars}
+              initialPeriod="6M"
+              levels={levels}
+              markers={markers}
+              height={420}
+              className="min-h-[420px] 2xl:min-h-[560px]"
+            />
+          </Panel>
+        </div>
+
+        {/* Right: levels + scaffold panels */}
+        <div className="space-y-4">
+          {bridgeRow && <LevelsCard bridgeRow={bridgeRow} />}
+
+          <Panel title="Signal">
+            <p className="text-[12px] text-muted">Under construction</p>
+          </Panel>
+          <Panel title="Options Flow">
+            <p className="text-[12px] text-muted">Under construction</p>
+          </Panel>
+          <Panel title="Catalyst">
+            <p className="text-[12px] text-muted">Under construction</p>
+          </Panel>
+        </div>
+      </div>
     </main>
   );
 }
