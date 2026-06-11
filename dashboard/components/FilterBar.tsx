@@ -21,7 +21,7 @@ export default function FilterBar() {
   } = useFilterContext();
 
   return (
-    <div className="bg-[#161b22] border-b border-[#30363d] sticky top-0 z-10">
+    <div className="bg-[#161b22] border-b border-[#30363d] sticky top-[44px] z-30">
       <div className="flex flex-wrap items-center gap-2 px-4 py-2.5">
         {/* Alignment buttons */}
         <div className="flex items-center gap-1">

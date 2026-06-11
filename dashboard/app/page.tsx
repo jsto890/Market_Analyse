@@ -19,7 +19,7 @@ export default function Home() {
   return (
     <main className="max-w-5xl mx-auto px-4 py-6">
       <p className="text-sm text-gray-400 mb-4">
-        {hcRows.length} HC longs · {rows.length} signals total
+        {hcRows.length} HC · {rows.length} signals
       </p>
 
       <FilterBar />

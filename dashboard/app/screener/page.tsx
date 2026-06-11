@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import type { ScreenerResult } from "@/types/argus";
 
@@ -132,11 +132,6 @@ export default function ScreenerPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // On mount: fetch default watchlist
-  useEffect(() => {
-    void runScreener(null);
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
-
   async function runScreener(tickers: string[] | null) {
     setLoading(true);
     setError(null);
@@ -215,6 +210,16 @@ export default function ScreenerPage() {
           >
             {loading ? "Running…" : "Run ›"}
           </button>
+          <button
+            onClick={() => {
+              setTickerInput("");
+              void runScreener(null);
+            }}
+            disabled={loading}
+            className="bg-gray-700 hover:bg-gray-600 disabled:opacity-50 text-white text-sm font-medium px-4 py-1.5 rounded transition-colors"
+          >
+            {loading ? "Running…" : "Run default universe"}
+          </button>
         </div>
 
         {/* States */}
@@ -226,6 +231,10 @@ export default function ScreenerPage() {
           <div className="bg-red-900/20 border border-red-800 rounded px-3 py-2 text-sm text-red-400">
             {error}
           </div>
+        )}
+
+        {!loading && !error && results === null && (
+          <p className="text-sm text-gray-500">Enter tickers or run the default universe</p>
         )}
 
         {!loading && !error && results !== null && (
