@@ -1,6 +1,8 @@
 # Argus
 
-A local, single-user multi-agent technical-analysis engine for systematic equity and futures research, inspired by the multi-agent quant-research concept. Everything runs on your machine, talks to your **IBKR** account, and has no auth, hosting, or cloud dependencies.
+The technical-analysis engine at the core of Market Analyse. A local, single-user multi-agent system for systematic equity research. Everything runs on your machine, optionally talks to your **IBKR** account, and has no auth, hosting, or cloud dependencies.
+
+Used standalone (screener, action cards, portfolio overlay) or as the validation layer inside `sentiment_bridge.py` (with the catalyst/fundamental leg blended on top).
 
 ## Disclaimer
 
@@ -18,19 +20,31 @@ of future results. The author accepts no liability for any financial loss.
 | Module | What it does |
 |---|---|
 | **Action Card** | Single screen per ticker — LONG / SHORT / WAIT verdict with entry, stop, target, R:R, agreement %, high-conviction flag. |
-| **52 voting agents** | Trend (EMA/SMA/Supertrend/PSAR/Ichimoku/HMA/KAMA), momentum (RSI/MACD/Stoch/Williams/CCI/ROC/TSI/StochRSI/WaveTrend/STC), volatility (BB/Keltner/Donchian/ATR/TTM Squeeze), volume (OBV/CMF/A-D/MFI/VWAP/volume surge), structure (market structure, SMC BOS / order block, Wyckoff phase, Elliott wave, ICS), context (RS vs SPY, VIX regime, 52-wk position, gap pattern, candle patterns). |
+| **70 voting agents** | 9 families: prefilter, trend, momentum, volatility, volume, structure, institutional, weekly structure, risk filter. Built on 65+ locally computed indicators. |
+| **Catalyst leg** | 5 fundamental votes (event catalyst, earnings proximity, squeeze setup, growth/profitability, analyst upside) used by the sentiment bridge — not part of the standalone Action Card. |
 | **Screener** | Run the agents over a default ~45-ticker universe (or your own list) in parallel. |
-| **Backtest** | Vectorized walk-forward backtest using the live agent ensemble. Win-rate, profit factor, CAGR, Sharpe, Sortino, max drawdown, equity curve, all trades. |
-| **Monte Carlo** | Bootstrap-resampled equity-curve distribution → P5/P50/P95, P(loss), P(ruin), avg max DD. Pre-trade stress estimator from entry/stop/target + assumed win-rate. |
+| **Period returns** | Trailing 1D / 1W / 1M / 6M / 1Y price return per ticker, surfaced in the dashboard and reports. |
 | **Portfolio + edge** | Connects to IBKR, lists positions, runs each through the Action Card, labels edge as HOLD/ADD, CONSIDER SELLING, or NEUTRAL. |
-| **Hedge calculator** | Inverse-ETF allocation (SH/SDS/SPXU/PSQ/QID) and a SPY put-spread plan sized to your long book. |
 | **Flow intelligence** | Best-effort options-flow summary from yfinance EOD chains: PCR, IV skew, max-pain, unusual-volume strikes. (Real-time tape and dark-pool prints are stubbed — see Limitations.) |
 | **Alerts** | Email (SMTP), Telegram, and HMAC-signed webhook dispatcher. Every alert is also logged to SQLite. |
 | **Chart Chat / Written Analysis** | Grounded in the actual indicator + agent payload. Calls the Anthropic API if `ANTHROPIC_API_KEY` is set; otherwise falls back to a templated narrative. |
-| **Journal** | SQLite-backed trade journal. Open / close trades, get per-trade R:R + PnL, win-rate, expectancy. |
-| **REST API** | FastAPI app on `127.0.0.1:8088`. ~28 routes. |
-| **Minimal UI** | One static HTML page (no framework, no build) with 9 tabs. Everything calls the REST API. |
-| **MCP server** | FastMCP server over **stdio** that exposes ~25 tools (`argus_*`) so Claude Desktop, Cursor, etc. can drive the platform directly. |
+| **REST API** | FastAPI app on `127.0.0.1:8088`. Serves JSON routes and a minimal dev UI at `/`. |
+| **Bridge endpoint** | `GET /api/bridge` — latest `reports/bridge_latest.csv` as JSON (powers the Next.js dashboard). |
+| **MCP server** | FastMCP server over **stdio** exposing **18 `argus_*` tools** for Claude Desktop, Cursor, etc. |
+
+### Agent families (70)
+
+| Family | Count | Examples |
+|--------|-------|----------|
+| Prefilter | 1 | ADR% filter |
+| Trend | 15 | EMA alignment, Supertrend, PSAR, Ichimoku, HMA/KAMA slope, Minervini template, Weinstein stage |
+| Momentum | 17 | RSI zones, MACD, Stochastic, WaveTrend, STC, TSI, Elder impulse, RSI divergence |
+| Volatility | 8 | TTM Squeeze, Bollinger, Keltner, Donchian, ATR expansion, VCP, NR7 |
+| Volume | 6 | OBV, CMF, A/D, VWAP, volume surge, pocket pivot |
+| Structure | 12 | Market structure, SMC BOS/order block, Wyckoff, Elliott, gaps, HTF, candle patterns |
+| Institutional | 4 | ICS score, RS vs SPY, RS vs sector, VIX regime |
+| Weekly structure | 6 | Weekly EMA, RSI, MACD, price structure, OBV, Bollinger |
+| Risk filter | 1 | Earnings proximity |
 
 ---
 
@@ -43,7 +57,7 @@ cd argus
 ./run.sh api         # starts http://127.0.0.1:8088
 ```
 
-Open `http://127.0.0.1:8088` in a browser. Try `?symbol=AAPL` on the Action Card tab.
+Open `http://127.0.0.1:8088` in a browser for the minimal dev UI.
 
 To run the offline validation (no network, no IBKR — uses synthetic OHLCV):
 
@@ -51,13 +65,22 @@ To run the offline validation (no network, no IBKR — uses synthetic OHLCV):
 ./.venv/bin/python tests/offline.py
 ```
 
-Expected output: 65 indicators, 52 agents, action card built, backtest runs, MC stats, FastAPI app + MCP server build.
-
 To run the full smoke test (requires internet for yfinance):
 
 ```bash
 ./run.sh test
 ```
+
+### Running the sentiment bridge (parent repo)
+
+From the repo root, after Market Review has produced `ticker_setups.csv`:
+
+```bash
+MARKET_REVIEW_REPORT=~/Market_Review/reports/ticker_setups.csv \
+  python sentiment_bridge.py --min-quality 6
+```
+
+Bridge scoring weights are read from `../config/weights.yaml` at startup.
 
 ---
 
@@ -73,10 +96,24 @@ To run the full smoke test (requires internet for yfinance):
    IBKR_HOST=127.0.0.1
    IBKR_PORT=7497          # 7497 paper, 7496 live
    IBKR_CLIENT_ID=11
-   IBKR_LIVE_TRADING=false # set true ONLY when you really want orders to fire
+   IBKR_LIVE_TRADING=0     # set 1 ONLY when you really want orders to fire
    ```
 
-The `/api/portfolio`, `/api/account`, and `/api/execute` endpoints (and the `argus_portfolio`, `argus_account_summary`, `argus_place_*` MCP tools) require an active TWS / Gateway connection.
+The `/api/portfolio`, `/api/account`, `/api/fundamentals`, and `/api/execute` endpoints (and the `argus_portfolio`, `argus_account_summary`, `argus_place_*` MCP tools) require an active TWS / Gateway connection.
+
+---
+
+## Environment variables
+
+See [`.env.example`](.env.example). Key settings:
+
+| Variable | Purpose |
+|----------|---------|
+| `IBKR_*` | Interactive Brokers connection |
+| `ANTHROPIC_API_KEY` / `ANTHROPIC_MODEL` | LLM-written analysis (optional) |
+| `SMTP_*` / `TELEGRAM_*` / `WEBHOOK_*` | Alert channels (optional) |
+| `ARGUS_HOST` / `ARGUS_PORT` | API bind address (default `127.0.0.1:8088`) |
+| `ARGUS_API_TOKEN` | When set, required as `X-Argus-Token` header on `/api/execute` and `/api/alert` |
 
 ---
 
@@ -96,7 +133,11 @@ Add this to your Claude Desktop config (`~/Library/Application Support/Claude/cl
 }
 ```
 
-Restart Claude Desktop. You'll see ~25 `argus_*` tools (`argus_action_card`, `argus_screen`, `argus_backtest`, `argus_chart_chat`, `argus_place_bracket_order`, etc.).
+Restart Claude Desktop. Available tools:
+
+`argus_get_quote`, `argus_get_history`, `argus_list_indicators`, `argus_get_indicators`, `argus_action_card`, `argus_list_agents`, `argus_screen`, `argus_options_flow`, `argus_options_chain`, `argus_portfolio`, `argus_account_summary`, `argus_place_market_order`, `argus_place_bracket_order`, `argus_chart_chat`, `argus_written_analysis`, `argus_send_alert`, `argus_status`, `argus_dashboard`
+
+Run the MCP server directly: `./run.sh mcp`
 
 ---
 
@@ -121,45 +162,43 @@ Every alert is logged to `alerts_log` in SQLite even if all channels are disable
 ## REST API surface
 
 ```
+GET  /health
+GET  /                          minimal dev UI (static HTML)
 GET  /api/quote/{symbol}
 GET  /api/history/{symbol}?period=2y&interval=1d
 GET  /api/indicators/{symbol}
 GET  /api/action_card/{symbol}
 GET  /api/agents
+GET  /api/screener
 POST /api/screener           {symbols: [...], min_conviction: 0.0}
 GET  /api/flow/{symbol}
 GET  /api/options/{symbol}
-GET  /api/backtest/{symbol}
-POST /api/monte_carlo        {trade_returns: [...]}
-POST /api/pre_trade_stress   {entry, stop, target, win_rate}
 GET  /api/portfolio
 GET  /api/account
-POST /api/hedge              {portfolio_value, coverage_pct}
-POST /api/execute            {symbol, side, qty, order_type, ...}
+GET  /api/fundamentals/{symbol}
+POST /api/execute            {symbol, side, qty, order_type, ...}  [requires ARGUS_API_TOKEN if set]
 POST /api/chat/{symbol}      {question}
 GET  /api/analysis/{symbol}
-GET  /api/journal
-POST /api/journal/open       {symbol, side, qty, entry, stop, target}
-POST /api/journal/close      {trade_id, exit_price, notes}
-POST /api/alert              {title, body, payload, channels}
+GET  /api/bridge             latest sentiment×technical bridge CSV as JSON
+POST /api/alert              {title, body, payload, channels}     [requires ARGUS_API_TOKEN if set]
 ```
 
-The minimal HTML UI is mounted at `/` and uses these routes only.
+The Next.js dashboard at `:3000` proxies these routes via `/api/argus/*`.
 
 ---
 
 ## Limitations / honest stub list
 
-Some features genuinely require paid market-data subscriptions or proprietary infrastructure. Here's the honest inventory:
+Some features genuinely require paid market-data subscriptions or proprietary infrastructure:
 
-- **Real-time options tape** — we use yfinance's EOD chains. There is no consolidated tape feed here. Volume / OI numbers update at most once per day.
-- **Dark-pool prints** — not available without a paid feed (e.g. NYSE TRF or Polygon). The "unusual volume" detector uses the EOD chain only.
-- **SMS / WhatsApp alerts** — only email, Telegram, and webhook are wired. Twilio / WhatsApp Business need credentials we'd rather not embed.
-- **Full ICS / Wyckoff / Elliott** — implemented as heuristic agents (find_peaks-based wave labelling, structure-of-bars Wyckoff phase, simple BOS / order-block detection). Production-grade pattern recognition is its own product.
-- **Live order chaining beyond bracket orders** — supports market and bracket via ib_insync. OCA, scaling-out, trailing stops are not exposed (but ib_insync supports them — you'd extend `argus/data/ibkr.py`).
-- **News / sentiment ingestion** — not implemented.
+- **Real-time options tape** — yfinance EOD chains only. Volume / OI update at most once per day.
+- **Dark-pool prints** — not available without a paid feed. Unusual-volume detection uses the EOD chain only.
+- **SMS / WhatsApp alerts** — only email, Telegram, and webhook are wired.
+- **Full ICS / Wyckoff / Elliott** — heuristic agents, not production-grade pattern recognition.
+- **Live order chaining beyond bracket orders** — market and bracket via ib_insync. OCA, scaling-out, trailing stops not exposed.
+- **News / sentiment ingestion** — lives in the separate Market Review repo, not in Argus itself.
 
-Everything else — the 52-agent ensemble, the Action Card, the screener, the backtest, Monte Carlo, the hedge calculator, the journal, the alerts, the FastAPI server, the MCP server — runs end-to-end on your machine.
+Everything else — the 70-agent ensemble, Action Card, screener, period-return panel, portfolio edge overlay, catalyst leg (via bridge), alerts, FastAPI server, MCP server — runs end-to-end on your machine.
 
 ---
 
@@ -173,28 +212,34 @@ argus/
 ├── argus/
 │   ├── settings.py              # pydantic-settings + .env
 │   ├── main.py                  # uvicorn launcher
+│   ├── weights_config.py        # loads config/weights.yaml
+│   ├── sector_taxonomy.py       # Family → sub-sector resolver
 │   ├── data/
 │   │   ├── market.py            # yfinance wrapper
 │   │   └── ibkr.py              # ib_insync client
 │   ├── indicators/
-│   │   ├── compute.py           # 65 indicators in pure pandas/numpy
+│   │   ├── compute.py           # 65+ indicators in pure pandas/numpy
 │   │   ├── smc.py               # Smart-Money Concepts heuristics
 │   │   ├── wyckoff.py           # phase classifier
 │   │   └── elliott.py           # wave labelling
 │   ├── agents/
 │   │   ├── base.py              # Verdict / Vote / Agent
-│   │   ├── strategies.py        # 52 strategy functions
+│   │   ├── strategies.py        # 70 strategy functions
 │   │   └── registry.py          # agent registration
+│   ├── catalyst/                # 5-vote fundamental leg (bridge only)
+│   │   ├── score.py
+│   │   ├── agents.py
+│   │   ├── sources.py
+│   │   └── classify.py
 │   ├── action_card/builder.py
 │   ├── screener/screen.py
-│   ├── backtest/{backtest,monte_carlo}.py
-│   ├── portfolio/{tracker,hedge}.py
+│   ├── portfolio/tracker.py
 │   ├── flow/options_flow.py
 │   ├── alerts/dispatcher.py     # email / telegram / webhook
+│   ├── alerts/log.py            # SQLite alert log
 │   ├── chat/chart_chat.py       # Anthropic-grounded analysis
-│   ├── journal/store.py         # SQLite trade journal
 │   ├── api/routes.py            # FastAPI app
-│   ├── ui/index.html            # one-page UI
+│   ├── ui/index.html            # minimal dev UI (superseded by dashboard/)
 │   └── mcp_server/server.py     # FastMCP stdio server
 └── tests/
     ├── smoke.py                 # full e2e (needs network)

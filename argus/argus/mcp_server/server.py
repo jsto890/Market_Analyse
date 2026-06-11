@@ -36,12 +36,9 @@ from ..agents import all_agents
 from ..action_card import build_action_card
 from ..screener import screen_universe, DEFAULT_UNIVERSE
 from ..flow import flow_summary
-from ..backtest import backtest_signal, monte_carlo
-from ..backtest.monte_carlo import pre_trade_stress
-from ..portfolio import PortfolioTracker, hedge_for_long_book
+from ..portfolio import PortfolioTracker
 from ..chat import chart_chat, written_analysis
-from ..journal import Journal, Trade
-from ..alerts import dispatch_alert, AlertChannels
+from ..alerts import dispatch_alert, AlertChannels, AlertLog
 from ..settings import settings
 from datetime import datetime, timezone
 
@@ -160,7 +157,6 @@ footer{{padding:5px 18px;color:var(--muted);font:10px var(--mono);border-top:1px
 <nav id="nav">
   <button class="active" data-tab="screener">Screener</button>
   <button data-tab="portfolio">Portfolio</button>
-  <button data-tab="journal">Journal</button>
 </nav>
 
 <main>
@@ -182,15 +178,6 @@ footer{{padding:5px 18px;color:var(--muted);font:10px var(--mono);border-top:1px
     <div class="panel">
       <h3>IBKR Positions + Argus Edge</h3>
       <div id="portfolio-out" class="tbl-wrap"></div>
-    </div>
-  </section>
-
-  <!-- JOURNAL -->
-  <section id="tab-journal">
-    <div id="journal-stat-cards" class="stat-row"></div>
-    <div class="panel">
-      <h3>Open &amp; Recent Trades</h3>
-      <div id="journal-out" class="tbl-wrap"></div>
     </div>
   </section>
 
@@ -324,61 +311,27 @@ function renderPortfolio(positions) {{
   </tr>`).join('')}}</tbody></table>`;
 }}
 
-/* ── render journal ── */
-function renderJournal(trades, stats) {{
-  if (stats && Object.keys(stats).length) {{
-    const pnlCls = (+stats.total_pnl||0)>=0?'pos':'neg';
-    $('journal-stat-cards').innerHTML=[
-      {{k:'Win Rate',  v:fmtPct(stats.win_rate),   cls:''}},
-      {{k:'Trades',    v:stats.trades??0,           cls:''}},
-      {{k:'Avg Win',   v:fmtDollar(stats.avg_win),  cls:'pos'}},
-      {{k:'Avg Loss',  v:fmtDollar(stats.avg_loss), cls:'neg'}},
-      {{k:'Total P&L', v:fmtDollar(stats.total_pnl),cls:pnlCls}},
-    ].map(s=>`<div class="stat-card"><div class="sl">${{s.k}}</div><div class="sv ${{s.cls}}">${{s.v}}</div></div>`).join('');
-  }}
-  if (!trades||!trades.length) {{
-    $('journal-out').innerHTML='<div class="empty-state">No trades yet.</div>';
-    return;
-  }}
-  $('journal-out').innerHTML=`<table><thead><tr>
-    <th>Symbol</th><th>Side</th><th>Qty</th><th>Entry</th><th>Stop</th><th>Target</th><th>Exit</th><th>P&L</th><th>Status</th>
-  </tr></thead><tbody>${{trades.map(t=>`<tr>
-    <td style="font-weight:700">${{t.symbol}}</td>
-    <td class="${{t.side==='LONG'?'pos':'neg'}}">${{t.side}}</td>
-    <td>${{t.qty}}</td>
-    <td>${{fmt(t.entry)}}</td><td>${{fmt(t.stop)}}</td><td>${{fmt(t.target)}}</td>
-    <td>${{fmt(t.exit)}}</td>
-    <td class="${{signCls(t.pnl)}}">${{t.pnl!=null?fmtDollar(t.pnl):'—'}}</td>
-    <td style="color:${{t.status==='OPEN'?'var(--amber)':'var(--muted)'}}">${{t.status}}</td>
-  </tr>`).join('')}}</tbody></table>`;
-}}
-
 /* ── render all ── */
 function render(data) {{
   $('snap-ts').textContent = data.generated_at || '';
   renderSummary(data.screener||[]);
   renderScreener(data.screener||[]);
   renderPortfolio(data.portfolio||[]);
-  renderJournal(data.journal_trades||[], data.journal_stats||{{}});
 }}
 
 /* ── live fetch ── */
 async function fetchLive() {{
-  const [sRes, pRes, jRes] = await Promise.all([
+  const [sRes, pRes] = await Promise.all([
     fetch(`${{API}}/api/screener`, {{method:'POST',headers:{{'Content-Type':'application/json'}},body:JSON.stringify({{min_conviction:MIN_CONVICTION}}),signal:AbortSignal.timeout(4000)}}),
     fetch(`${{API}}/api/portfolio`, {{signal:AbortSignal.timeout(4000)}}),
-    fetch(`${{API}}/api/journal`,   {{signal:AbortSignal.timeout(4000)}}),
   ]);
   if (!sRes.ok) throw new Error('screener '+sRes.status);
   const screener   = await sRes.json();
   const portfolio  = await pRes.json();
-  const journal    = await jRes.json();
   return {{
     generated_at: new Date().toISOString().slice(0,16).replace('T',' ')+' UTC',
     screener:      screener.results||[],
     portfolio:     Array.isArray(portfolio)?portfolio:(portfolio.positions||[]),
-    journal_trades:journal.trades||[],
-    journal_stats: journal.stats||{{}},
   }};
 }}
 
@@ -409,7 +362,7 @@ refreshData();
 
 def build_mcp() -> FastMCP:
     mcp = FastMCP("argus")
-    journal = Journal()
+    alert_log = AlertLog()
 
     # ---------------- DATA ----------------
 
@@ -533,60 +486,6 @@ def build_mcp() -> FastMCP:
         """Raw options chain (calls + puts) for an expiration."""
         return get_options_chain(symbol, expiration)
 
-    # ---------------- BACKTEST / MC ----------------
-
-    @mcp.tool()
-    def argus_backtest(symbol: str, period: str = "2y") -> dict:
-        """Backtest the Argus ensemble signal on historical data.
-
-        Returns trades, win rate, profit factor, CAGR, Sharpe/Sortino,
-        max drawdown, and the full equity curve.
-        """
-        df = get_history(symbol, period=period, interval="1d")
-        if df.empty:
-            return {"error": f"No history for {symbol}"}
-        r = backtest_signal(symbol, df)
-        d = r.__dict__.copy()
-        # Trim equity curve so we don't blow up the response.
-        if len(d["equity_curve"]) > 250:
-            step = len(d["equity_curve"]) // 250
-            d["equity_curve"] = d["equity_curve"][::step]
-        return d
-
-    @mcp.tool()
-    def argus_monte_carlo(
-        trade_returns: List[float],
-        sims: int = 5000,
-        horizon: Optional[int] = None,
-    ) -> dict:
-        """Bootstrap Monte Carlo on a list of trade returns.
-
-        Args:
-            trade_returns: Decimal returns per trade, e.g. [0.03, -0.012, ...].
-                Get these from `argus_backtest`'s `trade_returns` field.
-            sims: Number of randomised paths. Argus default is 5000.
-            horizon: Path length. Defaults to len(trade_returns).
-
-        Returns:
-            5th/50th/95th percentile final equities, P(loss), P(ruin>50%),
-            average max drawdown.
-        """
-        r = monte_carlo(trade_returns, sims=sims, horizon=horizon)
-        return r.__dict__
-
-    @mcp.tool()
-    def argus_pre_trade_stress(
-        entry: float,
-        stop: float,
-        target: float,
-        historical_win_rate: float = 0.5,
-    ) -> dict:
-        """Per-trade stress test: probability of hitting stop before target.
-
-        Mirrors Argus's "before you click buy" check.
-        """
-        return pre_trade_stress(entry, stop, target, historical_win_rate)
-
     # ---------------- PORTFOLIO ----------------
 
     @mcp.tool()
@@ -608,17 +507,6 @@ def build_mcp() -> FastMCP:
             return IBKRClient.instance().account_summary()
         except Exception as e:
             return {"error": str(e)}
-
-    @mcp.tool()
-    def argus_compute_hedge(portfolio_value: float, coverage_pct: float = 0.5) -> dict:
-        """Hedge calculator: how many shares of inverse ETFs (SH/SDS/SPXU/PSQ/QID)
-        OR SPY put contracts you need to hedge `coverage_pct` of `portfolio_value`.
-
-        Args:
-            portfolio_value: Total long $ exposure.
-            coverage_pct: 0..1. Argus defaults: 0.25 / 0.5 / 1.0.
-        """
-        return hedge_for_long_book(portfolio_value, coverage_pct)
 
     # ---------------- EXECUTION (gated) ----------------
 
@@ -666,49 +554,6 @@ def build_mcp() -> FastMCP:
             return {"error": f"No history for {symbol}"}
         return written_analysis(symbol, df)
 
-    # ---------------- JOURNAL ----------------
-
-    @mcp.tool()
-    def argus_journal_list(status: Optional[str] = None, limit: int = 50) -> dict:
-        """List journaled trades. status='OPEN'|'CLOSED'|None."""
-        return {"trades": journal.list_trades(status=status, limit=limit), "stats": journal.stats()}
-
-    @mcp.tool()
-    def argus_journal_open(
-        symbol: str,
-        side: str,
-        qty: float,
-        entry: Optional[float] = None,
-        stop: Optional[float] = None,
-        target: Optional[float] = None,
-        setup: Optional[str] = None,
-        notes: Optional[str] = None,
-    ) -> dict:
-        """Open a trade in the journal. side = LONG or SHORT."""
-        t = Trade(
-            id=None,
-            ts=datetime.now(timezone.utc).isoformat(),
-            symbol=symbol.upper(),
-            side=side.upper(),
-            qty=qty,
-            entry=entry,
-            stop=stop,
-            target=target,
-            exit=None, pnl=None, rr=None,
-            status="OPEN",
-            setup=setup,
-            notes=notes,
-        )
-        return {"id": journal.open_trade(t)}
-
-    @mcp.tool()
-    def argus_journal_close(
-        trade_id: int, exit: float, notes: Optional[str] = None
-    ) -> dict:
-        """Close a journaled trade by id."""
-        journal.close_trade(trade_id, exit, notes)
-        return {"ok": True}
-
     # ---------------- ALERTS ----------------
 
     @mcp.tool()
@@ -725,7 +570,7 @@ def build_mcp() -> FastMCP:
         """
         ch = AlertChannels(email=email, telegram=telegram, webhook=webhook)
         out = dispatch_alert(title, body, payload, channels=ch)
-        journal.log_alert(title, body, payload, {"results": out.results})
+        alert_log.log_alert(title, body, payload, {"results": out.results})
         return {"results": out.results}
 
     # ---------------- META ----------------
@@ -749,7 +594,7 @@ def build_mcp() -> FastMCP:
         """Generate a self-contained HTML dashboard artifact showing current market signals.
 
         Returns complete HTML that Claude Desktop renders as an interactive artifact.
-        Shows screener results, portfolio overlay, and journal stats.
+        Shows screener results and portfolio overlay.
         Tries to fetch live data from localhost:8088; falls back to embedded snapshot.
 
         Args:
@@ -763,15 +608,11 @@ def build_mcp() -> FastMCP:
             portfolio = PortfolioTracker().positions_with_edge()
         except Exception:
             portfolio = []
-        journal_data = journal.list_trades(status="OPEN", limit=20)
-        journal_stats = journal.stats()
 
         snapshot = {
             "generated_at": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC"),
             "screener": [c.to_dict() for c in cards],
             "portfolio": portfolio,
-            "journal_trades": journal_data,
-            "journal_stats": journal_stats,
             "min_conviction": min_conviction,
         }
         return _build_dashboard_html(snapshot)

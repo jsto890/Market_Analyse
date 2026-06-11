@@ -14,13 +14,17 @@ class Settings(BaseSettings):
 
     # IBKR
     ibkr_host: str = "127.0.0.1"
-    ibkr_port: int = 7497
+    ibkr_port: int = 4002   # IB Gateway paper (7497 = TWS paper, 4001 = Gateway live)
     ibkr_client_id: int = 11
     ibkr_live_trading: bool = False
 
     # Anthropic
     anthropic_api_key: str = ""
     anthropic_model: str = "claude-opus-4-6"
+    # Meta-analyst: lightweight LLM coherence check layered on the rule-based card.
+    meta_analyst_model: str = "claude-haiku-4-5"
+    meta_analyst_enabled: bool = False   # opt-in; screener loop leaves this off
+    meta_analyst_timeout_s: float = 2.0  # hard wall — degrade to neutral past this
 
     # SMTP
     smtp_host: str = ""

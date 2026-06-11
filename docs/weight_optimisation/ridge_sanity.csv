@@ -1,0 +1,4 @@
+horizon_d,n,coef_sentiment,coef_technical,sentiment_sign,technical_sign
+1,786,4.492,7.861,＋,＋
+5,593,15.026,-11.545,＋,－
+10,379,2.613,4.976,＋,＋

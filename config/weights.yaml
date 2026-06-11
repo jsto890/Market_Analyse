@@ -1,0 +1,26 @@
+# Bridge scoring weights — single source of truth.
+# Read at startup by sentiment_bridge.py (bridge:) and argus/catalyst/score.py (catalyst_intra:).
+# Edited by tools/weight_opt/apply_weights.py (atomic write). If this file is missing or
+# invalid, both modules fall back to their in-code defaults.
+#
+# Constraints (enforced on load):
+#   - each bridge weight in [0.10, 1.0], sum == 1.0
+#   - each catalyst_intra weight in [0.05, 0.50], sum == 1.0
+
+bridge:
+  sentiment: 0.35
+  technical: 0.45
+  catalyst:  0.20
+
+catalyst_intra:
+  # Literature baseline renormalised to sum 1.0 (raw synthesis 0.32/0.24/0.18/0.13/0.08 = 0.95).
+  event_catalyst:       0.34
+  earnings_proximity:   0.25
+  squeeze_setup:        0.19
+  growth_profitability: 0.14
+  analyst_upside:       0.08
+
+meta:
+  version: "2026-06-09"
+  source: "catalyst_intra from literature synthesis (docs/weight_optimisation/literature_catalyst_weights.md); bridge top-level pending rank-IC backtest"
+  note: "catalyst_intra = literature prior, awaiting 6-week forward validation. Top-level held at original 35/45/20 pending backtest verdict."

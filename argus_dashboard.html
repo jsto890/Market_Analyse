@@ -195,11 +195,15 @@ footer{padding:5px 18px;color:var(--muted);font:10px var(--mono);border-top:1px 
 
 /* ── MORNING SCAN CARDS ── */
 .candidate-stack{display:flex;flex-direction:column;gap:8px}
-.candidate-card{background:var(--bg);border:1px solid var(--line);border-left:3px solid var(--green);border-radius:5px;padding:11px 13px;display:grid;grid-template-columns:1fr auto;gap:6px;align-items:center;cursor:pointer;transition:border-color .15s}
+.candidate-card{background:var(--bg);border:1px solid var(--line);border-left:4px solid var(--green);border-radius:5px;padding:11px 13px;display:grid;grid-template-columns:1fr auto;gap:6px;align-items:center;cursor:pointer;transition:border-color .15s}
 .candidate-card:hover{border-left-color:var(--accent)}
 .candidate-card.TECH_WAIT{border-left-color:var(--muted);opacity:.7}
 .candidate-card.DIVERGING{border-left-color:var(--red)}
 .candidate-card.NEUTRAL{border-left-color:var(--muted);opacity:.6}
+.candidate-card.CONTRARIAN{border-left-color:var(--amber)}
+.cand-enter{font:10px var(--mono);padding:3px 8px;background:transparent;border:1px solid rgba(125,165,255,.3);color:var(--accent);border-radius:3px;cursor:pointer;white-space:nowrap}
+.cand-enter:hover{background:rgba(125,165,255,.12)}
+.hc-separator{font:9px var(--mono);color:var(--muted);text-transform:uppercase;letter-spacing:.08em;padding:4px 0 2px;border-top:1px solid var(--line);margin-top:4px}
 .cand-sym{font:16px var(--mono);font-weight:700}
 .cand-meta{font:10px var(--mono);color:var(--muted);margin-top:2px}
 .cand-bar-track{height:3px;background:var(--line);border-radius:2px;margin-top:5px;position:relative;overflow:hidden}
@@ -216,6 +220,46 @@ footer{padding:5px 18px;color:var(--muted);font:10px var(--mono);border-top:1px 
 /* ── DRILL BUTTON ── */
 .drill-btn{background:transparent;border:1px solid var(--line);color:var(--muted);padding:2px 7px;border-radius:3px;cursor:pointer;font:13px var(--mono);transition:all .15s;line-height:1}
 .drill-btn:hover{border-color:var(--accent);color:var(--accent)}
+
+/* ── FAMILY VERDICT BARS ── */
+.fam-bars{display:flex;flex-direction:column;gap:5px;margin-top:8px}
+.fam-bar-row{display:flex;align-items:center;gap:7px;font:10px var(--mono)}
+.fam-bar-label{width:90px;color:var(--muted);text-align:right;flex-shrink:0}
+.fam-bar-track{flex:1;height:8px;background:rgba(255,255,255,.05);border-radius:2px;position:relative;overflow:hidden}
+.fam-bar-fill{height:100%;border-radius:2px;position:absolute;left:0;top:0}
+.fam-bar-meta{width:90px;flex-shrink:0;color:var(--text)}
+.regime-chip{display:inline-block;padding:1px 7px;border-radius:3px;font:10px var(--mono);font-weight:600;letter-spacing:.05em}
+.regime-chip.trending{background:rgba(30,184,84,.15);color:var(--green);border:1px solid rgba(30,184,84,.3)}
+.regime-chip.trending_late{background:rgba(30,184,84,.08);color:var(--green);border:1px dashed rgba(30,184,84,.35)}
+.regime-chip.ranging{background:rgba(125,165,255,.1);color:var(--accent);border:1px solid rgba(125,165,255,.25)}
+.regime-chip.gap_down_continuation{background:rgba(224,69,90,.15);color:var(--red);border:1px solid rgba(224,69,90,.3)}
+.regime-chip.neutral{background:rgba(139,147,163,.1);color:var(--muted);border:1px solid rgba(139,147,163,.2)}
+.regime-chip.high_vol{background:rgba(216,162,58,.12);color:var(--amber);border:1px solid rgba(216,162,58,.3)}
+
+/* ── STICKY BRIDGE SUMMARY BAR ── */
+#bridge-summary-bar{
+  display:none;font:11px var(--mono);color:var(--text);padding:5px 12px;
+  background:rgba(13,15,18,.95);border-bottom:1px solid var(--line);
+  position:sticky;top:0;z-index:5;backdrop-filter:blur(4px);
+  flex-wrap:wrap;gap:10px;align-items:center;
+}
+#bridge-summary-bar.visible{display:flex}
+
+/* ── MOBILE ── */
+@media(max-width:768px){
+  .main-inner{padding:10px 10px}
+  .grid2{grid-template-columns:1fr}
+  .candidate-card{grid-template-columns:1fr}
+  .cand-action{flex-direction:row;align-items:center;flex-wrap:wrap;gap:8px;margin-top:6px}
+  nav{padding:5px 10px;gap:2px}
+  nav button{padding:3px 8px;font-size:11px}
+  .fund-grid{grid-template-columns:repeat(2,1fr)}
+  table{font-size:11px}
+  th,td{padding:5px 6px}
+  .vote-matrix{grid-template-columns:repeat(4,1fr)}
+  .stat-row{grid-template-columns:repeat(3,1fr)}
+  .stress-out{grid-template-columns:repeat(2,1fr)}
+}
 </style>
 </head>
 <body>
@@ -239,11 +283,8 @@ footer{padding:5px 18px;color:var(--muted);font:10px var(--mono);border-top:1px 
   <button data-tab="screener">Screener</button>
   <button data-tab="bridge">Bridge Report</button>
   <button data-tab="flow">Options Flow</button>
-  <button data-tab="backtest">Backtest</button>
   <button data-tab="portfolio">Portfolio</button>
-  <button data-tab="hedge">Hedge</button>
   <button data-tab="chat">AI Chat</button>
-  <button data-tab="journal">Journal</button>
   <button data-tab="agents">Agents</button>
 </nav>
 
@@ -341,11 +382,12 @@ footer{padding:5px 18px;color:var(--muted);font:10px var(--mono);border-top:1px 
       <div class="row" style="margin-bottom:8px">
         <span style="font:11px var(--mono);color:var(--muted)">Sentiment × Technical bridge</span>
         <button class="ghost" style="font-size:11px;padding:3px 8px" onclick="loadBridge()">↺ Refresh</button>
-        <button class="ghost" id="morning-toggle" style="font-size:11px;padding:3px 8px" onclick="toggleMorningMode()">☀ Morning Mode</button>
+        <button class="ghost active-filter" id="morning-toggle" style="font-size:11px;padding:3px 8px" onclick="toggleMorningMode()">☀ Exit Morning Mode</button>
         <button class="ghost" id="compass-toggle" style="font-size:11px;padding:3px 8px" onclick="toggleCompass()">⊕ Compass</button>
         <span id="bridge-ts" style="font:10px var(--mono);color:var(--muted);margin-left:auto"></span>
       </div>
       <div class="stat-row" id="bridge-stats"></div>
+      <div id="bridge-summary-bar"></div>
       <div class="row" id="bridge-filters" style="gap:5px;margin-bottom:10px">
         <button class="ghost active-filter" data-f="all"       onclick="setFilter(this,'all')">All</button>
         <button class="ghost"              data-f="ALIGNED"    onclick="setFilter(this,'ALIGNED')"    style="color:var(--green)">✅ Aligned</button>
@@ -372,37 +414,6 @@ footer{padding:5px 18px;color:var(--muted);font:10px var(--mono);border-top:1px 
     </div>
   </section>
 
-  <!-- ════ BACKTEST ════ -->
-  <section id="tab-backtest">
-    <div class="panel">
-      <div class="row">
-        <input id="bt-sym" placeholder="Symbol" style="width:155px" onkeydown="if(event.key==='Enter')runBacktest()">
-        <select id="bt-period">
-          <option>2y</option><option>5y</option><option>10y</option>
-        </select>
-        <button class="primary" onclick="runBacktest()">Backtest</button>
-        <button class="ghost" onclick="runMC()">+ Monte Carlo (5000)</button>
-      </div>
-      <div id="bt-out" class="kv"></div>
-      <pre id="bt-mc" style="margin-top:12px;display:none"></pre>
-    </div>
-    <div class="panel">
-      <h3>Pre-trade stress test</h3>
-      <div class="row">
-        <label style="font:11px var(--mono);color:var(--muted)">Entry $</label>
-        <input id="st-entry"  type="number" step="0.01" placeholder="0.00" style="width:90px">
-        <label style="font:11px var(--mono);color:var(--muted)">Stop $</label>
-        <input id="st-stop"   type="number" step="0.01" placeholder="0.00" style="width:90px">
-        <label style="font:11px var(--mono);color:var(--muted)">Target $</label>
-        <input id="st-target" type="number" step="0.01" placeholder="0.00" style="width:90px">
-        <label style="font:11px var(--mono);color:var(--muted)">Win rate</label>
-        <input id="st-wr"     type="number" step="0.01" value="0.50"        style="width:75px">
-        <button class="primary" onclick="runStress()">Run stress</button>
-      </div>
-      <div id="stress-out" class="stress-out" style="display:none"></div>
-    </div>
-  </section>
-
   <!-- ════ PORTFOLIO ════ -->
   <section id="tab-portfolio">
     <div class="panel">
@@ -412,43 +423,6 @@ footer{padding:5px 18px;color:var(--muted);font:10px var(--mono);border-top:1px 
       </div>
       <div id="portfolio-out" class="tbl-wrap"></div>
       <pre id="account-out" style="margin-top:12px;display:none"></pre>
-    </div>
-  </section>
-
-  <!-- ════ HEDGE ════ -->
-  <section id="tab-hedge">
-    <div class="panel">
-      <div class="row">
-        <label style="font:11px var(--mono);color:var(--muted)">Portfolio $</label>
-        <input id="h-pv" type="number" placeholder="e.g. 100000" style="width:165px">
-        <label style="font:11px var(--mono);color:var(--muted)">Coverage</label>
-        <input id="h-cov" type="number" step="0.05" value="0.5" style="width:75px">
-        <button class="primary" onclick="runHedge()">Compute hedge</button>
-      </div>
-      <pre id="hedge-out">(enter portfolio value and click Compute)</pre>
-    </div>
-  </section>
-
-  <!-- ════ JOURNAL ════ -->
-  <section id="tab-journal">
-    <div class="panel">
-      <h3>Open new trade</h3>
-      <div class="row">
-        <input id="j-sym" placeholder="Symbol" style="width:100px">
-        <select id="j-side"><option>LONG</option><option>SHORT</option></select>
-        <input id="j-qty"    type="number" placeholder="Qty"    style="width:75px">
-        <input id="j-entry"  type="number" placeholder="Entry"  style="width:85px" step="0.01">
-        <input id="j-stop"   type="number" placeholder="Stop"   style="width:85px" step="0.01">
-        <input id="j-target" type="number" placeholder="Target" style="width:85px" step="0.01">
-        <input id="j-setup"  placeholder="Setup tag"            style="width:130px">
-        <button class="primary" onclick="openTrade()">Open trade</button>
-      </div>
-    </div>
-    <div class="panel">
-      <h3>Trade log</h3>
-      <button class="ghost" onclick="loadJournal()">↺ Refresh</button>
-      <div id="journal-out" class="tbl-wrap" style="margin-top:10px"></div>
-      <pre id="journal-stats" style="margin-top:10px;display:none"></pre>
     </div>
   </section>
 
@@ -486,24 +460,6 @@ footer{padding:5px 18px;color:var(--muted);font:10px var(--mono);border-top:1px 
   </div>
 </section>
 
-<!-- ════ CLOSE TRADE MODAL ════ -->
-<div class="modal-overlay" id="close-modal" onclick="if(event.target===this)hideCloseModal()">
-  <div class="modal-box">
-    <h4>Close trade <span id="close-modal-sym" style="color:var(--accent)"></span></h4>
-    <div class="mrow">
-      <label>Exit $</label>
-      <input id="close-exit" type="number" step="0.01" placeholder="Exit price">
-    </div>
-    <div class="mrow">
-      <label>Notes</label>
-      <input id="close-notes" placeholder="Optional notes">
-    </div>
-    <div class="mbtns">
-      <button class="ghost" onclick="hideCloseModal()">Cancel</button>
-      <button class="primary" id="close-confirm-btn" onclick="confirmCloseTrade()">Confirm close</button>
-    </div>
-  </div>
-</div>
 
 <!-- ════ G-KEY SPOTLIGHT ════ -->
 <div id="spotlight" onclick="if(event.target===this)closeSpotlight()">
@@ -577,7 +533,6 @@ function switchTab(tab) {
     $('tab-'+tab).classList.add('active');
     if (tab === 'agents')  loadAgents();
     if (tab === 'bridge')  loadBridge();
-    if (tab === 'journal') loadJournal();
   }
 }
 
@@ -713,6 +668,110 @@ function buildFamilyRings(votes) {
   }).join('');
 }
 
+/* ═══════════════════════ FAMILY VERDICT BARS ═══════════════════════ */
+const _CAP_FAM_ORDER = ['ma_trend','breakout','squeeze','momentum_osc','weekly_structure','other'];
+
+function buildFamilyBars(familyVotes, verdict, familyAttribution) {
+  const el = $('family-bars');
+  if (!el || !familyVotes) return;
+  el.innerHTML = _CAP_FAM_ORDER.map(fam => {
+    const c = familyVotes[fam];
+    if (!c) return '';
+    const total = c.long + c.short + c.wait || 1;
+    const dominant = c.long >= c.short ? 'long' : 'short';
+    const dominantN = c.long >= c.short ? c.long : c.short;
+    const pct = dominantN / total;
+    const clr = dominant === 'long' ? 'var(--green)' : 'var(--red)';
+    const FAM_LABELS = {ma_trend:'MA Trend', breakout:'Breakout', squeeze:'Squeeze', momentum_osc:'Momentum', weekly_structure:'Weekly', other:'Uncapped'};
+    const label = FAM_LABELS[fam] || fam;
+    const meta = `${dominantN}/${total} ${dominant.toUpperCase()}`;
+    // LOO attribution delta: how much does removing this family change the score?
+    const attr = familyAttribution && familyAttribution[fam] != null ? familyAttribution[fam] : null;
+    const attrHtml = attr != null
+      ? ` <span style="font-size:9px;color:${attr>0.02?'var(--green)':attr<-0.02?'var(--red)':'var(--muted)'};margin-left:4px" title="Score drops by ${attr.toFixed(3)} if this family removed">${attr>0?'+':''}${(attr*100).toFixed(1)}%</span>`
+      : '';
+    return `<div class="fam-bar-row">
+      <div class="fam-bar-label">${label}${attrHtml}</div>
+      <div class="fam-bar-track">
+        <div class="fam-bar-fill" style="width:${(pct*100).toFixed(1)}%;background:${clr}"></div>
+      </div>
+      <div class="fam-bar-meta">${meta}</div>
+    </div>`;
+  }).join('');
+}
+
+/* ═══════════════════════ STOP ANCHOR DESCRIPTIONS ═══════════════════════ */
+const STOP_ANCHOR_DESC = {
+  'psar':         'Parabolic SAR — trailing stop accelerates as trend extends',
+  'supertrend':   'Supertrend — volatility-adaptive band below trend direction',
+  'ema_50':       '50-day EMA — medium-term trend support',
+  'ema_200':      '200-day EMA — long-term trend support',
+  'sma_50':       '50-day SMA — medium-term support',
+  'sma_200':      '200-day SMA — long-term support',
+  'swing_low':    'Recent swing low — last significant support level',
+  'swing_high':   'Recent swing high — last significant resistance (short)',
+  'swing_low-buf':'Swing low with ATR buffer — wider protection below support',
+  'swing_high-buf':'Swing high with ATR buffer — wider protection above resistance',
+  'psar-buf':     'Parabolic SAR with ATR buffer',
+  'supertrend-buf':'Supertrend with ATR buffer',
+  'ema_50-buf':   '50-day EMA with ATR buffer',
+  'ema_200-buf':  '200-day EMA with ATR buffer',
+  'ATR':          'ATR-based flat stop — no technical level found; sized by volatility',
+};
+
+function stopAnchorHtml(anchor) {
+  if (!anchor) return '—';
+  const desc = STOP_ANCHOR_DESC[anchor];
+  return desc
+    ? `<span title="${desc}" style="cursor:help;border-bottom:1px dotted var(--muted)">${anchor}</span> <span style="color:var(--muted);font-size:10px">${desc}</span>`
+    : anchor;
+}
+
+/* ═══════════════════════ ACTION LABEL HELPER ═══════════════════════ */
+const ACTION_LABEL_META = {
+  PRIME_LONG:     { color: '#00c853', bg: 'rgba(0,200,83,0.15)',  desc: 'Highest-expectancy — STRONG_COMBO + weekly=L multi-timeframe alignment (55%+ WR)' },
+  STANDARD_LONG:  { color: '#69f0ae', bg: 'rgba(105,240,174,0.12)', desc: 'Solid trend setup — BULLISH_SETUP criteria met (weekly bearish filtered out)' },
+  WATCH:          { color: '#ffd740', bg: 'rgba(255,215,64,0.12)', desc: 'Monitor — setup forming or weak combo' },
+  AVOID:          { color: '#ff5252', bg: 'rgba(255,82,82,0.12)',  desc: 'No entry — SHORT signal or gap-down continuation' },
+  WAIT:           { color: '#90a4ae', bg: 'rgba(144,164,174,0.1)', desc: 'No actionable signal' },
+};
+const TRADE_STYLE_LABEL = {
+  MOMENTUM:    'Momentum',
+  SWING:       'Swing',
+  BREAKOUT:    'Breakout',
+  MEAN_REVERT: 'Mean-revert',
+  MIXED:       'Mixed',
+  NONE:        '',
+};
+function actionLabelHtml(label, style) {
+  const m = ACTION_LABEL_META[label] || ACTION_LABEL_META.WAIT;
+  const sl = TRADE_STYLE_LABEL[style] || '';
+  const styleTag = sl ? ` <span style="color:var(--muted);font-size:10px">${sl}</span>` : '';
+  return `<span style="font-weight:700;font-size:12px;padding:2px 8px;border-radius:4px;
+    color:${m.color};background:${m.bg}" title="${m.desc}">${label||'WAIT'}</span>${styleTag}`;
+}
+
+/* ═══════════════════════ REGIME CHIP HELPER ═══════════════════════ */
+function regimeChip(regime, highVol) {
+  const r = regime || 'neutral';
+  const hvTag = highVol ? ` <span class="regime-chip high_vol">HIGH VOL</span>` : '';
+  return `<span class="regime-chip ${r}">${r.replace(/_/g,' ').toUpperCase()}</span>${hvTag}`;
+}
+
+let _spyRegime = null;
+let _spyHighVol = false;
+
+async function fetchSpyRegime() {
+  if (_spyRegime !== null) return;
+  try {
+    const c = await fetch(`${API}/api/action_card/SPY`, {signal: AbortSignal.timeout(8000)}).then(r=>r.json());
+    _spyRegime = c.ticker_regime || 'neutral';
+    _spyHighVol = !!c.high_vol_regime;
+  } catch { _spyRegime = 'neutral'; }
+  const chip = $('spy-regime-chip');
+  if (chip) chip.innerHTML = regimeChip(_spyRegime, _spyHighVol);
+}
+
 /* ═══════════════════════ ACTION CARD ═══════════════════════ */
 async function loadCard() {
   const sym = $('sym').value.trim().toUpperCase();
@@ -722,6 +781,7 @@ async function loadCard() {
   panel.classList.remove('extended-warning');
   $('ext-banner').classList.remove('show');
   $('pin-btn').style.display = 'none';
+  $('enter-btn').style.display = 'none';
   $('fund-section').style.display = 'none';
 
   $('card-out').innerHTML = '<span style="color:var(--muted)">running agents…</span>';
@@ -753,32 +813,73 @@ async function loadCard() {
       </div>
       <div class="k">Verdict</div>
       <div class="v"><span class="verdict ${card.verdict}">${card.verdict}</span></div>
+      <div class="k">Action</div>
+      <div class="v">${actionLabelHtml(card.action_label, card.trade_style)}</div>
       <div class="k">Score</div>
       <div class="v" id="${scoreBarId}"></div>
+      ${(card.score_ci_lo != null && card.score_ci_hi != null) ? `
+      <div class="k" style="color:var(--muted);font-size:10px">90% CI</div>
+      <div class="v" style="font-size:10px;color:var(--muted)">[${fmt(card.score_ci_lo,3)} → ${fmt(card.score_ci_hi,3)}]
+        ${Math.abs((card.score_ci_hi||0)-(card.score_ci_lo||0)) > 0.4 ? '<span style="color:var(--amber)">wide — low certainty</span>' : ''}</div>` : ''}
       <div class="k">Agreement</div>
-      <div class="v">${fmt(card.agreement_pct,1)}%</div>
+      <div class="v">${fmt(card.agreement_pct,1)}%${card.inflation_gap > 0.15 ? ' <span style="color:var(--amber);font-size:10px">⚠ inflation +' + (card.inflation_gap*100).toFixed(0) + '%</span>' : ''}</div>
       <div class="k">Votes</div>
       <div class="v">
         <span class="pos">L:${card.long_votes}</span> ·
         <span class="neg">S:${card.short_votes}</span> ·
         <span class="neu">W:${card.wait_votes}</span>
+        <span style="color:var(--muted);font-size:10px;margin-left:8px">N_eff ${(card.n_eff||0).toFixed(1)}</span>
       </div>
       <div class="k">Entry / Stop / Target</div>
       <div class="v">${fmt(card.entry)} / <span class="neg">${fmt(card.stop)}</span> / <span class="pos">${fmt(card.target)}</span></div>
       <div class="k">Risk : Reward</div>
-      <div class="v">${fmt(card.risk_reward,2)}x</div>
+      <div class="v">${fmt(card.risk_reward,2)}x
+        ${(card.entry && card.stop && card.target && card.verdict !== 'WAIT') ? (() => {
+          const slip = card.verdict === 'LONG' ? card.entry * 1.005 : card.entry * 0.995;
+          const risk = card.verdict === 'LONG' ? slip - card.stop : card.stop - slip;
+          const rr   = risk > 0 ? Math.abs(card.target - slip) / risk : 0;
+          return ` <span style="color:var(--muted);font-size:10px">· slip 0.5%: ${fmt(slip)} entry, ${rr.toFixed(2)}x R:R</span>`;
+        })() : ''}</div>
+      <div class="k">Stop anchor</div>
+      <div class="v">${stopAnchorHtml(card.stop_anchor)}</div>
+      ${card.sector ? `<div class="k" style="color:var(--muted);font-size:10px">Sector</div>
+      <div class="v" style="font-size:10px;color:var(--muted)">${card.sector}</div>` : ''}
+      <div class="k">Regime</div>
+      <div class="v">${regimeChip(card.ticker_regime, card.high_vol_regime)}${card.combo ? (() => {
+        const daily = card.combo.slice(0,4);
+        const wkDir = card.combo[4] || 'N';
+        const wkLabel = wkDir === 'L' ? 'wk↑' : wkDir === 'S' ? 'wk↓' : 'wk—';
+        const wkClr = wkDir === 'L' ? 'var(--green)' : wkDir === 'S' ? 'var(--red)' : 'var(--muted)';
+        return ` <span style="color:var(--muted);font-size:10px;margin-left:6px">combo: ${daily}</span> <span style="color:${wkClr};font-size:10px;margin-left:4px">${wkLabel}</span>`;
+      })() : ''}${card.adx_value != null ? (() => {
+        const slopeIcon = card.adx_slope === 'rising' ? '↑' : card.adx_slope === 'falling' ? '↓' : '→';
+        const slopeClr = card.adx_slope === 'rising' ? 'var(--green)' : card.adx_slope === 'falling' ? 'var(--red)' : 'var(--muted)';
+        return ` <span style="color:var(--muted);font-size:10px;margin-left:8px">ADX ${card.adx_value}</span><span style="color:${slopeClr};font-size:11px;margin-left:2px">${slopeIcon}</span>`;
+      })() : ''}</div>
+      <div class="k">Family breakdown</div>
+      <div class="v"><div class="fam-bars" id="family-bars"></div></div>
       <div class="k">Momentum</div>
       <div class="v" id="${momId}"></div>
       <div class="k">Note</div>
-      <div class="v" style="color:var(--muted)">${card.notes||'—'}</div>`;
+      <div class="v" style="color:var(--muted)">${card.notes||'—'}</div>
+      ${(card.meta_note) ? `
+      <div class="k" style="color:var(--muted);font-size:10px">Meta-analyst</div>
+      <div class="v" style="font-size:10px">
+        <span style="color:${card.meta_coherence>=0.7?'var(--green)':card.meta_coherence<=0.35?'var(--red)':'var(--amber)'}">
+          ●${(card.meta_coherence*100).toFixed(0)}% coherent
+        </span>
+        ${card.meta_adjustment !== 0 ? `<span style="color:var(--muted);margin-left:6px">${card.meta_adjustment>0?'+':''}${(card.meta_adjustment*100).toFixed(0)}% adj</span>` : ''}
+        <div style="color:var(--muted);margin-top:2px;font-style:italic">${card.meta_note}</div>
+      </div>` : ''}`;
 
     renderScoreBar($(scoreBarId), sc, card.verdict);
     renderMomentum($(momId), card.ret_1d, card.ret_5d, card.ret_20d);
 
-    // Vote matrix + family rings
+    // Vote matrix + family rings + cap-family bars
     const votes = card.votes || [];
     buildVoteMatrix(votes);
     buildFamilyRings(votes);
+    buildFamilyBars(card.family_votes, card.verdict, card.family_attribution);
 
     // Agreed / dissented
     const agreed    = card.agreed    || [];
@@ -795,6 +896,8 @@ async function loadCard() {
     $('ind').textContent = JSON.stringify(indRes.values||indRes, null, 2);
     $('card-detail').style.display = 'grid';
     $('pin-btn').style.display = 'inline-block';
+    $('enter-btn').style.display = (card.verdict === 'LONG' || card.verdict === 'SHORT') ? 'inline-block' : 'none';
+    _lastCard = card;
 
     // Fetch fundamentals from IBKR in background
     fetchFundamentals(sym);
@@ -932,8 +1035,9 @@ async function runScreener() {
 /* ═══════════════════════ BRIDGE REPORT ═══════════════════════ */
 let _bridgeRows   = [];
 let _bridgeFilter = 'all';
-let _morningMode  = false;
+let _morningMode  = true;
 let _compassOpen  = false;
+let _lastCard     = null;   // most recently fetched action card — used to enrich signal snapshots
 
 const BRIDGE_CSV = `ticker,setup_label,quality_score,signa_verdict,high_conviction,agreement_pct,entry,stop,target,risk_reward,sentiment_score,tech_score,combined_score,alignment,catalysts,ret_1d,ret_5d,ret_20d
 IREN,fresh_watch,19.67,LONG,true,85.7,56.56,49.25,71.17,2.0,0.7,0.804,0.762,ALIGNED,ai_infrastructure;crypto;earnings,2.56,3.32,19.4
@@ -1034,6 +1138,44 @@ function renderBridgeSummary(rows) {
     <div class="sl">${s.k}</div>
     <div class="sv" style="color:${s.cls==='green'?'var(--green)':s.cls==='red'?'var(--red)':s.cls==='amber'?'var(--amber)':'var(--text)'}">${s.v}</div>
   </div>`).join('');
+  renderSummaryBar(rows);
+}
+
+let _bridgeGeneratedAt = null;
+
+function _signalAgeHours() {
+  if (!_bridgeGeneratedAt) return null;
+  const ms = Date.now() - Date.parse(_bridgeGeneratedAt);
+  if (isNaN(ms) || ms < 0) return null;
+  return ms / 3_600_000;
+}
+
+function renderSummaryBar(rows) {
+  const bar = $('bridge-summary-bar');
+  if (!bar) return;
+  const isHC = r => r.high_conviction==='true' || r.high_conviction===true;
+  const verd = r => r.argus_verdict || r.signa_verdict || '';
+  const hcLong  = rows.filter(r => isHC(r) && verd(r)==='LONG'  && r.alignment==='ALIGNED').length;
+  const hcShort = rows.filter(r => isHC(r) && (verd(r)==='SHORT'||r.alignment==='DIVERGING')).length;
+  const aligned = rows.filter(r => r.alignment==='ALIGNED').length;
+  const ageH = _signalAgeHours();
+  const ageStr = ageH === null ? '' : ageH < 1
+    ? `<span style="color:var(--green)">${(ageH*60).toFixed(0)}m old</span>`
+    : ageH > 48
+      ? `<span style="color:var(--red)">${(ageH/24).toFixed(1)}d old — stale</span>`
+      : `<span style="color:var(--muted)">${ageH.toFixed(1)}h old</span>`;
+  bar.className = 'visible';
+  bar.innerHTML = `
+    <span style="color:var(--green)">⚡ ${hcLong} HC longs</span>
+    <span style="color:var(--line)">·</span>
+    <span style="color:var(--red)">⚡ ${hcShort} HC shorts</span>
+    <span style="color:var(--line)">·</span>
+    <span style="color:var(--text)">${aligned} aligned</span>
+    <span style="color:var(--line)">·</span>
+    <span id="spy-regime-chip">${_spyRegime ? regimeChip(_spyRegime, _spyHighVol) : '<span style="color:var(--muted)">SPY …</span>'}</span>
+    ${ageStr ? `<span style="color:var(--line)">·</span>${ageStr}` : ''}
+    <span style="color:var(--muted);margin-left:auto;font-size:10px">${rows.length} tickers</span>
+  `;
 }
 
 function renderBridge() {
@@ -1102,22 +1244,29 @@ function renderBridgeTable(rows) {
 }
 
 function renderMorningCards(rows) {
-  // Sort by combined_score desc, group ALIGNED first
-  const sorted = [...rows].sort((a,b) => parseFloat(b.combined_score||0) - parseFloat(a.combined_score||0));
-  $('bridge-out').innerHTML = `<div class="candidate-stack">${sorted.map(r => {
-    const sc    = parseFloat(r.combined_score) || 0;
-    const verd  = r.signa_verdict || r.argus_verdict || '';
-    const am    = alignMeta(r.alignment);
-    const hc    = r.high_conviction==='true'||r.high_conviction===true;
-    const pct   = Math.abs(sc) * 50;
+  const byScore = (a,b) => parseFloat(b.combined_score||0) - parseFloat(a.combined_score||0);
+  const isHC = r => r.high_conviction==='true' || r.high_conviction===true;
+  const hcRows   = [...rows].filter(isHC).sort(byScore);
+  const nonHcRows= [...rows].filter(r => !isHC(r)).sort(byScore);
+
+  const renderCard = r => {
+    const sc     = parseFloat(r.combined_score) || 0;
+    const verd   = r.argus_verdict || r.signa_verdict || '';
+    const am     = alignMeta(r.alignment);
+    const hc     = isHC(r);
+    const pct    = Math.abs(sc) * 50;
     const barClr = sc > 0 ? 'var(--green)' : 'var(--red)';
-    const barLeft = sc >= 0 ? '50%' : (50-pct)+'%';
+    const barLeft= sc >= 0 ? '50%' : (50-pct)+'%';
+    const ent    = parseFloat(r.entry);
+    const stp    = parseFloat(r.stop);
+    const tgt    = parseFloat(r.target);
     return `<div class="candidate-card ${r.alignment}" onclick="drillTicker('${r.ticker}')">
       <div>
-        <div class="cand-sym">${r.ticker} ${hc?'⚡':''}</div>
-        <div class="cand-meta">${am.icon} ${r.alignment} · ${verd} · ${r.quality_score||0} qual · ${r.agreement_pct||0}% agree</div>
+        <div class="cand-sym">${r.ticker}${hc?' <span style="color:var(--amber)">⚡</span>':''}</div>
+        <div class="cand-meta">${am.icon} ${r.alignment} · ${verd} · Q${parseFloat(r.quality_score||0).toFixed(1)} · ${r.agreement_pct||0}% agree</div>
         <div class="cand-meta" style="margin-top:2px">
           ${fmtRet(r.ret_1d)} 1d &nbsp;${fmtRet(r.ret_5d)} 5d &nbsp;${fmtRet(r.ret_20d)} 20d
+          ${isNaN(ent)?'':` &nbsp;<span style="color:var(--muted)">E <b>${ent.toFixed(2)}</b> S <span style="color:var(--red)">${stp.toFixed(2)}</span> T <span style="color:var(--green)">${tgt.toFixed(2)}</span></span>`}
         </div>
         <div class="cand-bar-track">
           <div class="cand-bar-fill" style="left:${barLeft};width:${pct}%;background:${barClr}"></div>
@@ -1127,10 +1276,18 @@ function renderMorningCards(rows) {
         <span class="verdict ${verd}" style="margin-bottom:4px">${verd}</span>
         <div class="cand-rr">${sc >= 0 ? '+' : ''}${sc.toFixed(3)}</div>
         <div class="cand-rr">${r.risk_reward}x R:R</div>
-        <div class="cand-rr" style="color:var(--muted)">${(r.catalysts||'').split(';').slice(0,2).join(' ')}</div>
       </div>
     </div>`;
-  }).join('')}</div>`;
+  };
+
+  let html = `<div class="candidate-stack">`;
+  hcRows.forEach(r => { html += renderCard(r); });
+  if (hcRows.length && nonHcRows.length) {
+    html += `<div class="hc-separator">— non-HC below —</div>`;
+  }
+  nonHcRows.forEach(r => { html += renderCard(r); });
+  html += `</div>`;
+  $('bridge-out').innerHTML = html;
 }
 
 /* ═══════════════════════ ALIGNMENT COMPASS ═══════════════════════ */
@@ -1161,10 +1318,12 @@ function buildAlignmentCompass(rows) {
 }
 
 async function loadBridge() {
+  fetchSpyRegime(); // kick off in background; chip updates when resolved
   try {
     const r = await fetch(`${API}/api/bridge`, {signal: AbortSignal.timeout(3000)}).then(r=>r.json());
     if (r?.rows?.length) {
       _bridgeRows = r.rows;
+      _bridgeGeneratedAt = r.generated_at || null;
       $('bridge-ts').textContent = r.generated_at || '';
       renderBridgeSummary(_bridgeRows);
       renderBridge();
@@ -1172,6 +1331,7 @@ async function loadBridge() {
     }
   } catch { /* fall through */ }
   _bridgeRows = parseCSV(BRIDGE_CSV);
+  _bridgeGeneratedAt = '2026-05-13 08:03';
   $('bridge-ts').textContent = '2026-05-13 08:03 (embedded snapshot)';
   renderBridgeSummary(_bridgeRows);
   renderBridge();
@@ -1186,88 +1346,6 @@ async function loadFlow() {
     const r = await fetch(`${API}/api/flow/${sym}`).then(r=>r.json());
     $('flow-out').textContent = JSON.stringify(r,null,2);
   } catch(e) { $('flow-out').textContent = 'Error: '+e.message; }
-}
-
-/* ═══════════════════════ BACKTEST ═══════════════════════ */
-let _lastBT = null;
-
-async function runBacktest() {
-  const sym = $('bt-sym').value.trim().toUpperCase();
-  if (!sym) { $('bt-sym').focus(); return; }
-  $('bt-out').innerHTML = '<span style="color:var(--muted)">running backtest…</span>';
-  $('bt-mc').style.display = 'none';
-  try {
-    const r = await fetch(`${API}/api/backtest/${sym}?period=${$('bt-period').value}`).then(r=>r.json());
-    if (r.detail) { $('bt-out').innerHTML = `<span class="neg">${r.detail}</span>`; return; }
-    _lastBT = r;
-    $('bt-out').innerHTML = `
-      <div class="k">Symbol</div>
-      <div class="v" style="font-weight:700">${r.symbol}</div>
-      <div class="k">Bars / Trades</div>
-      <div class="v">${r.bars} / ${r.trades}</div>
-      <div class="k">Win rate</div>
-      <div class="v">${fmtPct(r.win_rate)}</div>
-      <div class="k">Profit factor</div>
-      <div class="v">${fmt(r.profit_factor,2)}</div>
-      <div class="k">CAGR</div>
-      <div class="v ${signCls(r.cagr)}">${fmtPct(r.cagr)}</div>
-      <div class="k">Sharpe / Sortino</div>
-      <div class="v">${fmt(r.sharpe,2)} / ${fmt(r.sortino,2)}</div>
-      <div class="k">Max drawdown</div>
-      <div class="v neg">${fmtPct(r.max_drawdown)}</div>
-      <div class="k">Final equity</div>
-      <div class="v">${fmt(r.final_equity,3)}</div>`;
-  } catch(e) { $('bt-out').innerHTML = `<span class="neg">Error: ${e.message}</span>`; }
-}
-
-async function runMC() {
-  if (!_lastBT?.trade_returns?.length) { alert('Run a backtest first'); return; }
-  const mc = $('bt-mc');
-  mc.style.display = 'block';
-  mc.textContent = 'simulating 5000 paths…';
-  try {
-    const r = await fetch(`${API}/api/monte_carlo`,{
-      method:'POST', headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({trade_returns:_lastBT.trade_returns, sims:5000})
-    }).then(r=>r.json());
-    mc.textContent = JSON.stringify(r,null,2);
-  } catch(e) { mc.textContent = 'Error: '+e.message; }
-}
-
-/* ═══════════════════════ PRE-TRADE STRESS ═══════════════════════ */
-async function runStress() {
-  const entry = parseFloat($('st-entry').value);
-  const stop  = parseFloat($('st-stop').value);
-  const tgt   = parseFloat($('st-target').value);
-  const wr    = parseFloat($('st-wr').value)||0.5;
-  if (isNaN(entry)||isNaN(stop)||isNaN(tgt)) { alert('Enter entry, stop and target prices'); return; }
-  const out = $('stress-out');
-  out.style.display = 'none';
-  out.innerHTML = '';
-  try {
-    const r = await fetch(`${API}/api/pre_trade_stress`,{
-      method:'POST', headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({entry, stop, target:tgt, historical_win_rate:wr})
-    }).then(r=>r.json());
-    if (r.detail) { out.style.display='grid'; out.innerHTML=`<span class="neg">${r.detail}</span>`; return; }
-    const cards = [
-      {k:'R:R',          v: r.risk_reward!=null   ? fmt(r.risk_reward,2)+'x'    : '—',  cls:''},
-      {k:'Expected EV',  v: r.expected_value!=null ? fmt(r.expected_value,3)     : '—',  cls: r.expected_value>0?'pos':r.expected_value<0?'neg':''},
-      {k:'Win rate',     v: r.win_rate!=null       ? fmtPct(r.win_rate)          : '—',  cls:''},
-      {k:'Risk $',       v: r.risk_dollars!=null   ? '$'+fmt(r.risk_dollars,2)   : '—',  cls:'neg'},
-      {k:'Reward $',     v: r.reward_dollars!=null ? '$'+fmt(r.reward_dollars,2) : '—',  cls:'pos'},
-      {k:'Break-even WR',v: r.breakeven_wr!=null   ? fmtPct(r.breakeven_wr)      : '—',  cls:''},
-      {k:'P(profit)',    v: r.prob_profit!=null     ? fmtPct(r.prob_profit)       : '—',  cls: r.prob_profit>=0.5?'pos':'neg'},
-      {k:'Verdict',      v: r.verdict              || '—',                                cls: r.verdict==='TAKE'?'pos':r.verdict==='SKIP'?'neg':''},
-    ];
-    out.innerHTML = cards.map(c =>
-      `<div class="stress-card">
-        <div class="sl">${c.k}</div>
-        <div class="sv ${c.cls}" style="${!c.cls?'color:var(--text)':''}">${c.v}</div>
-      </div>`
-    ).join('');
-    out.style.display = 'grid';
-  } catch(e) { out.style.display='grid'; out.innerHTML=`<span class="neg">Error: ${e.message}</span>`; }
 }
 
 /* ═══════════════════════ PORTFOLIO ═══════════════════════ */
@@ -1301,21 +1379,6 @@ async function loadAccount() {
     const r = await fetch(`${API}/api/account`).then(r=>r.json());
     el.textContent = JSON.stringify(r,null,2);
   } catch(e) { el.textContent = 'Error: '+e.message; }
-}
-
-/* ═══════════════════════ HEDGE ═══════════════════════ */
-async function runHedge() {
-  const pv  = parseFloat($('h-pv').value);
-  const cov = parseFloat($('h-cov').value)||0.5;
-  if (!pv||isNaN(pv)) { alert('Enter a portfolio value first'); return; }
-  $('hedge-out').textContent = 'computing…';
-  try {
-    const r = await fetch(`${API}/api/hedge`,{
-      method:'POST', headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({portfolio_value:pv, coverage_pct:cov})
-    }).then(r=>r.json());
-    $('hedge-out').textContent = JSON.stringify(r,null,2);
-  } catch(e) { $('hedge-out').textContent = 'Error: '+e.message; }
 }
 
 /* ═══════════════════════ AI CHAT ═══════════════════════ */
@@ -1374,107 +1437,6 @@ function escHtml(s) {
   return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
 
-/* ═══════════════════════ JOURNAL ═══════════════════════ */
-async function openTrade() {
-  const sym = $('j-sym').value.trim().toUpperCase();
-  if (!sym) { alert('Enter a symbol'); $('j-sym').focus(); return; }
-  const body = {
-    symbol: sym,
-    side:   $('j-side').value,
-    qty:    parseFloat($('j-qty').value)||1,
-    entry:  parseFloat($('j-entry').value)  ||null,
-    stop:   parseFloat($('j-stop').value)   ||null,
-    target: parseFloat($('j-target').value) ||null,
-    setup:  $('j-setup').value.trim()||null,
-  };
-  try {
-    await fetch(`${API}/api/journal/open`,{
-      method:'POST', headers:{'Content-Type':'application/json'},
-      body:JSON.stringify(body)
-    }).then(r=>r.json());
-    ['j-sym','j-qty','j-entry','j-stop','j-target','j-setup'].forEach(id => { $(id).value=''; });
-    loadJournal();
-  } catch(e) { alert('Error opening trade: '+e.message); }
-}
-
-let _closeTradeId = null;
-
-function showCloseModal(id, sym) {
-  _closeTradeId = id;
-  $('close-modal-sym').textContent = sym;
-  $('close-exit').value  = '';
-  $('close-notes').value = '';
-  $('close-modal').classList.add('show');
-  setTimeout(() => $('close-exit').focus(), 80);
-}
-
-function hideCloseModal() {
-  $('close-modal').classList.remove('show');
-  _closeTradeId = null;
-}
-
-async function confirmCloseTrade() {
-  const exit = parseFloat($('close-exit').value);
-  if (!_closeTradeId || isNaN(exit)) { $('close-exit').focus(); return; }
-  const btn = $('close-confirm-btn');
-  btn.disabled = true;
-  try {
-    const r = await fetch(`${API}/api/journal/close`, {
-      method:'POST', headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({trade_id:_closeTradeId, exit, notes:$('close-notes').value||null})
-    }).then(r=>r.json());
-    if (r.ok) {
-      hideCloseModal();
-      loadJournal();
-    } else {
-      alert('Error closing trade: ' + JSON.stringify(r));
-    }
-  } catch(e) {
-    alert('Error: ' + e.message);
-  } finally {
-    btn.disabled = false;
-  }
-}
-
-async function loadJournal() {
-  const out = $('journal-out');
-  try {
-    const r = await fetch(`${API}/api/journal`).then(r=>r.json());
-    if (!r.trades?.length) {
-      out.innerHTML = '<div style="color:var(--muted);padding:16px;text-align:center">No trades yet — open one above</div>';
-    } else {
-      out.innerHTML = `<table><thead><tr>
-        <th>ID</th><th>Date</th><th>Symbol</th><th>Side</th><th>Qty</th>
-        <th>Entry</th><th>Stop</th><th>Target</th><th>Exit</th><th>P&L</th><th>R:R</th><th>Status</th><th></th>
-      </tr></thead><tbody>${r.trades.map(t=>`<tr>
-        <td style="color:var(--muted)">${t.id}</td>
-        <td style="color:var(--muted)">${(t.ts||'').slice(0,10)}</td>
-        <td style="font-weight:700;cursor:pointer" onclick="drillTicker('${escHtml(t.symbol)}')">${t.symbol}</td>
-        <td class="${t.side==='LONG'?'pos':'neg'}">${t.side}</td>
-        <td>${t.qty}</td>
-        <td>${fmt(t.entry)}</td><td>${fmt(t.stop)}</td><td>${fmt(t.target)}</td>
-        <td>${fmt(t.exit)}</td>
-        <td class="${signCls(t.pnl)}">${t.pnl!=null?fmt(t.pnl,2):'—'}</td>
-        <td>${t.rr!=null?fmt(t.rr,2)+'x':'—'}</td>
-        <td style="color:${t.status==='OPEN'?'var(--amber)':'var(--muted)'}">${t.status}</td>
-        <td>${t.status==='OPEN'
-          ? `<button class="ghost" style="font-size:11px;padding:3px 7px;color:var(--red);border-color:rgba(224,69,90,.35)"
-               onclick="showCloseModal(${t.id},'${escHtml(t.symbol)}')">Close</button>`
-          : ''}</td>
-      </tr>`).join('')}</tbody></table>`;
-    }
-    const stats = $('journal-stats');
-    if (r.stats && Object.keys(r.stats).length) {
-      stats.style.display = 'block';
-      stats.textContent   = JSON.stringify(r.stats,null,2);
-    } else {
-      stats.style.display = 'none';
-    }
-  } catch {
-    out.innerHTML = '<div style="color:var(--muted);padding:16px;text-align:center">Journal unavailable — API offline</div>';
-  }
-}
-
 /* ═══════════════════════ AGENTS ═══════════════════════ */
 async function loadAgents() {
   const out = $('agents-out');
@@ -1494,7 +1456,6 @@ async function loadAgents() {
 
 /* ═══════════════════════ INIT ═══════════════════════ */
 loadBridge();
-loadJournal();
 </script>
 </body>
 </html>

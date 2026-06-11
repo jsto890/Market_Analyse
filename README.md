@@ -1,6 +1,10 @@
-# Argus — Local Multi-Agent Technical Analysis Engine
+# Market Analyse — Sentiment × Technical Long-Candidate Discovery
 
-A local, single-user multi-agent technical-analysis engine for systematic equity and futures research. Runs entirely on your machine, integrates with IBKR, and has no cloud or auth dependencies.
+A local research stack that monitors curated market commentators, discovers tickers they're talking about, and validates each candidate through a **70-agent technical ensemble** plus a **5-vote catalyst/fundamental leg**. Output is a daily conviction-ranked shortlist, an Obsidian report, and a live Next.js dashboard.
+
+Runs entirely on your machine. No cloud hosting or auth. Optional integrations: **IBKR** (portfolio + execution), **Anthropic** (written analysis), and a companion **Market Review** repo for X/Twitter sentiment ingestion.
+
+See [`OVERVIEW.md`](OVERVIEW.md) for positioning, funnel numbers, and point-in-time performance evidence.
 
 ## Disclaimer
 
@@ -15,39 +19,101 @@ of future results. The author accepts no liability for any financial loss.
 
 ## What it does
 
-52 voting agents across six families produce a per-ticker **LONG / SHORT / WAIT** verdict with entry price, stop, target, and R:R ratio. A meta-score weights agent agreement and confidence into a single actionable signal.
+| Stage | Module | Role |
+|-------|--------|------|
+| 1. Sentiment discovery | **Market Review** (separate repo) | Scrapes ~24 curated X accounts, extracts cashtags, classifies setup labels (`fresh_watch` → `momentum_confirmed`, etc.) |
+| 2. Technical validation | **Argus** (`argus/`) | 70 voting agents across 9 families on 65+ locally computed indicators |
+| 3. Fundamental leg | **Catalyst** (`argus/argus/catalyst/`) | 5 votes: event catalyst, earnings proximity, squeeze setup, growth/profitability, analyst upside |
+| 4. Blend + report | **`sentiment_bridge.py`** | Weighted 3-leg score, regime gating, sector rotation panel, Markdown + CSV |
+| 5. Dashboard | **`dashboard/`** | Interactive view of today's bridge signals |
 
-| Family | Agents |
-|--------|--------|
-| Trend | EMA/SMA cross, Supertrend, PSAR, Ichimoku, HMA, KAMA |
-| Momentum | RSI, MACD, Stochastic, Williams %R, CCI, ROC, TSI, StochRSI, WaveTrend, STC |
-| Volatility | Bollinger Bands, Keltner Channel, Donchian, ATR, TTM Squeeze |
-| Volume | OBV, CMF, Accumulation/Distribution, MFI, VWAP, volume surge |
-| Structure | Market structure, SMC BOS/order blocks, Wyckoff phase, Elliott wave, ICT concepts |
-| Context | RS vs SPY, VIX regime, 52-week position, gap pattern, candle patterns |
+**Typical daily funnel:** ~480 discovered → ~70 actionable → ~22 technically analysed → ~13 fully aligned longs → ~6 high-conviction.
 
-## Capabilities
+Scoring weights live in [`config/weights.yaml`](config/weights.yaml) (default **35% sentiment / 45% technical / 20% catalyst**).
 
-- **Action Card** — single-screen per-ticker verdict with entry, stop, target, R:R, agreement %, and high-conviction flag
-- **Screener** — run the full ensemble over a configurable ticker universe in parallel
-- **Backtest** — vectorised walk-forward backtest using the live agent ensemble; win rate, profit factor, CAGR, Sharpe, Sortino, max drawdown, equity curve
-- **Monte Carlo** — bootstrap-resampled equity-curve distribution → P5/P50/P95, P(loss), P(ruin), pre-trade stress estimator
-- **Portfolio analysis** — connects to IBKR, labels each position HOLD/ADD, CONSIDER SELLING, or NEUTRAL
-- **Options flow** — PCR, IV skew, max-pain, unusual-volume strikes from EOD chains
-- **Alerts** — email (SMTP), Telegram, HMAC-signed webhook; all logged to SQLite
-- **MCP server** — exposes `argus_action_card`, `argus_screen`, `argus_portfolio`, `argus_dashboard` tools for Claude Desktop integration
+---
+
+## Repository layout
+
+```
+Market_Analyse/
+├── sentiment_bridge.py      # daily report generator (Market Review → Argus → report)
+├── sector_rotation.py       # RRG sector-rotation panel for the report
+├── config/
+│   ├── weights.yaml         # bridge + catalyst_intra scoring weights
+│   ├── sector_taxonomy.yaml   # Family → sub-sector taxonomy
+│   ├── sector_cache.json      # ticker → yfinance sector cache
+│   └── rotation_ranks.json    # dated RRG rank snapshots (Δrank)
+├── reports/
+│   ├── bridge_latest.md       # latest daily report
+│   ├── bridge_latest.csv      # machine-readable bridge output
+│   └── selection_*.csv        # point-in-time selection backtests
+├── argus/                   # technical engine + REST API + MCP (see argus/README.md)
+├── dashboard/               # Next.js UI (see dashboard/README.md)
+├── tools/
+│   ├── label_efficacy.py    # monthly forward-return backtest by setup label
+│   └── weight_opt/          # weight optimisation experiments
+└── docs/                    # design specs, session handoffs, label efficacy
+```
+
+---
 
 ## Quick start
 
+### 1. Argus API (technical engine)
+
 ```bash
 cd argus
-python3 -m venv .venv && source .venv/bin/activate
-pip install -e ".[dev]"
-cp .env.example .env   # fill in ANTHROPIC_API_KEY and IBKR settings
-uvicorn argus.main:app --reload --port 8088
+./run.sh setup
+# edit .env — IBKR, optional Anthropic key, optional alerts
+./run.sh api          # http://127.0.0.1:8088
 ```
 
-See [`argus/README.md`](argus/README.md) for full setup, environment variables, and API reference.
+### 2. Daily bridge report
+
+Requires Market Review's `ticker_setups.csv` (set `MARKET_REVIEW_REPORT` if not at the default path):
+
+```bash
+cd Market_Analyse
+MARKET_REVIEW_REPORT=~/Market_Review/reports/ticker_setups.csv \
+  python sentiment_bridge.py --min-quality 6
+```
+
+Outputs `reports/bridge_latest.md` and `reports/bridge_latest.csv`.
+
+### 3. Dashboard
+
+```bash
+cd dashboard
+npm install
+npm run dev           # http://localhost:3000
+```
+
+Start the Argus API on `:8088` for live quotes, screener, and portfolio pages.
+
+---
+
+## Daily report structure
+
+1. **Market regime** — SPY+QQQ risk-on/off; chase labels (`extended` / `late_chase`) gated by regime
+2. **Sector rotation** — equal-weight RRG panel vs SPY (Leading / Improving / Weakening / Lagging)
+3. **Aligned** — sentiment + technical + fundamental all bullish (group1)
+4. **High conviction, pulling back** — strong social quality + catalyst, weak sentiment (dip watchlist)
+5. **Technical + Fundamental bullish** — group2; 🔸 = near-aligned (sentiment just below threshold)
+6. **Long Candidate Detail** — per-ticker evidence blocks with returns strip, agent votes, catalysts
+
+---
+
+## Further reading
+
+| Doc | Contents |
+|-----|----------|
+| [`OVERVIEW.md`](OVERVIEW.md) | Product positioning, funnel, performance stats, stack |
+| [`argus/README.md`](argus/README.md) | Agent families, REST API, MCP, IBKR, alerts, limitations |
+| [`dashboard/README.md`](dashboard/README.md) | Dashboard pages, data sources, dev setup |
+| [`docs/SESSION_HANDOFF.md`](docs/SESSION_HANDOFF.md) | Latest pipeline changes and open follow-ups |
+
+---
 
 ## Note on git history
 
