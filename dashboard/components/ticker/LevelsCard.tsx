@@ -1,10 +1,22 @@
 "use client";
 
+import useSWR from "swr";
 import * as Tooltip from "@radix-ui/react-tooltip";
 import { useLocalStorage } from "@/lib/useLocalStorage";
 import type { BridgeRow } from "@/types/bridge";
 
+interface QuoteData {
+  price: number;
+}
+
+const fetcher = (url: string) =>
+  fetch(url).then((r) => {
+    if (!r.ok) throw new Error(`${r.status}`);
+    return r.json();
+  });
+
 interface LevelsCardProps {
+  ticker: string;
   bridgeRow: BridgeRow;
 }
 
@@ -44,13 +56,31 @@ function InfoTooltip({ text }: { text: string }) {
   );
 }
 
-export default function LevelsCard({ bridgeRow }: LevelsCardProps) {
+export default function LevelsCard({ ticker, bridgeRow }: LevelsCardProps) {
   const [riskUsd, setRiskUsd] = useLocalStorage("dash:riskUsd", 500);
+
+  const { data: quote } = useSWR<QuoteData>(
+    `/api/argus/quote/${ticker}`,
+    fetcher,
+    { refreshInterval: 30000, shouldRetryOnError: false }
+  );
 
   const { entry, stop, target, risk_reward, stop_anchor } = bridgeRow;
 
+  const livePrice = quote?.price ?? null;
+
+  const distToEntry =
+    Number.isFinite(entry) && entry !== null && entry !== 0 &&
+    Number.isFinite(livePrice) && livePrice !== null
+      ? (((livePrice - entry) / entry) * 100).toFixed(1)
+      : null;
+
   const shares =
-    entry > stop ? Math.floor(riskUsd / (entry - stop)) : null;
+    Number.isFinite(entry) && Number.isFinite(stop) &&
+    entry !== null && stop !== null &&
+    entry > stop && riskUsd > 0
+      ? Math.floor(riskUsd / (entry - stop))
+      : null;
 
   const rrLabel =
     risk_reward != null ? risk_reward.toFixed(2) : "—";
@@ -92,6 +122,18 @@ export default function LevelsCard({ bridgeRow }: LevelsCardProps) {
           </div>
         </div>
 
+        {/* Dist-to-entry line */}
+        {distToEntry !== null && (
+          <p className="text-[12px] font-mono tabular-nums text-muted">
+            price{" "}
+            <span className={Number(distToEntry) >= 0 ? "text-pos" : "text-neg"}>
+              {Number(distToEntry) >= 0 ? "+" : ""}
+              {distToEntry}%
+            </span>{" "}
+            {Number(distToEntry) >= 0 ? "above" : "below"} entry
+          </p>
+        )}
+
         {/* Stop anchor sentence */}
         {anchorLabel && (
           <p className="text-[12px] text-muted">{anchorLabel}</p>
@@ -106,14 +148,15 @@ export default function LevelsCard({ bridgeRow }: LevelsCardProps) {
               min={0}
               step={50}
               value={riskUsd}
-              onChange={(e) => setRiskUsd(Number(e.target.value))}
+              onChange={(e) => {
+                const v = Number(e.target.value);
+                if (!isNaN(v) && v >= 0) setRiskUsd(v);
+              }}
               className="w-20 rounded border border-line bg-elevated px-2 py-0.5 font-mono text-[12px] text-foreground tabular-nums focus:outline-none focus:border-accent"
             />
-            {shares !== null && (
-              <span className="font-mono text-[13px] tabular-nums text-foreground ml-2">
-                = {shares} shares
-              </span>
-            )}
+            <span className="font-mono text-[13px] tabular-nums text-foreground ml-2">
+              {shares !== null ? `= ${shares} shares` : "—"}
+            </span>
           </div>
         </div>
 

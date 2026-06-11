@@ -30,10 +30,10 @@ export interface BridgeRow {
   long_votes: number;
   short_votes: number;
   wait_votes: number;
-  entry: number;
-  stop: number;
-  target: number;
-  risk_reward: number;
+  entry: number | null;
+  stop: number | null;
+  target: number | null;
+  risk_reward: number | null;
   is_extended: boolean;
   entry_quality: EntryQuality;
   stop_anchor: string;

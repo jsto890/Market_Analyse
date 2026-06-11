@@ -1,5 +1,6 @@
 "use client";
 
+import { useRef } from "react";
 import useSWR from "swr";
 import * as Tooltip from "@radix-ui/react-tooltip";
 import Badge from "@/components/ui/Badge";
@@ -29,7 +30,11 @@ interface QuoteData {
   change_pct: number;
 }
 
-const fetcher = (url: string) => fetch(url).then((r) => r.json());
+const fetcher = (url: string) =>
+  fetch(url).then((r) => {
+    if (!r.ok) throw new Error(`${r.status}`);
+    return r.json();
+  });
 
 function InfoTooltip({ text }: { text: string }) {
   return (
@@ -62,10 +67,13 @@ function PinButton({ ticker }: { ticker: string }) {
     fetcher,
     { revalidateOnFocus: false }
   );
+  const pending = useRef(false);
 
   const pinned = data?.watchlist?.some((w) => w.ticker === ticker) ?? false;
 
   async function toggle() {
+    if (pending.current) return;
+    pending.current = true;
     const optimistic = !pinned;
     // Optimistic update
     mutate(
@@ -87,6 +95,8 @@ function PinButton({ ticker }: { ticker: string }) {
     } catch {
       // revert on error
       mutate();
+    } finally {
+      pending.current = false;
     }
   }
 
@@ -115,7 +125,7 @@ export default function Header({
   const { data: quote } = useSWR<QuoteData>(
     `/api/argus/quote/${ticker}`,
     fetcher,
-    { refreshInterval: 30000 }
+    { refreshInterval: 30000, shouldRetryOnError: false }
   );
 
   const price = quote?.price ?? null;
@@ -139,7 +149,7 @@ export default function Header({
     );
     const entryAtFlag = firstRow.entry;
     const sinceStr =
-      entryAtFlag !== null && lastClose !== null
+      entryAtFlag !== null && entryAtFlag !== 0 && lastClose !== null
         ? (((lastClose - entryAtFlag) / entryAtFlag) * 100).toFixed(1)
         : null;
 
@@ -236,7 +246,7 @@ export default function Header({
                     className="rounded bg-elevated px-2 py-1 text-[12px] text-muted shadow-lg border border-line z-50 max-w-[220px]"
                     sideOffset={4}
                   >
-                    {">="}75% indicator agreement — consensus, not edge
+                    {"≥"}75% indicator agreement — consensus, not edge
                     <Tooltip.Arrow className="fill-elevated" />
                   </Tooltip.Content>
                 </Tooltip.Portal>

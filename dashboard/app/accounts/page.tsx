@@ -145,9 +145,9 @@ function WatchlistCard({
             <span>Score: {signal.combined_score.toFixed(3)}</span>
           </div>
           <div className="text-xs text-gray-500 tabular-nums mb-1">
-            E {signal.entry.toFixed(2)}{"  "}
-            S {signal.stop.toFixed(2)}{"  "}
-            T {signal.target.toFixed(2)}
+            E {signal.entry?.toFixed(2) ?? "—"}{"  "}
+            S {signal.stop?.toFixed(2) ?? "—"}{"  "}
+            T {signal.target?.toFixed(2) ?? "—"}
           </div>
         </>
       ) : (

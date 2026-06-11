@@ -26,31 +26,31 @@ export default async function TickerPage({
 }) {
   const ticker = params.ticker.toUpperCase();
 
-  // Server data
-  const [bars] = await Promise.all([fetchHistory(ticker)]);
-
-  const bridgeRow = (() => {
-    try {
-      const rows = loadBridgeSignals();
-      return rows.find((r) => r.ticker.toUpperCase() === ticker) ?? null;
-    } catch {
-      return null;
-    }
-  })();
-
-  const history = (() => {
-    try {
-      return signalHistory(ticker) as {
-        date: string;
-        report_group: string | null;
-        action_label: string | null;
-        combined_score: number | null;
-        entry: number | null;
-      }[];
-    } catch {
-      return [];
-    }
-  })();
+  // Run independent fetches in parallel
+  const [bars, bridgeRow, history] = await Promise.all([
+    fetchHistory(ticker),
+    Promise.resolve((() => {
+      try {
+        const rows = loadBridgeSignals();
+        return rows.find((r) => r.ticker.toUpperCase() === ticker) ?? null;
+      } catch {
+        return null;
+      }
+    })()),
+    Promise.resolve((() => {
+      try {
+        return signalHistory(ticker) as {
+          date: string;
+          report_group: string | null;
+          action_label: string | null;
+          combined_score: number | null;
+          entry: number | null;
+        }[];
+      } catch {
+        return [];
+      }
+    })()),
+  ]);
 
   // Last close from history bars (same-basis as chart)
   const lastClose = bars.length > 0 ? bars[bars.length - 1].close : null;
@@ -59,9 +59,9 @@ export default async function TickerPage({
   const levels: Level[] = (() => {
     if (!bridgeRow) return [];
     const l: Level[] = [];
-    if (bridgeRow.entry) l.push({ price: bridgeRow.entry, kind: "entry" });
-    if (bridgeRow.stop) l.push({ price: bridgeRow.stop, kind: "stop" });
-    if (bridgeRow.target) l.push({ price: bridgeRow.target, kind: "target" });
+    if (Number.isFinite(bridgeRow.entry) && bridgeRow.entry !== null) l.push({ price: bridgeRow.entry, kind: "entry" });
+    if (Number.isFinite(bridgeRow.stop) && bridgeRow.stop !== null) l.push({ price: bridgeRow.stop, kind: "stop" });
+    if (Number.isFinite(bridgeRow.target) && bridgeRow.target !== null) l.push({ price: bridgeRow.target, kind: "target" });
     return l;
   })();
 
@@ -102,7 +102,7 @@ export default async function TickerPage({
 
         {/* Right: levels + scaffold panels */}
         <div className="space-y-4">
-          {bridgeRow && <LevelsCard bridgeRow={bridgeRow} />}
+          {bridgeRow && <LevelsCard ticker={ticker} bridgeRow={bridgeRow} />}
 
           <Panel title="Signal">
             <p className="text-[12px] text-muted">Under construction</p>

@@ -11,10 +11,14 @@ export async function GET(
     const res = await fetch(`${ARGUS_BASE}/${argusPath}${query}`, {
       headers: { "Content-Type": "application/json" },
       next: { revalidate: 0 },
+      signal: AbortSignal.timeout(15000),
     });
     const data = await res.json();
     return Response.json(data, { status: res.status });
-  } catch {
+  } catch (err) {
+    if (err instanceof Error && err.name === "TimeoutError") {
+      return Response.json({ error: "argus timeout" }, { status: 504 });
+    }
     return Response.json({ error: "Argus API offline" }, { status: 503 });
   }
 }
@@ -31,10 +35,14 @@ export async function POST(
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
       next: { revalidate: 0 },
+      signal: AbortSignal.timeout(15000),
     });
     const data = await res.json();
     return Response.json(data, { status: res.status });
-  } catch {
+  } catch (err) {
+    if (err instanceof Error && err.name === "TimeoutError") {
+      return Response.json({ error: "argus timeout" }, { status: 504 });
+    }
     return Response.json({ error: "Argus API offline" }, { status: 503 });
   }
 }
