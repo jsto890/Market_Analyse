@@ -42,6 +42,7 @@ const tx = db.transaction((rows: SignalRecord[]) => rows.forEach((r) => stmt.run
 
 let totalRows = 0;
 let totalRejects = 0;
+let daysWithRows = 0;
 
 for (const [date, filename] of Array.from(latest)) {
   const content = fs.readFileSync(path.join(BRIDGE_DIR, filename), "utf-8");
@@ -66,6 +67,7 @@ for (const [date, filename] of Array.from(latest)) {
   tx(rows);
   totalRows += rows.length;
   totalRejects += rejects;
+  if (rows.length > 0) daysWithRows++;
 }
 
-console.log(`ingested ${latest.size} days, ${totalRows} rows, ${totalRejects} rejected`);
+console.log(`ingested ${daysWithRows} days, ${totalRows} rows, ${totalRejects} rejected`);

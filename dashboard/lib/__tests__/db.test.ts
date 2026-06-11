@@ -43,6 +43,9 @@ it("migrates a baseline db by adding all 16 new columns and watchlist table", ()
   for (const c of Object.keys(NEW_COLS))
     expect(cols).toContain(c);
 
+  expect(cols).toContain("ret_126d");
+  expect(cols).toContain("ret_252d");
+
   expect(db.prepare("SELECT name FROM sqlite_master WHERE name='watchlist'").get()).toBeTruthy();
   db.close();
 });
