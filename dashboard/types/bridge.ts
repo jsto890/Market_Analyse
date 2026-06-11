@@ -38,6 +38,13 @@ export interface BridgeRow {
   tech_score: number;
   combined_score: number;
   alignment: Alignment;
+  action_label: string;
+  trade_style: string;
+  conviction: string;
+  group1: boolean;
+  group2: boolean;
+  near_aligned: boolean;
+  extra: string;
 }
 
 export const ALIGNMENT_COLOR: Record<Alignment, string> = {
