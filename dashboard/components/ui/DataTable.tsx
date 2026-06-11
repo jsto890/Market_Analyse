@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback, KeyboardEvent, Fragment } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo, KeyboardEvent, Fragment } from "react";
 import { ChevronUp, ChevronDown } from "lucide-react";
 
 export interface Column<T> {
@@ -50,8 +50,9 @@ export default function DataTable<T>({
   const [sort, setSort] = useState<SortState | null>(defaultSort ?? null);
   const [hydrated, setHydrated] = useState(false);
   const [expandedKeys, setExpandedKeys] = useState<Set<string>>(new Set());
-  const [focusedIndex, setFocusedIndex] = useState<number>(-1);
+  const [focusedKey, setFocusedKey] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const rowRefs = useRef<Map<string, HTMLTableRowElement>>(new Map());
 
   useEffect(() => {
     if (storageKey) {
@@ -71,13 +72,22 @@ export default function DataTable<T>({
 
   const activeSort = hydrated ? sort : (defaultSort ?? null);
 
-  const sortedRows = (() => {
+  const sortedRows = useMemo(() => {
     if (!activeSort) return rows;
     const col = columns.find((c) => c.key === activeSort.key && c.sortable);
     if (!col || !col.sortFn) return rows;
     const multiplier = activeSort.dir === "asc" ? 1 : -1;
     return [...rows].sort((a, b) => col.sortFn!(a, b) * multiplier);
-  })();
+  }, [rows, columns, activeSort]);
+
+  // Scroll focused row into view whenever focusedKey changes
+  useEffect(() => {
+    if (focusedKey === null) return;
+    const el = rowRefs.current.get(focusedKey);
+    if (el) {
+      el.scrollIntoView({ block: "nearest" });
+    }
+  }, [focusedKey]);
 
   function handleHeaderClick(col: Column<T>) {
     if (!col.sortable) return;
@@ -111,22 +121,29 @@ export default function DataTable<T>({
 
       if (e.key === "j" || e.key === "k") {
         e.preventDefault();
-        setFocusedIndex((prev) => {
-          const max = sortedRows.length - 1;
-          if (e.key === "j") return Math.min(prev + 1, max);
-          return Math.max(prev - 1, 0);
-        });
+        const currentIndex = focusedKey
+          ? sortedRows.findIndex((r) => rowKey(r) === focusedKey)
+          : -1;
+        const max = sortedRows.length - 1;
+        let nextIndex: number;
+        if (e.key === "j") {
+          nextIndex = currentIndex < 0 ? 0 : Math.min(currentIndex + 1, max);
+        } else {
+          nextIndex = currentIndex < 0 ? 0 : Math.max(currentIndex - 1, 0);
+        }
+        const nextRow = sortedRows[nextIndex];
+        if (nextRow) setFocusedKey(rowKey(nextRow));
         return;
       }
 
-      if (focusedIndex < 0) return;
-      const row = sortedRows[focusedIndex];
+      if (focusedKey === null) return;
+      const focusedIndex = sortedRows.findIndex((r) => rowKey(r) === focusedKey);
+      const row = focusedIndex >= 0 ? sortedRows[focusedIndex] : null;
       if (!row) return;
-      const key = rowKey(row);
 
       if (e.key === " " || e.key === "ArrowRight") {
         e.preventDefault();
-        if (expandedRender) toggleExpand(key);
+        if (expandedRender) toggleExpand(focusedKey);
         return;
       }
 
@@ -139,11 +156,11 @@ export default function DataTable<T>({
       if (e.key === "Escape") {
         e.preventDefault();
         setExpandedKeys(new Set());
-        setFocusedIndex(-1);
+        setFocusedKey(null);
         return;
       }
     },
-    [focusedIndex, sortedRows, rowKey, expandedRender, onOpen]
+    [focusedKey, sortedRows, rowKey, expandedRender, onOpen]
   );
 
   const alignClass = (align?: "left" | "right" | "center") => {
@@ -172,7 +189,7 @@ export default function DataTable<T>({
                   ci === 0
                     ? "sticky left-0 z-10 bg-surface border-r border-line"
                     : "",
-                  col.sortable ? "cursor-pointer select-none hover:text-foreground" : "",
+                  col.sortable ? "cursor-pointer select-none hover:text-[var(--text)]" : "",
                 ].join(" ")}
                 onClick={() => handleHeaderClick(col)}
               >
@@ -194,18 +211,23 @@ export default function DataTable<T>({
           {sortedRows.map((row, ri) => {
             const key = rowKey(row);
             const isExpanded = expandedKeys.has(key);
-            const isFocused = focusedIndex === ri;
+            const isFocused = focusedKey === key;
             const isEven = ri % 2 === 0;
 
             return (
               <Fragment key={key}>
                 <tr
+                  ref={(el) => {
+                    if (el) rowRefs.current.set(key, el);
+                    else rowRefs.current.delete(key);
+                  }}
                   onClick={() => {
-                    setFocusedIndex(ri);
+                    setFocusedKey(key);
                     if (expandedRender) toggleExpand(key);
                   }}
+                  aria-expanded={expandedRender ? isExpanded : undefined}
                   className={[
-                    "cursor-pointer transition-colors hover:bg-elevated",
+                    "cursor-pointer transition-colors hover:bg-elevated scroll-mt-[var(--nav-h)]",
                     isEven ? "bg-surface" : "bg-bg",
                     isFocused ? "bg-elevated ring-1 ring-inset ring-accent" : "",
                   ].join(" ")}
@@ -230,15 +252,19 @@ export default function DataTable<T>({
                   <tr>
                     <td
                       colSpan={columns.length}
-                      className="px-3 overflow-hidden border-b border-line bg-elevated"
-                      style={{
-                        maxHeight: isExpanded ? "600px" : "0px",
-                        padding: isExpanded ? undefined : "0",
-                        transition: "max-height 150ms ease-out",
-                        display: isExpanded ? "table-cell" : "none",
-                      }}
+                      className="border-b border-line bg-elevated"
+                      style={{ padding: isExpanded ? undefined : "0" }}
                     >
-                      {isExpanded ? expandedRender(row) : null}
+                      <div
+                        style={{
+                          maxHeight: isExpanded ? "600px" : "0px",
+                          overflow: "hidden",
+                          transition: "max-height 150ms ease-out",
+                        }}
+                        className={isExpanded ? "px-3" : ""}
+                      >
+                        {expandedRender(row)}
+                      </div>
                     </td>
                   </tr>
                 )}
