@@ -43,8 +43,7 @@ const tx = db.transaction((rows: SignalRecord[]) => rows.forEach((r) => stmt.run
 let totalRows = 0;
 let totalRejects = 0;
 
-for (const [dayKey, filename] of Array.from(latest)) {
-  const date = `${dayKey.slice(0, 4)}-${dayKey.slice(4, 6)}-${dayKey.slice(6, 8)}`;
+for (const [date, filename] of Array.from(latest)) {
   const content = fs.readFileSync(path.join(BRIDGE_DIR, filename), "utf-8");
   const parsed = Papa.parse<Record<string, unknown>>(content, {
     header: true,

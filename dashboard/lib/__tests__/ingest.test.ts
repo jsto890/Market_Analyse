@@ -10,8 +10,8 @@ it("keeps lexicographically-latest file per day", () => {
     ])
   ).toEqual(
     new Map([
-      ["20260610", "bridge_20260610_1450.csv"],
-      ["20260609", "bridge_20260609_0800.csv"],
+      ["2026-06-10", "bridge_20260610_1450.csv"],
+      ["2026-06-09", "bridge_20260609_0800.csv"],
     ])
   );
 });

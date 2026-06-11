@@ -19,7 +19,8 @@ it("migrates a baseline db by adding all 16 new columns and watchlist table", ()
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "db-migrate-"));
   const p = path.join(dir, "migrate.db");
 
-  // Create baseline db with the pre-migration schema (no new columns, no watchlist)
+  // Create baseline db with the pre-migration schema (no new columns, no watchlist,
+  // and without ret_126d/ret_252d which are now part of NEW_COLS migration)
   const seed = new Database(p);
   seed.exec(`
     CREATE TABLE IF NOT EXISTS signals (
@@ -30,7 +31,6 @@ it("migrates a baseline db by adding all 16 new columns and watchlist table", ()
       entry REAL, stop REAL, target REAL, risk_reward REAL,
       entry_quality TEXT, stop_anchor TEXT,
       catalysts TEXT, ret_1d REAL, ret_5d REAL, ret_20d REAL,
-      ret_126d REAL, ret_252d REAL,
       UNIQUE(date, ticker)
     );
   `);

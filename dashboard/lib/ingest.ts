@@ -81,9 +81,10 @@ function deriveReportGroup(row: CsvRow): string {
 export function latestPerDay(names: string[]): Map<string, string> {
   const map = new Map<string, string>();
   for (const name of names) {
-    const day = name.slice(7, 15);
-    const current = map.get(day);
-    if (!current || name > current) map.set(day, name);
+    const raw = name.slice(7, 15); // "20260610"
+    const key = `${raw.slice(0, 4)}-${raw.slice(4, 6)}-${raw.slice(6, 8)}`; // "2026-06-10"
+    const current = map.get(key);
+    if (!current || name > current) map.set(key, name);
   }
   return map;
 }

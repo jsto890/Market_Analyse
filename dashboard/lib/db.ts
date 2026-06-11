@@ -4,6 +4,7 @@ import path from "path";
 declare global { var __argusDb: Database.Database | undefined }
 
 export const NEW_COLS: Record<string, string> = {
+  ret_126d: "REAL", ret_252d: "REAL",
   conviction: "TEXT", action_label: "TEXT", trade_style: "TEXT", combo: "TEXT",
   ticker_regime: "TEXT", n_eff: "REAL", report_group: "TEXT", near_aligned: "INTEGER",
   sector: "TEXT", industry: "TEXT", theme: "TEXT", mentions: "INTEGER",
