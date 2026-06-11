@@ -23,9 +23,6 @@ export default function Nav() {
       <Link href="/screener" className={linkClass("/screener")}>
         Screener
       </Link>
-      <Link href="/options" className={linkClass("/options")}>
-        Options
-      </Link>
       <Link href="/portfolio" className={linkClass("/portfolio")}>
         Portfolio
       </Link>

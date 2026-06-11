@@ -1,6 +1,5 @@
 "use client";
 
-import { use } from "react";
 import Link from "next/link";
 import useSWR from "swr";
 import type { OptionsFlowData } from "@/types/argus";
@@ -85,9 +84,9 @@ function isErrorResponse(r: ApiResponse): r is { error: string } {
 export default function OptionsPage({
   params,
 }: {
-  params: Promise<{ ticker: string }>;
+  params: { ticker: string };
 }) {
-  const { ticker } = use(params);
+  const { ticker } = params;
   const upper = ticker.toUpperCase();
 
   const { data, error, isLoading, mutate } = useSWR<ApiResponse>(
