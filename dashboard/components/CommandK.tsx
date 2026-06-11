@@ -17,7 +17,7 @@ interface ResultItem {
   source: "bridge" | "watchlist" | "raw";
 }
 
-function isEditableTarget(): boolean {
+export function isEditableTarget(): boolean {
   const tag = (document.activeElement?.tagName ?? "").toLowerCase();
   return (
     tag === "input" ||
@@ -122,8 +122,16 @@ export default function CommandK() {
       }
     }
 
+    function onOpen() {
+      setOpen((v) => !v);
+    }
+
     document.addEventListener("keydown", onKeyDown);
-    return () => document.removeEventListener("keydown", onKeyDown);
+    window.addEventListener("commandk:open", onOpen);
+    return () => {
+      document.removeEventListener("keydown", onKeyDown);
+      window.removeEventListener("commandk:open", onOpen);
+    };
   }, [close]);
 
   useEffect(() => {

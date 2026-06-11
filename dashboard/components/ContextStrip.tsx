@@ -1,6 +1,7 @@
 import fs from "fs";
 import path from "path";
 import * as Tooltip from "@radix-ui/react-tooltip";
+import { loadBridgeSignals, resolveBridgePath } from "@/lib/bridge";
 
 interface BridgeMeta {
   generated_at?: string;
@@ -18,43 +19,21 @@ function resolveMetaPath(): string {
   return path.join(base, "bridge_meta.json");
 }
 
-function resolveCsvPath(): string {
-  const base = process.env.BRIDGE_DIR ?? path.join(process.cwd(), "..", "reports");
-  return path.join(base, "bridge_latest.csv");
-}
-
-function parseCsvCounts(csvPath: string): { aligned: number; pullback: number; tech_fund: number } {
+function computeCounts(): { aligned: number; pullback: number; tech_fund: number } {
   try {
-    const content = fs.readFileSync(csvPath, "utf-8");
-    const lines = content.trim().split("\n");
-    if (lines.length < 2) return { aligned: 0, pullback: 0, tech_fund: 0 };
-    const headers = lines[0].split(",");
-    const idx = (name: string) => headers.indexOf(name);
-    const g1 = idx("group1");
-    const g2 = idx("group2");
-    const conv = idx("conviction");
-    const sent = idx("sentiment_score");
-
+    const rows = loadBridgeSignals();
     let aligned = 0;
     let pullback = 0;
     let tech_fund = 0;
-
-    for (let i = 1; i < lines.length; i++) {
-      const cols = lines[i].split(",");
-      const isGroup1 = cols[g1]?.trim() === "True";
-      const isGroup2 = cols[g2]?.trim() === "True";
-      const conviction = cols[conv]?.trim();
-      const sentScore = parseFloat(cols[sent] ?? "");
-
-      if (isGroup1) {
+    for (const row of rows) {
+      if (row.group1) {
         aligned++;
-      } else if (isGroup2 && conviction === "high" && !isNaN(sentScore) && sentScore < 0.2) {
+      } else if (row.group2 && row.conviction === "high" && row.sentiment_score < 0.2) {
         pullback++;
-      } else if (isGroup2) {
+      } else if (row.group2) {
         tech_fund++;
       }
     }
-
     return { aligned, pullback, tech_fund };
   } catch {
     return { aligned: 0, pullback: 0, tech_fund: 0 };
@@ -86,21 +65,20 @@ export default function ContextStrip() {
     generatedAt = meta.generated_at ?? null;
   } catch {
     try {
-      const stat = fs.statSync(resolveCsvPath());
+      const stat = fs.statSync(resolveBridgePath());
       generatedAt = stat.mtime.toISOString();
     } catch {
       generatedAt = null;
     }
   }
 
-  const csvPath = resolveCsvPath();
-  let counts = meta?.counts
+  const counts = meta?.counts
     ? {
         aligned: meta.counts.aligned ?? 0,
         pullback: meta.counts.pullback ?? 0,
         tech_fund: meta.counts.tech_fund ?? 0,
       }
-    : parseCsvCounts(csvPath);
+    : computeCounts();
 
   const freshClass = freshnessClass(generatedAt);
   const timeStr = formatTime(generatedAt);

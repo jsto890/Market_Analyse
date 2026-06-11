@@ -7,6 +7,8 @@ import CommandK from "@/components/CommandK";
 import HelpOverlay from "@/components/HelpOverlay";
 import TooltipProvider from "@/components/ui/TooltipProvider";
 
+export const dynamic = "force-dynamic";
+
 export const metadata: Metadata = {
   title: "Argus Dashboard",
   description: "Trading signal dashboard",

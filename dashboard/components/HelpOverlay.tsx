@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { isEditableTarget } from "@/components/CommandK";
 
 const KEYS: { key: string; desc: string }[] = [
   { key: "g  /  ⌘K", desc: "Open command palette" },
@@ -16,13 +17,7 @@ export default function HelpOverlay() {
 
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
-      const tag = (document.activeElement?.tagName ?? "").toLowerCase();
-      const editable =
-        tag === "input" ||
-        tag === "textarea" ||
-        (document.activeElement as HTMLElement)?.isContentEditable;
-
-      if (e.key === "?" && !editable && !e.metaKey && !e.ctrlKey) {
+      if (e.key === "?" && !isEditableTarget() && !e.metaKey && !e.ctrlKey) {
         e.preventDefault();
         setOpen((v) => !v);
       }
