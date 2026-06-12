@@ -273,6 +273,36 @@ Per the collaborative-build directive: each workstream gets a small team — spe
 
 Standing rules: every PR through `code-reviewer`; design-stage work (API shapes, model specs) reviewed *before* implementation; `debugger` is the first responder on any repro-needed bug (never guess-fix); research tasks fan out in parallel (e.g., GEX methodology + DJX data sourcing + FinBERT eval run concurrently at WS-1/3 kickoff).
 
+### 4.1 Execution guardrails — how agents stay on task
+
+These rules are **binding on every agent dispatched for this plan**. They exist because multi-agent work fails in predictable ways: agents drift out of scope, re-derive context that's already written down, "improve" things nobody asked about, claim done without verifying, and leave no trace of where they stopped. Every rule below blocks one of those failure modes.
+
+**Central project management.**
+- A **`project-manager` agent is the standing overseer**: convened at every phase boundary, after every workstream's task batch, and whenever an agent's report smells off. It reviews each agent's report *against the task brief it was given* — scope respected? acceptance criteria met with evidence? docs/status updated? — and flags drift before the next task is dispatched, not after.
+- The orchestrating session dispatches work per the `subagent-driven-development` skill; the PM reviews; `code-reviewer` gates the code. Three different eyes, three different questions: *is it the right task* (PM), *is it done right* (code-reviewer), *does it run* (verification).
+
+**Task briefs — no agent starts without one.** Every dispatched agent receives, in its prompt:
+1. **Objective** — one sentence, testable.
+2. **Scope boundary** — the files/directories it may touch; anything else is read-only. Out-of-scope problems discovered along the way are *reported, never fixed inline*.
+3. **Acceptance criteria** — what "done" looks like, checkable by someone else.
+4. **Context pointers** — this plan's relevant §, the workstream implementation plan, project CLAUDE.md, and the specific source files to read first. Agents read context before writing anything; an agent that starts coding without reading the named context is redone, not patched.
+5. **Report-back contract** — what changed (files), what was verified (commands + output), what's left or blocked, anything discovered out of scope.
+
+**Software engineering rules (non-negotiable).**
+- **TDD** per the superpowers skill: failing test → implementation → green, for every feature/bugfix. UI work gets a Playwright check in the smoke harness.
+- **Verification before completion**: no agent claims "done/fixed/passing" without having run the verifying command in the same session and shown its output. "Should work" is not a state.
+- **Small, focused commits** in the existing conventional style (`fix(dashboard): …`, `feat(odte): …`); one concern per commit; no drive-by refactors mixed into feature commits.
+- **No silent fallbacks** — every error path renders a designed state naming the cause and the heartbeat age (the B4/B6 rule). A reviewer finding a bare `catch {}` or silent empty-array fallback bounces the PR.
+- **Schema discipline**: any change to §2.2 tables happens via a migration script with a one-line entry in the schema section of `dashboard/README.md`; never an in-place ad-hoc `ALTER`.
+- **Secrets rule** (§2.2.6) is absolute; an agent that prints, commits, or logs a credential has its work reverted wholesale.
+- **Plan-vs-reality conflicts stop work**: if the codebase contradicts this plan (file moved, API shape different, assumption false), the agent stops and reports — it does not improvise a workaround that silently forks the design. The plan gets amended first, then work resumes.
+
+**Living documentation — "where are we and what do you need" must always be answerable from files, not memory.**
+- **§9 status board (below)** is updated by the orchestrator in the same commit as any task batch that changes a workstream's state. A stale status board is a bug.
+- **READMEs update in the same PR as the change**: `dashboard/README.md` for dashboard surface/API changes, `argus/README.md` for service/endpoint changes; every NEW module (`options_intel/`, `news/`, `position_engine/`, `odte/`) ships with a README from its first commit — purpose, how to run, data in/out, owner workstream.
+- **`docs/SESSION_HANDOFF.md`** is rewritten at the end of every working session: current phase, last commit, in-flight work, exact next step, open blockers. A fresh agent (or a fresh session) must be able to resume from that file alone.
+- **OVERVIEW.md** gains its "Platform v2" section when Phase A lands and is refreshed at each phase completion — it is the outsider's view; the status board is the worker's view.
+
 ---
 
 ## 5. Sequencing
@@ -328,6 +358,23 @@ Still needed (small): channel IDs for the private group's whale-watch bot and Ma
 
 ## 8. Memory/doc updates on approval
 
-- Update `project_positioning` memory: discovery+selection positioning superseded — entries/exits/automation are now in scope (this doc, §0).
+- Update `project_positioning` memory: discovery+selection positioning superseded — entries/exits/automation are now in scope (this doc, §0). *(Done 2026-06-12.)*
 - OVERVIEW.md gains a "Platform v2 direction" section after Phase A lands.
-- Each workstream kickoff produces its own `docs/superpowers/plans/` implementation plan; this file gets a status table row per workstream as they start/land.
+- Each workstream kickoff produces its own `docs/superpowers/plans/` implementation plan, linked from the status board below.
+
+---
+
+## 9. Status board — where we are, what's next
+
+> Updated by the orchestrator in the same commit as any state change (§4.1). A stale board is a bug. Format: one row per phase; "Needs" lists what is blocking or required to start.
+
+| Phase | Workstream(s) | Status | Impl. plan | Last update | Needs / next step |
+|---|---|---|---|---|---|
+| — | Master plan | **Approved-pending-final-OK** — all Q1–Q9 answered; WS-4/WS-5 clarifications integrated | this file | 2026-06-12 | User "go" → write Phase A + B-0 implementation plans |
+| A | WS-0 bug sweep | Not started | — | 2026-06-12 | Implementation plan; B3 needs Playwright repro first |
+| B-0 | Data-plane foundation | Not started | — | 2026-06-12 | Implementation plan; gates all ingesters |
+| B | WS-1 options intel · WS-6 catalysts | Not started | — | 2026-06-12 | B-0 landed |
+| C | WS-2 UI shell · WS-3 news/macro | Not started | — | 2026-06-12 | B-0 landed; optional: private-group channel IDs (whale-watch, Market Report) |
+| D | WS-5 0DTE hub (vendor OptionsAnalysis) | Not started | — | 2026-06-12 | WS-1 GEX/snapshots for companion panels; vendoring itself unblocked |
+| E | WS-4 Position Engine | Not started | — | 2026-06-12 | Design-phase first (engine choice, fill rules, PIT universes) |
+| F | WS-7 automation | Gated | — | 2026-06-12 | Gate 1 evidence; VPS (Q6); risk rails proposal (Q7) |
