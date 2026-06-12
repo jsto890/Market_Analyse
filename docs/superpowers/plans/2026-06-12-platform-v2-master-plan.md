@@ -296,7 +296,7 @@ Each workstream gets its own implementation plan (writing-plans skill: exact tas
 
 | # | Decision / input | Needed by | Recommendation |
 |---|---|---|---|
-| Q1 | **Discord bot access** — create a read-only bot token, invite to the news server, share channel IDs | WS-3 kickoff | Do it; it's the highest-value/lowest-cost data feed in the plan, and its daily report also bootstraps the economic calendar (no paid API needed for v1) |
+| Q1 | **Discord bot access** | — | **ANSWERED 2026-06-12.** News channel ID `1514793336513495050` (server `1508333182112501844`). Credentials already exist in `~/discord_copytrade/.env` — **secret: reference that file (or copy values into this repo's git-ignored `.env`) at implementation time; never commit, log, or echo them.** The ingester reuses discord_copytrade's existing auth pattern rather than minting a new token. |
 | Q2 | **DJX**: no free chain data exists; IBKR-only. Accept **DIA proxy** in v1 with IBKR-DJX upgrade later? | WS-5 | Yes — DIA tracks Dow, daily expiries exist, works overnight from Sydney |
 | Q3 | **Taxonomy cutover**: run WEAK/WAIT/LONG/EXIT in parallel with PRIME/STANDARD/WATCH for ≥4 weeks before the old labels leave the UI? | WS-4 | Yes — parallel run; preserves label-efficacy history and de-risks the switch |
 | Q4 | **Economic calendar source** after the Discord-parse bootstrap: stay with parsed bot data, or add a paid API (FMP ~US$30/mo) for actual/forecast/prior values? | WS-3 v2 | Start with Discord parse; revisit only if gaps hurt |
