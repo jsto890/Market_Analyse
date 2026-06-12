@@ -247,25 +247,23 @@ export default function DataTable<T>({
                     </td>
                   ))}
                 </tr>
-                {expandedRender && (
+                {expandedRender && everExpandedKeys.has(key) && (
                   <tr>
                     <td
                       colSpan={columns.length}
                       className={isExpanded ? "border-b border-line bg-elevated" : ""}
                       style={{ padding: isExpanded ? undefined : "0" }}
                     >
-                      {everExpandedKeys.has(key) && (
-                        <div
-                          style={{
-                            maxHeight: isExpanded ? "600px" : "0px",
-                            overflow: "hidden",
-                            transition: "max-height 150ms ease-out",
-                          }}
-                          className={isExpanded ? "px-3" : ""}
-                        >
-                          {expandedRender(row)}
-                        </div>
-                      )}
+                      <div
+                        style={{
+                          maxHeight: isExpanded ? "600px" : "0px",
+                          overflow: "hidden",
+                          transition: "max-height 150ms ease-out",
+                        }}
+                        className={isExpanded ? "px-3" : ""}
+                      >
+                        {expandedRender(row)}
+                      </div>
                     </td>
                   </tr>
                 )}
