@@ -15,7 +15,7 @@ import { MEDIAN_PEAK_PCT, MEDIAN_DAYS_TO_PEAK } from "@/lib/perf-constants";
 async function fetchHistory(ticker: string): Promise<Bar[]> {
   try {
     const res = await fetch(
-      `http://127.0.0.1:8088/api/history/${encodeURIComponent(ticker)}?period=6mo`,
+      `http://127.0.0.1:8088/api/history/${encodeURIComponent(ticker)}?period=2y`,
       { cache: "no-store", signal: AbortSignal.timeout(5000) }
     );
     if (!res.ok) return [];

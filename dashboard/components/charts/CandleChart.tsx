@@ -2,6 +2,7 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import type { IChartApi, ISeriesApi, UTCTimestamp } from "lightweight-charts";
 import EmptyState from "@/components/ui/EmptyState";
+import { visibleRangeFor, type ChartPeriod as Period } from "@/lib/chart-range";
 
 export interface Level {
   price: number;
@@ -19,14 +20,6 @@ export interface Bar {
   close: number;
   volume: number;
 }
-
-type Period = "3M" | "6M" | "1Y" | "2Y";
-const PERIOD_PARAM: Record<Period, string> = {
-  "3M": "3mo",
-  "6M": "6mo",
-  "1Y": "1y",
-  "2Y": "2y",
-};
 
 interface EmaToggles {
   e20: boolean;
@@ -112,8 +105,7 @@ export default function CandleChart({
   );
   const [emas, setEmas] = useState<EmaToggles>(DEFAULT_PERSIST.emas);
   const [logScale, setLogScale] = useState(DEFAULT_PERSIST.log);
-  const [loading, setLoading] = useState(false);
-  const [fetchError, setFetchError] = useState<string | null>(null);
+  const periodRef = useRef<Period>(initialPeriod ?? DEFAULT_PERSIST.period);
   const chartReady = useRef(false);
 
   // Hydrate from localStorage once on mount
@@ -122,13 +114,18 @@ export default function CandleChart({
       const raw = localStorage.getItem(`dash:chart:${ticker}`);
       if (raw) {
         const saved = JSON.parse(raw) as Partial<PersistedState>;
-        if (saved.period) setActivePeriod(saved.period);
+        if (saved.period) {
+          setActivePeriod(saved.period);
+          // periodRef.current set here is consumed by applyData when the chart (re)applies data
+          periodRef.current = saved.period;
+        }
         if (saved.emas) setEmas(saved.emas);
         if (typeof saved.log === "boolean") setLogScale(saved.log);
       }
     } catch {
       // ignore parse errors
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ticker]);
 
   // Persist state changes
@@ -189,8 +186,34 @@ export default function CandleChart({
       emaSeries.setData(emaData);
     }
 
-    chartRef.current?.timeScale().fitContent();
+    if (chartRef.current && bars.length >= 2) {
+      const { from, to } = visibleRangeFor(
+        periodRef.current,
+        toUTC(bars[0].ts) as number,
+        toUTC(bars[bars.length - 1].ts) as number
+      );
+      chartRef.current.timeScale().setVisibleRange({
+        from: from as UTCTimestamp,
+        to: to as UTCTimestamp,
+      });
+    }
   }, [markers]);
+
+  const applyPeriod = useCallback((p: Period) => {
+    periodRef.current = p;
+    setActivePeriod(p);
+    const bars = barsRef.current;
+    if (!chartRef.current || bars.length < 2) return;
+    const { from, to } = visibleRangeFor(
+      p,
+      toUTC(bars[0].ts) as number,
+      toUTC(bars[bars.length - 1].ts) as number
+    );
+    chartRef.current.timeScale().setVisibleRange({
+      from: from as UTCTimestamp,
+      to: to as UTCTimestamp,
+    });
+  }, []);
 
   // Apply log scale toggle to existing chart
   useEffect(() => {
@@ -325,31 +348,7 @@ export default function CandleChart({
     // chart not ready yet → applyData will be called inside the .then above
   }, [initialBars, applyData]);
 
-  const fetchPeriod = useCallback(
-    async (p: Period) => {
-      setLoading(true);
-      setFetchError(null);
-      try {
-        const res = await fetch(
-          `/api/argus/history/${encodeURIComponent(ticker)}?period=${PERIOD_PARAM[p]}`
-        );
-        if (!res.ok) throw new Error(`${res.status}`);
-        const json = (await res.json()) as { bars?: Bar[] };
-        if (!aliveRef.current) return;
-        const bars = json.bars ?? [];
-        barsRef.current = bars;
-        applyData(bars);
-        setActivePeriod(p);
-      } catch {
-        setFetchError(`failed to load ${p}`);
-      } finally {
-        setLoading(false);
-      }
-    },
-    [ticker, applyData]
-  );
-
-  if (initialBars.length === 0 && !loading) {
+  if (initialBars.length === 0) {
     return <EmptyState message="no chart data" />;
   }
 
@@ -362,14 +361,12 @@ export default function CandleChart({
           {(["3M", "6M", "1Y", "2Y"] as Period[]).map((p) => (
             <button
               key={p}
-              disabled={loading}
-              onClick={() => fetchPeriod(p)}
+              onClick={() => applyPeriod(p)}
               className={[
                 "px-2 py-0.5 rounded text-[11px] font-medium transition-colors",
                 activePeriod === p
                   ? "bg-accent text-white"
                   : "bg-elevated text-muted hover:text-foreground",
-                loading ? "opacity-50 cursor-not-allowed" : "",
               ].join(" ")}
             >
               {p}
@@ -412,10 +409,6 @@ export default function CandleChart({
         >
           log
         </button>
-
-        {fetchError && (
-          <span className="text-[11px] text-muted ml-auto">{fetchError}</span>
-        )}
       </div>
 
       {/* Chart canvas */}
