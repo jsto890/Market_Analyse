@@ -60,9 +60,11 @@ Market_Analyse/
 │       ├── news/               NEW: Discord ingester, yfinance/IBKR news pollers, macro scorer
 │       └── position_engine/    NEW: state machine, level model, backtest harness, health monitor
 ├── dashboard/                  (existing Next.js :3000 — shell + new pages)
-│   ├── app/odte/               NEW: index 0DTE hub
+│   ├── app/odte/               NEW: 0DTE entry — hosts the vendored ladder + WS-1 panels
 │   ├── components/rails/       NEW: LeftRail (tickers/sessions/macro), RightRail (news)
 │   └── components/position/    NEW: state badge, trade-progress meter, marker layers
+├── odte/                       NEW: vendored copy of ~/OptionsAnalysis (backend + Vite
+│                               frontend) — original repo untouched; see WS-5
 └── scripts/                    snapshot/ingest jobs wired into launchd + run_daily.sh
 ```
 
@@ -228,14 +230,15 @@ The quant review flagged the health monitor as **the single largest overfitting 
 
 **Knowledge sources:** López de Prado *Advances in Financial Machine Learning* (triple-barrier labelling, purged CV — methodology only, start rules-based before any ML); Quantpedia/Quantocracy for entry/exit study summaries; vectorbt docs (candidate engine; decide vs extending `tools/backtest`); existing `docs/weight_optimisation` + `docs/label_efficacy` work.
 
-### WS-5 · Index 0DTE hub (`/odte`)
+### WS-5 · Index 0DTE hub (`/odte`) — vendor OptionsAnalysis, don't rebuild
 
-A dashboard page, not a link-out (supersedes the 2026-06-11 decision — the user explicitly wants it in-product). Underlyings: **SPX/SPY, NDX/QQQ, RUT/IWM, DJX/DIA**.
+A dashboard page, not a link-out (supersedes the 2026-06-11 decision). **User decision 2026-06-12: splice the existing `~/OptionsAnalysis` app into this repo rather than building a fresh page. The original repo is never modified — it stays the canonical standalone app; we bring a copy over.** Underlyings: **SPX/SPY, NDX/QQQ, RUT/IWM, DJX/DIA**.
 
-- **Layout: 2×2 grid** (UI review: four equal columns inside the railed content area gives each index ~150px — unreadable; a 2×2 grid gives each cell a workable half-width; a 4-across dense view is opt-in on wide screens with rails minimised). **Per-index cell:** spot + day%; today's expiry chain summary (0DTE P/C vol ratio, premium split); GEX levels card (zero-gamma, call wall, put wall) with distance-from-spot — **labelled "OI-based, reflects overnight book"** per the WS-1 0DTE limitation, with levels published from the next non-zero-DTE expiry; intraday price chart with GEX levels overlaid; top unusual 0DTE contracts (relative-unusual scorer, WS-1, volume-based so it *is* intraday-valid).
-- **Data reality:** SPY/QQQ/IWM/DIA chains are reliably available via yfinance (ETF proxies; daily expiries on all four). True index options (SPX/NDX/RUT/DJX) need IBKR. **v1 ships on ETF proxies** (works overnight from Sydney, no Gateway dependency), with an IBKR upgrade layer when Gateway is connected — badge shows which source is live. DJX specifically has no free chain source → DIA proxy in v1 (Q2).
-- **Relationship to `~/OptionsAnalysis`:** its QQQ ladder stays the live-execution tool; its backend patterns (IBKR options websocket subscription management) are the reference implementation for the IBKR upgrade layer. Re-evaluate merging only after the hub proves out (avoid two IBKR consumers fighting pacing limits — same constraint as before).
-- The 0DTE nav link-out gets replaced by the `/odte` page; health-ping pattern reused for the IBKR-source badge.
+- **Vendoring:** one-time copy of `~/OptionsAnalysis` backend (FastAPI, `backend/app`) + frontend (React 18 + Vite + TS — same React major as the dashboard) into `odte/` in this repo, with the source commit hash recorded in the vendoring commit message for provenance. All subsequent changes (multi-underlying, styling, shell integration) happen to **our copy only**; the original repo is read-only reference. If upstream improves later, re-vendor by diff — no submodule coupling.
+- **Integration shape (v1 = minimal splice):** its FastAPI backend runs as another supervised local service (own port, launchd KeepAlive, heartbeat row per §2.2.5); its Vite frontend builds with an `/odte` base path and renders **full-bleed inside the dashboard shell** (rails still present/minimisable) — the embed keeps its own websocket lifecycle isolated from Next.js. Nav "0DTE ↗" link-out becomes the `/odte` entry; the existing health-ping pattern drives a live/down badge for its backend.
+- **Our extensions (in the vendored copy):** the ladder is QQQ-0DTE-only by spec — extend the *copy* to IWM/SPY/DIA underlyings selectable from the page. Below/beside the ladder, the WS-1 companions render in a **2×2 grid** (UI review: 4-across is unreadable inside the railed width; dense 4-across is opt-in on wide screens): per-index spot + day%, 0DTE P/C vol ratio + premium split, GEX levels card (zero-gamma, call wall, put wall, distance-from-spot — **labelled "OI-based, reflects overnight book"** per the WS-1 limitation, levels from the next non-zero-DTE expiry), top unusual 0DTE contracts (volume-based, so intraday-valid).
+- **Data reality:** the ladder is live only when IBKR Gateway is up (its design); the WS-1 companion panels run on yfinance ETF proxies and work overnight from Sydney — so the page is useful in both states, with a source badge showing which layer is live. DJX has no free chain source → DIA proxy (Q2).
+- **IBKR pacing:** with the ladder and the WS-1 snapshotter now both in-house, the snapshotter checks the ladder backend's health endpoint and **backs off chain polling while the ladder is live** (formalises the §7 risk).
 
 ### WS-6 · Catalysts everywhere
 
@@ -264,7 +267,7 @@ Per the collaborative-build directive: each workstream gets a small team — spe
 | 2 UI shell | `ui-designer` (spec) → `frontend-developer` + `react-specialist` (build) | `architect-reviewer` (layout/perf: rails re-render isolation), `accessibility-tester` (contrast, motion) | `design-bridge` reference specs (TradingView/Bloomberg/Linear-dark), `frontend-design` skill, existing token sheet (§4.8 of 2026-06-11 spec); `agent-installer` scans for further UI agents first |
 | 3 News/macro | `python-pro` (ingesters), `nlp-engineer` (FinBERT pipeline), `api-designer` (news/calendar API shapes before build) | `error-detective` (ingest failure modes: Discord reconnects, dedupe), `code-reviewer` | discord.py docs (Context7), ProsusAI/finbert model card, live samples of the bot's message format |
 | 4 Position Engine | `quant-analyst` (model + backtest design), `python-pro` (implementation), `ml-engineer` (only if/when ML enters; rules-first) | **second `quant-analyst` instance as adversarial reviewer** (overfitting hunt: leakage, survivorship, regime-dependence), `qa-expert` (test strategy for the state machine) | López de Prado (triple-barrier, purged walk-forward), Quantpedia/Quantocracy, vectorbt docs, `tools/backtest/`, `docs/label_efficacy/` |
-| 5 0DTE hub | `frontend-developer` (page), `python-pro` (index data layer) | `performance-engineer` (intraday refresh load), `code-reviewer` | WS-1 outputs; IBKR API docs for index options (DJX/SPX contracts); OptionsAnalysis backend |
+| 5 0DTE hub | `frontend-developer` (vendoring + shell embed + multi-underlying extension), `python-pro` (ladder backend service + WS-1 panel data) | `performance-engineer` (websocket/refresh load, IBKR pacing), `code-reviewer` | the vendored `odte/` code itself (read it before extending), `~/OptionsAnalysis` docs/CLAUDE.md, WS-1 outputs, IBKR API docs for index options |
 | 6 Catalysts | `fullstack-developer` | `code-reviewer` | yfinance earnings/recommendations API surface; existing catalyst leg design doc (2026-06-09) |
 | 7 Automation | `fintech-engineer` (executor), `python-pro` | `security-engineer` (credential/kill-switch audit) **mandatory before Gate 2**, `risk-manager` (risk-rail review), `code-reviewer` | ib_insync docs (Context7), IBKR paper-trading docs, existing `argus/data/ibkr.py` |
 
