@@ -370,9 +370,9 @@ Still needed (small): channel IDs for the private group's whale-watch bot and Ma
 
 | Phase | Workstream(s) | Status | Impl. plan | Last update | Needs / next step |
 |---|---|---|---|---|---|
-| — | Master plan | **Approved-pending-final-OK** — all Q1–Q9 answered; WS-4/WS-5 clarifications integrated | this file | 2026-06-12 | User "go" → write Phase A + B-0 implementation plans |
-| A | WS-0 bug sweep | Not started | — | 2026-06-12 | Implementation plan; B3 needs Playwright repro first |
-| B-0 | Data-plane foundation | Not started | — | 2026-06-12 | Implementation plan; gates all ingesters |
+| — | Master plan | **Approved** — all Q1–Q9 answered; WS-4/WS-5 clarifications integrated | this file | 2026-06-12 | Execute Phase A + B-0 |
+| A | WS-0 bug sweep | **Planned** | [2026-06-12-phase-a-bug-sweep.md](2026-06-12-phase-a-bug-sweep.md) | 2026-06-12 | Execute (9 tasks); B3 repro before fix |
+| B-0 | Data-plane foundation | **Planned** | [2026-06-12-phase-b0-data-plane.md](2026-06-12-phase-b0-data-plane.md) | 2026-06-12 | Execute (9 tasks); `setup_wakes.sh` needs user sudo once |
 | B | WS-1 options intel · WS-6 catalysts | Not started | — | 2026-06-12 | B-0 landed |
 | C | WS-2 UI shell · WS-3 news/macro | Not started | — | 2026-06-12 | B-0 landed; optional: private-group channel IDs (whale-watch, Market Report) |
 | D | WS-5 0DTE hub (vendor OptionsAnalysis) | Not started | — | 2026-06-12 | WS-1 GEX/snapshots for companion panels; vendoring itself unblocked |
