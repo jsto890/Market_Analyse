@@ -62,6 +62,7 @@ Dev-server env when running checks locally: `ARGUS_DB=<repo>/argus.db BRIDGE_DIR
 3. PipelineHealth renders any non-2xx from the proxy as "Argus API offline" (e.g. a future 500). Accepted interim copy; revisit if it misleads.
 4. `bridge_meta.json` staleness banner appears when the daily pipeline hasn't run — self-heals with the nightly schedule.
 5. Dev-only React StrictMode persist/hydrate race on the chart period (pre-existing; production build unaffected).
+6. busy_timeout divergence on the shared DB: Python `get_conn()` waits 5000ms, Node `lib/db.ts` waits 3000ms (per their respective plan specs). Harmless at current contention; align to 5000 if Node writers are ever added. (Final-review note 2026-06-13; test heartbeat rows were cleared at integration — the panel starts from the designed empty state until tonight's 20:30 run.)
 
 ## 6. Architecture pointers
 
