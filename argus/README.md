@@ -182,11 +182,16 @@ GET  /api/analysis/{symbol}
 GET  /api/bridge             latest sentiment×technical bridge CSV as JSON
 POST /api/alert              {title, body, payload, channels}     [requires ARGUS_API_TOKEN if set]
 GET  /api/heartbeats         scheduled-job freshness
+GET  /api/catalysts/{symbol} next/last earnings + analyst actions for any ticker
 ```
 
 DB access: `argus.db.get_conn()` only (WAL + busy_timeout enforced).
 
 The Next.js dashboard at `:3000` proxies these routes via `/api/argus/*`.
+
+### `catalysts` module (`argus/argus/catalysts/`)
+
+Composes three yfinance data sources into a unified catalyst payload for any ticker. `provider.py` fetches: `calendar` (next earnings date), `upgrades_downgrades` (analyst actions — last 90 days, capped at 3 per firm), and `earnings_dates` (past earnings dates for reaction lookup — requires `lxml`; degrades gracefully and sets `degraded: true` in the response when `lxml` is absent). `reaction.py` derives the percentage price move from the session after each past earnings date using price history, so the payload reports both the date and the actual market reaction. The endpoint (`GET /api/catalysts/{symbol}`) is any-ticker: it does not require the ticker to appear in the bridge universe.
 
 ---
 

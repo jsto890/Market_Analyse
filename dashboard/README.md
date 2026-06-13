@@ -32,7 +32,7 @@ The Signals page reads from `reports/bridge_latest.csv` in the parent repo. Run 
 | Route | Purpose |
 |-------|---------|
 | `/` **Signals** | Today's bridge candidates — high-conviction first, filterable by alignment/verdict. Alignment compass modal (press `g` for spotlight search). |
-| `/action/[ticker]` **Action Card** | Per-ticker verdict, vote matrix, family rings, entry/stop/target, agent notes. |
+| `/action/[ticker]` **Action Card** | Per-ticker verdict, vote matrix, family rings, entry/stop/target, agent notes. Header includes a **CatalystStrip**: one line showing next/last earnings date + most recent analyst action, fed by `/api/argus/catalysts/{ticker}`. Past-earnings reaction % renders only once `lxml` is installed in the argus venv. |
 | `/accounts` **Accounts** | Curated X account trust tiers + local watchlist pins. |
 | `/screener` **Screener** | Batch-run the Argus agent stack over a ticker list (proxied to `/api/argus/screener`). |
 | `/options/[ticker]` **Options** | Options flow summary and chain for a ticker. |
