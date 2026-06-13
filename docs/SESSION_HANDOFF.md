@@ -57,7 +57,7 @@ Dev-server env when running checks locally: `ARGUS_DB=<repo>/argus.db BRIDGE_DIR
 
 ## 5. Open items / follow-ups
 
-1. **USER ACTION (blocking nightly wake):** run `./scripts/setup_wakes.sh` once — needs sudo; agents must never run it.
+1. ~~setup_wakes.sh~~ **DONE 2026-06-13** — user ran it; `pmset -g sched` shows `wakepoweron at 5:45AM weekdays only`.
 2. yfinance options-flow rows carry no `type` field → the options panel Type column renders "—" (pre-existing). Candidate fix: derive from `contractSymbol` (…C/P########) or `inTheMoney`; or drop the column. Data-layer follow-up.
 3. PipelineHealth renders any non-2xx from the proxy as "Argus API offline" (e.g. a future 500). Accepted interim copy; revisit if it misleads.
 4. `bridge_meta.json` staleness banner appears when the daily pipeline hasn't run — self-heals with the nightly schedule.
