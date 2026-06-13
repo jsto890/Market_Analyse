@@ -29,6 +29,7 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 from ..data import get_history, get_quote, get_options_chain, get_realtime_history, get_extended_quote, IBKRClient
+from ..data.rail import rail_quotes
 from ..db import get_conn
 from ..options_intel.schema import ensure_schema
 from ..settings import settings
@@ -102,6 +103,10 @@ def build_app() -> FastAPI:
         if not q:
             raise HTTPException(404, "no data")
         return q
+
+    @app.get("/api/rail/quotes")
+    def rail():
+        return rail_quotes()
 
     @app.get("/api/extended/{symbol}")
     def extended(symbol: str):
