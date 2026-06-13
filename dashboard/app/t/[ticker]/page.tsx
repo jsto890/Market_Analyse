@@ -1,5 +1,6 @@
 import CandleChart, { type Bar, type Level, type Marker } from "@/components/charts/CandleChart";
 import Panel from "@/components/ui/Panel";
+import ChartInfoStrip from "@/components/ticker/ChartInfoStrip";
 import Header from "@/components/ticker/Header";
 import LevelsCard from "@/components/ticker/LevelsCard";
 import WhyPanel from "@/components/ticker/WhyPanel";
@@ -15,7 +16,7 @@ import { MEDIAN_PEAK_PCT, MEDIAN_DAYS_TO_PEAK } from "@/lib/perf-constants";
 async function fetchHistory(ticker: string): Promise<Bar[]> {
   try {
     const res = await fetch(
-      `http://127.0.0.1:8088/api/history/${encodeURIComponent(ticker)}?period=6mo`,
+      `http://127.0.0.1:8088/api/history/${encodeURIComponent(ticker)}?period=2y`,
       { cache: "no-store", signal: AbortSignal.timeout(5000) }
     );
     if (!res.ok) return [];
@@ -111,6 +112,7 @@ export default async function TickerPage({
                 height={420}
                 className="min-h-[420px] 2xl:min-h-[560px]"
               />
+              <ChartInfoStrip ticker={ticker} bars={bars} />
             </Panel>
           </div>
           <OptionsPanel ticker={ticker} />

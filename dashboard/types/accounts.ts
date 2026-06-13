@@ -38,6 +38,7 @@ export interface AccountStat {
 export interface AccountsData {
   accounts: AccountStat[];
   by_tier: Record<AccountTier, AccountStat[]>;
+  meta?: { path: string; exists: boolean };
 }
 
 export interface WatchlistEntry {

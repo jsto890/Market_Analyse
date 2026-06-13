@@ -102,6 +102,52 @@ Health check: `GET /api/argus/health`
 
 ---
 
+## Chart design
+
+The ticker chart (`components/CandleChart.tsx`) fetches **2Y of daily bars once** on page load.
+Period pills (3M / 6M / 1Y / 2Y) switch the visible range client-side — `lib/chart-range.ts`
+exports `visibleRangeFor()` returning a `{from, to}` range that `CandleChart.tsx` passes to
+`timeScale().setVisibleRange()` — no refetch, no failure on pill click.
+EMA-200 is computed over the full 2Y series and renders correctly on all periods, including
+short views where only 64–126 bars are visible (previously it required ≥200 bars in view).
+
+## Environment variables
+
+| Variable | Purpose | Default |
+|---|---|---|
+| `ARGUS_DB` | Absolute path to the shared SQLite database | `../argus.db` |
+| `BRIDGE_DIR` | Directory containing `bridge_latest.csv` | `../reports` |
+| `ACCOUNTS_CSV` | Absolute path to the account-backtest CSV for Sources | none (shows designed empty state) |
+
+## Helper modules (lib/)
+
+| Module | Purpose |
+|---|---|
+| `lib/chart-range.ts` | Client-side chart period switching — exports `visibleRangeFor()` that maps pill labels to `{from, to}` ranges; `CandleChart.tsx` passes the result to `timeScale().setVisibleRange()` |
+| `lib/market-clock.ts` | DST-safe US session state (PRE / REGULAR / AFTER / CLOSED) — pure time math, no data dependency |
+| `lib/bar-stats.ts` | Volume ratio, 52-week position, and price range stats for the chart info strip |
+| `lib/called-since.ts` | "Called DATE @ $PRICE → now $PRICE (+X%, N days)" — coherent since-called line for ticker headers |
+
+## Regression scripts
+
+```bash
+# Check for sliver rows in the Today table (exits 1 if any row height ≤ 10px)
+SMOKE_URL=http://localhost:3100 node scripts/row-heights.mjs
+
+# Full smoke test — visits all routes, clicks chart pills, screenshots each page
+SMOKE_URL=http://localhost:3100 node scripts/smoke.mjs
+```
+
+`scripts/row-heights.mjs` uses Playwright to measure every `tbody tr` height; exits 1 on zero-height
+("sliver") rows.  This guards against the B3 regression: the DataTable phantom collapsed-row bug
+that collapsed rows to a 1px clickable sliver. The bug was identified by height, not text content
+(the text filter missed it because the collapsed row preserved its DOM text).
+
+`scripts/smoke.mjs` visits every route in the ROUTES list, captures console/page errors and failed
+requests (IBKR-dependent and argus API failures are in the acceptable-fails list), and runs
+`checkChartPills` on ticker routes — clicks each of 3M / 1Y / 2Y / 6M and checks for a
+"failed to load" error after each click.
+
 ## Scripts
 
 ```bash

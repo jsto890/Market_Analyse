@@ -3,6 +3,7 @@
 import useSWR from "swr";
 import Panel from "@/components/ui/Panel";
 import type { OptionsFlowData } from "@/types/argus";
+import { usMarketState } from "@/lib/market-clock";
 
 const fetcher = (url: string) =>
   fetch(url).then((r) => {
@@ -23,9 +24,19 @@ interface UnusualRow {
   strike?: unknown;
   expiry?: unknown;
   vol?: unknown;
+  volume?: unknown;        // yfinance field name
   oi?: unknown;
+  openInterest?: unknown;  // yfinance field name
   type?: unknown;
+  lastPrice?: unknown;
+  bid?: unknown;
+  ask?: unknown;
+  percentChange?: unknown;
   [key: string]: unknown;
+}
+
+function num(v: unknown): number | null {
+  return typeof v === "number" && Number.isFinite(v) ? v : null;
 }
 
 function isUnusualRow(v: unknown): v is UnusualRow {
@@ -45,26 +56,38 @@ function UnusualTable({ rows, label }: { rows: unknown[]; label: string }) {
         <thead>
           <tr className="text-left text-muted text-[11px] border-b border-line">
             <th className="pb-1 pr-3 font-medium">Strike</th>
-            <th className="pb-1 pr-3 font-medium">Expiry</th>
+            <th className="pb-1 pr-3 font-medium text-right">Last</th>
+            <th className="pb-1 pr-3 font-medium text-right">Bid×Ask</th>
+            <th className="pb-1 pr-3 font-medium text-right">Δ%</th>
             <th className="pb-1 pr-3 font-medium text-right">Vol</th>
             <th className="pb-1 pr-3 font-medium text-right">OI</th>
             <th className="pb-1 font-medium">Type</th>
           </tr>
         </thead>
         <tbody>
-          {valid.map((row, i) => (
-            <tr key={i} className="border-t border-line">
-              <td className="py-1 pr-3 text-foreground">{String(row.strike ?? "—")}</td>
-              <td className="py-1 pr-3 text-muted">{String(row.expiry ?? "—")}</td>
-              <td className="py-1 pr-3 text-right text-muted">
-                {typeof row.vol === "number" ? row.vol.toLocaleString() : String(row.vol ?? "—")}
-              </td>
-              <td className="py-1 pr-3 text-right text-muted">
-                {typeof row.oi === "number" ? row.oi.toLocaleString() : String(row.oi ?? "—")}
-              </td>
-              <td className="py-1 text-muted">{String(row.type ?? "—")}</td>
-            </tr>
-          ))}
+          {valid.map((row, i) => {
+            const last = num(row.lastPrice);
+            const bid = num(row.bid);
+            const ask = num(row.ask);
+            const chg = num(row.percentChange);
+            const vol = num(row.vol) ?? num(row.volume);
+            const oi = num(row.oi) ?? num(row.openInterest);
+            return (
+              <tr key={i} className="border-t border-line">
+                <td className="py-1 pr-3 text-foreground">{String(row.strike ?? "—")}</td>
+                <td className="py-1 pr-3 text-right text-foreground">{last !== null ? last.toFixed(2) : "—"}</td>
+                <td className="py-1 pr-3 text-right text-muted">
+                  {bid !== null && ask !== null ? `${bid.toFixed(2)}×${ask.toFixed(2)}` : "—"}
+                </td>
+                <td className={`py-1 pr-3 text-right ${chg === null ? "text-muted" : chg >= 0 ? "text-pos" : "text-neg"}`}>
+                  {chg !== null ? `${chg >= 0 ? "+" : ""}${chg.toFixed(0)}%` : "—"}
+                </td>
+                <td className="py-1 pr-3 text-right text-muted">{vol !== null ? vol.toLocaleString() : "—"}</td>
+                <td className="py-1 pr-3 text-right text-muted">{oi !== null ? oi.toLocaleString() : "—"}</td>
+                <td className="py-1 text-muted">{String(row.type ?? "—")}</td>
+              </tr>
+            );
+          })}
         </tbody>
       </table>
     </div>
@@ -86,7 +109,12 @@ export default function OptionsPanel({ ticker }: { ticker: string }) {
     { revalidateOnFocus: false, shouldRetryOnError: false }
   );
 
-  const offline = error != null || (data != null && isErrorResponse(data));
+  const argusDown = error != null; // proxy 503/504 → fetcher threw
+  const noChain = data != null && isErrorResponse(data); // flow returned {error: "no chain"}
+
+  const state = usMarketState();
+  const stateLabel =
+    state === "regular" ? "live" : state === "pre" ? "pre-market" : state === "after" ? "after-hours" : "US closed — last session";
 
   if (isLoading) {
     return (
@@ -96,11 +124,11 @@ export default function OptionsPanel({ ticker }: { ticker: string }) {
     );
   }
 
-  if (offline) {
+  if (argusDown) {
     return (
       <Panel title="Options" collapsible defaultOpen={false} persistKey="ticker-options">
         <div className="flex items-center gap-2 font-mono text-[12px] text-muted">
-          <span>IBKR offline</span>
+          <span>Argus API offline</span>
           <span>·</span>
           <button
             type="button"
@@ -114,12 +142,22 @@ export default function OptionsPanel({ ticker }: { ticker: string }) {
     );
   }
 
+  if (noChain) {
+    return (
+      <Panel title="Options" collapsible defaultOpen={false} persistKey="ticker-options">
+        <p className="font-mono text-[12px] text-muted">
+          no options chain for {upper} (source: yfinance)
+        </p>
+      </Panel>
+    );
+  }
+
   if (!data || isErrorResponse(data)) return null;
 
   return (
     <Panel
       title="Options"
-      subtitle={`${data.expiration}`}
+      subtitle={`${data.expiration} · ${stateLabel}`}
       collapsible
       defaultOpen={false}
       persistKey="ticker-options"
@@ -209,12 +247,17 @@ export default function OptionsPanel({ ticker }: { ticker: string }) {
         </div>
 
         {/* Unusual activity */}
-        {(data.unusual_calls_top.length > 0 || data.unusual_puts_top.length > 0) && (
+        {(data.unusual_calls_top.length > 0 || data.unusual_puts_top.length > 0) ? (
           <div className="space-y-3 border-t border-line pt-2">
             <UnusualTable rows={data.unusual_calls_top} label="Unusual Calls" />
             <UnusualTable rows={data.unusual_puts_top} label="Unusual Puts" />
           </div>
-        )}
+        ) : state === "closed" ? (
+          <p className="font-mono text-[11px] text-muted border-t border-line pt-2">
+            unusual-activity lists rebuild from live volume during US hours; overnight
+            recaps land with WS-1 snapshots
+          </p>
+        ) : null}
       </div>
     </Panel>
   );

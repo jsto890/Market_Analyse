@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import fs from "fs";
-import path from "path";
 import Papa from "papaparse";
 import {
   AccountStat,
@@ -11,9 +10,9 @@ import {
 
 export const dynamic = "force-dynamic";
 
-const CSV_PATH = path.join(
-  "/Users/josephstorey/Market_Review/reports/account_backtest.csv"
-);
+const CSV_PATH =
+  process.env.ACCOUNTS_CSV ??
+  "/Users/josephstorey/Market_Review/reports/account_backtest.csv";
 
 function parseNullableFloat(value: unknown): number | null {
   if (value === null || value === undefined || value === "") return null;
@@ -29,6 +28,7 @@ export async function GET(): Promise<NextResponse> {
     const empty: AccountsData = {
       accounts: [],
       by_tier: Object.fromEntries(TIER_ORDER.map((t) => [t, []])) as unknown as Record<AccountTier, AccountStat[]>,
+      meta: { path: CSV_PATH, exists: false },
     };
     return NextResponse.json(empty);
   }
@@ -76,7 +76,7 @@ export async function GET(): Promise<NextResponse> {
     ])
   ) as Record<AccountTier, AccountStat[]>;
 
-  const payload: AccountsData = { accounts, by_tier };
+  const payload: AccountsData = { accounts, by_tier, meta: { path: CSV_PATH, exists: true } };
 
   return NextResponse.json(payload);
 }

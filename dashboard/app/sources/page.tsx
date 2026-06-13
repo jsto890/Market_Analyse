@@ -140,8 +140,14 @@ export default function SourcesPage() {
           );
         })}
 
-      {data && TIER_ORDER.every((t) => !data.by_tier[t]?.length) && (
-        <EmptyState message="No account data available" />
+      {data && data.accounts.length === 0 && (
+        <EmptyState
+          message={
+            data.meta?.exists
+              ? `No account rows in CSV at ${data.meta.path} — the file exists but contains no data. It is produced by the daily pipeline's account-backtest step (see scripts/run_daily.sh).`
+              : `No account data yet — expected CSV at ${data.meta?.path ?? "ACCOUNTS_CSV"}. It is produced by the daily pipeline's account-backtest step (see scripts/run_daily.sh).`
+          }
+        />
       )}
     </main>
   );

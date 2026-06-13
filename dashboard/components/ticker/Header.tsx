@@ -6,6 +6,7 @@ import * as Tooltip from "@radix-ui/react-tooltip";
 import Badge from "@/components/ui/Badge";
 import ConvictionDot from "@/components/ui/ConvictionDot";
 import type { BridgeRow, Conviction } from "@/types/bridge";
+import { calledSince } from "@/lib/called-since";
 
 interface SignalRow {
   date: string;
@@ -145,34 +146,29 @@ export default function Header({
   const firstRow = signalHistory.length > 0 ? signalHistory[0] : null;
   let flagAgeLine: React.ReactNode = null;
   if (firstRow) {
-    const firstDate = new Date(firstRow.date);
-    const now = new Date();
-    const daysAgo = Math.floor(
-      (now.getTime() - firstDate.getTime()) / (1000 * 60 * 60 * 24)
-    );
-    const entryAtFlag = firstRow.entry;
-    const sinceStr =
-      entryAtFlag !== null && entryAtFlag !== 0 && lastClose !== null
-        ? (((lastClose - entryAtFlag) / entryAtFlag) * 100).toFixed(1)
-        : null;
-
-    flagAgeLine = (
-      <p className="text-[12px] text-muted font-mono tabular-nums mt-1">
-        flagged {daysAgo}d ago
-        {entryAtFlag !== null ? ` at ${entryAtFlag.toFixed(2)}` : ""}
-        {sinceStr !== null ? (
-          <span className={Number(sinceStr) >= 0 ? "text-pos" : "text-neg"}>
-            {" "}
-            {Number(sinceStr) >= 0 ? "+" : ""}
-            {sinceStr}% since
+    const cs = calledSince(firstRow.date, firstRow.entry, lastClose);
+    if (cs) {
+      flagAgeLine = (
+        <p className="text-[12px] text-muted font-mono tabular-nums mt-1">
+          called {cs.dateLabel}
+          {firstRow.entry !== null ? ` @ ${firstRow.entry.toFixed(2)}` : ""}
+          {cs.pct !== null && lastClose !== null ? (
+            <>
+              {" → "}
+              {lastClose.toFixed(2)}{" "}
+              <span className={cs.pct >= 0 ? "text-pos" : "text-neg"}>
+                ({cs.pct >= 0 ? "+" : ""}
+                {cs.pct.toFixed(1)}%, {cs.days}d)
+              </span>
+            </>
+          ) : null}
+          {" · "}
+          <span className="text-muted">
+            median pick peaks +{medianPeakPct}% @ ~{medianDaysToPeak}d
           </span>
-        ) : null}
-        {" · "}
-        <span className="text-muted">
-          median pick peaks +{medianPeakPct}% @ ~{medianDaysToPeak}d
-        </span>
-      </p>
-    );
+        </p>
+      );
+    }
   }
 
   // Earnings chip

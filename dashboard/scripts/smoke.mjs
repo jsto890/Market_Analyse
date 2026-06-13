@@ -66,6 +66,17 @@ function isCriticalFail(url, status) {
   return !isAcceptableFail(url);
 }
 
+async function checkChartPills(page, label) {
+  for (const pill of ["3M", "1Y", "2Y", "6M"]) {
+    const btn = page.locator(`button:text-is("${pill}")`).first();
+    if ((await btn.count()) === 0) return `${label}: no chart pills`;
+    await btn.click();
+    await page.waitForTimeout(150);
+  }
+  const err = await page.locator("text=failed to load").count();
+  return err > 0 ? `${label}: chart shows 'failed to load'` : null;
+}
+
 async function detectServer(baseUrl) {
   try {
     const resp = await fetch(baseUrl, { signal: AbortSignal.timeout(3000) });
@@ -172,6 +183,13 @@ async function main() {
       navError = e.message;
     }
 
+    // For ticker routes: check chart period pills
+    const chartPillErrors = [];
+    if (!navError && route.label.startsWith("ticker-")) {
+      const pillErr = await checkChartPills(page, route.label);
+      if (pillErr) chartPillErrors.push(pillErr);
+    }
+
     // For home route: try clicking first table row to expand it
     if (route.expandRow && !navError) {
       try {
@@ -201,7 +219,8 @@ async function main() {
       !navError &&
       nonResourceConsoleErrors.length === 0 &&
       pageErrors.length === 0 &&
-      failedRequests.length === 0;
+      failedRequests.length === 0 &&
+      chartPillErrors.length === 0;
 
     results.push({
       route: route.path,
@@ -212,6 +231,7 @@ async function main() {
       pageErrors,
       failedRequests,
       acceptableFailedRequests,
+      chartPillErrors,
       screenshot: screenshotPath,
     });
   }
@@ -249,6 +269,10 @@ async function main() {
     if (r.pageErrors.length > 0) {
       console.log(`  page errors (${r.pageErrors.length}):`);
       r.pageErrors.forEach((e) => console.log(`    - ${e}`));
+    }
+    if (r.chartPillErrors && r.chartPillErrors.length > 0) {
+      console.log(`  chart pill errors (${r.chartPillErrors.length}):`);
+      r.chartPillErrors.forEach((e) => console.log(`    - ${e}`));
     }
     if (r.failedRequests.length > 0) {
       console.log(`  failed requests (${r.failedRequests.length}):`);
