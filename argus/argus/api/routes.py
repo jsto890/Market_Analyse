@@ -30,6 +30,7 @@ from pydantic import BaseModel
 
 from ..data import get_history, get_quote, get_options_chain, get_realtime_history, get_extended_quote, IBKRClient
 from ..db import get_conn
+from ..options_intel.schema import ensure_schema
 from ..settings import settings
 
 
@@ -119,6 +120,41 @@ def build_app() -> FastAPI:
         finally:
             conn.close()
         return {"heartbeats": [dict(r) for r in rows]}
+
+    @app.get("/api/unusual/{symbol}")
+    def unusual(symbol: str):
+        conn = get_conn()
+        ensure_schema(conn)
+        try:
+            latest = conn.execute(
+                "SELECT MAX(snap_date) AS d FROM unusual_activity WHERE symbol=?",
+                (symbol.upper(),)).fetchone()
+            if not latest or not latest["d"]:
+                raise HTTPException(404, "no scored snapshots for symbol")
+            rows = conn.execute(
+                "SELECT * FROM unusual_activity WHERE symbol=? AND snap_date=? "
+                "ORDER BY score DESC", (symbol.upper(), latest["d"])).fetchall()
+            return {"symbol": symbol.upper(), "as_of": latest["d"],
+                    "rows": [dict(r) for r in rows]}
+        finally:
+            conn.close()
+
+    @app.get("/api/gex/{symbol}")
+    def gex(symbol: str):
+        conn = get_conn()
+        ensure_schema(conn)
+        try:
+            row = conn.execute(
+                "SELECT * FROM gex_levels WHERE symbol=? ORDER BY date DESC LIMIT 1",
+                (symbol.upper(),)).fetchone()
+            if not row:
+                raise HTTPException(404, "no gex levels for symbol")
+            out = dict(row)
+            out["caveat"] = ("OI-based — reflects overnight book, not today's flow; "
+                             "model assumes dealer positioning (estimates, not measurements)")
+            return out
+        finally:
+            conn.close()
 
     @app.get("/api/history/{symbol}")
     def history(symbol: str, period: str = "1y", interval: str = "1d"):
