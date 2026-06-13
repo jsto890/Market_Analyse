@@ -116,6 +116,20 @@ def get_quote(symbol: str) -> Optional[dict]:
     }
 
 
+def get_extended_quote(symbol: str) -> Optional[dict]:
+    """Last traded price including pre/post sessions (1m prepost bars)."""
+    sym = symbol.upper()
+    try:
+        df = yf.Ticker(sym).history(period="1d", interval="1m", prepost=True)
+    except Exception:
+        return None
+    if df is None or df.empty:
+        return None
+    df.columns = [str(c).lower() for c in df.columns]
+    last = df.iloc[-1]
+    return {"symbol": sym, "price": float(last["close"]), "ts": str(df.index[-1])}
+
+
 def get_options_chain(symbol: str, expiration: Optional[str] = None) -> dict:
     """Best-effort options chain via yfinance. Used for Flow Intelligence stub.
 

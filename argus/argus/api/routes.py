@@ -27,7 +27,7 @@ from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
-from ..data import get_history, get_quote, get_options_chain, get_realtime_history, IBKRClient
+from ..data import get_history, get_quote, get_options_chain, get_realtime_history, get_extended_quote, IBKRClient
 from ..settings import settings
 
 
@@ -96,6 +96,13 @@ def build_app() -> FastAPI:
     @app.get("/api/quote/{symbol}")
     def quote(symbol: str):
         q = get_quote(symbol)
+        if not q:
+            raise HTTPException(404, "no data")
+        return q
+
+    @app.get("/api/extended/{symbol}")
+    def extended(symbol: str):
+        q = get_extended_quote(symbol)
         if not q:
             raise HTTPException(404, "no data")
         return q
