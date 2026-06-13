@@ -3,6 +3,7 @@
 Single-user, no auth (binds to 127.0.0.1 by default). Argus feature set:
 
   /api/quote/{sym}           - last price
+  /api/heartbeats            - pipeline job heartbeats
   /api/history/{sym}         - OHLCV
   /api/indicators/{sym}      - full indicator panel
   /api/action_card/{sym}     - the headline LONG/SHORT/WAIT card
@@ -28,6 +29,7 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 from ..data import get_history, get_quote, get_options_chain, get_realtime_history, IBKRClient
+from ..db import get_conn
 from ..settings import settings
 
 
@@ -99,6 +101,17 @@ def build_app() -> FastAPI:
         if not q:
             raise HTTPException(404, "no data")
         return q
+
+    @app.get("/api/heartbeats")
+    def heartbeats():
+        conn = get_conn()
+        try:
+            rows = conn.execute(
+                "SELECT job, last_run_ts, status, detail FROM heartbeats ORDER BY job"
+            ).fetchall()
+        finally:
+            conn.close()
+        return {"heartbeats": [dict(r) for r in rows]}
 
     @app.get("/api/history/{symbol}")
     def history(symbol: str, period: str = "1y", interval: str = "1d"):
