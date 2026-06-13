@@ -57,3 +57,22 @@ def test_empty_symbol_safe(monkeypatch):
                         calendar=lambda s: {}, upgrades=lambda s: None,
                         history=lambda s, **k: None, past_earnings=lambda s: None)
     assert c["next_earnings"] is None and c["last_earnings"] is None and c["analyst"] == []
+
+
+def test_tz_aware_indices_do_not_raise():
+    up = pd.DataFrame({"Firm": ["UBS"], "ToGrade": ["Buy"], "FromGrade": ["Neutral"],
+                       "Action": ["up"]},
+                      index=pd.to_datetime(["2026-06-03"]).tz_localize("America/New_York"))
+    past = pd.DataFrame({"Surprise(%)": [12.4]},
+                        index=pd.to_datetime(["2026-05-28"]).tz_localize("America/New_York"))
+    hist = pd.DataFrame({"open": [102, 110], "high": [1, 1], "low": [1, 1],
+                         "close": [103, 111], "volume": [1, 1]},
+                        index=pd.to_datetime(["2026-05-28", "2026-05-29"]))
+    c = build_catalysts("AAPL", today="2026-06-13",
+                        calendar=lambda s: {"Earnings Date": [pd.Timestamp("2026-08-01").date()]},
+                        upgrades=lambda s: up, history=lambda s, **k: hist,
+                        past_earnings=lambda s: past)
+    assert c["analyst"][0]["firm"] == "UBS"
+    assert c["last_earnings"]["date"] == "2026-05-28"
+    assert c["last_earnings"]["surprise_pct"] == 12.4
+    assert c["degraded"] == []

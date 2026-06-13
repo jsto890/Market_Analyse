@@ -17,6 +17,12 @@ ANALYST_WINDOW_DAYS = 90
 ANALYST_MAX = 3
 
 
+def _naive(ts) -> pd.Timestamp:
+    """Drop tz so comparisons against the tz-naive `today` never raise."""
+    t = pd.Timestamp(ts)
+    return t.tz_localize(None) if t.tz is not None else t
+
+
 def _default_calendar(sym): import yfinance as yf; return yf.Ticker(sym).calendar
 def _default_upgrades(sym): import yfinance as yf; return yf.Ticker(sym).upgrades_downgrades
 def _default_past(sym): import yfinance as yf; return yf.Ticker(sym).earnings_dates
@@ -40,7 +46,7 @@ def _last_earnings(past_df, hist, today: str) -> Optional[dict]:
     if past_df is None or len(past_df) == 0:
         return None
     t = pd.Timestamp(today).normalize()
-    idx = pd.to_datetime(past_df.index).normalize()
+    idx = [_naive(d).normalize() for d in past_df.index]
     past = sorted([d for d in idx if d <= t], reverse=True)
     if not past:
         return None
@@ -48,7 +54,8 @@ def _last_earnings(past_df, hist, today: str) -> Optional[dict]:
     surprise = None
     for col in ("Surprise(%)", "Surprise %", "surprise"):
         if col in past_df.columns:
-            v = past_df.loc[past_df.index.normalize() == d, col]
+            naive_idx = [_naive(x).normalize() for x in past_df.index]
+            v = past_df.iloc[[i for i, x in enumerate(naive_idx) if x == d]][col]
             if len(v) and pd.notna(v.iloc[0]):
                 surprise = round(float(v.iloc[0]), 1)
             break
@@ -64,7 +71,7 @@ def _analyst(up_df, today: str) -> list[dict]:
     t = pd.Timestamp(today).normalize()
     out = []
     for ts, row in up_df.iterrows():
-        d = pd.Timestamp(ts).normalize()
+        d = _naive(ts).normalize()
         if (t - d).days > ANALYST_WINDOW_DAYS or d > t:
             continue
         out.append({"date": d.date().isoformat(), "firm": str(row.get("Firm", "")),
