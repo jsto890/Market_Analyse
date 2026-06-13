@@ -8,6 +8,7 @@ import CatalystsCard from "@/components/ticker/CatalystsCard";
 import SentimentCard from "@/components/ticker/SentimentCard";
 import HistoryCard from "@/components/ticker/HistoryCard";
 import OptionsPanel from "@/components/ticker/OptionsPanel";
+import GexCard from "@/components/ticker/GexCard";
 import AiPanel from "@/components/ticker/AiPanel";
 import { loadBridgeSignals } from "@/lib/bridge";
 import { signalHistory } from "@/lib/signals";
@@ -116,6 +117,9 @@ export default async function TickerPage({
             </Panel>
           </div>
           <OptionsPanel ticker={ticker} />
+          {["SPY", "QQQ", "IWM", "DIA"].includes(ticker.toUpperCase()) && (
+            <GexCard ticker={ticker} />
+          )}
         </div>
 
         {/* Right: Levels → Why → Catalysts → Sentiment → History → AI */}

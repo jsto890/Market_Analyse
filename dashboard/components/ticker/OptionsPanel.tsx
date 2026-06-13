@@ -32,6 +32,8 @@ interface UnusualRow {
   bid?: unknown;
   ask?: unknown;
   percentChange?: unknown;
+  score?: unknown;
+  basis?: unknown;
   [key: string]: unknown;
 }
 
@@ -47,6 +49,8 @@ function UnusualTable({ rows, label }: { rows: unknown[]; label: string }) {
   const valid = rows.filter(isUnusualRow);
   if (valid.length === 0) return null;
 
+  const hasScores = valid.some((row) => num(row.score) !== null);
+
   return (
     <div>
       <p className="text-[11px] font-medium text-muted uppercase tracking-wide mb-1.5">
@@ -55,6 +59,7 @@ function UnusualTable({ rows, label }: { rows: unknown[]; label: string }) {
       <table className="w-full font-mono text-[12px] tabular-nums border-collapse">
         <thead>
           <tr className="text-left text-muted text-[11px] border-b border-line">
+            {hasScores && <th className="pb-1 pr-3 font-medium">σ</th>}
             <th className="pb-1 pr-3 font-medium">Strike</th>
             <th className="pb-1 pr-3 font-medium text-right">Last</th>
             <th className="pb-1 pr-3 font-medium text-right">Bid×Ask</th>
@@ -72,8 +77,14 @@ function UnusualTable({ rows, label }: { rows: unknown[]; label: string }) {
             const chg = num(row.percentChange);
             const vol = num(row.vol) ?? num(row.volume);
             const oi = num(row.oi) ?? num(row.openInterest);
+            const score = num(row.score);
             return (
               <tr key={i} className="border-t border-line">
+                {hasScores && (
+                  <td className="py-1 pr-3 text-muted" title={String(row.basis ?? "")}>
+                    {score !== null ? score.toFixed(1) : "—"}
+                  </td>
+                )}
                 <td className="py-1 pr-3 text-foreground">{String(row.strike ?? "—")}</td>
                 <td className="py-1 pr-3 text-right text-foreground">{last !== null ? last.toFixed(2) : "—"}</td>
                 <td className="py-1 pr-3 text-right text-muted">
@@ -249,9 +260,18 @@ export default function OptionsPanel({ ticker }: { ticker: string }) {
         {/* Unusual activity */}
         {(data.unusual_calls_top.length > 0 || data.unusual_puts_top.length > 0) ? (
           <div className="space-y-3 border-t border-line pt-2">
+            {data.unusual_as_of ? (
+              <p className="font-mono text-[11px] text-muted border-t border-line pt-2">
+                as of {data.unusual_as_of} close (US) — robust-score (beta), validation pending
+              </p>
+            ) : null}
             <UnusualTable rows={data.unusual_calls_top} label="Unusual Calls" />
             <UnusualTable rows={data.unusual_puts_top} label="Unusual Puts" />
           </div>
+        ) : data.unusual_as_of ? (
+          <p className="font-mono text-[11px] text-muted border-t border-line pt-2">
+            as of {data.unusual_as_of} close (US) — robust-score (beta), validation pending
+          </p>
         ) : state === "closed" ? (
           <p className="font-mono text-[11px] text-muted border-t border-line pt-2">
             unusual-activity lists rebuild from live volume during US hours; overnight
