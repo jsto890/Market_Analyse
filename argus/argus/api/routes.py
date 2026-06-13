@@ -207,6 +207,17 @@ def build_app() -> FastAPI:
         except Exception as e:
             return {"error": str(e), "symbol": symbol.upper()}
 
+    @app.get("/api/catalysts/{symbol}")
+    def catalysts(symbol: str):
+        from ..catalysts import provider
+        return provider.build_catalysts(
+            symbol,
+            calendar=provider._default_calendar,
+            upgrades=provider._default_upgrades,
+            history=provider._default_history,
+            past_earnings=provider._default_past,
+        )
+
     @app.post("/api/execute", dependencies=[Depends(_require_token)])
     def execute(req: ExecReq):
         ib = IBKRClient.instance()
