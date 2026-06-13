@@ -19,6 +19,8 @@ import pandas as pd
 import numpy as np
 
 from ..data import get_options_chain, get_quote
+from ..db import get_conn
+from ..options_intel.clock import us_market_open
 
 
 def _max_pain(calls: pd.DataFrame, puts: pd.DataFrame) -> float:
@@ -76,6 +78,36 @@ def flow_summary(symbol: str, expiration: Optional[str] = None) -> dict:
     unusual_calls = calls[calls["volume"].fillna(0) > calls["openInterest"].fillna(1) * 2]
     unusual_puts = puts[puts["volume"].fillna(0) > puts["openInterest"].fillna(1) * 2]
 
+    # Closed-market fallback (B6 completion): live same-day volume is meaningless
+    # overnight — serve the latest SCORED close snapshot instead, labelled.
+    scored_as_of = None
+    unusual_calls_records = None
+    unusual_puts_records = None
+    if not us_market_open():
+        conn = None
+        try:
+            conn = get_conn()
+            latest = conn.execute(
+                "SELECT MAX(snap_date) AS d FROM unusual_activity WHERE symbol=?",
+                (symbol.upper(),)).fetchone()
+            if latest and latest["d"]:
+                rows = conn.execute(
+                    "SELECT * FROM unusual_activity WHERE symbol=? AND snap_date=? "
+                    "ORDER BY score DESC", (symbol.upper(), latest["d"])).fetchall()
+                if rows:
+                    scored_as_of = latest["d"]
+                    to_rec = lambda r: {
+                        "strike": r["strike"], "expiry": r["expiry"],
+                        "volume": r["vol"], "openInterest": r["oi"],
+                        "lastPrice": r["last"], "score": r["score"], "basis": r["basis"]}
+                    unusual_calls_records = [to_rec(r) for r in rows if r["side"] == "C"][:5]
+                    unusual_puts_records = [to_rec(r) for r in rows if r["side"] == "P"][:5]
+        except Exception:
+            scored_as_of = None  # never break the panel — fall through to live lists
+        finally:
+            if conn is not None:
+                conn.close()
+
     return {
         "symbol": symbol.upper(),
         "expiration": chain["expiration"],
@@ -86,9 +118,10 @@ def flow_summary(symbol: str, expiration: Optional[str] = None) -> dict:
         "iv_skew": (iv_put - iv_call) if iv_call and iv_put else None,
         "max_pain": max_pain,
         "flags": flags,
-        "unusual_calls_top": unusual_calls.sort_values("volume", ascending=False)
-            .head(5).to_dict("records"),
-        "unusual_puts_top": unusual_puts.sort_values("volume", ascending=False)
-            .head(5).to_dict("records"),
+        "unusual_calls_top": unusual_calls_records if scored_as_of is not None
+            else unusual_calls.sort_values("volume", ascending=False).head(5).to_dict("records"),
+        "unusual_puts_top": unusual_puts_records if scored_as_of is not None
+            else unusual_puts.sort_values("volume", ascending=False).head(5).to_dict("records"),
+        "unusual_as_of": scored_as_of,
         "disclaimer": "Free EOD chain — not real-time tape. For sweeps/blocks use a vendor feed.",
     }

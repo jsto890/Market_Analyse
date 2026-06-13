@@ -460,7 +460,7 @@ git commit -m "feat(options_intel): chain snapshotter — moneyness-banded, idem
 - Create: `argus/argus/options_intel/unusual.py`
 - Test: `argus/tests/test_oi_unusual.py`
 
-The quant-adopted design (master plan WS-1.2), exactly: eligibility `OI ≥ 50`; metric `log1p(vol)`; **cross-sectional** robust z vs same-expiry contracts within ±2% moneyness (median + MAD, MAD scaled ×1.4826, MAD=0 → z=0); **own-baseline** robust z vs that contract's prior `close` snapshots, requiring ≥10 non-zero-volume days else the term is suppressed and the basis says "insufficient history"; `score = max(cross_z, own_z_or_-inf_suppressed)` + 0.5 persistence bonus if the contract scored ≥ 3.0 the previous session; rows with `score ≥ 2.0` persist to `unusual_activity` (top 15 per symbol/side), basis in plain words.
+The quant-adopted design (master plan WS-1.2), exactly: eligibility `OI ≥ 50`; metric `log1p(vol)`; **cross-sectional** robust z vs same-expiry contracts within ±2% moneyness (median + MAD, MAD scaled ×1.4826; if scale==0 fall back to sample std-dev (ddof=1); if std-dev is also 0 the baseline is constant → return `None`, i.e. suppress that term — no fudge denominators); **own-baseline** robust z vs that contract's prior `close` snapshots, requiring ≥10 non-zero-volume days else the term is suppressed and the basis says "insufficient history"; both terms may now be `None` — `score = max` over the present (non-`None`) terms; skip the contract entirely if both are suppressed; + 0.5 persistence bonus if the contract scored ≥ 3.0 the previous session; rows with `score ≥ 2.0` persist to `unusual_activity` (top 15 per symbol/side), basis in plain words.
 
 - [ ] **Step 1: Write the failing tests**
 
@@ -485,16 +485,25 @@ def test_robust_z_flags_outlier_not_noise():
     assert abs(robust_z(1.0, [1.0, 1.1, 0.9, 1.0, 1.05])) < 1
 
 
-def test_robust_z_mad_zero_guard():
-    assert robust_z(5.0, [2.0, 2.0, 2.0]) == 0.0
+def test_robust_z_constant_baseline_suppressed():
+    # constant baseline carries zero dispersion info → suppress (None), never a fake 0 or fudge
+    assert robust_z(2.0, [2.0, 2.0, 2.0]) is None
+    assert robust_z(5.0, [2.0, 2.0, 2.0]) is None
+    assert robust_z(1.0, [1.0, 1.0]) is None            # <3 points → None
+
+
+def test_robust_z_mad_zero_but_variance_sigma_fallback():
+    import math
+    # tie-heavy but NOT constant: MAD=0, σ>0 → scored via std-dev fallback
+    assert robust_z(math.log1p(5000), [math.log1p(20)] * 4 + [math.log1p(30)]) > 3
 
 
 def test_score_symbol_outlier_beats_low_oi_noise(tmp_path):
     db = tmp_path / "t.db"
     conn = get_conn(db); ensure_schema(conn)
-    # neighbours at similar moneyness, quiet volume
-    for k in (98.0, 99.0, 100.0, 101.0, 102.0):
-        _snap(conn, "2026-06-13", "TEST", k, "C", oi=500, vol=20)
+    # neighbours at similar moneyness, quiet but NON-identical volume → MAD>0 normal path
+    for k, v in [(98.0, 18), (99.0, 25), (100.0, 22), (101.0, 19), (102.0, 24)]:
+        _snap(conn, "2026-06-13", "TEST", k, "C", oi=500, vol=v)
     # the genuinely unusual contract: eligible OI, huge volume
     _snap(conn, "2026-06-13", "TEST", 99.5, "C", oi=500, vol=5000)
     # low-OI lottery ticket with big vol/OI ratio — must NOT rank (ineligible)
@@ -559,14 +568,18 @@ PERSIST_THRESHOLD = 3.0
 TOP_N = 15
 
 
-def robust_z(value: float, baseline: list[float]) -> float:
+def robust_z(value: float, baseline: list[float]) -> float | None:
+    # None = "no defensible dispersion estimate — suppress this term."
     if len(baseline) < 3:
-        return 0.0
+        return None
     med = statistics.median(baseline)
     mad = statistics.median(abs(x - med) for x in baseline)
-    if mad == 0:
-        return 0.0
-    return (value - med) / (1.4826 * mad)
+    scale = 1.4826 * mad
+    if scale == 0:
+        scale = statistics.stdev(baseline)   # MAD=0 but ties not total → sample std-dev (ddof=1)
+    if scale == 0:
+        return None                          # constant baseline → suppress, no fudge denominator
+    return (value - med) / scale
 
 
 def _contract(symbol, expiry, strike, side) -> str:
@@ -594,7 +607,10 @@ def score_symbol(conn, symbol: str, snap_date: str, spot: float | None) -> int:
             "AND type=? AND kind='close' AND snap_date<? AND vol>0 ORDER BY snap_date",
             (symbol, r["expiry"], r["strike"], r["type"], snap_date)).fetchall()]
         own = robust_z(metric, hist) if len(hist) >= MIN_BASELINE_DAYS else None
-        score = max(cross, own) if own is not None else cross
+        terms = [t for t in (cross, own) if t is not None]
+        if not terms:
+            continue                         # both suppressed → not scorable
+        score = max(terms)
         contract = _contract(symbol, r["expiry"], r["strike"], r["type"])
         prev = conn.execute(
             "SELECT score FROM unusual_activity WHERE symbol=? AND contract=? "

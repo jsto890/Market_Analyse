@@ -100,6 +100,7 @@ export interface OptionsFlowData {
   flags: string[];
   unusual_calls_top: unknown[];
   unusual_puts_top: unknown[];
+  unusual_as_of?: string | null;
 }
 
 export interface FundamentalsData {

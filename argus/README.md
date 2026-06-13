@@ -26,6 +26,7 @@ of future results. The author accepts no liability for any financial loss.
 | **Period returns** | Trailing 1D / 1W / 1M / 6M / 1Y price return per ticker, surfaced in the dashboard and reports. |
 | **Portfolio + edge** | Connects to IBKR, lists positions, runs each through the Action Card, labels edge as HOLD/ADD, CONSIDER SELLING, or NEUTRAL. |
 | **Flow intelligence** | Best-effort options-flow summary from yfinance EOD chains: PCR, IV skew, max-pain, unusual-volume strikes. (Real-time tape and dark-pool prints are stubbed — see Limitations.) |
+| **Options intel** | Structured options-intelligence layer: chain snapshotter, relative-unusual scorer, and GEX engine. See [`options_intel` module](#options_intel-module) below. |
 | **Alerts** | Email (SMTP), Telegram, and HMAC-signed webhook dispatcher. Every alert is also logged to SQLite. |
 | **Chart Chat / Written Analysis** | Grounded in the actual indicator + agent payload. Calls the Anthropic API if `ANTHROPIC_API_KEY` is set; otherwise falls back to a templated narrative. |
 | **REST API** | FastAPI app on `127.0.0.1:8088`. Serves JSON routes and a minimal dev UI at `/`. |
@@ -182,11 +183,25 @@ GET  /api/analysis/{symbol}
 GET  /api/bridge             latest sentiment×technical bridge CSV as JSON
 POST /api/alert              {title, body, payload, channels}     [requires ARGUS_API_TOKEN if set]
 GET  /api/heartbeats         scheduled-job freshness
+GET  /api/unusual/{symbol}   latest scored unusual-activity rows + as_of snap date
+GET  /api/gex/{symbol}       latest gamma levels (zero_gamma, call_wall, put_wall, total_gex, profile_json) + OI-based caveat
 ```
 
 DB access: `argus.db.get_conn()` only (WAL + busy_timeout enforced).
 
 The Next.js dashboard at `:3000` proxies these routes via `/api/argus/*`.
+
+---
+
+## `options_intel` module
+
+`argus/options_intel/` implements the structured options-intelligence layer (WS-1):
+
+**Snapshotter (`snapshot.py`)** — captures EOD chain data from yfinance for the snapshot universe (indices + watchlist + bridge tickers, capped). Runs pre-close (~15:50 ET) and at close (~16:10 ET) as separate launchd jobs. Contracts are filtered to ±20% moneyness of spot. Each run is idempotent: rows are keyed on `(snap_date, kind, symbol, expiry, strike, type)` so a re-run on the same date is a no-op. The `kind` field distinguishes `preclose` vs `close` snapshots.
+
+**Relative-unusual scorer (`unusual.py`)** — scores each contract in the latest close snapshot against two baselines: (1) *cross-sectional* — robust median/MAD z-score on `log1p(vol)` across all contracts for that symbol/expiry/date (contracts with OI < 50 excluded); (2) *own-baseline* — same z-score against the contract's own prior close-snapshot distribution, requiring ≥ 10 days of history. MAD = 0 triggers a std-dev fallback; if std-dev is also 0 (or history is too thin) the contract is suppressed rather than assigned a spurious infinite score. Contracts that scored unusual on the prior close earn a persistence bonus (+0.5 to the composite). The scorer carries a **beta** tag until a labelled validation week signs off (see `label_sheet.py`).
+
+**GEX engine (`gex.py`)** — computes a Black-Scholes gamma-exposure (GEX) profile by sweeping spot ±15% in 0.25% steps. Derives zero-gamma flip (where net dealer gamma crosses zero), call wall (peak positive GEX strike), and put wall (peak negative GEX strike). **Dealer-sign convention is a documented assumption** — the engine treats net open interest as reflecting a typical market-maker book (short calls, long puts at strikes with put-heavy OI) and documents this limitation explicitly in the API response's `caveat` field. Because GEX is OI-based it reflects the overnight book, not intraday flow; computation uses the next non-zero-DTE expiry only.
 
 ---
 
@@ -238,6 +253,14 @@ argus/
 │   ├── screener/screen.py
 │   ├── portfolio/tracker.py
 │   ├── flow/options_flow.py
+│   ├── options_intel/           # WS-1: chain snapshotter, scorer, GEX engine
+│   │   ├── schema.py            # DDL + ensure_schema()
+│   │   ├── universe.py          # snapshot universe builder
+│   │   ├── snapshot.py          # moneyness-banded chain snapshotter
+│   │   ├── unusual.py           # relative-unusual scorer (beta)
+│   │   ├── gex.py               # BS-gamma spot-sweep profile + levels
+│   │   ├── clock.py             # market-session helpers
+│   │   └── label_sheet.py       # blind labelling CSV for scorer validation
 │   ├── alerts/dispatcher.py     # email / telegram / webhook
 │   ├── alerts/log.py            # SQLite alert log
 │   ├── chat/chart_chat.py       # Anthropic-grounded analysis
