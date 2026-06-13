@@ -53,6 +53,10 @@ Nav shows a live **API status** indicator (green when Argus is reachable).
 | Watchlist pins | SQLite (`../argus.db`) | `better-sqlite3` in `lib/db.ts` |
 | Bridge JSON (alternative) | Argus `GET /api/bridge` | Available when CSV exists; dashboard currently reads CSV directly |
 
+### Database schema notes
+
+`heartbeats` table (job, last_run_ts, status, detail): written by scheduled jobs via `argus.heartbeat`; rendered on /sources. DB path = `ARGUS_DB` (dashboard/.env.local), default `<repo>/argus.db`.
+
 ### Configuring the bridge CSV path
 
 `lib/bridge.ts` currently hardcodes the absolute path to `reports/bridge_latest.csv`. For a different machine or checkout, update `CSV_PATH` in that file (or set it relative to the repo root).
