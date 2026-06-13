@@ -57,6 +57,12 @@ Nav shows a live **API status** indicator (green when Argus is reachable).
 
 `heartbeats` table (job, last_run_ts, status, detail): written by scheduled jobs via `argus.heartbeat`; rendered on /sources. DB path = `ARGUS_DB` (dashboard/.env.local), default `<repo>/argus.db`.
 
+**WS-1 options-intel tables** (written by `argus/options_intel/`; read by the API + dashboard components):
+
+- `options_snapshots` — columns: `snap_date, kind, symbol, expiry, strike, type, oi, vol, last, bid, ask, iv` + `ts`; primary key `(snap_date, kind, symbol, expiry, strike, type)`; written by the snapshotter (pre-close and close runs).
+- `unusual_activity` — columns: `snap_date, symbol, contract, side, score, cross_z, own_z, persistence, vol, oi, last, basis` + `ts`; written by the relative-unusual scorer; surfaced via `GET /api/unusual/{symbol}` (σ-score column + as-of banner in the OptionsPanel).
+- `gex_levels` — columns: `date, symbol, expiry, zero_gamma, call_wall, put_wall, total_gex, profile_json`; written by the GEX engine; surfaced via `GET /api/gex/{symbol}` (GexCard on index tickers).
+
 ### Configuring the bridge CSV path
 
 `lib/bridge.ts` currently hardcodes the absolute path to `reports/bridge_latest.csv`. For a different machine or checkout, update `CSV_PATH` in that file (or set it relative to the repo root).

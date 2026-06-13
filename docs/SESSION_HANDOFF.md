@@ -1,72 +1,93 @@
-# Session Handoff — 2026-06-13
+# Session Handoff — WS-1 Options Intel (branch ws1-options-intel)
 
-> Rewritten at integration (§4.1). Both Phase A and Phase B-0 are **merged to main**; live verification ran at integration. A fresh session can resume from this file alone.
+> Written from the WS-1 branch perspective. The controller reconciles this with the WS-6 handoff at integration. A fresh session can resume from this file alone.
 
 ## 1. Current state
 
-- **Phase A (WS-0 bug sweep, B1–B8): DONE** — branch `phase-a-bug-sweep` (10 commits) merged to main.
-- **Phase B-0 (data-plane foundation): DONE** — branch `phase-b0-data-plane` (9 commits) merged to main.
-- Execution model: subagent-driven development in two parallel git worktrees (`.worktrees/phase-a`, `.worktrees/phase-b0`), implementer → spec review → quality review per task, PM audit at the phase boundary, machine-global steps done once at integration on main.
-- **Next step:** start Phase B (WS-1 options intel + WS-6 catalysts) — write its implementation plan per the master plan §5. The 20-trading-day baseline clock for relative-unusual starts when the snapshotter lands.
+- **WS-1 (options intel): COMPLETE on branch `ws1-options-intel`** (10 tasks, 10 commits). Awaiting controller integration to main and a calendar-gated validation week.
+- Parallel stream: WS-6 catalysts is on its own branch (`ws6-catalysts`). Both feed into Phase B.
+- The scorer carries a **beta** tag — full acceptance requires ≥ 5 sessions of close snapshots followed by a signed-off labelled week (see §5 below).
 
-## 2. What landed (by phase)
+## 2. WS-1 branch commits (4193a5a..HEAD)
 
-### Phase A — every visible bug from the 2026-06-12 feedback session
+```
+3fd0226 feat(options_intel): blind labelling sheet for scorer validation
+42d6db6 feat(scripts): options snapshot/score/gex jobs — Tue–Sat pre-close + close chain via wrapper
+d3a4bcc feat(dashboard): scored unusual rows + as-of banner; GEX levels card on index tickers
+ebde5a9 feat(options_intel): /api/unusual + /api/gex endpoints; flow serves scored close snapshot overnight
+a869019 feat(options_intel): GEX engine — spot-sweep profile, zero-gamma flip, walls, documented dealer-sign
+e05a862 feat(options_intel): robust relative-unusual scorer — median/MAD, own-baseline, persistence
+45bab3f feat(options_intel): chain snapshotter — moneyness-banded, idempotent, heartbeated
+318bab4 feat(options_intel): snapshot universe — indices + watchlist + bridge, capped
+4193a5a feat(options_intel): package + WS-1 schema (snapshots, unusual, gex)
+```
 
-| Bug | Fix | Key files |
+## 3. What landed (WS-1)
+
+| Task | Deliverable | Key files |
 |---|---|---|
-| B1/B1b/B2 | Chart fetches 2Y once; range pills switch client-side; EMA-200 on all periods; persisted period applies to pill + window | `dashboard/lib/chart-range.ts`, `components/charts/CandleChart.tsx`, `app/t/[ticker]/page.tsx` |
-| B3 | Phantom collapsed expansion rows (42 × 1px) — expansion `<tr>` now gated on `everExpandedKeys` | `components/ui/DataTable.tsx`, regression check `dashboard/scripts/row-heights.mjs` |
-| B4 | Sources reads `ACCOUNTS_CSV` env; `meta {path, exists}` on payload; designed empty states (file-missing vs file-empty) | `app/api/accounts/route.ts`, `app/sources/page.tsx`, `types/accounts.ts` |
-| B5 | Header: `called 7 May @ 421.39 → 488.45 (+15.9%, 36d) · median pick peaks…` | `lib/called-since.ts`, `components/ticker/Header.tsx` |
-| B6/B7 | Options panel: Strike·Last·Bid×Ask·Δ%·Vol·OI·Type columns; "Argus API offline" vs "no options chain (source: yfinance)"; market-state subtitle; closed+empty explanation line | `components/ticker/OptionsPanel.tsx`, `lib/market-clock.ts` |
-| B8 | Chart info strip: session badge, close/range, vol× avg, 52w position, pre/after extended price | `lib/bar-stats.ts`, `components/ticker/ChartInfoStrip.tsx`, argus `/api/extended/{symbol}` |
+| Schema | `options_snapshots`, `unusual_activity`, `gex_levels` DDL; idempotent `ensure_schema()` | `argus/argus/options_intel/schema.py` |
+| Universe | Snapshot universe builder (indices + watchlist + bridge, capped) | `argus/argus/options_intel/universe.py` |
+| Snapshotter | Moneyness-banded (±20%) chain snapshotter; idempotent per `(snap_date, kind, symbol, expiry, strike, type)`; heartbeated | `argus/argus/options_intel/snapshot.py` |
+| Scorer | Robust relative-unusual scorer: median/MAD z on `log1p(vol)`; own-baseline ≥10d; MAD=0 → std-dev fallback → suppress; OI≥50 eligibility; persistence bonus; **beta tag** | `argus/argus/options_intel/unusual.py` |
+| GEX engine | BS-gamma spot-sweep profile; zero-gamma flip + call/put walls; dealer-sign is a documented assumption; OI-based so next non-zero-DTE expiry only | `argus/argus/options_intel/gex.py` |
+| Clock | Market-session helpers (ET-aware open/pre/close windows) | `argus/argus/options_intel/clock.py` |
+| Label tool | Blind labelling CSV export for scorer validation | `argus/argus/options_intel/label_sheet.py` |
+| API | `GET /api/unusual/{symbol}` (scored rows + as_of); `GET /api/gex/{symbol}` (gamma levels + caveat); `GET /api/flow/{symbol}` falls back to scored close snapshot overnight | `argus/argus/api/routes.py` |
+| Dashboard | OptionsPanel: σ-score column + as-of banner; GexCard on index tickers | `dashboard/components/ticker/OptionsPanel.tsx`, `dashboard/components/ticker/GexCard.tsx` |
+| Jobs + plists | `options_close_job.sh`; `com.argus.options-snapshot-preclose.plist` (05:50 AEST); `com.argus.options-snapshot-close.plist` (06:10 AEST) | `scripts/` |
 
-Plan correction (documented, evidence-backed): the B3 repro script uses a height-only sliver filter — the plan's `text.length > 0` filter provably missed the empty-text phantom rows.
+## 4. Integration actions (controller does at merge)
 
-### Phase B-0 — data-plane foundation (gates all ingest workstreams)
+The following steps are **not done on the branch** — the controller performs them once on main after merging:
 
-- Root `.env` is the config contract (`.env.example` committed): `ARGUS_DB`, `BRIDGE_DIR`, `ACCOUNTS_CSV`.
-- `argus/argus/db.py` is the ONLY Python SQLite access point (WAL persisted, busy_timeout=5000, synchronous=NORMAL, row_factory=Row, auto-creates `heartbeats`). `settings.py` resolves `db_path` lazily via `resolve_db_path()`; `alerts/log.py` fully routed.
-- Heartbeats: `python -m argus.heartbeat <job> <status> [detail]` CLI → `heartbeats` table (job PK, upsert) → `GET /api/heartbeats` → Pipeline-health panel on `/sources` (stale >26h amber, errors red).
-- `scripts/job_wrapper.sh <job> <cmd…>`: sources `.env`, `caffeinate -i`, start/ok/error heartbeats. Every launchd job runs through it.
-- `scripts/run_daily.sh`: Market_Review sentiment pipeline → account backtest → dashboard ingest, each step heartbeated independently (`daily-sentiment`, `daily-account-backtest`, `daily-ingest`).
-- `scripts/setup_wakes.sh`: one-time pmset pre-wake 05:45 local — **REQUIRES USER SUDO, not yet run**.
-- `dashboard/lib/db.ts` resolves `ARGUS_DB` (logs `[db] sqlite: <path>` once); `dashboard/.env.local` carries it for Next.
+1. Install the two launchd plists:
+   ```bash
+   cp scripts/com.argus.options-snapshot-preclose.plist ~/Library/LaunchAgents/
+   cp scripts/com.argus.options-snapshot-close.plist ~/Library/LaunchAgents/
+   launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.argus.options-snapshot-preclose.plist
+   launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.argus.options-snapshot-close.plist
+   ```
+2. Restart the live Argus API so `/api/unusual`, `/api/gex`, and the closed-market flow fallback are live:
+   ```bash
+   launchctl kickstart -k gui/$(id -u)/ai.argus.api
+   ```
+3. Seed the DB with a first manual run:
+   ```bash
+   bash scripts/options_close_job.sh
+   ```
+4. Verify the endpoints:
+   ```bash
+   curl -s http://127.0.0.1:8088/api/unusual/SPY | python3 -m json.tool | head -20
+   curl -s http://127.0.0.1:8088/api/gex/SPY    | python3 -m json.tool | head -20
+   ```
 
-## 3. Integration actions performed (2026-06-13)
+## 5. Calendar-gated acceptance (scorer beta tag)
 
-- Merged `phase-b0-data-plane` then `phase-a-bug-sweep`; conflicts resolved in `argus/argus/api/routes.py` (both new routes kept), master plan §9 (both rows Done), this file (reconciled), `dashboard/app/sources/page.tsx` verified composed (PipelineHealth panel renders above the B4 empty states).
-- Created machine-local `.env` (from `.env.example`) and `dashboard/.env.local` (`ARGUS_DB=…`).
-- Restarted `ai.argus.api` (`launchctl kickstart -k gui/$(id -u)/ai.argus.api`); verified `GET /api/heartbeats` (wrapper-test rows) and `GET /api/extended/AAPL`.
-- Ran the Market_Review account backtest once (`account_backtest.csv` generated) and `npm run ingest`.
-- Repointed `~/Library/LaunchAgents/com.market-review.daily.plist` through `job_wrapper.sh daily → scripts/run_daily.sh` (20:30 schedule kept); bootout/bootstrap done.
-- Full sweep on merged main: argus pytest, dashboard vitest, tsc, row-heights.mjs, smoke.mjs — see §4.
+The scorer is tagged **beta, validation pending** because median/MAD z-scores are statistically meaningful only after a sufficient own-baseline window (~20 trading sessions per contract). The beta tag is removed only after the following steps:
 
-## 4. Regression baseline (merged main)
+1. **Accumulate ≥ 5 close-snapshot sessions** (the plists run Tue–Sat at 06:10 AEST, so ≥ 5 US market-close sessions).
+2. **Export the blind labelling sheet:**
+   ```bash
+   python -m argus.options_intel.label_sheet <out.csv>
+   ```
+3. **User labels the week** — for each flagged contract: was there a significant move in the underlying within the next 1–3 sessions? Mark each row YES / NO / AMBIGUOUS.
+4. **Review** — check hit rate vs the cross_z and own_z cutoffs; adjust thresholds if needed.
+5. **Remove the beta tag** after the user signs off the labelled week.
 
-```
-argus:     .venv/bin/python -m pytest tests/   → 22 passed
-dashboard: npx vitest run                       → 45 passed
-           npx tsc --noEmit                     → clean
-           SMOKE_URL=… node scripts/row-heights.mjs → rows>0, slivers=0, exit 0
-           SMOKE_URL=… node scripts/smoke.mjs       → all routes PASS (chart-pill check included)
-```
+## 6. Timing note (Sydney timezone drift)
 
-Dev-server env when running checks locally: `ARGUS_DB=<repo>/argus.db BRIDGE_DIR=<repo>/reports` (Today table reads `BRIDGE_DIR` CSVs, NOT the DB).
+The plists fire at **05:50 AEST / 06:10 AEST** (pre-close and close). Mapping to ET:
 
-## 5. Open items / follow-ups
+- **During AEST ↔ EDT (northern-hemisphere summer):** AEST = UTC+10, EDT = UTC-4 → 14h offset. 05:50 AEST = 15:50 ET (pre-close ✓), 06:10 AEST = 16:10 ET (post-close ✓).
+- **During AEDT (daylight saving in effect, ~Oct–Apr):** AEDT = UTC+11 → 15h offset. 05:50 AEDT = 14:50 ET (~2h early); 06:10 AEDT = 15:10 ET (intraday, not post-close). The plists will need a seasonal time adjustment or a clock-check wrapper during AEDT. This is a known drift (master plan §2.4); the snapshotter heartbeat will surface the timing gap.
 
-1. ~~setup_wakes.sh~~ **DONE 2026-06-13** — user ran it; `pmset -g sched` shows `wakepoweron at 5:45AM weekdays only`.
-2. yfinance options-flow rows carry no `type` field → the options panel Type column renders "—" (pre-existing). Candidate fix: derive from `contractSymbol` (…C/P########) or `inTheMoney`; or drop the column. Data-layer follow-up.
-3. PipelineHealth renders any non-2xx from the proxy as "Argus API offline" (e.g. a future 500). Accepted interim copy; revisit if it misleads.
-4. `bridge_meta.json` staleness banner appears when the daily pipeline hasn't run — self-heals with the nightly schedule.
-5. Dev-only React StrictMode persist/hydrate race on the chart period (pre-existing; production build unaffected).
-6. busy_timeout divergence on the shared DB: Python `get_conn()` waits 5000ms, Node `lib/db.ts` waits 3000ms (per their respective plan specs). Harmless at current contention; align to 5000 if Node writers are ever added. (Final-review note 2026-06-13; test heartbeat rows were cleared at integration — the panel starts from the designed empty state until tonight's 20:30 run.)
-
-## 6. Architecture pointers
+## 7. Architecture pointers
 
 - Master plan: `docs/superpowers/plans/2026-06-12-platform-v2-master-plan.md` (§4.1 guardrails, §9 board).
-- Phase plans: `2026-06-12-phase-a-bug-sweep.md`, `2026-06-12-phase-b0-data-plane.md` (same dir).
-- Ops: `scripts/README.md`. Service: `ai.argus.api` is a USER LaunchAgent — restart with `launchctl kickstart -k gui/$(id -u)/ai.argus.api` (no sudo). Daily job: `com.market-review.daily` at 20:30 local through the wrapper.
-- Worktrees `.worktrees/phase-a` and `.worktrees/phase-b0` can be removed once branches are confirmed merged (`git worktree remove …`).
+- WS-1 implementation plan: `docs/superpowers/plans/2026-06-13-phase-b-ws1-options-intel.md`.
+- Options intel module: `argus/argus/options_intel/` — `schema.py`, `universe.py`, `snapshot.py`, `unusual.py`, `gex.py`, `clock.py`, `label_sheet.py`.
+- API endpoints: `argus/argus/api/routes.py` (`/api/unusual/{symbol}`, `/api/gex/{symbol}`, `/api/flow/{symbol}` fallback).
+- Dashboard components: `dashboard/components/ticker/OptionsPanel.tsx`, `dashboard/components/ticker/GexCard.tsx`.
+- Scheduling scripts: `scripts/options_close_job.sh`, `scripts/com.argus.options-snapshot-{preclose,close}.plist`.
+- Prior session handoff state (Phase A + B-0 integration summary): preserved in git history — see commit `838edee` and earlier for the merged-main context.
