@@ -1,5 +1,6 @@
 import CandleChart, { type Bar, type Level, type Marker } from "@/components/charts/CandleChart";
 import Panel from "@/components/ui/Panel";
+import ChartInfoStrip from "@/components/ticker/ChartInfoStrip";
 import Header from "@/components/ticker/Header";
 import LevelsCard from "@/components/ticker/LevelsCard";
 import WhyPanel from "@/components/ticker/WhyPanel";
@@ -111,6 +112,7 @@ export default async function TickerPage({
                 height={420}
                 className="min-h-[420px] 2xl:min-h-[560px]"
               />
+              <ChartInfoStrip ticker={ticker} bars={bars} />
             </Panel>
           </div>
           <OptionsPanel ticker={ticker} />
