@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key><string>com.argus.options-snapshot-close</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>/bin/zsh</string>
+        <string>/Users/josephstorey/Market_Analyse/scripts/job_wrapper.sh</string>
+        <string>options-close</string>
+        <string>/bin/zsh</string>
+        <string>/Users/josephstorey/Market_Analyse/scripts/options_close_job.sh</string>
+    </array>
+    <key>WorkingDirectory</key><string>/Users/josephstorey/Market_Analyse/argus</string>
+    <key>StartCalendarInterval</key>
+    <array>
+        <dict><key>Weekday</key><integer>2</integer><key>Hour</key><integer>6</integer><key>Minute</key><integer>10</integer></dict>
+        <dict><key>Weekday</key><integer>3</integer><key>Hour</key><integer>6</integer><key>Minute</key><integer>10</integer></dict>
+        <dict><key>Weekday</key><integer>4</integer><key>Hour</key><integer>6</integer><key>Minute</key><integer>10</integer></dict>
+        <dict><key>Weekday</key><integer>5</integer><key>Hour</key><integer>6</integer><key>Minute</key><integer>10</integer></dict>
+        <dict><key>Weekday</key><integer>6</integer><key>Hour</key><integer>6</integer><key>Minute</key><integer>10</integer></dict>
+    </array>
+    <key>StandardOutPath</key><string>/tmp/argus-options-close.log</string>
+    <key>StandardErrorPath</key><string>/tmp/argus-options-close.err</string>
+</dict>
+</plist>
