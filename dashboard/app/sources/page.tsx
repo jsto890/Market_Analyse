@@ -4,6 +4,7 @@ import useSWR from "swr";
 import Panel from "@/components/ui/Panel";
 import DataTable, { Column } from "@/components/ui/DataTable";
 import EmptyState from "@/components/ui/EmptyState";
+import PipelineHealth from "@/components/sources/PipelineHealth";
 import type { AccountsData, AccountStat } from "@/types/accounts";
 import { TIER_ORDER, TIER_LABEL } from "@/types/accounts";
 
@@ -123,6 +124,8 @@ export default function SourcesPage() {
       <p className="text-[13px] text-muted">
         X/Twitter accounts tracked by Argus. N &lt; 10 shown in amber (insufficient sample).
       </p>
+
+      <PipelineHealth />
 
       {isLoading && <p className="text-[13px] text-muted">Loading…</p>}
 
