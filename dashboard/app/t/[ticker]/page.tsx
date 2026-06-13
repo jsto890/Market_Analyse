@@ -10,6 +10,7 @@ import HistoryCard from "@/components/ticker/HistoryCard";
 import OptionsPanel from "@/components/ticker/OptionsPanel";
 import GexCard from "@/components/ticker/GexCard";
 import AiPanel from "@/components/ticker/AiPanel";
+import CatalystStrip from "@/components/ticker/CatalystStrip";
 import { loadBridgeSignals } from "@/lib/bridge";
 import { signalHistory } from "@/lib/signals";
 import { MEDIAN_PEAK_PCT, MEDIAN_DAYS_TO_PEAK } from "@/lib/perf-constants";
@@ -96,6 +97,7 @@ export default async function TickerPage({
           medianPeakPct={MEDIAN_PEAK_PCT}
           medianDaysToPeak={MEDIAN_DAYS_TO_PEAK}
         />
+        <CatalystStrip ticker={ticker} />
       </section>
 
       {/* Two-column layout */}
