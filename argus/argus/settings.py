@@ -2,7 +2,9 @@
 from __future__ import annotations
 
 from pathlib import Path
+from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
+from .db import resolve_db_path
 
 
 class Settings(BaseSettings):
@@ -47,7 +49,7 @@ class Settings(BaseSettings):
     argus_api_token: str = ""
 
     # Paths
-    db_path: Path = Path("argus.db")
+    db_path: Path = Field(default_factory=resolve_db_path)
     data_dir: Path = Path("./.cache")
 
     # Offline fallback — comma-separated symbols shown via yfinance when IBKR is down

@@ -7,6 +7,7 @@ from contextlib import contextmanager
 from datetime import datetime, timezone
 from typing import Optional
 
+from ..db import get_conn
 from ..settings import settings
 
 
@@ -27,7 +28,7 @@ class AlertLog:
         self.path = str(path or settings.db_path)
         # Keep a persistent connection for :memory: databases (they don't survive reconnects)
         self._persistent_conn: Optional[sqlite3.Connection] = (
-            sqlite3.connect(":memory:") if self.path == ":memory:" else None
+            get_conn(":memory:") if self.path == ":memory:" else None
         )
         self._init()
 
@@ -38,12 +39,10 @@ class AlertLog:
     @contextmanager
     def _conn(self):
         if self._persistent_conn is not None:
-            self._persistent_conn.row_factory = sqlite3.Row
             yield self._persistent_conn
             self._persistent_conn.commit()
         else:
-            conn = sqlite3.connect(self.path)
-            conn.row_factory = sqlite3.Row
+            conn = get_conn(self.path)
             try:
                 yield conn
                 conn.commit()

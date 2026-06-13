@@ -46,7 +46,8 @@ export function openDb(dbPath: string): Database.Database {
 
 export function getDb(): Database.Database {
   if (globalThis.__argusDb) return globalThis.__argusDb;
-  const p = process.env.ARGUS_DB ?? path.join(process.cwd(), "..", "argus.db");
+  const p = path.resolve(process.env.ARGUS_DB ?? path.join(process.cwd(), "..", "argus.db"));
+  console.log(`[db] sqlite: ${p}`);
   const db = openDb(p);
   globalThis.__argusDb = db;
   return globalThis.__argusDb;

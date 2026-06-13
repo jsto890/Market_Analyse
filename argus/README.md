@@ -181,7 +181,10 @@ POST /api/chat/{symbol}      {question}
 GET  /api/analysis/{symbol}
 GET  /api/bridge             latest sentiment×technical bridge CSV as JSON
 POST /api/alert              {title, body, payload, channels}     [requires ARGUS_API_TOKEN if set]
+GET  /api/heartbeats         scheduled-job freshness
 ```
+
+DB access: `argus.db.get_conn()` only (WAL + busy_timeout enforced).
 
 The Next.js dashboard at `:3000` proxies these routes via `/api/argus/*`.
 
