@@ -1,71 +1,89 @@
-# Session Handoff — 2026-06-13 (Phase B integrated)
+# Session Handoff — 2026-06-16 (Phase C / WS-2 complete, branch ws2-ui-shell)
 
-> Reconciled at integration from the WS-1 and WS-6 branch handoffs (§4.1). Both workstreams are **merged to main**; live verification ran at integration. A fresh session can resume from this file alone.
+> Written from the WS-2 branch perspective. **Integration pending** — the branch has not yet been merged to main. A fresh session can resume from this file alone.
 
 ## 1. Current state
 
-- **Phase B / WS-1 (options intel): DONE** — branch `ws1-options-intel` (10 tasks) merged to main. Scorer carries a **beta** tag until a calendar-gated validation week (§5).
-- **Phase B / WS-6 (catalysts): DONE** — branch `ws6-catalysts` (5 tasks + 1 tz-hardening fix) merged to main.
-- Earlier phases (A bug-sweep, B-0 data-plane) already on main; the daily launchd job runs through `job_wrapper.sh`; the 05:45 weekday pmset pre-wake is active.
-- **Next step:** Phase C (WS-2 UI shell + WS-3 news/macro) per the master plan §5, or let WS-1 accumulate snapshot sessions toward the validation week.
+- **Phase C / WS-2 (UI shell): DONE on branch `ws2-ui-shell`** — 8 tasks complete, ready for controller integration.
+- `main` is at the Phase B merge state (WS-1 options intel + WS-6 catalysts merged, live API serving both).
+- **This branch has NOT been merged to main.** The controller must merge + restart the Argus API at integration (see §3).
 
-## 2. What landed (Phase B)
+## 2. What landed (WS-2 — all 8 tasks)
 
-### WS-1 — options intelligence (`argus/argus/options_intel/`)
-- `schema.py` — `options_snapshots`, `unusual_activity`, `gex_levels` (idempotent `ensure_schema`).
-- `universe.py` — snapshot universe: index underlyings + watchlist + bridge tickers, capped, never-fatal on missing inputs.
-- `snapshot.py` — chain snapshotter (±20% moneyness band, idempotent per `(snap_date,kind,symbol,expiry,strike,type)`, NaN-safe, heartbeated). Live smoke: 947 rows for SPY.
-- `unusual.py` — robust relative-unusual scorer: median/MAD z on `log1p(vol)`; **MAD=0 → sample std-dev fallback → suppress (None)** (quant-adjudicated, master plan §WS-1.2); own-baseline ≥10 non-zero days; OI≥50 eligibility; persistence bonus; top-15/side. **Beta tag** until validation.
-- `gex.py` — GEX engine: BS-gamma spot-sweep (61 pts, ±15%, gamma re-evaluated per spot), zero-gamma flip, call/put walls; dealer-sign is a **documented assumption**; OI-based so next non-0DTE expiry only.
-- `clock.py` — `us_market_open()` (ET session check, no holidays).
-- `label_sheet.py` — blind validation CSV (top-N scored + N random unscored, shuffled, no score columns).
-- API: `GET /api/unusual/{symbol}` (scored rows + `as_of`), `GET /api/gex/{symbol}` (levels + OI-based caveat); `flow_summary` serves the latest scored close snapshot overnight with `unusual_as_of` (closes B6 for good — never an empty overnight table).
-- Dashboard: OptionsPanel σ-score column (only when scores present) + as-of beta banner; `GexCard` on SPY/QQQ/IWM/DIA.
-- Jobs: `scripts/options_close_job.sh` (snapshot→score→gex chain); `scripts/com.argus.options-snapshot-{preclose,close}.plist` (05:50/06:10 local Tue–Sat via `job_wrapper.sh`).
+### Argus — new endpoint
 
-### WS-6 — catalysts everywhere (`argus/argus/catalysts/`)
-- `reaction.py` — earnings price-reaction % from history.
-- `provider.py` — any-ticker `build_catalysts`: yfinance `calendar` (next earnings) + `upgrades_downgrades` (analyst, 90d/cap-3) + `earnings_dates` (past surprise, lxml-optional → `degraded` field); tz-safe date comparisons.
-- API: `GET /api/catalysts/{symbol}` (any ticker, not just bridge names).
-- Dashboard: header `CatalystStrip` (next/last earnings + analyst action) on every ticker page.
-- Today-table catalyst chips (`CatalystCount`) confirmed already shipped in a prior phase (WS-6 item 1).
+- `argus/argus/data/rail.py` — `rail_quotes()`: batched `yf.download` for the full basket (ES NQ YM RTY VIX CL BTC SPY QQQ IWM DIA EURUSD USDJPY GBPUSD AUDUSD), ffill per-symbol to handle ragged last rows across asset classes, grouped output (`futures` / `indices` / `forex`).
+- `argus/argus/api/routes.py` — `GET /api/rail/quotes` registered in `build_app()`.
+- `argus/tests/test_rail.py` — 2 tests: `test_rail_quotes_per_symbol_last_valid` (ffill + change_pct), `test_rail_quotes_survives_empty` (empty DataFrame → `error: "no data"`).
 
-## 3. Integration actions performed (2026-06-13)
+### Dashboard — new helpers (`lib/`)
 
-- Merged `ws1-options-intel` then `ws6-catalysts`; conflicts resolved: `argus/argus/api/routes.py` (all of `/api/unusual`, `/api/gex`, `/api/catalysts`, plus prior `/api/extended`, `/api/heartbeats` kept), `dashboard/app/t/[ticker]/page.tsx` (CatalystStrip + GexCard + existing cards composed), this file (reconciled), master plan §9 (both WS-1 + WS-6 rows Done) and §WS-1.2 (MAD=0 amendment applied), both READMEs (kept both sides).
-- Installed + bootstrapped the two options plists into `~/Library/LaunchAgents` (gui domain, no sudo).
-- Restarted `ai.argus.api`; verified `/api/unusual/SPY`, `/api/gex/SPY`, `/api/catalysts/AAPL`.
-- Seeded the DB with a first `scripts/options_close_job.sh` run (snapshots + scores + gex + heartbeats).
-- Full sweep on merged main (see §4).
+- `lib/forex-session.ts` — `forexSessions(now?)`: Asia 00–09 UTC / LDN 07–16 / NY 12–21, weekend-aware; returns `{active, overlap, closed}`.
+- `lib/tz-display.ts` — `dualClock(now?)`: Sydney-primary / ET-secondary clock strings.
+- `lib/rail-quotes.ts` — `useRailQuotes()` SWR hook polling `/api/argus/rail/quotes` every 45s; `RAIL_LABEL` display map; `RailQuote` / `RailData` types.
 
-## 4. Regression baseline (merged main)
+### Dashboard — rail components (`components/rails/`)
+
+- `components/rails/QuoteRow.tsx` — single ticker line (label, price, signed % colored pos/neg).
+- `components/rails/LeftRail.tsx` — quote rail: Futures + US Equity (with `usMarketState` session badge) + Forex (with `forexSessions` chip, teal for overlap). Skeleton rows while loading; amber offline banner ("QUOTE FEED OFFLINE") on error — never blank. Minimised 36px strip shows SPY/QQQ/VIX deltas. localStorage-persisted collapse.
+- `components/rails/RightRail.tsx` — news rail shell: designed dormant state ("live news + macro sentiment land with WS-3"). Minimised strip shows vertical NEWS label. localStorage-persisted collapse.
+- `components/rails/RailShell.tsx` — `"use client"` wrapper; 3-column flex row (LeftRail · content · RightRail). Wraps `{children}` in `app/layout.tsx`.
+
+### Dashboard — layout integration
+
+- `app/layout.tsx` — `{children}` replaced with `<RailShell>{children}</RailShell>`; rails appear on every page.
+
+### Regression guard
+
+- `dashboard/scripts/smoke.mjs` — `checkRails()` helper added; called on home route after page load; asserts left rail `aside` renders (via "Futures", "QUOTE FEED OFFLINE", or "ES" text) and right rail `aside` renders (via "NEWS" text); `/api/argus/rail/quotes` added to `ACCEPTABLE_FAIL_PREFIXES` (404 until API restarts post-integration).
+
+## 3. Branch commits (a1b9169..HEAD)
 
 ```
-argus:     .venv/bin/python -m pytest tests/   → <count> passed   (WS-1 + WS-6 tests + prior baseline)
-dashboard: npx vitest run                       → 45 passed
-           npx tsc --noEmit                     → clean
+7ecc6f4 feat(dashboard): wrap every page in the 3-column rail shell (left quote rail + right news shell)
+ca467dd feat(dashboard): RightRail news shell per design spec — designed dormant state, static bars, minimised NEWS strip
+c22f7ed feat(dashboard): LeftRail quote rail per design spec — blocks, session badges, teal overlap, skeleton/offline/minimised
+e893df2 feat(dashboard): rail-quotes SWR hook + ticker label map
+1811da8 feat(dashboard): dual-clock tz-display helper (Sydney primary, ET secondary)
+bbdc391 feat(dashboard): forex-session helper — Asia/London/NY windows + overlap
+591cd98 feat(rail): batched /api/rail/quotes basket — futures, indices, forex (ffill per-symbol)
 ```
 
-## 5. Calendar-gated acceptance — WS-1 scorer beta tag
+(Plus Task-8 commit: `chore(rails): smoke rail check, docs + status board for WS-2`)
 
-Median/MAD z-scores are meaningful only after a sufficient own-baseline window. Lift the beta tag only after:
-1. Accumulate **≥5 close-snapshot sessions** (plists run Tue–Sat 06:10 local).
-2. Export the blind sheet: `cd argus && .venv/bin/python -m argus.options_intel.label_sheet /tmp/unusual_validation.csv`
-3. User labels each contract unusual y/n **blind**; compare against the scorer's verdicts (hit rate vs cross_z/own_z).
-4. Remove the beta tag (OptionsPanel as-of banner copy) only after the user signs off the labelled week.
+## 4. Regression sweep (branch, pre-integration)
 
-## 6. Open items / follow-ups
+```
+dashboard vitest:   49/49 passed
+dashboard tsc:      clean (no errors)
+smoke (port 3100):  8/8 routes passed
+                    rail check PASS — left rail renders QUOTE FEED OFFLINE aside (API 404, expected pre-integration)
+                    right rail renders NEWS aside
+                    /api/argus/rail/quotes → acceptable 404 (old API, pre-restart)
+argus pytest:       48/49 passed
+                    KNOWN PRE-EXISTING FAIL: test_cat_endpoint.py::test_catalysts_endpoint_shape
+                    (test monkeypatches analyst data but the 90-day recency filter drops it;
+                    present at branch start, not introduced by WS-2; fix is a follow-up for main)
+```
 
-1. **Optional:** `argus/.venv/bin/pip install lxml` unlocks past-earnings surprise + reaction % in `/api/catalysts` / the CatalystStrip (degrades gracefully without it via the `degraded` field).
-2. Options-flow `type` column always renders "—" — yfinance carries no `type` field on chain rows (pre-existing, both live and scored paths). Derive from `contractSymbol`/`inTheMoney` or drop the column — data-layer follow-up.
-3. WS-1.4 **day-review post-close summary** (P/C vol vs 20d, IV change, biggest OI moves) was scoped OUT of this plan — it needs day-over-day snapshot deltas (same calendar gate) and is a follow-up panel.
-4. WS-6 item 4 (index econ-calendar catalyst chips) deferred to WS-3 (needs the `econ_calendar` table).
-5. Cosmetic: 2 unused imports in `gex.py`; the beta-banner double top-border; `GexCard` `shouldRetryOnError:false` also drops transient 500s. Non-blocking.
-6. AEDT timing drift: 05:50/06:10 local lands ~2h before the US close during AEDT (Oct–Apr); heartbeat badges surface it (master plan §2.4). The snapshotter is idempotent, so a seasonal clock-check wrapper can be added later.
+## 5. Integration steps (controller)
+
+1. **Merge** `ws2-ui-shell` → `main` (resolve any conflicts in `layout.tsx`, `routes.py`).
+2. **Restart live Argus API**: `launchctl kickstart -k gui/$(id -u)/ai.argus.api` (no sudo). After restart, `curl http://127.0.0.1:8088/api/rail/quotes` should return ~15 quotes grouped futures/indices/forex.
+3. **Verify live rail**: open dashboard at `:3000` — left rail should show live prices in all three blocks with session badges. If the endpoint is still 404, the Argus process didn't pick up the new route (check `ai.argus.api` is running the worktree's code — it must point to the merged main, not the old source path).
+4. **Remove worktree**: `git worktree remove .worktrees/ws2` once merge is confirmed.
+
+## 6. WS-3 blockers (next workstream)
+
+WS-3 (Discord ingest + FinBERT news/macro) is the next workstream. It wires the right rail and adds macro-sentiment gauges to the left rail. Blockers:
+
+- **Discord credentials**: private-group channel IDs (whale-watch, Market Report channels) + bot token. The ingest plan assumes a read-only bot.
+- **FinBERT model**: `ProsusAI/finbert` or equivalent; needs ~500MB disk and the `transformers` package in the argus venv. Confirm GPU/CPU inference budget on the Mac.
+- **`econ_calendar` table**: the "Today" econ-events block (left rail block 6) needs this populated; WS-3 owns the ingester.
 
 ## 7. Architecture pointers
 
-- Master plan: `docs/superpowers/plans/2026-06-12-platform-v2-master-plan.md` (§4.1 guardrails, §9 board, §WS-1.2 scorer design).
-- Phase B plans: `2026-06-13-phase-b-ws1-options-intel.md`, `2026-06-13-phase-b-ws6-catalysts.md`.
-- Service: `ai.argus.api` is a USER LaunchAgent — `launchctl kickstart -k gui/$(id -u)/ai.argus.api` (no sudo). Options jobs: `com.argus.options-snapshot-{preclose,close}` Tue–Sat through `job_wrapper.sh`.
-- Worktrees `.worktrees/ws1` and `.worktrees/ws6` can be removed once merges are confirmed (`git worktree remove …`).
+- Master plan: `docs/superpowers/plans/2026-06-12-platform-v2-master-plan.md` (§4.1 guardrails, §9 board, §WS-2).
+- WS-2 plan: `docs/superpowers/plans/2026-06-13-phase-c-ws2-ui-shell.md` (8 tasks, acceptance criteria).
+- Design spec: `docs/design/ws2-rail-spec.md` (visual authority — tokens, states, §8 Tailwind recipes).
+- Service: `ai.argus.api` is a USER LaunchAgent — `launchctl kickstart -k gui/$(id -u)/ai.argus.api` (no sudo).

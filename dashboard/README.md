@@ -117,6 +117,27 @@ exports `visibleRangeFor()` returning a `{from, to}` range that `CandleChart.tsx
 EMA-200 is computed over the full 2Y series and renders correctly on all periods, including
 short views where only 64–126 bars are visible (previously it required ≥200 bars in view).
 
+## Rail shell (WS-2)
+
+Every page is wrapped in a persistent 3-column rail shell (`components/rails/RailShell.tsx`):
+
+- **LeftRail** (`components/rails/LeftRail.tsx` + `components/rails/QuoteRow.tsx`) — quote rail with three blocks: Futures (ES NQ YM RTY VIX Crude BTC), US Equity (SPY QQQ IWM DIA) with US-session badge, Forex (EUR/USD USD/JPY GBP/USD AUD/USD) with FX-session chip (Asia/LDN/NY overlap shown in teal). Live data polls `GET /api/argus/rail/quotes` every 45s via SWR; renders a designed offline amber state ("QUOTE FEED OFFLINE") when the endpoint is unreachable — never a blank box.
+- **RightRail** (`components/rails/RightRail.tsx`) — news rail shell. Renders a designed dormant state ("live news + macro sentiment land with WS-3"). The full feed wires up when WS-3 (Discord ingest + FinBERT) lands.
+- Both rails are individually minimisable; collapsed state persists in `localStorage`. Minimised left strip shows SPY/QQQ/VIX deltas; minimised right strip shows a vertical NEWS label.
+- Design authority: `docs/design/ws2-rail-spec.md` (terminal/Bloomberg-dark aesthetic, token sheet, §8 Tailwind recipes).
+
+New WS-2 helpers (`lib/`):
+
+| Module | Purpose |
+|---|---|
+| `lib/forex-session.ts` | FX session windows (Asia 00–09 UTC / LDN 07–16 / NY 12–21); returns `{active, overlap, closed}`. Weekend-aware. |
+| `lib/tz-display.ts` | Sydney-primary / ET-secondary clock strings via `dualClock(now)`. |
+| `lib/rail-quotes.ts` | SWR hook `useRailQuotes()` polling `/api/argus/rail/quotes` every 45s; exports `RailQuote`, `RailData` types and `RAIL_LABEL` display map. |
+
+**Deferred to WS-3:** macro-sentiment gauges (left rail block 5), one-line market blurb (block 2), "Today" econ-events block (block 6 — needs `econ_calendar`), and the right-rail news feed (Discord ingest + FinBERT).
+
+---
+
 ## Environment variables
 
 | Variable | Purpose | Default |
@@ -133,6 +154,9 @@ short views where only 64–126 bars are visible (previously it required ≥200 
 | `lib/market-clock.ts` | DST-safe US session state (PRE / REGULAR / AFTER / CLOSED) — pure time math, no data dependency |
 | `lib/bar-stats.ts` | Volume ratio, 52-week position, and price range stats for the chart info strip |
 | `lib/called-since.ts` | "Called DATE @ $PRICE → now $PRICE (+X%, N days)" — coherent since-called line for ticker headers |
+| `lib/forex-session.ts` | FX session windows (Asia/LDN/NY) + overlap detection — used by the LeftRail FX chip |
+| `lib/tz-display.ts` | Sydney-primary / ET-secondary clock via `dualClock()` |
+| `lib/rail-quotes.ts` | `useRailQuotes()` SWR hook + `RAIL_LABEL` display map — powers LeftRail |
 
 ## Regression scripts
 

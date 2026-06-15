@@ -27,7 +27,7 @@ const ROUTES = [
   { path: "/portfolio", label: "portfolio" },
 ];
 
-// API path prefixes that are acceptable to fail (IBKR offline, quote 404s)
+// API path prefixes that are acceptable to fail (IBKR offline, quote 404s, rail pre-integration)
 const ACCEPTABLE_FAIL_PREFIXES = [
   "/api/argus/portfolio",
   "/api/argus/flow",
@@ -35,6 +35,7 @@ const ACCEPTABLE_FAIL_PREFIXES = [
   "/api/argus/quote",
   "/api/argus/screener",
   "/api/argus/history",
+  "/api/argus/rail/quotes", // 404 until live API restarts post-integration (WS-2 pre-integration state)
 ];
 
 // Next.js dev-server static chunks that may 404 transiently during warmup
@@ -64,6 +65,14 @@ function isCriticalFail(url, status) {
   // page-document failures are always critical
   if (!url.includes("/api/")) return true;
   return !isAcceptableFail(url);
+}
+
+async function checkRails(page, label) {
+  const left = await page.locator('aside:has-text("Futures"), aside:has-text("QUOTE FEED OFFLINE"), aside:has-text("ES")').count();
+  const right = await page.locator('aside:has-text("NEWS")').count();
+  if (left === 0) return `${label}: left quote rail not rendered`;
+  if (right === 0) return `${label}: right news rail not rendered`;
+  return null;
 }
 
 async function checkChartPills(page, label) {
@@ -188,6 +197,12 @@ async function main() {
     if (!navError && route.label.startsWith("ticker-")) {
       const pillErr = await checkChartPills(page, route.label);
       if (pillErr) chartPillErrors.push(pillErr);
+    }
+
+    // For home route: check rails are rendered
+    if (route.path === "/" && !navError) {
+      const railErr = await checkRails(page, route.label);
+      if (railErr) chartPillErrors.push(railErr);
     }
 
     // For home route: try clicking first table row to expand it

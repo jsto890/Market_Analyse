@@ -186,6 +186,7 @@ GET  /api/heartbeats         scheduled-job freshness
 GET  /api/unusual/{symbol}   latest scored unusual-activity rows + as_of snap date
 GET  /api/gex/{symbol}       latest gamma levels (zero_gamma, call_wall, put_wall, total_gex, profile_json) + OI-based caveat
 GET  /api/catalysts/{symbol} next/last earnings + analyst actions for any ticker
+GET  /api/rail/quotes        batched basket (futures/indices/forex) for the dashboard left rail — one yf.download per poll, ffill per-symbol to handle ragged last rows across asset classes; groups: futures (ES NQ YM RTY VIX CL BTC), indices (SPY QQQ IWM DIA), forex (EURUSD USDJPY GBPUSD AUDUSD)
 ```
 
 DB access: `argus.db.get_conn()` only (WAL + busy_timeout enforced).
