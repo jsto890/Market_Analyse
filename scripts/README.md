@@ -13,6 +13,7 @@ Sources page and at `GET /api/heartbeats`).
 | `render_report_preview.sh` | (pre-existing) report preview | manual |
 | `options_close_job.sh` | close chain: snapshot → unusual scorer → GEX | `com.argus.options-snapshot-close` 06:10 local Tue–Sat |
 | (module) `argus.options_intel.snapshot --kind preclose` | pre-close chain snapshot | `com.argus.options-snapshot-preclose` 05:50 local Tue–Sat |
+| (module) `argus.news.ingest` | persistent Discord news gateway (self-bot, KeepAlive) → `news_items` | `com.argus.news-ingest` (KeepAlive, not scheduled) |
 
 Config contract: repo-root `.env` (see `.env.example`). `ARGUS_DB` is the single
 SQLite file both runtimes use; Python access only via `argus.db.get_conn()`.
