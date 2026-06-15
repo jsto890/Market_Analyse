@@ -6,6 +6,7 @@ import StatusDot from "@/components/StatusDot";
 import CommandK from "@/components/CommandK";
 import HelpOverlay from "@/components/HelpOverlay";
 import TooltipProvider from "@/components/ui/TooltipProvider";
+import RailShell from "@/components/rails/RailShell";
 
 export const dynamic = "force-dynamic";
 
@@ -26,7 +27,7 @@ export default function RootLayout({
           <Nav contextStrip={<ContextStrip />} statusDot={<StatusDot />} />
           <CommandK />
           <HelpOverlay />
-          {children}
+          <RailShell>{children}</RailShell>
         </TooltipProvider>
       </body>
     </html>
