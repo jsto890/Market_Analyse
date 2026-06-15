@@ -11,6 +11,7 @@ import OptionsPanel from "@/components/ticker/OptionsPanel";
 import GexCard from "@/components/ticker/GexCard";
 import AiPanel from "@/components/ticker/AiPanel";
 import CatalystStrip from "@/components/ticker/CatalystStrip";
+import NewsCard from "@/components/ticker/NewsCard";
 import { loadBridgeSignals } from "@/lib/bridge";
 import { signalHistory } from "@/lib/signals";
 import { MEDIAN_PEAK_PCT, MEDIAN_DAYS_TO_PEAK } from "@/lib/perf-constants";
@@ -129,6 +130,7 @@ export default async function TickerPage({
           {bridgeRow && <LevelsCard ticker={ticker} bridgeRow={bridgeRow} />}
           <WhyPanel ticker={ticker} />
           <CatalystsCard ticker={ticker} bridgeRow={bridgeRow} />
+          <NewsCard ticker={ticker} />
           <SentimentCard bridgeRow={bridgeRow} lastSeen={lastSeen} />
           <HistoryCard rows={history} lastClose={lastClose} />
           <AiPanel ticker={ticker} />
