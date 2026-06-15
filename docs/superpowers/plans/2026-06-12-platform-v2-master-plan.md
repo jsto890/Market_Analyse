@@ -376,7 +376,8 @@ Still needed (small): channel IDs for the private group's whale-watch bot and Ma
 | B-0 | Data-plane foundation | **Done** | [2026-06-12-phase-b0-data-plane.md](2026-06-12-phase-b0-data-plane.md) | 2026-06-13 | Merged to main; `setup_wakes.sh` needs user sudo once |
 | B / WS-1 | WS-1 options intel | **Done (awaiting validation week)** | [2026-06-13-phase-b-ws1-options-intel.md](2026-06-13-phase-b-ws1-options-intel.md) | 2026-06-13 | Merged to main; plists installed + API restarted + snapshots seeded at integration; scorer beta tag lifted after ≥5 sessions + labelled week |
 | B / WS-6 | WS-6 catalysts | **Done** | [2026-06-13-phase-b-ws6-catalysts.md](2026-06-13-phase-b-ws6-catalysts.md) | 2026-06-13 | Merged to main; API restarted at integration; optional `pip install lxml` unlocks past-earnings; item 4 (econ-calendar chips) deferred to WS-3 |
-| C | WS-2 UI shell · WS-3 news/macro | Not started | — | 2026-06-12 | B-0 landed; optional: private-group channel IDs (whale-watch, Market Report) |
+| C / WS-2 | WS-2 UI shell (quote rail + news shell) | **Done (quote rail; news rail shell awaiting WS-3)** | [2026-06-13-phase-c-ws2-ui-shell.md](2026-06-13-phase-c-ws2-ui-shell.md) | 2026-06-16 | Branch `ws2-ui-shell` ready for integration; controller: restart Argus API so `/api/rail/quotes` serves live data; WS-3 (news feed + macro) needs Discord creds + FinBERT |
+| C / WS-3 | WS-3 news/macro | Not started | — | 2026-06-12 | Discord channel IDs + bot token; FinBERT model (~500MB); `econ_calendar` ingester |
 | D | WS-5 0DTE hub (vendor OptionsAnalysis) | Not started | — | 2026-06-12 | WS-1 GEX/snapshots for companion panels; vendoring itself unblocked |
 | E | WS-4 Position Engine | Not started | — | 2026-06-12 | Design-phase first (engine choice, fill rules, PIT universes) |
 | F | WS-7 automation | Gated | — | 2026-06-12 | Gate 1 evidence; VPS (Q6); risk rails proposal (Q7) |
