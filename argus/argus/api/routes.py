@@ -47,6 +47,9 @@ from ..flow import flow_summary
 from ..portfolio import PortfolioTracker
 from ..chat import chart_chat, written_analysis
 from ..alerts import dispatch_alert, AlertChannels, AlertLog
+from ..news.schema import ensure_news_schema
+from ..news.store import fetch_after
+from ..news.ticker_news import ticker_news
 
 
 UI_DIR = Path(__file__).parent.parent / "ui"
@@ -125,6 +128,22 @@ def build_app() -> FastAPI:
         finally:
             conn.close()
         return {"heartbeats": [dict(r) for r in rows]}
+
+    @app.get("/api/news")
+    def news(after: int = 0, limit: int = 200):
+        conn = get_conn()
+        ensure_news_schema(conn)
+        try:
+            rows = fetch_after(conn, after_id=after, limit=limit)
+            items = [dict(r) for r in rows]
+        finally:
+            conn.close()
+        cursor = items[-1]["id"] if items else after
+        return {"items": items, "cursor": cursor}
+
+    @app.get("/api/news/{symbol}")
+    def news_for_symbol(symbol: str):
+        return {"symbol": symbol.upper(), "items": ticker_news(symbol)}
 
     @app.get("/api/unusual/{symbol}")
     def unusual(symbol: str):
