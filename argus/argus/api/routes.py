@@ -50,6 +50,8 @@ from ..alerts import dispatch_alert, AlertChannels, AlertLog
 from ..news.schema import ensure_news_schema
 from ..news.store import fetch_after, fetch_latest
 from ..news.ticker_news import ticker_news
+from ..macro.schema import ensure_macro_schema
+from ..macro.store import latest_macro, macro_series
 
 
 UI_DIR = Path(__file__).parent.parent / "ui"
@@ -146,6 +148,26 @@ def build_app() -> FastAPI:
     @app.get("/api/news/{symbol}")
     def news_for_symbol(symbol: str):
         return {"symbol": symbol.upper(), "items": ticker_news(symbol)}
+
+    @app.get("/api/macro")
+    def macro():
+        conn = get_conn()
+        ensure_macro_schema(conn)
+        try:
+            gauges = [dict(r) for r in latest_macro(conn)]
+        finally:
+            conn.close()
+        return {"gauges": gauges}
+
+    @app.get("/api/macro/series")
+    def macro_series_route(scope: str = "global", window: str = "1d", limit: int = 200):
+        conn = get_conn()
+        ensure_macro_schema(conn)
+        try:
+            points = [dict(r) for r in macro_series(conn, scope, window, limit)]
+        finally:
+            conn.close()
+        return {"scope": scope, "window": window, "points": points}
 
     @app.get("/api/unusual/{symbol}")
     def unusual(symbol: str):
