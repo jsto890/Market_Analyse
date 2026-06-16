@@ -1,89 +1,103 @@
-# Session Handoff — 2026-06-16 (Phase C / WS-2 complete, branch ws2-ui-shell)
+# Session Handoff — 2026-06-16 (Phase C / WS-3a complete, branch ws3a-news-pipeline)
 
-> Written from the WS-2 branch perspective. **Integration pending** — the branch has not yet been merged to main. A fresh session can resume from this file alone.
+> Written from the WS-3a branch perspective. **Integration pending** — the branch has not yet been merged to main. A fresh session can resume from this file alone.
 
 ## 1. Current state
 
-- **Phase C / WS-2 (UI shell): DONE on branch `ws2-ui-shell`** — 8 tasks complete, ready for controller integration.
-- `main` is at the Phase B merge state (WS-1 options intel + WS-6 catalysts merged, live API serving both).
-- **This branch has NOT been merged to main.** The controller must merge + restart the Argus API at integration (see §3).
+- **Phase C / WS-3a (news pipeline): DONE on branch `ws3a-news-pipeline`** — 9 tasks complete, ready for controller integration.
+- `main` is at the Phase B/C merge state (WS-1 options intel + WS-6 catalysts + WS-2 UI shell merged).
+- **This branch has NOT been merged to main.** The controller must merge + restart the Argus API + bootstrap the ingest service (see §3).
 
-## 2. What landed (WS-2 — all 8 tasks)
+## 2. What landed (WS-3a — all 9 tasks)
 
-### Argus — new endpoint
+### Argus — schema
 
-- `argus/argus/data/rail.py` — `rail_quotes()`: batched `yf.download` for the full basket (ES NQ YM RTY VIX CL BTC SPY QQQ IWM DIA EURUSD USDJPY GBPUSD AUDUSD), ffill per-symbol to handle ragged last rows across asset classes, grouped output (`futures` / `indices` / `forex`).
-- `argus/argus/api/routes.py` — `GET /api/rail/quotes` registered in `build_app()`.
-- `argus/tests/test_rail.py` — 2 tests: `test_rail_quotes_per_symbol_last_valid` (ffill + change_pct), `test_rail_quotes_survives_empty` (empty DataFrame → `error: "no data"`).
+- `argus/argus/news/schema.py` — `ensure_schema()` creates `news_items(id, ts, source, ticker, headline, body, url, tags, is_breaking, external_id)` and `backfill_cursors(channel_id, last_id)` tables; WAL + busy_timeout via shared `argus.db`.
 
-### Dashboard — new helpers (`lib/`)
+### Argus — store helpers
 
-- `lib/forex-session.ts` — `forexSessions(now?)`: Asia 00–09 UTC / LDN 07–16 / NY 12–21, weekend-aware; returns `{active, overlap, closed}`.
-- `lib/tz-display.ts` — `dualClock(now?)`: Sydney-primary / ET-secondary clock strings.
-- `lib/rail-quotes.ts` — `useRailQuotes()` SWR hook polling `/api/argus/rail/quotes` every 45s; `RAIL_LABEL` display map; `RailQuote` / `RailData` types.
+- `argus/argus/news/store.py` — `insert_news_item()` with conflict-ignore dedup on `(source, external_id)`; `fetch_after(cursor, limit)` (cursor-paginated by monotonic `id`); `fetch_for_ticker(symbol, limit)`.
 
-### Dashboard — rail components (`components/rails/`)
+### Argus — per-ticker news
 
-- `components/rails/QuoteRow.tsx` — single ticker line (label, price, signed % colored pos/neg).
-- `components/rails/LeftRail.tsx` — quote rail: Futures + US Equity (with `usMarketState` session badge) + Forex (with `forexSessions` chip, teal for overlap). Skeleton rows while loading; amber offline banner ("QUOTE FEED OFFLINE") on error — never blank. Minimised 36px strip shows SPY/QQQ/VIX deltas. localStorage-persisted collapse.
-- `components/rails/RightRail.tsx` — news rail shell: designed dormant state ("live news + macro sentiment land with WS-3"). Minimised strip shows vertical NEWS label. localStorage-persisted collapse.
-- `components/rails/RailShell.tsx` — `"use client"` wrapper; 3-column flex row (LeftRail · content · RightRail). Wraps `{children}` in `app/layout.tsx`.
+- `argus/argus/news/per_ticker.py` — `get_news_for_ticker(symbol)`: fetches yfinance `Ticker.news` + IBKR `historical_news`, merges, title-deduplicates, returns sorted by recency. Each source fails independently.
 
-### Dashboard — layout integration
+### Argus — REST endpoints
 
-- `app/layout.tsx` — `{children}` replaced with `<RailShell>{children}</RailShell>`; rails appear on every page.
+- `GET /api/news` — cursor-based feed; `?after=<id>` for incremental polls; returns `{items: [...], cursor: <int>}`.
+- `GET /api/news/{symbol}` — per-ticker feed (yfinance + IBKR merge).
+- Both registered in `argus/argus/api/routes.py`.
 
-### Regression guard
+### Argus — Discord ingest
 
-- `dashboard/scripts/smoke.mjs` — `checkRails()` helper added; called on home route after page load; asserts left rail `aside` renders (via "Futures", "QUOTE FEED OFFLINE", or "ES" text) and right rail `aside` renders (via "NEWS" text); `/api/argus/rail/quotes` added to `ACCEPTABLE_FAIL_PREFIXES` (404 until API restarts post-integration).
+- `argus/argus/news/discord_ingest.py` — `discord.py-self` self-bot (reuses `discord_copytrade` auth pattern). On `on_ready`: loads `backfill_cursors` per channel and backfills all messages since the stored cursor. `on_message`: stores live items. Processing: cashtag extraction → ticker normalisation, BREAKING detection, dedup via `source=discord:<msgid>`. Requires `DISCORD_USER_TOKEN` + `DISCORD_NEWS_CHANNEL_ID` in the git-ignored `.env`.
 
-## 3. Branch commits (a1b9169..HEAD)
+### Argus — launchd service
+
+- `scripts/com.argus.news-ingest.plist` — KeepAlive launchd user agent that keeps the Discord ingest process alive. Gateway reconnects automatically on disconnect.
+
+### Dashboard — live right-rail news feed
+
+- `components/rails/RightRail.tsx` upgraded from shell to live feed. Polls `/api/argus/news?after=<cursor>` every 25s via `lib/news.ts`. Each item: timestamp, source chip, headline, optional ticker chip(s) → `/t/[ticker]`. Breaking items (is_breaking=true): red left-border + `BREAKING` tag.
+
+### Dashboard — per-ticker News card
+
+- `components/TickerNewsCard.tsx` — calls `useTickerNews(symbol)` (`lib/news.ts`), renders scrollable list (yfinance + IBKR), source chip per row.
+- Wired into the ticker page (`app/t/[ticker]/page.tsx` or equivalent).
+
+### Dashboard — `lib/news.ts`
+
+- `useNews(cursor?)` SWR hook (25s poll); `useTickerNews(symbol)` hook; `NewsItem` type.
+
+## 3. Branch commits (141b533..HEAD)
 
 ```
-7ecc6f4 feat(dashboard): wrap every page in the 3-column rail shell (left quote rail + right news shell)
-ca467dd feat(dashboard): RightRail news shell per design spec — designed dormant state, static bars, minimised NEWS strip
-c22f7ed feat(dashboard): LeftRail quote rail per design spec — blocks, session badges, teal overlap, skeleton/offline/minimised
-e893df2 feat(dashboard): rail-quotes SWR hook + ticker label map
-1811da8 feat(dashboard): dual-clock tz-display helper (Sydney primary, ET secondary)
-bbdc391 feat(dashboard): forex-session helper — Asia/London/NY windows + overlap
-591cd98 feat(rail): batched /api/rail/quotes basket — futures, indices, forex (ffill per-symbol)
+e400321 feat(scripts): persistent news-ingest launchd service (KeepAlive)
+8ebd256 feat(dashboard): per-ticker News card on the ticker page
+075490c feat(dashboard): right-rail live news feed — source/ticker chips, breaking treatment, 25s poll
+a7e3c16 feat(news): discord ingest — pure mapper + store, backfill/live client shell
+f0a713d feat(news): /api/news cursor feed + /api/news/{symbol} per-ticker endpoint
+3142203 feat(news): per-ticker news — yfinance + IBKR merge, title-dedup, failure-tolerant
+fb2c0ee feat(news): store helpers — insert-dedup, backfill cursor, fetch-after/for-ticker
+171ef60 feat(news): news_items + backfill-cursor schema
+(Task 9: chore(news): docs + status board for WS-3a news pipeline)
 ```
-
-(Plus Task-8 commit: `chore(rails): smoke rail check, docs + status board for WS-2`)
 
 ## 4. Regression sweep (branch, pre-integration)
 
 ```
+argus pytest:       63/63 passed
+                    NOTE: test_cat_endpoint.py emits a pandas deprecation WARNING — not a failure; test passes (pre-existing)
 dashboard vitest:   49/49 passed
 dashboard tsc:      clean (no errors)
-smoke (port 3100):  8/8 routes passed
-                    rail check PASS — left rail renders QUOTE FEED OFFLINE aside (API 404, expected pre-integration)
-                    right rail renders NEWS aside
-                    /api/argus/rail/quotes → acceptable 404 (old API, pre-restart)
-argus pytest:       48/49 passed
-                    KNOWN PRE-EXISTING FAIL: test_cat_endpoint.py::test_catalysts_endpoint_shape
-                    (test monkeypatches analyst data but the 90-day recency filter drops it;
-                    present at branch start, not introduced by WS-2; fix is a follow-up for main)
 ```
 
 ## 5. Integration steps (controller)
 
-1. **Merge** `ws2-ui-shell` → `main` (resolve any conflicts in `layout.tsx`, `routes.py`).
-2. **Restart live Argus API**: `launchctl kickstart -k gui/$(id -u)/ai.argus.api` (no sudo). After restart, `curl http://127.0.0.1:8088/api/rail/quotes` should return ~15 quotes grouped futures/indices/forex.
-3. **Verify live rail**: open dashboard at `:3000` — left rail should show live prices in all three blocks with session badges. If the endpoint is still 404, the Argus process didn't pick up the new route (check `ai.argus.api` is running the worktree's code — it must point to the merged main, not the old source path).
-4. **Remove worktree**: `git worktree remove .worktrees/ws2` once merge is confirmed.
+1. **Check `.env` secrets**: confirm `DISCORD_USER_TOKEN` and `DISCORD_NEWS_CHANNEL_ID` are present in the git-ignored `argus/.env` (never committed, never in any plist `EnvironmentVariables` block).
+2. **Merge** `ws3a-news-pipeline` → `main`.
+3. **Restart live Argus API**: `launchctl kickstart -k gui/$(id -u)/ai.argus.api` (no sudo). After restart, `curl http://127.0.0.1:8088/api/news?after=0` should return `{items: [], cursor: 0}` (empty until ingest runs).
+4. **Bootstrap the ingest service** (first time only):
+   ```bash
+   cp scripts/com.argus.news-ingest.plist ~/Library/LaunchAgents/
+   launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.argus.news-ingest.plist
+   launchctl kickstart gui/$(id -u)/com.argus.news-ingest
+   ```
+   The gateway connects with the user's Discord token (self-bot — personal use, accepted ToS risk, same pattern as discord_copytrade). It will backfill the configured channel(s) on first `on_ready`, then stream live.
+5. **Verify**: check `/sources` heartbeats show `news-ingest` alive; `curl http://127.0.0.1:8088/api/news?after=0` returns backfilled items; the right rail in the dashboard shows the live feed.
+6. **Remove worktree**: `git worktree remove .worktrees/ws3a` once merge is confirmed.
 
-## 6. WS-3 blockers (next workstream)
+## 6. WS-3 remaining slices (next)
 
-WS-3 (Discord ingest + FinBERT news/macro) is the next workstream. It wires the right rail and adds macro-sentiment gauges to the left rail. Blockers:
-
-- **Discord credentials**: private-group channel IDs (whale-watch, Market Report channels) + bot token. The ingest plan assumes a read-only bot.
-- **FinBERT model**: `ProsusAI/finbert` or equivalent; needs ~500MB disk and the `transformers` package in the argus venv. Confirm GPU/CPU inference budget on the Mac.
-- **`econ_calendar` table**: the "Today" econ-events block (left rail block 6) needs this populated; WS-3 owns the ingester.
+| Slice | Content | Blockers |
+|-------|---------|---------|
+| WS-3b | Macro-sentiment scoring — FinBERT (`ProsusAI/finbert`, already installed in argus venv); `macro_sentiment` table; left-rail gauges (global/US/sector) | FinBERT ~500MB; GPU/CPU inference budget |
+| WS-3c | Economic calendar ingester — BLS/FOMC/BEA public schedules + yfinance earnings calendar; `econ_calendar` table; "Today" left-rail block | None (all public data) |
+| WS-3d | Morning macro report + whale alerts — auto-generated daily report (futures snapshot, headlines, econ events); whale alerts from unusual scorer cross-market top-N premium | WS-3b (macro scorer) + WS-1 unusual scorer already live |
 
 ## 7. Architecture pointers
 
-- Master plan: `docs/superpowers/plans/2026-06-12-platform-v2-master-plan.md` (§4.1 guardrails, §9 board, §WS-2).
-- WS-2 plan: `docs/superpowers/plans/2026-06-13-phase-c-ws2-ui-shell.md` (8 tasks, acceptance criteria).
-- Design spec: `docs/design/ws2-rail-spec.md` (visual authority — tokens, states, §8 Tailwind recipes).
-- Service: `ai.argus.api` is a USER LaunchAgent — `launchctl kickstart -k gui/$(id -u)/ai.argus.api` (no sudo).
+- Master plan: `docs/superpowers/plans/2026-06-12-platform-v2-master-plan.md` (§4.1 guardrails, §9 board, §WS-3).
+- WS-3a plan: `docs/superpowers/plans/2026-06-16-phase-c-ws3a-news-pipeline.md` (9 tasks, acceptance criteria).
+- Service: `ai.argus.api` + `com.argus.news-ingest` are USER LaunchAgents — `launchctl kickstart -k gui/$(id -u)/<label>` (no sudo).
+- DB: one canonical `ARGUS_DB` path (set in `.env` + every plist); WAL + busy_timeout via `argus.db.get_conn()`.

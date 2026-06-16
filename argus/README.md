@@ -187,6 +187,8 @@ GET  /api/unusual/{symbol}   latest scored unusual-activity rows + as_of snap da
 GET  /api/gex/{symbol}       latest gamma levels (zero_gamma, call_wall, put_wall, total_gex, profile_json) + OI-based caveat
 GET  /api/catalysts/{symbol} next/last earnings + analyst actions for any ticker
 GET  /api/rail/quotes        batched basket (futures/indices/forex) for the dashboard left rail — one yf.download per poll, ffill per-symbol to handle ragged last rows across asset classes; groups: futures (ES NQ YM RTY VIX CL BTC), indices (SPY QQQ IWM DIA), forex (EURUSD USDJPY GBPUSD AUDUSD)
+GET  /api/news               cursor-based feed — returns `{items: [...], cursor: <int>}`; pass `?after=<id>` for incremental polls (cursor is monotonic `news_items.id`, dedupe-safe across backfills)
+GET  /api/news/{symbol}      per-ticker news — merges yfinance `Ticker.news` + IBKR `historical_news`, title-deduped, failure-tolerant (each source degrades independently)
 ```
 
 DB access: `argus.db.get_conn()` only (WAL + busy_timeout enforced).
@@ -196,6 +198,20 @@ The Next.js dashboard at `:3000` proxies these routes via `/api/argus/*`.
 ### `catalysts` module (`argus/argus/catalysts/`)
 
 Composes three yfinance data sources into a unified catalyst payload for any ticker. `provider.py` fetches: `calendar` (next earnings date), `upgrades_downgrades` (analyst actions — last 90 days, capped at 3 per firm), and `earnings_dates` (past earnings dates for reaction lookup — requires `lxml`; degrades gracefully and adds the failed source(s) to the `degraded` list in the response, e.g. `["past_earnings"]`, when `lxml` is absent). `reaction.py` derives the percentage price move from the session after each past earnings date using price history, so the payload reports both the date and the actual market reaction. The endpoint (`GET /api/catalysts/{symbol}`) is any-ticker: it does not require the ticker to appear in the bridge universe.
+
+---
+
+## `news` module (`argus/argus/news/`)
+
+Provides a unified news stream for the live right-rail feed and per-ticker News card.
+
+**Discord ingest (`discord_ingest.py`)** — persistent read-only self-bot using `discord.py-self`, reusing the auth pattern from `discord_copytrade`. On `on_ready` it backfills each configured channel from its stored cursor (last seen `news_items.id`) so gaps during downtime are filled automatically. `on_message` stores live items. Processing pipeline: cashtag extraction → ticker normalisation, BREAKING keyword detection, dedup via `source=discord:<msgid>` (idempotent on restart), store to `news_items`. Requires `DISCORD_USER_TOKEN` + `DISCORD_NEWS_CHANNEL_ID` in the git-ignored `.env`; running as a self-bot is the user's accepted ToS risk (personal, private-group use only).
+
+**Per-ticker news (`per_ticker.py`)** — `get_news_for_ticker(symbol)` fetches from two sources: yfinance `Ticker.news` and IBKR `historical_news`. Results are merged, title-deduplicated, and returned sorted by recency. Each source fails independently (network error or IBKR offline → that source is omitted, the other still returns).
+
+**Store (`store.py`)** — `insert_news_item()` with conflict-ignore dedup on `(source, external_id)`; `fetch_after(cursor)` for the cursor-paginated feed; `fetch_for_ticker(symbol)` for the ticker page.
+
+**Deferred to later WS-3 slices:** macro-sentiment scoring (FinBERT — already installed in the argus venv, WS-3b), economic calendar ingester (WS-3c), morning macro report + whale alerts (WS-3d).
 
 ---
 
@@ -220,7 +236,9 @@ Some features genuinely require paid market-data subscriptions or proprietary in
 - **SMS / WhatsApp alerts** — only email, Telegram, and webhook are wired.
 - **Full ICS / Wyckoff / Elliott** — heuristic agents, not production-grade pattern recognition.
 - **Live order chaining beyond bracket orders** — market and bracket via ib_insync. OCA, scaling-out, trailing stops not exposed.
-- **News / sentiment ingestion** — lives in the separate Market Review repo, not in Argus itself.
+- **Macro sentiment / FinBERT scoring** — deferred to WS-3b (FinBERT already installed); WS-3a ships Discord ingest + yfinance/IBKR per-ticker news only.
+- **Economic calendar** — deferred to WS-3c.
+- **Morning report + whale alerts** — deferred to WS-3d.
 
 Everything else — the 70-agent ensemble, Action Card, screener, period-return panel, portfolio edge overlay, catalyst leg (via bridge), alerts, FastAPI server, MCP server — runs end-to-end on your machine.
 
@@ -259,6 +277,11 @@ argus/
 │   ├── screener/screen.py
 │   ├── portfolio/tracker.py
 │   ├── flow/options_flow.py
+│   ├── news/                    # WS-3a: Discord ingest, per-ticker merge, store
+│   │   ├── schema.py            # DDL — news_items + backfill_cursors tables
+│   │   ├── store.py             # insert-dedup, fetch_after, fetch_for_ticker
+│   │   ├── per_ticker.py        # yfinance + IBKR per-ticker news merge
+│   │   └── discord_ingest.py    # discord.py-self self-bot (backfill + live)
 │   ├── options_intel/           # WS-1: chain snapshotter, scorer, GEX engine
 │   │   ├── schema.py            # DDL + ensure_schema()
 │   │   ├── universe.py          # snapshot universe builder
