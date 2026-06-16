@@ -1,6 +1,7 @@
 from argus.db import get_conn
 from argus.news.schema import ensure_news_schema
-from argus.news.store import insert_item, get_cursor, set_cursor, fetch_after, fetch_for_ticker
+from argus.news.store import (insert_item, get_cursor, set_cursor, fetch_after,
+                              fetch_for_ticker, fetch_latest)
 
 
 def _conn(tmp_path):
@@ -43,3 +44,16 @@ def test_fetch_after_and_for_ticker(tmp_path):
     assert [r["headline"] for r in after0] == ["macro a", "aapl b", "macro c"]
     assert [r["id"] for r in after1] == [2, 3]
     assert [r["headline"] for r in aapl] == ["aapl b"]
+
+
+def test_fetch_latest_returns_newest_ascending(tmp_path):
+    conn = _conn(tmp_path)
+    for i in range(5):  # ids 1..5, headlines n0..n4
+        insert_item(conn, {"ts": f"2026-06-16T00:0{i}:00Z", "source": "discord",
+                           "headline": f"n{i}", "ticker": None, "body": None, "url": None,
+                           "is_breaking": 0, "dedup_key": f"k{i}"})
+    latest = fetch_latest(conn, limit=3)
+    conn.close()
+    # the newest 3 (ids 3,4,5), returned ASCENDING so a reversing feed shows newest-first
+    assert [r["id"] for r in latest] == [3, 4, 5]
+    assert [r["headline"] for r in latest] == ["n2", "n3", "n4"]

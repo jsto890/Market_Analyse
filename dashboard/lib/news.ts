@@ -11,7 +11,7 @@ const fetcher = (url: string) =>
 
 export function useNewsFeed() {
   return useSWR<{ items: NewsItem[]; cursor: number }>(
-    "/api/argus/news?after=0&limit=60", fetcher,
+    "/api/argus/news?latest=60", fetcher,
     { refreshInterval: 25_000, shouldRetryOnError: false }
   );
 }

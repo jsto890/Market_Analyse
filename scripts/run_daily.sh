@@ -3,6 +3,11 @@
 # Steps are independent: a failure is logged via heartbeat and the run continues.
 set -uo pipefail
 
+# launchd runs with a minimal PATH that excludes Homebrew (node/npm live in
+# /opt/homebrew/bin). Without this the dashboard-ingest step fails with exit 127
+# (command not found: npm). Prepend Homebrew so node/npm and other CLIs resolve.
+export PATH="/opt/homebrew/bin:/usr/local/bin:$PATH"
+
 REPO="$(cd "$(dirname "$0")/.." && pwd)"
 MR="$HOME/Market_Review"
 MR_PY="$MR/.venv/bin/python"

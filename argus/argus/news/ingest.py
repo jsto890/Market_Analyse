@@ -75,9 +75,14 @@ def run() -> int:
                     if ch is None:
                         continue
                     after_id = get_cursor(conn, cid)
-                    kwargs = {"limit": 200, "oldest_first": True}
                     if after_id:
-                        kwargs["after"] = discord.Object(id=int(after_id))
+                        # Resuming: process everything since the cursor, in order.
+                        kwargs = {"limit": 500, "oldest_first": True,
+                                  "after": discord.Object(id=int(after_id))}
+                    else:
+                        # Fresh: grab the MOST RECENT messages (newest-first), not the
+                        # channel's oldest history — a news feed wants the recent window.
+                        kwargs = {"limit": 200}
                     async for m in ch.history(**kwargs):
                         if store_message(conn, m):
                             total += 1

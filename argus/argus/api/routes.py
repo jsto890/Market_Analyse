@@ -48,7 +48,7 @@ from ..portfolio import PortfolioTracker
 from ..chat import chart_chat, written_analysis
 from ..alerts import dispatch_alert, AlertChannels, AlertLog
 from ..news.schema import ensure_news_schema
-from ..news.store import fetch_after
+from ..news.store import fetch_after, fetch_latest
 from ..news.ticker_news import ticker_news
 
 
@@ -130,11 +130,13 @@ def build_app() -> FastAPI:
         return {"heartbeats": [dict(r) for r in rows]}
 
     @app.get("/api/news")
-    def news(after: int = 0, limit: int = 200):
+    def news(after: int = 0, limit: int = 200, latest: int = 0):
         conn = get_conn()
         ensure_news_schema(conn)
         try:
-            rows = fetch_after(conn, after_id=after, limit=limit)
+            # latest>0: the newest N (display window for the rail).
+            # else: forward cursor pagination from `after`.
+            rows = fetch_latest(conn, limit=latest) if latest > 0 else fetch_after(conn, after_id=after, limit=limit)
             items = [dict(r) for r in rows]
         finally:
             conn.close()
