@@ -5,6 +5,7 @@ import { useRailQuotes, RAIL_LABEL, type RailQuote } from "@/lib/rail-quotes";
 import { usMarketState, STATE_LABEL } from "@/lib/market-clock";
 import { forexSessions, type FxSession } from "@/lib/forex-session";
 import { QuoteRow } from "./QuoteRow";
+import { MacroGauges } from "./MacroGauges";
 
 // ─── Session badge helpers ────────────────────────────────────────────────────
 
@@ -247,11 +248,9 @@ export function LeftRail() {
           {renderRows("forex")}
         </Block>
 
-        {/* Footnote zone per spec §8.10 */}
-        <div className="mt-auto px-3 py-2 border-t border-line">
-          <p className="text-[10px] font-mono text-muted opacity-60 leading-relaxed">
-            macro gauges · market blurb · today&rsquo;s events&thinsp;&mdash;&thinsp;land with WS-3
-          </p>
+        {/* Macro sentiment gauges — WS-3b */}
+        <div className="mt-auto">
+          <MacroGauges window="1d" />
         </div>
 
         {/* Collapse button per spec §8.5 */}
