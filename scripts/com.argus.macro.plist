@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key><string>com.argus.macro</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>/bin/zsh</string>
+        <string>/Users/josephstorey/Market_Analyse/scripts/job_wrapper.sh</string>
+        <string>macro-aggregate</string>
+        <string>/Users/josephstorey/Market_Analyse/argus/.venv/bin/python</string>
+        <string>-m</string><string>argus.macro.run</string>
+    </array>
+    <key>WorkingDirectory</key><string>/Users/josephstorey/Market_Analyse/argus</string>
+    <key>StartInterval</key><integer>1200</integer>
+    <key>RunAtLoad</key><true/>
+    <key>StandardOutPath</key><string>/tmp/argus-macro.log</string>
+    <key>StandardErrorPath</key><string>/tmp/argus-macro.err</string>
+</dict>
+</plist>

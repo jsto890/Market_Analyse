@@ -39,3 +39,7 @@ fi
 
 # 3. Dashboard SQLite ingest (bridge CSVs → signals table)
 if (cd "$REPO/dashboard" && npm run ingest --silent); then hb daily-ingest ok; else hb daily-ingest error "exit $?"; fi
+
+# 4. Macro sentiment aggregate (FinBERT scores news → macro_sentiment; WS-3b).
+#    run_aggregation writes its own detailed macro-aggregate heartbeat on success.
+(cd "$REPO/argus" && "$PY" -m argus.macro.run) || hb macro-aggregate error "exit $?"
