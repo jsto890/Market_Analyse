@@ -1,8 +1,6 @@
-import pytest
 from argus.macro.finbert import score_headline, score_batch
 
 
-@pytest.mark.slow
 def test_score_sign_is_directionally_correct():
     pos = score_headline("shares surge to record high on blowout profit and raised guidance")
     neg = score_headline("stock collapses on bankruptcy filing and massive write-downs")
@@ -11,7 +9,6 @@ def test_score_sign_is_directionally_correct():
     assert -1.0 <= pos <= 1.0 and -1.0 <= neg <= 1.0
 
 
-@pytest.mark.slow
 def test_batch_matches_single_and_handles_empty():
     texts = ["profit beats expectations", "", "guidance slashed amid weak demand"]
     out = score_batch(texts)
