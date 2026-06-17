@@ -52,6 +52,8 @@ from ..news.store import fetch_after, fetch_latest
 from ..news.ticker_news import ticker_news
 from ..macro.schema import ensure_macro_schema
 from ..macro.store import latest_macro, macro_series
+from ..calendar.schema import ensure_calendar_schema
+from ..calendar.store import upcoming as calendar_upcoming
 
 
 UI_DIR = Path(__file__).parent.parent / "ui"
@@ -168,6 +170,18 @@ def build_app() -> FastAPI:
         finally:
             conn.close()
         return {"scope": scope, "window": window, "points": points}
+
+    @app.get("/api/calendar")
+    def calendar(days: int = 7):
+        from datetime import date
+        conn = get_conn()
+        ensure_calendar_schema(conn)
+        try:
+            today = date.today().isoformat()
+            events = [dict(r) for r in calendar_upcoming(conn, today, days)]
+        finally:
+            conn.close()
+        return {"today": today, "days": days, "events": events}
 
     @app.get("/api/unusual/{symbol}")
     def unusual(symbol: str):

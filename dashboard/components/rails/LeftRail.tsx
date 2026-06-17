@@ -6,6 +6,7 @@ import { usMarketState, STATE_LABEL } from "@/lib/market-clock";
 import { forexSessions, type FxSession } from "@/lib/forex-session";
 import { QuoteRow } from "./QuoteRow";
 import { MacroGauges } from "./MacroGauges";
+import { EconCalendar } from "./EconCalendar";
 
 // ─── Session badge helpers ────────────────────────────────────────────────────
 
@@ -247,6 +248,9 @@ export function LeftRail() {
         <Block label="Forex" badge={<FxChip />} separator>
           {renderRows("forex")}
         </Block>
+
+        {/* What's-next economic calendar — WS-3c */}
+        <EconCalendar days={7} />
 
         {/* Macro sentiment gauges — WS-3b */}
         <div className="mt-auto">
