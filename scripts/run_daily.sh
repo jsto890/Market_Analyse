@@ -43,3 +43,11 @@ if (cd "$REPO/dashboard" && npm run ingest --silent); then hb daily-ingest ok; e
 # 4. Macro sentiment aggregate (FinBERT scores news → macro_sentiment; WS-3b).
 #    run_aggregation writes its own detailed macro-aggregate heartbeat on success.
 (cd "$REPO/argus" && "$PY" -m argus.macro.run) || hb macro-aggregate error "exit $?"
+
+# 5. Economic calendar refresh (macro seed + tracked-name earnings; WS-3c).
+#    run_refresh writes its own detailed calendar-refresh heartbeat on success.
+(cd "$REPO/argus" && "$PY" -m argus.calendar.refresh) || hb calendar-refresh error "exit $?"
+
+# 6. Morning brief (macro/futures/calendar/headlines → dashboard + Obsidian; WS-3d).
+#    run.py writes its own morning-report heartbeat; append to Obsidian is idempotent.
+(cd "$REPO/argus" && "$PY" -m argus.report.run) || hb morning-report error "exit $?"

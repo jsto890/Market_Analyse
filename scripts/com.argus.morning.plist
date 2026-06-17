@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key><string>com.argus.morning</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>/bin/zsh</string>
+        <string>/Users/josephstorey/Market_Analyse/scripts/job_wrapper.sh</string>
+        <string>morning-report</string>
+        <string>/Users/josephstorey/Market_Analyse/argus/.venv/bin/python</string>
+        <string>-m</string><string>argus.report.run</string>
+    </array>
+    <key>WorkingDirectory</key><string>/Users/josephstorey/Market_Analyse/argus</string>
+    <!-- ~08:00 ET pre-open. Local clock maps US close 16:00 ET -> 06:00, so 08:00 ET -> 22:00 (Mon-Fri). -->
+    <key>StartCalendarInterval</key>
+    <array>
+        <dict><key>Weekday</key><integer>1</integer><key>Hour</key><integer>22</integer><key>Minute</key><integer>0</integer></dict>
+        <dict><key>Weekday</key><integer>2</integer><key>Hour</key><integer>22</integer><key>Minute</key><integer>0</integer></dict>
+        <dict><key>Weekday</key><integer>3</integer><key>Hour</key><integer>22</integer><key>Minute</key><integer>0</integer></dict>
+        <dict><key>Weekday</key><integer>4</integer><key>Hour</key><integer>22</integer><key>Minute</key><integer>0</integer></dict>
+        <dict><key>Weekday</key><integer>5</integer><key>Hour</key><integer>22</integer><key>Minute</key><integer>0</integer></dict>
+    </array>
+    <key>StandardOutPath</key><string>/tmp/argus-morning.log</string>
+    <key>StandardErrorPath</key><string>/tmp/argus-morning.err</string>
+</dict>
+</plist>

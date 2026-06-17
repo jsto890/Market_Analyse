@@ -183,6 +183,11 @@ def build_app() -> FastAPI:
             conn.close()
         return {"today": today, "days": days, "events": events}
 
+    @app.get("/api/report/morning")
+    def report_morning():
+        from ..report.morning import generate
+        return generate()
+
     @app.get("/api/unusual/{symbol}")
     def unusual(symbol: str):
         conn = get_conn()

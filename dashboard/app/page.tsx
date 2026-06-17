@@ -7,6 +7,7 @@ import type { BridgeRow, ReportGroup } from "@/types/bridge";
 import DiffStrip from "@/components/today/DiffStrip";
 import SignalGroups from "@/components/today/SignalGroups";
 import RotationPanel, { type RotationRow } from "@/components/today/RotationPanel";
+import { MorningReport } from "@/components/today/MorningReport";
 
 export const dynamic = "force-dynamic";
 
@@ -110,6 +111,7 @@ export default async function Home() {
 
   return (
     <main className="mx-auto max-w-6xl space-y-4 px-4 py-6">
+      <MorningReport />
       {rows.length === 0 && (
         <div className="rounded-lg border border-warn/50 bg-warn/10 px-4 py-2.5 text-[13px] text-warn">
           No bridge data — run_daily may have failed

@@ -91,6 +91,7 @@ const SOURCE_SHORT: Record<string, string> = {
   benzinga: "benz",
   twitter: "twit",
   x: "x",
+  whale: "🐋",
 };
 
 function shortSource(s: string): string {
@@ -154,12 +155,14 @@ function NewsFeedBody() {
 // ── Individual news row ───────────────────────────────────────────────────────
 function NewsRow({ item }: { item: NewsItem }) {
   const isBreaking = Boolean(item.is_breaking);
+  const isWhale = item.source === "whale";
 
   return (
     <div
       className={[
         "px-3 py-1.5 border-b border-line/50",
         isBreaking ? "border-l-2 border-neg pl-2" : "",
+        isWhale && !isBreaking ? "border-l-2 border-teal pl-2" : "",
       ]
         .filter(Boolean)
         .join(" ")}
