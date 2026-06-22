@@ -3,6 +3,7 @@ exact intraday fills when intraday bars exist, else a conservative daily fallbac
 (stop -> min(stop, exit-day open) gap-through; target/time/bias -> next-bar open;
 straddle day -> stop-first). All fills are net of slippage + commission. Lives
 outside the engine so live arrows never see slippage."""
+import warnings
 from dataclasses import dataclass
 
 import pandas as pd
@@ -71,7 +72,8 @@ def make_intraday_fetcher(ticker: str, interval: str = "60m", period: str = "2y"
     the resolver."""
     try:
         intr = get_history(ticker, period=period, interval=interval)
-    except Exception:
+    except Exception as exc:  # degrade to daily-fallback fills, but make it observable
+        warnings.warn(f"intraday fetch failed for {ticker!r} ({exc!r}); using daily fallback")
         intr = None
 
     def fetch(day_ts) -> pd.DataFrame | None:

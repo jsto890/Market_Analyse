@@ -1,4 +1,5 @@
 import pandas as pd
+import pytest
 from argus.position_engine.fills import FillModel, price_exit
 
 FM = FillModel(slippage_bps=5.0, commission_per_share=0.005)
@@ -73,3 +74,15 @@ def test_make_intraday_fetcher_slices_by_day(monkeypatch):
     fetch = F.make_intraday_fetcher("X")
     assert len(fetch("2024-03-01")) == 2
     assert fetch("2024-03-02") is None
+
+
+def test_make_intraday_fetcher_warns_and_degrades_on_source_error(monkeypatch):
+    import argus.position_engine.fills as F
+
+    def boom(*a, **k):
+        raise RuntimeError("source down")
+
+    monkeypatch.setattr(F, "get_history", boom)
+    with pytest.warns(UserWarning):
+        fetch = F.make_intraday_fetcher("X")
+    assert fetch("2024-03-01") is None  # degrades to daily fallback, no propagation
