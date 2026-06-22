@@ -5,6 +5,8 @@ NEXT bar's open (no same-bar FLAT→LONG = no lookahead). bar_index is an intege
 bar counter used for min-hold / cooldown windows."""
 from dataclasses import dataclass, field
 
+from .params import EngineParams, DEFAULT
+
 MIN_HOLD_BARS = 3
 COOLDOWN_BARS = 5
 
@@ -30,7 +32,7 @@ class OverlayCtx:
     cooldown_until: int | None = None
 
 
-def step_overlay(prev: OverlayState, ctx: OverlayCtx):
+def step_overlay(prev: OverlayState, ctx: OverlayCtx, params: EngineParams = DEFAULT):
     events: list[dict] = []
 
     # invariant: any non-flat overlay under a non-LONG bias force-exits
@@ -60,7 +62,7 @@ def step_overlay(prev: OverlayState, ctx: OverlayCtx):
         return OverlayState("LONG", entry_index=prev.entry_index), None, events
 
     if prev.overlay == "EXIT":
-        return OverlayState("COOLDOWN", cooldown_until=ctx.bar_index + COOLDOWN_BARS), None, events
+        return OverlayState("COOLDOWN", cooldown_until=ctx.bar_index + params.cooldown_bars), None, events
 
     if prev.overlay == "COOLDOWN":
         if prev.cooldown_until is not None and ctx.bar_index >= prev.cooldown_until and ctx.bias == "LONG":
