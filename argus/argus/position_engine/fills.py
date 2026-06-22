@@ -7,6 +7,8 @@ from dataclasses import dataclass
 
 import pandas as pd
 
+from ..data.market import get_history
+
 
 @dataclass(frozen=True)
 class FillModel:
@@ -60,3 +62,23 @@ def _price_exit_intraday(stop: float, target: float, intraday: pd.DataFrame,
     # not touched intraday (engine exit was time/bias_flip): fill at the last close
     last = float(intraday.iloc[-1]["close"])
     return "time", _net_sell(last, fm)
+
+
+def make_intraday_fetcher(ticker: str, interval: str = "60m", period: str = "2y"):
+    """Return fetch(day_ts) -> intraday OHLC for that calendar day, or None when
+    the source has no bars for it (the common historical case). Pulled once, sliced
+    per day. Source-agnostic: swap get_history for a deeper feed without changing
+    the resolver."""
+    try:
+        intr = get_history(ticker, period=period, interval=interval)
+    except Exception:
+        intr = None
+
+    def fetch(day_ts) -> pd.DataFrame | None:
+        if intr is None or intr.empty:
+            return None
+        d = pd.Timestamp(day_ts).date()
+        sl = intr[intr.index.normalize() == pd.Timestamp(d)]
+        return sl if len(sl) else None
+
+    return fetch
