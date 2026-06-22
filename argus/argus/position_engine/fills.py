@@ -84,3 +84,40 @@ def make_intraday_fetcher(ticker: str, interval: str = "60m", period: str = "2y"
         return sl if len(sl) else None
 
     return fetch
+
+
+def _ibkr_window(ticker: str, years: int, bar_size: str) -> pd.DataFrame:
+    """Page IBKR hourly bars back `years` in <=1Y chunks (IBKR's per-request cap
+    for intraday sizes), oldest-first. Isolated so tests can monkeypatch it."""
+    from ..data.ibkr import IBKRClient
+    client = IBKRClient.instance()
+    frames, end = [], ""
+    for _ in range(max(1, years)):
+        chunk = client.historical_bars(ticker, end=end, duration="1 Y", bar_size=bar_size)
+        if chunk.empty:
+            break
+        frames.append(chunk)
+        end = chunk.index[0].strftime("%Y%m%d %H:%M:%S")
+    if not frames:
+        return pd.DataFrame(columns=["open", "high", "low", "close", "volume"])
+    combined = pd.concat(frames).sort_index()
+    return combined[~combined.index.duplicated()]
+
+
+def make_ibkr_intraday_fetcher(ticker: str, *, years: int = 5, bar_size: str = "1 hour"):
+    """fetch(day_ts) -> that day's IBKR intraday bars, or None. Any IBKR failure
+    (TWS down, no subscription, missing day) degrades to None so the backtest falls
+    back to the conservative daily fill model rather than crashing."""
+    try:
+        intr = _ibkr_window(ticker, years, bar_size)
+    except Exception as exc:  # degrade to daily-fallback fills, but make it observable
+        warnings.warn(f"IBKR intraday fetch failed for {ticker!r} ({exc!r}); using daily fallback")
+        intr = None
+
+    def fetch(day_ts):
+        if intr is None or intr.empty:
+            return None
+        sl = intr[intr.index.normalize() == pd.Timestamp(pd.Timestamp(day_ts).date())]
+        return sl if len(sl) else None
+
+    return fetch
