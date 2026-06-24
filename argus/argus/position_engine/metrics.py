@@ -52,3 +52,50 @@ def aggregate(trades: pd.DataFrame, *, n_bars: int, years: float,
 
 def _safe_ratio(num: float, den: float) -> float:
     return float(num / den) if den and den > 0 else 0.0
+
+
+def block_bootstrap_ci(values, block_len: int, n_boot: int = 1000,
+                       alpha: float = 0.05, seed: int | None = None) -> tuple[float, float]:
+    """Moving-block bootstrap CI for the mean of a serially-correlated series.
+    Resamples contiguous blocks (length block_len) with replacement until the
+    sample length is covered, then takes percentile bounds across n_boot means."""
+    v = np.asarray(values, dtype=float)
+    nobs = v.size
+    if nobs == 0:
+        return (0.0, 0.0)
+    block_len = max(1, min(block_len, nobs))
+    n_blocks = int(np.ceil(nobs / block_len))
+    starts_max = nobs - block_len + 1
+    rng = np.random.default_rng(seed)
+    means = np.empty(n_boot)
+    for b in range(n_boot):
+        starts = rng.integers(0, starts_max, size=n_blocks)
+        sample = np.concatenate([v[s:s + block_len] for s in starts])[:nobs]
+        means[b] = sample.mean()
+    return (float(np.quantile(means, alpha / 2)), float(np.quantile(means, 1 - alpha / 2)))
+
+
+def beats_baseline(candidate: dict, baseline: dict, *, mar_uplift_ci: tuple[float, float],
+                   mar_uplift_min: float = 0.15, trades_per_year_cap: float = 0.25) -> dict:
+    """Pre-registered success bar (spec §196): MAR improves by >= mar_uplift_min,
+    trades/year rises by <= trades_per_year_cap, and the MAR-uplift bootstrap CI
+    excludes zero. mar_uplift_ci is the CI of (candidate-baseline) MAR over regimes.
+
+    A degenerate baseline (MAR == 0, i.e. no drawdown / break-even, or zero
+    trades/year) makes the *relative* uplift undefined; the gate conservatively
+    does NOT graduate in that case (passed=False, baseline_degenerate=True)."""
+    base_mar = baseline["mar"]
+    base_tpy = baseline["trades_per_year"]
+    ci_lo, ci_hi = mar_uplift_ci
+    ci_excludes_zero = ci_lo > 0 or ci_hi < 0          # CI does not span zero
+    if base_mar == 0 or base_tpy == 0:
+        return {"passed": False, "mar_uplift": float("nan"),
+                "tpy_increase": float("nan"), "ci_excludes_zero": bool(ci_excludes_zero),
+                "baseline_degenerate": True}
+    mar_uplift = (candidate["mar"] - base_mar) / abs(base_mar)
+    tpy_increase = (candidate["trades_per_year"] - base_tpy) / abs(base_tpy)
+    passed = (mar_uplift >= mar_uplift_min and tpy_increase <= trades_per_year_cap
+              and ci_excludes_zero)
+    return {"passed": bool(passed), "mar_uplift": float(mar_uplift),
+            "tpy_increase": float(tpy_increase), "ci_excludes_zero": bool(ci_excludes_zero),
+            "baseline_degenerate": False}
