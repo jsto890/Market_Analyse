@@ -74,3 +74,29 @@ def test_trail_ratchets_stop_up_and_locks_gains(tmp_path):
     assert t is not None
     # exit above entry => the trail locked gain rather than taking the original stop
     assert t["exit_px"] > t["entry_px"]
+
+
+def test_replay_persists_health_int_and_flags_string(tmp_path):
+    conn = get_conn(tmp_path / "pe.db")
+    ensure_schema(conn)
+    df = _series()
+    replay(conn, ticker="H", daily=df, spy=df, sector=None, model_ver="v1",
+           run_kind="ondemand")
+    rows = conn.execute(
+        "SELECT health, health_flags FROM position_signals WHERE ticker='H'").fetchall()
+    conn.close()
+    assert rows, "expected persisted signal rows"
+    # health is a populated int in range; flags is a string (possibly empty), never NULL
+    assert all(r["health"] is not None and 0 <= r["health"] <= 100 for r in rows)
+    assert all(isinstance(r["health_flags"], str) for r in rows)
+
+
+def test_health_does_not_change_trade_outcomes(tmp_path):
+    # alert-only: persisting health must not alter the trade the engine books
+    conn = get_conn(tmp_path / "pe.db")
+    ensure_schema(conn)
+    df = _series()
+    replay(conn, ticker="H2", daily=df, spy=df, sector=None, model_ver="v1", run_kind="ondemand")
+    t = conn.execute("SELECT exit_reason, exit_px FROM trades WHERE ticker='H2'").fetchone()
+    conn.close()
+    assert t is not None and t["exit_reason"] == "stop"   # same round-trip as the base case

@@ -1,6 +1,6 @@
 """Replay driver (design spec §10/§12). Walks a ticker's daily history bar by bar:
 computes bias/strength/levels (pure), steps bias + overlay state machines, and
-persists position_signals + trades. Single-shot entries; health=None (Phase 3).
+persists position_signals + trades. Single-shot entries; health computed alert-only (Phase 3a).
 WARMUP bars are skipped so indicators are valid. Used by both the live job and the
 on-demand 'Run model' endpoint (run_kind differs)."""
 import pandas as pd
@@ -10,6 +10,7 @@ from .strength import strength_components, score_strength, arm_eligible
 from .levels import entry_trigger, compute_levels, gap_skip, trail_stop
 from .overlay import OverlayState, OverlayCtx, step_overlay
 from .progress import progress_r, progress_pct, risk_state
+from .health import health as _health
 from .params import EngineParams, DEFAULT
 from ..indicators.compute import _atr
 from . import store as _store
@@ -38,8 +39,11 @@ def replay(conn, *, ticker, daily: pd.DataFrame, spy: pd.DataFrame,
            sector: pd.DataFrame | None, model_ver: str, run_kind: str = "live",
            mode: str = "paper", params: EngineParams = DEFAULT) -> int:
     data_date = str(daily.index[-1].date())
-    weekly = daily.resample("W-FRI").agg(
-        {"open": "first", "high": "max", "low": "min", "close": "last", "volume": "sum"}).dropna()
+    _wk_agg = {"open": "first", "high": "max", "low": "min", "close": "last", "volume": "sum"}
+    weekly = daily.resample("W-FRI").agg(_wk_agg).dropna()
+    spy_weekly = spy.resample("W-FRI").agg(_wk_agg).dropna()
+    sector_weekly = (sector.resample("W-FRI").agg(_wk_agg).dropna()
+                     if sector is not None else None)
     _clear_prior_trades(conn, ticker, model_ver, mode)
 
     bstate = BiasState()
@@ -56,6 +60,10 @@ def replay(conn, *, ticker, daily: pd.DataFrame, spy: pd.DataFrame,
         bar = daily.iloc[i]
         ts = str(daily.index[i].date())
         wk = weekly[weekly.index <= daily.index[i]]
+        spy_wk = spy_weekly[spy_weekly.index <= daily.index[i]]
+        sector_wk = (sector_weekly[sector_weekly.index <= daily.index[i]]
+                     if sector_weekly is not None else None)
+        h_val, h_flags = _health(win, wk, spy_wk, sector_wk)   # alert-only; h5_flag deferred (off)
 
         score = bias_score(win, wk)
         bstate = step_bias(bstate, score, params)
@@ -121,7 +129,7 @@ def replay(conn, *, ticker, daily: pd.DataFrame, spy: pd.DataFrame,
             "leg_count": 1 if ostate.overlay == "LONG" else 0,
             "progress_r": pr, "progress_pct": pp,
             "progress_denom": (init_target - entry_px) if (ostate.overlay == "LONG" and entry_px) else None,
-            "progress_anchor": None, "health": None, "health_flags": None, "risk_state": rs,
+            "progress_anchor": None, "health": h_val, "health_flags": h_flags, "risk_state": rs,
             "structure": None, "exit_reason": exit_reason, "cooldown_until": ostate.cooldown_until,
             "run_kind": run_kind, "data_date": data_date,
         })
