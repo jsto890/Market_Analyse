@@ -1,6 +1,14 @@
 import numpy as np
 import pandas as pd
-from argus.position_engine.panelbuild import build_panel
+from argus.position_engine.panelbuild import build_panel, _long_run_caps
+
+
+def test_long_run_caps_caps_each_run_at_its_end():
+    # two LONG runs: positions {2,3,4} and {8,9}; n=12
+    caps = _long_run_caps([2, 3, 4, 8, 9], 12)
+    assert caps[2] == 4 and caps[3] == 4 and caps[4] == 4   # first run ends at 4
+    assert caps[8] == 9 and caps[9] == 9                    # second run ends at 9
+    assert caps[0] == 11 and caps[5] == 11                  # non-LONG bars: no cap (series end)
 
 
 def _series():

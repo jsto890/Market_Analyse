@@ -42,3 +42,27 @@ def test_tail_bars_have_no_label():
     out = forward_mae(df, horizon=20, k=1.5)
     assert pd.isna(out["fwd_mae"].iloc[-1])         # no forward bar
     assert pd.isna(out["adverse"].iloc[-1])
+
+
+def test_exit_cap_excludes_post_exit_drawdown():
+    # flat at 100 (lows==close, no routine dip); a deep low at bar 20 is AFTER exit at bar 10.
+    closes = [100.0] * 40
+    lows = [100.0] * 40
+    lows[20] = 80.0                                  # huge drawdown, but post-exit
+    df = _frame(closes, lows)
+    # bar 0 holds until exit at position 10 (inclusive); cap the forward window there.
+    exit_pos = np.full(40, 10, dtype=int)
+    capped = forward_mae(df, horizon=20, k=1.5, exit_pos=exit_pos)
+    uncapped = forward_mae(df, horizon=20, k=1.5)
+    i = df.index[0]
+    assert capped.loc[i, "fwd_mae"] == 0.0          # never sees the post-exit low
+    assert capped.loc[i, "adverse"] == False
+    assert uncapped.loc[i, "fwd_mae"] > 1.5         # uncapped DOES see it (look-ahead)
+
+
+def test_exit_cap_drops_label_on_exit_bar():
+    closes = [100.0] * 40
+    df = _frame(closes)
+    exit_pos = np.full(40, 10, dtype=int)
+    out = forward_mae(df, horizon=20, k=1.5, exit_pos=exit_pos)
+    assert pd.isna(out["fwd_mae"].iloc[10])         # exit bar: no remaining held window
