@@ -23,8 +23,11 @@ def test_evaluate_grades_a_real_signal_and_rejects_noise():
     res = evaluate(_panel())
     assert res["H2"]["graduated"] is True            # predictive -> graduates
     assert res["H2"]["auc"] > 0.5 and res["H2"]["rank_ic"] > 0
-    # a pure-noise signal should not graduate
+    assert res["H2"]["perm_p"] < 0.05                # real permutation p, not a proxy
+    assert res["H2"]["holm_reject"] is True
+    # a pure-noise signal should not graduate (Holm-corrected permutation p)
     assert res["H1"]["graduated"] is False
+    assert res["H1"]["perm_p"] > 0.05
     # composite health (lower=worse) should track forward MAE negatively
     assert res["composite"]["rank_ic"] < 0
 
@@ -33,3 +36,5 @@ def test_evaluate_reports_fire_rates_and_holm():
     res = evaluate(_panel())
     assert 0 <= res["H2"]["fire_rate"] <= 1
     assert "H5" in res and res["H5"]["fire_rate"] == 0.0   # H5 never fires (injected-off)
+    assert res["H5"]["perm_p"] == 1.0                      # never fires -> cannot graduate
+    assert res["H5"]["graduated"] is False
