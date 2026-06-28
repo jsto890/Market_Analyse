@@ -13,6 +13,7 @@ TRAIL_ATR = 2.5
 GAP_ATR = 0.75
 RR_FLOOR = 1.8
 SWING_LB = 10
+STRUCT_LB = 60          # prior-structure window for the forward (overhead) target
 
 
 def entry_trigger(daily: pd.DataFrame, params: EngineParams = DEFAULT) -> bool:
@@ -36,11 +37,18 @@ def compute_levels(entry_px: float, daily: pd.DataFrame, params: EngineParams = 
     swing_low = float(l.iloc[-SWING_LB:].min())
     stop = min(swing_low, entry_px - params.stop_atr * atr)
     r = entry_px - stop
-    struct_target = float(h.iloc[-SWING_LB:].max())
-    target = min(entry_px + 2.0 * r, struct_target) if struct_target > entry_px else entry_px + 2.0 * r
+    # Forward structural target: the highest PRIOR high ABOVE entry, from a window that
+    # EXCLUDES the most recent SWING_LB breakout/pullback bars — so the target is not
+    # pinned to the high we are breaking THROUGH (that pinning collapsed rr→0 and vetoed
+    # ~every entry). Floor at a clean 2R; extend up to genuine overhead resistance when it
+    # sits beyond 2R (let winners run to structure).
+    prior = h.iloc[-(STRUCT_LB + SWING_LB):-SWING_LB]
+    overhead = prior[prior > entry_px]
+    fwd_struct = float(overhead.max()) if len(overhead) else entry_px
+    target = max(entry_px + 2.0 * r, fwd_struct)
     rr = (target - entry_px) / r if r > 0 else 0.0
     return {"entry": entry_px, "stop": stop, "target": target, "rr": rr,
-            "armed": bool(rr >= RR_FLOOR), "atr": atr}
+            "armed": bool(r > 0 and rr >= RR_FLOOR), "atr": atr}
 
 
 def gap_skip(entry_signal_close: float, next_open: float, atr: float) -> bool:
