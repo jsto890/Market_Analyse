@@ -18,6 +18,23 @@ DISTRIB_MIN_DAYS = 3       # H3: >=3 high-volume down days
 DISTRIB_VOL_MULT = 1.5     # H3: vol > 1.5x 20-day avg
 RS_DECAY_WEEKS = 3         # H4: falls 3 consecutive weeks
 RS_EXCESS_LB = 13          # H4: 13-week excess
+MOM_ROC_WEEKS = 12         # H1: 12-week ROC
+MOM_MA_WEEKS = 4           # H1: 4-week MA of the ROC
+MOM_RSI_MAX = 50           # H1: RSI(14) < 50
+MOM_CONSEC_DAYS = 2        # H1: for 2 consecutive days
+
+
+def h1_momentum_rollover(daily: pd.DataFrame, wk: pd.DataFrame) -> bool:
+    """12-week ROC crosses below its 4-week MA while daily RSI(14) < 50, for 2
+    consecutive days. Weekly ROC supplies the trend; daily RSI confirms weakness."""
+    if len(wk) < MOM_ROC_WEEKS + MOM_MA_WEEKS or len(daily) < 16:
+        return False
+    roc = _roc(wk["close"], MOM_ROC_WEEKS)
+    roc_ma = _sma(roc, MOM_MA_WEEKS)
+    roc_below = (roc < roc_ma).iloc[-1]                       # current weekly rollover
+    rsi = _rsi(daily["close"], 14)
+    rsi_weak = bool((rsi.iloc[-MOM_CONSEC_DAYS:] < MOM_RSI_MAX).all())
+    return bool(roc_below and rsi_weak)
 
 
 def h2_trend_break(daily: pd.DataFrame) -> bool:
@@ -60,7 +77,7 @@ def health(daily: pd.DataFrame, wk: pd.DataFrame, spy: pd.DataFrame,
     """Compute the alert-only composite for the bar at the end of `daily`. H1/H4 are
     completed in Task 3; here they read False so the module is testable end-to-end."""
     flags = {
-        "H1": False,
+        "H1": h1_momentum_rollover(daily, wk),
         "H2": h2_trend_break(daily),
         "H3": h3_distribution(daily),
         "H4": False,

@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 
 from argus.position_engine.health import (
-    WEIGHTS, h2_trend_break, h3_distribution, composite, health,
+    WEIGHTS, h1_momentum_rollover, h2_trend_break, h3_distribution, composite, health,
 )
 
 
@@ -66,6 +66,32 @@ def test_h3_distribution_fires_on_three_highvol_down_days():
 
 def test_h3_distribution_false_on_quiet_tape():
     assert h3_distribution(_flat_daily(80, 100.0)) is False
+
+
+def _weekly_from(daily):
+    return daily.resample("W-FRI").agg(
+        {"open": "first", "high": "max", "low": "min", "close": "last", "volume": "sum"}).dropna()
+
+
+def test_h1_false_on_steady_uptrend():
+    # rising daily -> RSI>50 and ROC above its MA: no rollover
+    idx = pd.date_range("2023-01-01", periods=400, freq="D")
+    c = np.linspace(50, 150, 400)
+    d = pd.DataFrame({"open": c, "high": c + 1, "low": c - 1, "close": c,
+                      "volume": np.full(400, 1e6)}, index=idx)
+    assert h1_momentum_rollover(d, _weekly_from(d)) is False
+
+
+def test_h1_fires_when_roc_rolls_over_under_weak_rsi():
+    # long rise then a sustained 2-week fade: 12wk ROC dips below its 4wk MA while
+    # daily RSI(14) prints < 50 on the last two days
+    idx = pd.date_range("2022-06-01", periods=460, freq="D")
+    up = np.linspace(50, 160, 430)
+    fade = np.linspace(160, 138, 30)            # ~4-week rollover into weakness
+    c = np.concatenate([up, fade])
+    d = pd.DataFrame({"open": c, "high": c + 1, "low": c - 1, "close": c,
+                      "volume": np.full(len(c), 1e6)}, index=idx)
+    assert h1_momentum_rollover(d, _weekly_from(d)) is True
 
 
 def test_health_is_alertonly_int_and_string():
