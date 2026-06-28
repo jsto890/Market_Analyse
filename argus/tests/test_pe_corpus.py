@@ -89,3 +89,31 @@ def test_load_prices_respects_date_window(tmp_path):
     conn.close()
     assert sl.index.min() >= pd.Timestamp("2014-01-10")
     assert sl.index.max() <= pd.Timestamp("2014-02-10")
+
+
+import argus.position_engine.corpus as C
+
+
+def test_run_corpus_builds_db_and_manifest(tmp_path, monkeypatch):
+    mp = tmp_path / "membership.json"
+    mp.write_text(json.dumps(_FIXTURE))
+    monkeypatch.setattr(C, "yf_adjusted", lambda t, s: _fake_frame())
+    man = C.run_corpus(membership_path=mp, out_dir=tmp_path,
+                       start="2014-01-01", end="2024-01-01")
+    assert (tmp_path / "corpus.db").exists()
+    assert (tmp_path / "corpus_manifest.json").exists()
+    on_disk = json.loads((tmp_path / "corpus_manifest.json").read_text())
+    names = {r["ticker"] for r in on_disk["fetched"]}
+    assert {"AAA", "BBB", "CCC", "SPY", "XLK"} <= names   # active members + benchmarks
+    assert "DDD" not in names                              # left before the window
+    assert on_disk["start"] == "2014-01-01" and on_disk["n_members"] >= 5
+
+
+def test_run_corpus_default_fetch_is_yf_adjusted(tmp_path, monkeypatch):
+    # when fetch is not injected, run_corpus must route through the (monkeypatched) yf_adjusted
+    mp = tmp_path / "m.json"; mp.write_text(json.dumps({"_benchmarks": ["SPY"], "members": {}}))
+    called = {}
+    def fake(t, s): called["hit"] = t; return _fake_frame()
+    monkeypatch.setattr(C, "yf_adjusted", fake)
+    C.run_corpus(membership_path=mp, out_dir=tmp_path, start="2014-01-01", end="2024-01-01")
+    assert called.get("hit") == "SPY"

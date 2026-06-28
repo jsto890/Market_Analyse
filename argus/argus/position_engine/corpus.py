@@ -3,6 +3,7 @@ S&P 500 membership and builds/queries a SQLite cache of ADJUSTED daily OHLCV. Ru
 code never scrapes — membership comes from config/sp500_membership.json (built once by
 tools/corpus/build_sp500_membership.py). Network fetching is injected for testability."""
 import json
+from datetime import datetime, timezone
 from pathlib import Path
 
 import pandas as pd
@@ -82,3 +83,44 @@ def load_prices(conn, ticker, start=None, end=None) -> pd.DataFrame:
     df = pd.DataFrame(rows, columns=["date"] + _PRICE_COLS)
     df.index = pd.to_datetime(df["date"]); df.index.name = "ts"
     return df[_PRICE_COLS]
+
+
+def yf_adjusted(ticker: str, start: str):
+    """Split/dividend-adjusted daily OHLCV from yfinance, lowercase columns, DatetimeIndex.
+    Isolated (not inlined) so build orchestration is monkeypatchable in tests."""
+    import yfinance as yf
+    raw = yf.Ticker(ticker).history(start=start, interval="1d", auto_adjust=True)
+    if raw is None or raw.empty:
+        return None
+    raw = raw.rename(columns=str.lower)
+    raw.index = pd.to_datetime(raw.index).tz_localize(None)
+    cols = [c for c in _PRICE_COLS if c in raw.columns]
+    return raw[cols] if len(cols) == len(_PRICE_COLS) else None
+
+
+def run_corpus(*, membership_path, out_dir, start="2014-01-01", end=None, fetch=None) -> dict:
+    """Build the full corpus: active members over [start,end] + benchmarks -> corpus.db,
+    and write corpus_manifest.json. `fetch` defaults to the live yf_adjusted."""
+    out_dir = Path(out_dir); out_dir.mkdir(parents=True, exist_ok=True)
+    end = pd.Timestamp(end) if end is not None else pd.Timestamp.utcnow().normalize()
+    membership = load_membership(membership_path)
+    universe = sorted(members_active_between(membership, start, end))
+
+    def _default_fetch(t, s):
+        return yf_adjusted(t, s)
+    fetch = fetch or _default_fetch
+
+    conn = get_conn(out_dir / "corpus.db")
+    ensure_price_schema(conn)
+    built = build_corpus(universe, conn=conn, fetch=fetch, start=start)
+    conn.close()
+
+    manifest = {"built_at": datetime.now(timezone.utc).isoformat(),
+                "start": start, "end": end.strftime("%Y-%m-%d"),
+                "n_members": len(universe), **built}
+    (out_dir / "corpus_manifest.json").write_text(json.dumps(manifest, indent=2))
+    return manifest
+
+
+def load_manifest(out_dir) -> dict:
+    return json.loads((Path(out_dir) / "corpus_manifest.json").read_text())
