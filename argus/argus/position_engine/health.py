@@ -63,6 +63,32 @@ def h3_distribution(daily: pd.DataFrame) -> bool:
     return bool(int(flagged.sum()) >= DISTRIB_MIN_DAYS)
 
 
+def _excess_series(wk: pd.DataFrame, spy_wk: pd.DataFrame,
+                   sector_wk: pd.DataFrame | None) -> pd.Series:
+    """Rolling 13-week excess return of the ticker over SPY (and sector, averaged
+    when present), aligned on the weekly index."""
+    def roll(df):
+        return df["close"] / df["close"].shift(RS_EXCESS_LB) - 1.0
+    tkr_r = roll(wk)
+    exc = tkr_r - roll(spy_wk).reindex(wk.index)
+    if sector_wk is not None:
+        exc = (exc + (tkr_r - roll(sector_wk).reindex(wk.index))) / 2.0
+    return exc.dropna()
+
+
+def h4_rs_decay(wk: pd.DataFrame, spy_wk: pd.DataFrame,
+                sector_wk: pd.DataFrame | None) -> bool:
+    """13-week excess vs SPY (+sector) is negative now AND has fallen for 3
+    consecutive weeks."""
+    exc = _excess_series(wk, spy_wk, sector_wk)
+    if len(exc) < RS_DECAY_WEEKS + 1:
+        return False
+    negative_now = bool(exc.iloc[-1] < 0)
+    last = exc.iloc[-(RS_DECAY_WEEKS + 1):]
+    falling = bool((last.diff().dropna() < 0).all())   # 3 consecutive weekly declines
+    return negative_now and falling
+
+
 def composite(flags: dict) -> tuple[int, str]:
     """Severity-weighted: 100 - sum of tripped weights, clamped to [0,100]; plus the
     comma-joined tripped IDs in fixed H1..H5 order ('' when none)."""
@@ -72,15 +98,15 @@ def composite(flags: dict) -> tuple[int, str]:
     return health_val, tripped
 
 
-def health(daily: pd.DataFrame, wk: pd.DataFrame, spy: pd.DataFrame,
-           sector: pd.DataFrame | None = None, *, h5_flag: bool = False) -> tuple[int, str]:
-    """Compute the alert-only composite for the bar at the end of `daily`. H1/H4 are
-    completed in Task 3; here they read False so the module is testable end-to-end."""
+def health(daily: pd.DataFrame, wk: pd.DataFrame, spy_wk: pd.DataFrame,
+           sector_wk: pd.DataFrame | None = None, *, h5_flag: bool = False) -> tuple[int, str]:
+    """Alert-only composite for the bar ending `daily`. `wk`/`spy_wk`/`sector_wk` are
+    the weekly frames (H1 uses wk; H4 uses all three). Drives no trade decision."""
     flags = {
         "H1": h1_momentum_rollover(daily, wk),
         "H2": h2_trend_break(daily),
         "H3": h3_distribution(daily),
-        "H4": False,
+        "H4": h4_rs_decay(wk, spy_wk, sector_wk),
         "H5": bool(h5_flag),
     }
     return composite(flags)

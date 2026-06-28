@@ -2,7 +2,8 @@ import numpy as np
 import pandas as pd
 
 from argus.position_engine.health import (
-    WEIGHTS, h1_momentum_rollover, h2_trend_break, h3_distribution, composite, health,
+    WEIGHTS, h1_momentum_rollover, h2_trend_break, h3_distribution, h4_rs_decay,
+    composite, health,
 )
 
 
@@ -94,17 +95,45 @@ def test_h1_fires_when_roc_rolls_over_under_weak_rsi():
     assert h1_momentum_rollover(d, _weekly_from(d)) is True
 
 
+def test_h4_false_when_outperforming():
+    wks = pd.date_range("2023-01-06", periods=30, freq="W-FRI")
+    tkr = pd.DataFrame({"close": np.linspace(100, 160, 30)}, index=wks)   # strong
+    spy = pd.DataFrame({"close": np.linspace(100, 110, 30)}, index=wks)   # weak bench
+    assert h4_rs_decay(tkr, spy, None) is False
+
+
+def test_h4_fires_on_three_weeks_of_negative_falling_excess():
+    wks = pd.date_range("2023-01-06", periods=30, freq="W-FRI")
+    spy_c = np.linspace(100, 130, 30)                  # benchmark grinds up
+    tkr_c = spy_c.copy()
+    tkr_c[-3:] = [spy_c[-3] * 0.97, spy_c[-2] * 0.94, spy_c[-1] * 0.90]  # 3 weeks of decay
+    tkr = pd.DataFrame({"close": tkr_c}, index=wks)
+    spy = pd.DataFrame({"close": spy_c}, index=wks)
+    assert h4_rs_decay(tkr, spy, None) is True
+
+
+def test_h4_uses_sector_when_present():
+    wks = pd.date_range("2023-01-06", periods=30, freq="W-FRI")
+    spy_c = np.linspace(100, 130, 30)
+    tkr_c = spy_c.copy()
+    tkr_c[-3:] = [spy_c[-3] * 0.97, spy_c[-2] * 0.94, spy_c[-1] * 0.90]
+    tkr = pd.DataFrame({"close": tkr_c}, index=wks)
+    spy = pd.DataFrame({"close": spy_c}, index=wks)
+    sector = pd.DataFrame({"close": spy_c}, index=wks)
+    assert h4_rs_decay(tkr, spy, sector) is True
+
+
 def test_health_is_alertonly_int_and_string():
     d = _flat_daily(80, 100.0)
-    h, flags = health(d, wk=d.resample("W-FRI").last().dropna(), spy=d, sector=None)
+    h, flags = health(d, wk=_weekly_from(d), spy_wk=_weekly_from(d), sector_wk=None)
     assert isinstance(h, int) and isinstance(flags, str)
     assert 0 <= h <= 100
 
 
 def test_health_h5_flag_subtracts_its_weight():
     d = _flat_daily(80, 100.0)
-    wk = d.resample("W-FRI").last().dropna()
-    h0, f0 = health(d, wk=wk, spy=d, sector=None, h5_flag=False)
-    h1, f1 = health(d, wk=wk, spy=d, sector=None, h5_flag=True)
+    wk = _weekly_from(d)
+    h0, f0 = health(d, wk=wk, spy_wk=wk, sector_wk=None, h5_flag=False)
+    h1, f1 = health(d, wk=wk, spy_wk=wk, sector_wk=None, h5_flag=True)
     assert h0 == 100 and f0 == ""
     assert h1 == 100 - WEIGHTS["H5"] and f1 == "H5"
