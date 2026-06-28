@@ -2,7 +2,15 @@
 Phase-1 baseline `replay` over each corpus name into a throwaway per-run conn, reads the
 LONG-state bars (whose `health_flags` already record which of H1..H5 fired in 3a), and
 joins the forward-MAE label. sector=None is a documented v1 simplification (no per-name
-sector map yet → H4 uses SPY-only RS; H1/H2/H3 unaffected)."""
+sector map yet → H4 uses SPY-only RS; H1/H2/H3 unaffected).
+
+Label = FIXED forward window by default (`cap_at_exit=False`). Capping the window at the
+actual exit reintroduces time-to-exit CENSORING (F3): deterioration flags fire late in a
+hold → short capped window → mechanically small MAE → spurious negative IC. Direct
+evidence (30-name diagnostic): H2 fires with ~11 bars-to-exit vs ~21 for non-firing bars,
+and capping inflates its negative IC ~6×. The predictive estimand for an alert-only score
+is the stock's forward downside over a fixed horizon, independent of when we exit, so the
+fixed window is correct. `cap_at_exit=True` retains the held-position variant."""
 import os
 import tempfile
 
@@ -42,7 +50,7 @@ def _long_run_caps(positions, n: int) -> np.ndarray:
 
 
 def build_panel(tickers, *, prices: dict, spy: pd.DataFrame, replay_fn=replay,
-                model_ver: str = "bt") -> pd.DataFrame:
+                model_ver: str = "bt", cap_at_exit: bool = False) -> pd.DataFrame:
     rows = []
     for tkr in tickers:
         daily = prices.get(tkr)
@@ -63,11 +71,13 @@ def build_panel(tickers, *, prices: dict, spy: pd.DataFrame, replay_fn=replay,
             os.unlink(tmp)
         if not sig:
             continue
-        pos_of = {ts: i for i, ts in enumerate(daily.index)}
-        long_pos = [pos_of[pd.Timestamp(r["ts"])] for r in sig
-                    if pd.Timestamp(r["ts"]) in pos_of]
-        exit_pos = _long_run_caps(long_pos, len(daily))
-        lab = forward_mae(daily, exit_pos=exit_pos)
+        if cap_at_exit:
+            pos_of = {ts: i for i, ts in enumerate(daily.index)}
+            long_pos = [pos_of[pd.Timestamp(r["ts"])] for r in sig
+                        if pd.Timestamp(r["ts"]) in pos_of]
+            lab = forward_mae(daily, exit_pos=_long_run_caps(long_pos, len(daily)))
+        else:
+            lab = forward_mae(daily)                     # fixed forward window (F3, default)
         for r in sig:
             ts = pd.Timestamp(r["ts"])
             if ts not in lab.index:

@@ -53,6 +53,18 @@ def test_build_panel_has_long_bars_with_flags_and_label():
     assert panel["health"].between(0, 100).all()
 
 
+def test_build_panel_default_label_is_fixed_window_not_exit_capped():
+    # F3: the predictive label is a FIXED forward window by default (exit-cap reintroduces
+    # time-to-exit censoring). The fixed window sees >= the capped window's drawdown.
+    df = _series()
+    spy = _spy(len(df), df.index)
+    fixed = build_panel(["TEST"], prices={"TEST": df}, spy=spy)                  # default = fixed
+    capped = build_panel(["TEST"], prices={"TEST": df}, spy=spy, cap_at_exit=True)
+    m = fixed.merge(capped, on=["date", "ticker"], suffixes=("_fix", "_cap"))
+    assert (m["fwd_mae_fix"] >= m["fwd_mae_cap"] - 1e-9).all()   # fixed never sees less drawdown
+    assert (m["fwd_mae_fix"] > m["fwd_mae_cap"] + 1e-9).any()    # and strictly more for late bars
+
+
 def test_build_panel_skips_names_with_no_long():
     # a flat series never opens a trade -> contributes no rows, build must not crash
     n = 260
