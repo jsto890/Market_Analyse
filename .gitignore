@@ -63,3 +63,4 @@ docs/weight_optimisation/price_cache.parquet
 argus.db
 argus.db-shm
 argus.db-wal
+argus/backtests/

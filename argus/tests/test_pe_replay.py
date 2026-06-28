@@ -3,6 +3,7 @@ import pandas as pd
 from argus.db import get_conn
 from argus.position_engine.schema import ensure_schema
 from argus.position_engine.replay import replay
+from argus.position_engine.params import EngineParams
 
 
 def _series():
@@ -59,3 +60,17 @@ def test_replay_is_idempotent(tmp_path):
     n2 = conn.execute("SELECT COUNT(*) c FROM position_signals").fetchone()["c"]
     conn.close()
     assert n1 == n2  # INSERT OR REPLACE keyed on (ticker,tf,ts,model_ver,run_kind)
+
+
+def test_trail_ratchets_stop_up_and_locks_gains(tmp_path):
+    conn = get_conn(tmp_path / "pe.db")
+    ensure_schema(conn)
+    df = _series()
+    # tight trail forces an above-entry (locked) stop-out on the post-peak drop
+    replay(conn, ticker="TEST", daily=df, spy=df, sector=None, model_ver="v1",
+           run_kind="ondemand", params=EngineParams(trail_atr=1.0))
+    t = conn.execute("SELECT * FROM trades WHERE ticker='TEST' AND exit_reason='stop'").fetchone()
+    conn.close()
+    assert t is not None
+    # exit above entry => the trail locked gain rather than taking the original stop
+    assert t["exit_px"] > t["entry_px"]

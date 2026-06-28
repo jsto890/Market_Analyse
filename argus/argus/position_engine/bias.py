@@ -7,6 +7,7 @@ import numpy as np
 import pandas as pd
 
 from ..indicators.compute import _sma, _ema, _adx
+from .params import EngineParams, DEFAULT
 
 ENTER, LEAVE, CONFIRM, DWELL = 4, 1, 2, 10  # spec §3 starting values
 
@@ -63,25 +64,19 @@ class BiasState:
     confirm_count: int = 0
 
 
-def step_bias(prev: BiasState, score: int) -> BiasState:
-    """Schmitt hysteresis (enter ±ENTER, leave at ±LEAVE) + CONFIRM consecutive
-    bars + DWELL minimum hold. NEUTRAL is the buffer between thresholds."""
-    # 1. minimum dwell — cannot change until DWELL bars elapsed
-    locked = prev.bars_in_state < DWELL
-    # 2. determine the target direction this bar wants
+def step_bias(prev: BiasState, score: int, params: EngineParams = DEFAULT) -> BiasState:
+    """Schmitt hysteresis (enter ±bias_enter, leave at ±bias_leave) + confirm_bars
+    consecutive bars + min_dwell minimum hold. NEUTRAL is the buffer between thresholds."""
+    locked = prev.bars_in_state < params.min_dwell
     if prev.bias == "LONG":
-        want = "LONG" if score > LEAVE else "NEUTRAL"
+        want = "LONG" if score > params.bias_leave else "NEUTRAL"
     elif prev.bias == "SHORT":
-        want = "SHORT" if score < -LEAVE else "NEUTRAL"
-    else:  # NEUTRAL
-        want = "LONG" if score >= ENTER else ("SHORT" if score <= -ENTER else "NEUTRAL")
+        want = "SHORT" if score < -params.bias_leave else "NEUTRAL"
+    else:
+        want = "LONG" if score >= params.bias_enter else ("SHORT" if score <= -params.bias_enter else "NEUTRAL")
     if want == prev.bias or locked:
         return BiasState(prev.bias, prev.bars_in_state + 1, None, 0)
-    # 3. confirmation: the want must hold CONFIRM consecutive bars
-    if prev.pending == want:
-        cc = prev.confirm_count + 1
-    else:
-        cc = 1
-    if cc >= CONFIRM:
+    cc = prev.confirm_count + 1 if prev.pending == want else 1
+    if cc >= params.confirm_bars:
         return BiasState(want, 0, None, 0)
     return BiasState(prev.bias, prev.bars_in_state + 1, want, cc)

@@ -4,6 +4,7 @@ import numpy as np
 import pandas as pd
 
 from ..indicators.compute import _ema, _atr, _adx, _roc
+from .params import EngineParams, DEFAULT
 
 ARM, DISARM = 50, 40  # spec §4
 
@@ -57,8 +58,8 @@ def tier_of(s: int) -> str:
     return "weak" if s < 40 else ("building" if s < 70 else "strong")
 
 
-def arm_eligible(prev_armed: bool, strength: int) -> bool:
-    """Hysteresis: arm at >=ARM, disarm only below DISARM."""
+def arm_eligible(prev_armed: bool, strength: int, params: EngineParams = DEFAULT) -> bool:
+    """Hysteresis: arm at >=params.arm, disarm only below params.disarm."""
     if prev_armed:
-        return strength >= DISARM
-    return strength >= ARM
+        return strength >= params.disarm
+    return strength >= params.arm

@@ -219,6 +219,32 @@ class IBKRClient:
 
         return result
 
+    def historical_bars(self, symbol: str, *, end: str = "", duration: str = "1 Y",
+                        bar_size: str = "1 hour", what: str = "TRADES",
+                        use_rth: bool = True):
+        """Historical OHLCV bars via reqHistoricalData. Columns lowercase
+        open/high/low/close/volume, DatetimeIndex named 'ts' (matches data.market).
+        Empty DataFrame on no data."""
+        import pandas as pd
+        from ib_insync import Stock
+
+        self.connect()
+        contract = Stock(symbol.upper(), "SMART", "USD")
+        self.ib.qualifyContracts(contract)
+        bars = self.ib.reqHistoricalData(
+            contract, endDateTime=end, durationStr=duration, barSizeSetting=bar_size,
+            whatToShow=what, useRTH=use_rth, formatDate=1)
+        cols = ["open", "high", "low", "close", "volume"]
+        if not bars:
+            return pd.DataFrame(columns=cols)
+        df = pd.DataFrame(
+            [{"ts": b.date, "open": b.open, "high": b.high, "low": b.low,
+              "close": b.close, "volume": b.volume} for b in bars]
+        ).set_index("ts")
+        df.index = pd.to_datetime(df.index)
+        df.index.name = "ts"
+        return df[cols]
+
     def historical_news(self, symbol: str, total: int = 10) -> list[str]:
         """Best-effort recent news headlines for a symbol. Returns [] on any failure
         or if no news-provider subscription is available."""

@@ -7,9 +7,11 @@ import pandas as pd
 
 from .bias import BiasState, step_bias, bias_score
 from .strength import strength_components, score_strength, arm_eligible
-from .levels import entry_trigger, compute_levels, gap_skip
+from .levels import entry_trigger, compute_levels, gap_skip, trail_stop
 from .overlay import OverlayState, OverlayCtx, step_overlay
 from .progress import progress_r, progress_pct, risk_state
+from .params import EngineParams, DEFAULT
+from ..indicators.compute import _atr
 from . import store as _store
 
 WARMUP = 200  # need 200-SMA etc.
@@ -34,7 +36,7 @@ def _clear_prior_trades(conn, ticker, model_ver, mode):
 
 def replay(conn, *, ticker, daily: pd.DataFrame, spy: pd.DataFrame,
            sector: pd.DataFrame | None, model_ver: str, run_kind: str = "live",
-           mode: str = "paper") -> int:
+           mode: str = "paper", params: EngineParams = DEFAULT) -> int:
     data_date = str(daily.index[-1].date())
     weekly = daily.resample("W-FRI").agg(
         {"open": "first", "high": "max", "low": "min", "close": "last", "volume": "sum"}).dropna()
@@ -46,6 +48,7 @@ def replay(conn, *, ticker, daily: pd.DataFrame, spy: pd.DataFrame,
     trade_id = None
     cur_levels = None
     init_stop = init_target = entry_px = None
+    cur_stop = None
     n = 0
 
     for i in range(WARMUP, len(daily)):
@@ -55,23 +58,35 @@ def replay(conn, *, ticker, daily: pd.DataFrame, spy: pd.DataFrame,
         wk = weekly[weekly.index <= daily.index[i]]
 
         score = bias_score(win, wk)
-        bstate = step_bias(bstate, score)
+        bstate = step_bias(bstate, score, params)
         comp = strength_components(win, spy.iloc[: i + 1], sector.iloc[: i + 1] if sector is not None else None)
         strength, tier = score_strength(comp)
-        armed_prev = arm_eligible(armed_prev, strength) if bstate.bias == "LONG" else False
+        armed_prev = arm_eligible(armed_prev, strength, params) if bstate.bias == "LONG" else False
+
+        # Ratchet the live stop while LONG. ORDERING INVARIANT: this runs on the
+        # prior bar's `ostate` (step_overlay below has not fired yet) and must stay
+        # ABOVE the OverlayCtx/step_overlay call so the overlay exits against the
+        # trailed `live_stop`. On the fill bar `ostate` is still ARMED, so the trail
+        # does not run here — `cur_stop` is seeded to `init_stop` in the fill side-effect.
+        if ostate.overlay == "LONG" and entry_px is not None and cur_stop is not None:
+            atr = float(_atr(win["high"], win["low"], win["close"], 14).iloc[-1])
+            pr_now = progress_r(float(bar["close"]), entry_px, init_stop)
+            cur_stop = trail_stop(cur_stop, float(bar["close"]), atr, pr_now, entry_px, params)
+        live_stop = cur_stop if (ostate.overlay == "LONG" and cur_stop is not None) else (cur_levels or {}).get("stop")
 
         # entry signal on completed bar (used when overlay is FLAT)
-        sig = entry_trigger(win) if (bstate.bias == "LONG" and armed_prev) else False
+        sig = entry_trigger(win, params) if (bstate.bias == "LONG" and armed_prev) else False
         if sig and ostate.overlay == "FLAT":
-            cur_levels = compute_levels(entry_px=float(bar["close"]), daily=win)
+            cur_levels = compute_levels(entry_px=float(bar["close"]), daily=win, params=params)
 
-        levels = cur_levels or {"entry": None, "stop": None, "target": None, "armed": False}
+        levels = (dict(cur_levels, stop=live_stop) if cur_levels else
+                  {"entry": None, "stop": live_stop, "target": None, "armed": False})
         ctx = OverlayCtx(bias=bstate.bias, armed_eligible=armed_prev, entry_signal=sig,
                          bar_open=float(bar["open"]), bar_high=float(bar["high"]),
                          bar_low=float(bar["low"]), bar_close=float(bar["close"]),
                          levels=levels, bar_index=i, cooldown_until=ostate.cooldown_until)
         prev_overlay = ostate.overlay
-        ostate, exit_reason, events = step_overlay(ostate, ctx)
+        ostate, exit_reason, events = step_overlay(ostate, ctx, params)
 
         # side effects on transitions
         if prev_overlay == "ARMED" and ostate.overlay == "LONG":
@@ -81,11 +96,12 @@ def replay(conn, *, ticker, daily: pd.DataFrame, spy: pd.DataFrame,
                 cur_levels = None
             else:
                 entry_px, init_stop, init_target = fill, cur_levels["stop"], cur_levels["target"]
+                cur_stop = init_stop
                 trade_id = _store.open_trade(conn, ticker=ticker, tf="1d", model_ver=model_ver,
                                              mode=mode, entry_ts=ts, entry_px=fill, qty=1.0,
                                              init_stop=init_stop, init_target=init_target)
         if ostate.overlay == "EXIT" and trade_id is not None:
-            exit_px = init_stop if exit_reason == "stop" else float(bar["open"])
+            exit_px = live_stop if exit_reason == "stop" else float(bar["open"])
             r = progress_r(exit_px, entry_px, init_stop) if entry_px else None
             _store.close_trade(conn, trade_id, exit_ts=ts, exit_px=exit_px,
                                exit_reason=exit_reason, r_multiple=r)
@@ -111,6 +127,6 @@ def replay(conn, *, ticker, daily: pd.DataFrame, spy: pd.DataFrame,
         })
         # EXIT is transient — clear trade levels after persisting the exit bar
         if ostate.overlay == "EXIT":
-            entry_px = init_stop = init_target = cur_levels = None
+            entry_px = init_stop = init_target = cur_levels = cur_stop = None
         n += 1
     return n
