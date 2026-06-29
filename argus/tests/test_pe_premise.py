@@ -1,6 +1,6 @@
 import numpy as np
 import pandas as pd
-from argus.position_engine.premise import _enrich, extract_trades, _metrics, oracle_ceiling
+from argus.position_engine.premise import _enrich, extract_trades, _metrics, oracle_ceiling, bootstrap_rule
 
 
 def _series():
@@ -60,3 +60,24 @@ def test_oracle_ceiling_beats_hold():
     assert abs(oc["hold_exp"] - np.mean([0.5, -0.4, 1.0])) < 1e-9
     assert abs(oc["oracle_exp"] - np.mean([2.0, -0.2, 3.0])) < 1e-9   # oracle = max(hold, mfe)
     assert oc["uplift_exp"] > 0 and oc["uplift_mar"] > 0
+
+
+def _rule_df(n_names=40, edge=0.0, seed=0):
+    rng = np.random.default_rng(seed)
+    rows = []
+    for k in range(n_names):
+        for j in range(3):
+            hold = rng.normal(0.2, 1.0)
+            rows.append({"ticker": f"T{k}", "entry_ts": pd.Timestamp("2021-01-04") + pd.Timedelta(days=k * 5 + j),
+                         "hold_r": hold, "rule_r": hold + edge})
+    return pd.DataFrame(rows)
+
+
+def test_bootstrap_rule_small_p_for_clear_edge():
+    bs = bootstrap_rule(_rule_df(edge=0.6, seed=1), years=1.0, n_boot=400, seed=2)
+    assert bs["p_exp"] < 0.05 and bs["p_rule"] == max(bs["p_mar"], bs["p_exp"])
+
+
+def test_bootstrap_rule_large_p_for_no_edge():
+    bs = bootstrap_rule(_rule_df(edge=0.0, seed=3), years=1.0, n_boot=400, seed=4)
+    assert bs["p_exp"] > 0.05

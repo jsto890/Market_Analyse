@@ -87,3 +87,29 @@ def oracle_ceiling(trades, years) -> dict:
     o_mar, o_exp = _metrics([max(t["hold_r"], t["mfe_r"]) for t in s], years)
     return {"hold_mar": h_mar, "hold_exp": h_exp, "oracle_mar": o_mar, "oracle_exp": o_exp,
             "uplift_mar": o_mar - h_mar, "uplift_exp": o_exp - h_exp}
+
+
+def bootstrap_rule(df, years, *, n_boot=N_BOOT, seed=0, min_rep=10) -> dict:
+    """Paired name-cluster bootstrap of the (rule - hold) MAR and expectancy deltas. Each
+    replicate resamples whole names with replacement, sorts by entry date, and recomputes MAR
+    via aggregate() on both the rule and hold R-series (paired). One-sided p = P(delta <= 0)."""
+    names = df["ticker"].unique()
+    rng = np.random.default_rng(seed)
+    dmar, dexp = [], []
+    for _ in range(n_boot):
+        drawn = rng.choice(names, size=len(names), replace=True)
+        rs = pd.concat([df[df["ticker"] == nm] for nm in drawn]).sort_values("entry_ts")
+        if len(rs) < min_rep:
+            continue
+        mar_r, _ = _metrics(rs["rule_r"].tolist(), years)
+        mar_h, _ = _metrics(rs["hold_r"].tolist(), years)
+        dmar.append(mar_r - mar_h)
+        dexp.append(float((rs["rule_r"] - rs["hold_r"]).mean()))
+    dmar, dexp = np.asarray(dmar, float), np.asarray(dexp, float)
+    if dmar.size == 0:
+        return {"p_mar": 1.0, "p_exp": 1.0, "p_rule": 1.0, "ci_mar": (np.nan, np.nan),
+                "ci_exp": (np.nan, np.nan)}
+    p_mar, p_exp = float(np.mean(dmar <= 0)), float(np.mean(dexp <= 0))
+    return {"p_mar": p_mar, "p_exp": p_exp, "p_rule": max(p_mar, p_exp),
+            "ci_mar": (float(np.quantile(dmar, 0.025)), float(np.quantile(dmar, 0.975))),
+            "ci_exp": (float(np.quantile(dexp, 0.025)), float(np.quantile(dexp, 0.975)))}
