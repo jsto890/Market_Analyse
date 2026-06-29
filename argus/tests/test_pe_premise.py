@@ -111,3 +111,38 @@ def test_rule_correlation_is_fraction_in_0_1():
     corr = rule_correlation(df)
     assert all(0.0 <= v <= 1.0 for v in corr.values())
     assert "chandelier_high|giveback_trail" in corr or "giveback_trail|chandelier_high" in corr
+
+
+from argus.position_engine.premise import evaluate
+
+
+def _apply_df(good_edge=0.8, n_names=40, seed=0):
+    # build a synthetic apply_df directly: giveback_trail has a real edge, others none, health hurts
+    rng = np.random.default_rng(seed)
+    rows = []
+    for k in range(n_names):
+        for j in range(2):
+            hold = rng.normal(0.1, 1.0)
+            ets = pd.Timestamp("2021-03-01") + pd.Timedelta(days=k * 4 + j)
+            for rule, edge in [("giveback_trail", good_edge), ("chandelier_high", 0.0),
+                               ("donchian_break", 0.0), ("no_progress", 0.0),
+                               ("profit_target_3r", -0.3), ("health_exit", -0.5)]:
+                rows.append({"trade": k * 2 + j, "ticker": f"T{k}", "entry_ts": ets, "rule": rule,
+                             "rule_r": hold + edge, "hold_r": hold, "exit_offset": 3, "active": True})
+    return pd.DataFrame(rows)
+
+
+def test_evaluate_graduates_real_edge_and_excludes_control_from_holm():
+    res, go = evaluate(_apply_df(good_edge=0.8, seed=1), years=1.0, n_boot=400, seed=2)
+    assert go is True
+    assert res["giveback_trail"]["holm_win"] is True
+    assert "holm_win" not in res["health_exit"]                 # control not in Holm
+    assert res["health_exit"]["p_rule"] > 0.5                   # control hurts
+
+
+def test_evaluate_abstains_below_min_trades():
+    df = _apply_df(good_edge=0.8, seed=1)
+    df = df[df["trade"] < 10]                                    # ~20 active < 30 floor
+    res, go = evaluate(df, years=1.0, n_boot=200, seed=2)
+    assert res["giveback_trail"]["status"] == "ABSTAIN_LOW_N"
+    assert go is False
