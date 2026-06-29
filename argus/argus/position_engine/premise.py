@@ -69,3 +69,21 @@ def extract_trades(ticker, daily, spy, *, replay_fn=replay) -> list:
                     "mfe_r": float(t["mfe_r"]) if t["mfe_r"] is not None else float(t["r_multiple"]),
                     "path": path})
     return out
+
+
+def _metrics(r_values, years) -> tuple:
+    """(MAR, expectancy) for an entry-date-ordered R list, via metrics.aggregate. bh/spy args
+    are 0 (they only feed mar_vs_* fields, not mar). n_bars feeds exposure only (unused here)."""
+    r = list(r_values)
+    df = pd.DataFrame({"r_multiple": r, "holding_bars": [1] * len(r)})
+    m = aggregate(df, n_bars=max(len(r), 1), years=years, bh_return=0.0, bh_maxdd=0.0,
+                  spy_return=0.0, spy_maxdd=0.0)
+    return float(m["mar"]), float(m["expectancy"])
+
+
+def oracle_ceiling(trades, years) -> dict:
+    s = sorted(trades, key=lambda t: t["entry_ts"])
+    h_mar, h_exp = _metrics([t["hold_r"] for t in s], years)
+    o_mar, o_exp = _metrics([max(t["hold_r"], t["mfe_r"]) for t in s], years)
+    return {"hold_mar": h_mar, "hold_exp": h_exp, "oracle_mar": o_mar, "oracle_exp": o_exp,
+            "uplift_mar": o_mar - h_mar, "uplift_exp": o_exp - h_exp}

@@ -1,6 +1,6 @@
 import numpy as np
 import pandas as pd
-from argus.position_engine.premise import _enrich, extract_trades
+from argus.position_engine.premise import _enrich, extract_trades, _metrics, oracle_ceiling
 
 
 def _series():
@@ -42,3 +42,21 @@ def test_extract_trades_returns_enriched_paths():
     assert t["r"] > 0
     assert {"atr14", "donch_low20", "health_flags"}.issubset(t["path"].columns)
     assert len(t["path"]) >= 2                          # at least entry..exit
+
+
+def test_metrics_returns_mar_and_expectancy():
+    mar, exp = _metrics([1.0, -0.5, 2.0, -0.5], years=1.0)
+    assert abs(exp - 0.5) < 1e-9                       # mean R
+    assert mar > 0                                     # net 2.0 over a drawdown
+
+
+def test_oracle_ceiling_beats_hold():
+    # NB metrics.aggregate gives mar=0 when there is NO drawdown (the _safe_ratio convention),
+    # so the oracle series must still contain a loss for MAR to be well-defined.
+    trades = [{"entry_ts": pd.Timestamp("2021-01-04"), "hold_r": 0.5, "mfe_r": 2.0},
+              {"entry_ts": pd.Timestamp("2021-02-01"), "hold_r": -0.4, "mfe_r": -0.2},
+              {"entry_ts": pd.Timestamp("2021-03-01"), "hold_r": 1.0, "mfe_r": 3.0}]
+    oc = oracle_ceiling(trades, years=1.0)
+    assert abs(oc["hold_exp"] - np.mean([0.5, -0.4, 1.0])) < 1e-9
+    assert abs(oc["oracle_exp"] - np.mean([2.0, -0.2, 3.0])) < 1e-9   # oracle = max(hold, mfe)
+    assert oc["uplift_exp"] > 0 and oc["uplift_mar"] > 0
