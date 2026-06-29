@@ -1,7 +1,8 @@
+import json
 import pandas as pd
 from argus.db import get_conn
 from argus.position_engine.schema import ensure_schema
-from argus.position_engine.actions import daily_actions
+from argus.position_engine.actions import daily_actions, format_actions, write_actions
 
 
 def _sig(conn, ticker, ts, overlay, *, entry=None, stop=None, target=None,
@@ -54,3 +55,25 @@ def test_no_action_on_unchanged_hold_or_single_bar(tmp_path):
     acts = daily_actions(c, universe=["MSFT", "TSLA"])
     c.close()
     assert acts == []
+
+
+def test_format_actions_groups_by_kind():
+    acts = [{"kind": "ENTRY", "ticker": "NVDA", "entry": 100.0, "stop": 95.0, "target": 110.0},
+            {"kind": "EXIT", "ticker": "AAPL"},
+            {"kind": "TRAIL", "ticker": "MSFT", "stop": 395.0, "prev_stop": 390.0}]
+    md = format_actions(acts, asof="2024-01-05")
+    assert "## New entries" in md and "BUY NVDA" in md
+    assert "## Exits" in md and "SELL AAPL" in md
+    assert "## Stop adjustments" in md and "390.00 -> 395.00" in md
+
+
+def test_format_actions_empty():
+    assert "No actions today." in format_actions([], asof="2024-01-05")
+
+
+def test_write_actions_writes_json_and_md(tmp_path):
+    acts = [{"kind": "EXIT", "ticker": "AAPL"}]
+    res = write_actions(acts, asof="2024-01-05", out_dir=tmp_path)
+    payload = json.loads((tmp_path / "actions.json").read_text())
+    assert payload["asof"] == "2024-01-05" and payload["actions"] == acts
+    assert (tmp_path / "actions.md").exists() and res["n"] == 1
