@@ -189,19 +189,22 @@ def run_premise(*, corpus_dir, membership_path, out_dir=None, names=None,
     from .corpus import load_prices
     out_dir = Path(out_dir) if out_dir is not None else Path(corpus_dir)
     conn = get_conn(Path(corpus_dir) / "corpus.db")
-    if names is None:
-        names = [r["ticker"] for r in conn.execute(
-            "SELECT DISTINCT ticker FROM prices ORDER BY ticker") if r["ticker"] != "SPY"]
-    fetch_prices = fetch_prices or (lambda nm: load_prices(conn, nm, start="2014-01-01", end="2024-12-31"))
-    spy = load_prices(conn, "SPY", start="2014-01-01", end="2024-12-31")
+    # membership_path accepted for interface parity with run_corpus/run_evaluation; intentionally unused
+    try:
+        if names is None:
+            names = [r["ticker"] for r in conn.execute(
+                "SELECT DISTINCT ticker FROM prices ORDER BY ticker") if r["ticker"] != "SPY"]
+        fetch_prices = fetch_prices or (lambda nm: load_prices(conn, nm, start="2014-01-01", end="2024-12-31"))
+        spy = load_prices(conn, "SPY", start="2014-01-01", end="2024-12-31")
 
-    trades = []
-    for nm in names:
-        d = fetch_prices(nm)
-        if d is None or len(d) < 60:
-            continue
-        trades.extend(extract_trades(nm, d, spy))
-    conn.close()
+        trades = []
+        for nm in names:
+            d = fetch_prices(nm)
+            if d is None or len(d) < 60:
+                continue
+            trades.extend(extract_trades(nm, d, spy))
+    finally:
+        conn.close()
 
     oos = [t for t in trades if t["entry_ts"].year in OOS_YEARS]
     years = float(len(OOS_YEARS))

@@ -1,6 +1,6 @@
 import numpy as np
 import pandas as pd
-from argus.position_engine.premise import _enrich, extract_trades, _metrics, oracle_ceiling, bootstrap_rule, apply_rules, rule_correlation
+from argus.position_engine.premise import _enrich, extract_trades, _metrics, oracle_ceiling, bootstrap_rule, apply_rules, rule_correlation, evaluate
 
 
 def _series():
@@ -111,9 +111,6 @@ def test_rule_correlation_is_fraction_in_0_1():
     corr = rule_correlation(df)
     assert all(0.0 <= v <= 1.0 for v in corr.values())
     assert "chandelier_high|giveback_trail" in corr or "giveback_trail|chandelier_high" in corr
-
-
-from argus.position_engine.premise import evaluate
 
 
 def _apply_df(good_edge=0.8, n_names=40, seed=0):
