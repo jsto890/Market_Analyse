@@ -45,7 +45,7 @@ def extract_trades(ticker, daily, spy, *, replay_fn=replay) -> list:
         replay_fn(conn, ticker=ticker, daily=daily, spy=spy, sector=None,
                   model_ver="bt", run_kind="backtest", mode="paper")
         trows = conn.execute(
-            "SELECT entry_ts, entry_px, init_stop, exit_ts, r_multiple, mfe_r FROM trades "
+            "SELECT entry_ts, entry_px, init_stop, exit_ts, r_multiple FROM trades "
             "WHERE ticker=? AND exit_ts IS NOT NULL ORDER BY entry_ts", (ticker,)).fetchall()
         flags = {r["ts"]: (r["health_flags"] or "") for r in conn.execute(
             "SELECT ts, health_flags FROM position_signals WHERE ticker=? AND overlay='LONG'",
@@ -66,7 +66,7 @@ def extract_trades(ticker, daily, spy, *, replay_fn=replay) -> list:
         path["health_flags"] = [flags.get(str(ts.date()), "") for ts in path.index]
         out.append({"ticker": ticker, "entry_ts": e, "entry_px": float(t["entry_px"]),
                     "r": r, "hold_r": float(t["r_multiple"]),
-                    "mfe_r": float(t["mfe_r"]) if t["mfe_r"] is not None else float(t["r_multiple"]),
+                    "mfe_r": float((path["high"].max() - float(t["entry_px"])) / r),
                     "path": path})
     return out
 
@@ -130,12 +130,15 @@ def apply_rules(trades) -> pd.DataFrame:
 
 
 def rule_correlation(apply_df) -> dict:
-    rules = sorted(apply_df["rule"].unique())
-    piv = apply_df.pivot(index="trade", columns="rule", values="exit_offset")
+    cand = set(CANDIDATES)
+    rules = [r for r in sorted(apply_df["rule"].unique()) if r in cand]
+    df = apply_df.copy()
+    df.loc[~df["active"], "exit_offset"] = np.nan      # non-firing -> NaN so dropna drops it
+    piv = df.pivot(index="trade", columns="rule", values="exit_offset")
     out = {}
     for i, a in enumerate(rules):
         for b in rules[i + 1:]:
-            both = piv[[a, b]].dropna()
+            both = piv[[a, b]].dropna()                  # only trades where BOTH fired
             agree = ((both[a] - both[b]).abs() <= 1).mean() if len(both) else 0.0
             out[f"{a}|{b}"] = float(agree)
     return out

@@ -42,6 +42,8 @@ def test_extract_trades_returns_enriched_paths():
     assert t["r"] > 0
     assert {"atr14", "donch_low20", "health_flags"}.issubset(t["path"].columns)
     assert len(t["path"]) >= 2                          # at least entry..exit
+    assert t["mfe_r"] >= t["hold_r"]          # max favorable excursion >= realized
+    assert t["mfe_r"] > 0                       # the canned series runs up while held
 
 
 def test_metrics_returns_mar_and_expectancy():
