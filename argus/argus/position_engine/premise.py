@@ -113,3 +113,29 @@ def bootstrap_rule(df, years, *, n_boot=N_BOOT, seed=0, min_rep=10) -> dict:
     return {"p_mar": p_mar, "p_exp": p_exp, "p_rule": max(p_mar, p_exp),
             "ci_mar": (float(np.quantile(dmar, 0.025)), float(np.quantile(dmar, 0.975))),
             "ci_exp": (float(np.quantile(dexp, 0.025)), float(np.quantile(dexp, 0.975)))}
+
+
+def apply_rules(trades) -> pd.DataFrame:
+    allrules = {**RULES, **CONTROL}
+    rows = []
+    for i, t in enumerate(trades):
+        for name, fn in allrules.items():
+            off = fn(t["path"], t["entry_px"], t["r"])
+            rr = realized_r(t["path"], t["entry_px"], t["r"], off, t["hold_r"])
+            active = off is not None and off + 1 < len(t["path"])
+            rows.append({"trade": i, "ticker": t["ticker"], "entry_ts": t["entry_ts"],
+                         "rule": name, "rule_r": rr, "hold_r": t["hold_r"],
+                         "exit_offset": -1 if off is None else int(off), "active": bool(active)})
+    return pd.DataFrame(rows)
+
+
+def rule_correlation(apply_df) -> dict:
+    rules = sorted(apply_df["rule"].unique())
+    piv = apply_df.pivot(index="trade", columns="rule", values="exit_offset")
+    out = {}
+    for i, a in enumerate(rules):
+        for b in rules[i + 1:]:
+            both = piv[[a, b]].dropna()
+            agree = ((both[a] - both[b]).abs() <= 1).mean() if len(both) else 0.0
+            out[f"{a}|{b}"] = float(agree)
+    return out

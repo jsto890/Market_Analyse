@@ -1,6 +1,6 @@
 import numpy as np
 import pandas as pd
-from argus.position_engine.premise import _enrich, extract_trades, _metrics, oracle_ceiling, bootstrap_rule
+from argus.position_engine.premise import _enrich, extract_trades, _metrics, oracle_ceiling, bootstrap_rule, apply_rules, rule_correlation
 
 
 def _series():
@@ -81,3 +81,33 @@ def test_bootstrap_rule_small_p_for_clear_edge():
 def test_bootstrap_rule_large_p_for_no_edge():
     bs = bootstrap_rule(_rule_df(edge=0.0, seed=3), years=1.0, n_boot=400, seed=4)
     assert bs["p_exp"] > 0.05
+
+
+def _toy_trade(entry_ts="2021-02-01"):
+    n = 30
+    c = np.concatenate([np.linspace(100, 140, 12), np.linspace(139, 110, 18)])  # run up then drop
+    path = pd.DataFrame({"open": c, "high": c + 1, "low": c - 1, "close": c,
+                         "volume": np.full(n, 1e6), "atr14": np.full(n, 2.0),
+                         "donch_low20": np.full(n, 115.0), "health_flags": [""] * n},
+                        index=pd.date_range(entry_ts, periods=n, freq="B"))
+    return {"ticker": "T0", "entry_ts": pd.Timestamp(entry_ts), "entry_px": 100.0,
+            "r": 10.0, "hold_r": (c[-1] - 100.0) / 10.0, "mfe_r": (c.max() - 100.0) / 10.0,
+            "path": path}
+
+
+def test_apply_rules_one_row_per_trade_and_rule():
+    df = apply_rules([_toy_trade(), _toy_trade("2022-02-01")])
+    assert set(df["rule"].unique()) == {"giveback_trail", "chandelier_high", "donchian_break",
+                                        "no_progress", "profit_target_3r", "health_exit"}
+    assert len(df) == 2 * 6
+    # the giveback rule should fire on this run-up-then-drop path and beat the round-tripped hold
+    gb = df[(df["rule"] == "giveback_trail")]
+    assert gb["active"].all()
+    assert (gb["rule_r"] > gb["hold_r"]).all()
+
+
+def test_rule_correlation_is_fraction_in_0_1():
+    df = apply_rules([_toy_trade(), _toy_trade("2022-02-01")])
+    corr = rule_correlation(df)
+    assert all(0.0 <= v <= 1.0 for v in corr.values())
+    assert "chandelier_high|giveback_trail" in corr or "giveback_trail|chandelier_high" in corr
