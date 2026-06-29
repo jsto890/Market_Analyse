@@ -1,8 +1,17 @@
 """Health monitor (design spec §7) — v1 ALERT-ONLY: computes five deterioration
 signals into a severity-weighted composite health in [0,100] plus a tripped-flags
-string. Pure (frames in, (int,str) out); drives NO trade decision. Weights are
-frozen STARTING constants — Phase 3b fits them on forward outcomes across disjoint
-OOS universes. H5 (catalyst) is injected (default off) until its event feed lands."""
+string. Pure (frames in, (int,str) out); drives NO trade decision. H5 (catalyst) is
+injected (default off) until its event feed lands.
+
+⚠️ 3b CALIBRATION RESULT (2026-06-29) — DO NOT surface as "deterioration", DO NOT drive
+trades, DO NOT calibrate these weights. The 3b predictive study (618-name point-in-time
+S&P500 corpus; docs/superpowers/specs/2026-06-29-ws4-phase3b-findings-and-decision.md)
+found these five signals are ANTI-PREDICTIVE in the held strength-long population: flagged
+("unhealthy") bars had LESS forward drawdown and HIGHER forward return than perfect-health
+bars (spearman(health, fwd_MAE)=+0.036, spearman(health, fwd_return)=-0.032). They mark
+buyable mean-reverting dips, not failing positions — a selection effect (the engine holds
+strength-selected names). No signal graduated; WEIGHTS below stay frozen as heuristic
+constants. A real deterioration monitor needs different, trend-death signals."""
 import pandas as pd
 
 from ..indicators.compute import _ema, _rsi, _roc, _atr, _sma
