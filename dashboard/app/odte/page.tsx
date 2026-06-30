@@ -21,7 +21,7 @@ export default function OdtePage() {
   const down = badge.tone === "down";
 
   return (
-    <main className="flex flex-col font-mono h-[calc(100vh-3.5rem)]">
+    <main className="flex flex-col font-mono h-full">
       <div className="flex items-center justify-between px-4 py-2 border-b border-line">
         <h1 className="text-sm font-semibold">Index 0DTE · QQQ</h1>
         <span className={`px-2 py-0.5 text-xs rounded ${toneClass[badge.tone]}`}>{badge.label}</span>

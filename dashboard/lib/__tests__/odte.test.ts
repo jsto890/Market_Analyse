@@ -14,4 +14,7 @@ describe("odteBadge", () => {
   it("Service down when health is null (proxy failed)", () => {
     expect(odteBadge(null)).toEqual({ label: "Service down", tone: "down" });
   });
+  it("Service down when health is undefined (first render)", () => {
+    expect(odteBadge(undefined)).toEqual({ label: "Service down", tone: "down" });
+  });
 });
