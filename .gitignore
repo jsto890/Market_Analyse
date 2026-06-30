@@ -64,3 +64,9 @@ argus.db
 argus.db-shm
 argus.db-wal
 argus/backtests/
+
+# WS-5 vendored 0DTE app — runtime-provisioned artifacts
+odte/frontend/node_modules/
+odte/backend/.venv/
+odte/**/__pycache__/
+odte/**/.pytest_cache/
