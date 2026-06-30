@@ -64,3 +64,15 @@ def write_actions(actions, *, asof, out_dir) -> dict:
     (out_dir / "actions.json").write_text(json.dumps({"asof": str(asof), "actions": actions}, indent=2))
     (out_dir / "actions.md").write_text(format_actions(actions, asof=asof))
     return {"json": str(out_dir / "actions.json"), "md": str(out_dir / "actions.md"), "n": len(actions)}
+
+
+def run_daily_actions(conn, *, universe, out_dir, model_ver="bt", run_kind="live", asof=None) -> dict:
+    """Daily-job entry point: derive today's actions for the universe and write the artifact.
+    `asof` defaults to the latest signal date on record (the 'today' the engine just wrote)."""
+    acts = daily_actions(conn, universe=universe, model_ver=model_ver, run_kind=run_kind, asof=asof)
+    label = asof
+    if label is None:
+        row = conn.execute("SELECT MAX(ts) AS m FROM position_signals WHERE model_ver=? AND run_kind=?",
+                           (model_ver, run_kind)).fetchone()
+        label = (row["m"] if row and row["m"] else "latest")
+    return write_actions(acts, asof=label, out_dir=out_dir)
