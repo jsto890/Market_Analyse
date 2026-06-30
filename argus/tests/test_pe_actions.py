@@ -2,7 +2,9 @@ import json
 import pandas as pd
 from argus.db import get_conn
 from argus.position_engine.schema import ensure_schema
-from argus.position_engine.actions import daily_actions, format_actions, write_actions
+from argus.position_engine.actions import (
+    daily_actions, format_actions, write_actions, run_daily_actions,
+)
 
 
 def _sig(conn, ticker, ts, overlay, *, entry=None, stop=None, target=None,
@@ -77,3 +79,15 @@ def test_write_actions_writes_json_and_md(tmp_path):
     payload = json.loads((tmp_path / "actions.json").read_text())
     assert payload["asof"] == "2024-01-05" and payload["actions"] == acts
     assert (tmp_path / "actions.md").exists() and res["n"] == 1
+
+
+def test_run_daily_actions_composes_and_labels_latest_asof(tmp_path):
+    c = _conn(tmp_path)
+    _sig(c, "NVDA", "2024-01-04", "ARMED")
+    _sig(c, "NVDA", "2024-01-05", "LONG", entry=100.0, stop=95.0, target=110.0)
+    res = run_daily_actions(c, universe=["NVDA"], out_dir=tmp_path / "out")
+    c.close()
+    payload = json.loads((tmp_path / "out" / "actions.json").read_text())
+    assert payload["asof"] == "2024-01-05"          # resolved to the latest signal ts
+    assert payload["actions"][0]["kind"] == "ENTRY"
+    assert res["n"] == 1

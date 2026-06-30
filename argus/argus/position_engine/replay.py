@@ -123,7 +123,7 @@ def replay(conn, *, ticker, daily: pd.DataFrame, spy: pd.DataFrame,
             "ts": ts, "ticker": ticker, "tf": "1d", "model_ver": model_ver,
             "bias": bstate.bias, "bias_strength": strength, "strength_tier": tier,
             "overlay": ostate.overlay, "entry": entry_px if ostate.overlay == "LONG" else None,
-            "stop": init_stop if ostate.overlay == "LONG" else None,
+            "stop": live_stop if ostate.overlay == "LONG" else None,   # trailed stop (engine exits vs this), not static init
             "target": init_target if ostate.overlay == "LONG" else None,
             "avg_cost": entry_px if ostate.overlay == "LONG" else None,
             "leg_count": 1 if ostate.overlay == "LONG" else 0,

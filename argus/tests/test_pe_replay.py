@@ -100,3 +100,20 @@ def test_health_does_not_change_trade_outcomes(tmp_path):
     t = conn.execute("SELECT exit_reason, exit_px FROM trades WHERE ticker='H2'").fetchone()
     conn.close()
     assert t is not None and t["exit_reason"] == "stop"   # same round-trip as the base case
+
+
+def test_replay_persists_trailed_stop_not_static_init(tmp_path):
+    # the persisted position_signals.stop must reflect the LIVE trailed stop the engine exits
+    # against (replay.py:112), not the static init_stop — otherwise consumers (the daily action
+    # notifier) show the wrong stop and TRAIL never fires.
+    conn = get_conn(tmp_path / "pe.db")
+    ensure_schema(conn)
+    df = _series()
+    spy = df.copy()
+    replay(conn, ticker="TEST", daily=df, spy=spy, sector=None, model_ver="v1", run_kind="ondemand")
+    stops = [r["stop"] for r in conn.execute(
+        "SELECT stop FROM position_signals WHERE ticker='TEST' AND overlay='LONG' "
+        "AND stop IS NOT NULL ORDER BY ts")]
+    conn.close()
+    assert len(stops) >= 2
+    assert len({round(s, 6) for s in stops}) > 1     # the trail ratchets; not a single static value
