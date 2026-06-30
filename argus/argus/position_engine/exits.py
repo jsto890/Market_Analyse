@@ -31,9 +31,9 @@ def chandelier_high(path, entry_px, r, *, k=3.0):
     return None
 
 
-def donchian_break(path, entry_px, r, *, n=20):
+def donchian_break(path, entry_px, r):
     close = path["close"].to_numpy(float)
-    dl = path["donch_low20"].to_numpy(float)
+    dl = path["donch_low20"].to_numpy(float)   # prior-20-bar low, precomputed in premise._enrich
     for t in range(len(path)):
         if np.isfinite(dl[t]) and close[t] < dl[t]:
             return t

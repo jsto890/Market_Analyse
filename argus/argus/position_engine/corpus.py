@@ -1,7 +1,13 @@
 """Calibration corpus (design spec §3, Phase 3b-1). Reads the committed point-in-time
 S&P 500 membership and builds/queries a SQLite cache of ADJUSTED daily OHLCV. Runtime
 code never scrapes — membership comes from config/sp500_membership.json (built once by
-tools/corpus/build_sp500_membership.py). Network fetching is injected for testability."""
+tools/corpus/build_sp500_membership.py). Network fetching is injected for testability.
+
+DATA CAVEAT (survivorship): yfinance cannot serve many delisted *departed* tickers — a live
+build over the point-in-time S&P 500 fetched 618/738 names (120 skipped, all delisted M&A/
+bankruptcy exits). Membership is point-in-time correct, but the *available data* reintroduces
+partial survivorship that attenuates momentum/trend/RS signals (directionally, not just level).
+A delisting-inclusive feed would tighten this; treat absolute edge figures as mildly optimistic."""
 import json
 from datetime import datetime, timezone
 from pathlib import Path
