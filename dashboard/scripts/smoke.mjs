@@ -21,6 +21,7 @@ const ROUTES = [
   { path: "/t/AMD", label: "ticker-AMD" },
   { path: "/t/SPY", label: "ticker-SPY" },
   { path: "/watchlist", label: "watchlist" },
+  { path: "/odte", label: "odte" },
   { path: "/performance", label: "performance" },
   { path: "/sources", label: "sources" },
   { path: "/screener", label: "screener" },
@@ -36,6 +37,7 @@ const ACCEPTABLE_FAIL_PREFIXES = [
   "/api/argus/screener",
   "/api/argus/history",
   "/api/argus/rail/quotes", // 404 until live API restarts post-integration (WS-2 pre-integration state)
+  "/api/odte/health",
 ];
 
 // Next.js dev-server static chunks that may 404 transiently during warmup
