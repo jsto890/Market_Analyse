@@ -1,6 +1,15 @@
 import numpy as np
 import pandas as pd
-from argus.position_engine.validation import validate_corpus
+from argus.position_engine.validation import validate_corpus, robust_trade_stats
+
+
+def test_robust_trade_stats_tames_near_zero_risk_outlier():
+    # one artifact (+500R from a near-zero risk denominator) corrupts the mean; robust stats don't
+    s = robust_trade_stats([0.1, -0.2, 0.3, -0.1, 500.0], r_clip=25.0)
+    assert s["raw_mean"] > 90                      # mean hijacked by the outlier
+    assert abs(s["median"] - 0.1) < 1e-9           # median unaffected
+    assert s["winsor_mean"] < 6                     # 500 clipped to 25
+    assert s["n_clipped"] == 1
 
 
 def _series():
