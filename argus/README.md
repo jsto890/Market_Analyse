@@ -211,7 +211,7 @@ Provides a unified news stream for the live right-rail feed and per-ticker News 
 
 **Store (`store.py`)** — `insert_news_item()` with conflict-ignore dedup on `(source, external_id)`; `fetch_after(cursor)` for the cursor-paginated feed; `fetch_for_ticker(symbol)` for the ticker page.
 
-**Deferred to later WS-3 slices:** macro-sentiment scoring (FinBERT — already installed in the argus venv, WS-3b), economic calendar ingester (WS-3c), morning macro report + whale alerts (WS-3d).
+All four WS-3 slices are live: **FinBERT macro-sentiment** gauges (WS-3b), **economic calendar** ingester — BLS/FOMC/BEA + earnings (WS-3c), and **morning brief + whale alerts** appended to the daily Obsidian report at 8am ET (WS-3d).
 
 ---
 
@@ -227,6 +227,38 @@ Provides a unified news stream for the live right-rail feed and per-ticker News 
 
 ---
 
+## `position_engine` module (WS-4)
+
+A two-axis state machine for signal timing — independent of the discovery/scoring stack. Runs per-ticker on daily bars and persists signals to SQLite. **234 tests green.**
+
+**Axes:**
+- **Bias** (always-on, hysteretic): LONG/NEUTRAL/SHORT × strength — slow-moving regime indicator.
+- **Overlay** (trade layer, fires only under long bias): FLAT → ARMED → LONG → EXIT → COOLDOWN. Anti-whipsaw dwell locks prevent premature entries.
+
+**Key design constraints baked in by validation:**
+- Entry target = `max(entry + 2R, forward overhead resistance)` — the original struct-target bug (rr≈0) is fixed.
+- Trailed stop tracks live, not static init_stop.
+- Fill model: 5bps slippage/side + $0.005/share commission.
+
+**Validated findings (Phase-2 corpus backtest, 2014–2024):**
+
+| Metric | Value |
+|--------|-------|
+| Names / trades | 608 / 10,525 |
+| Win rate | 43.5% |
+| Median R | −0.22 |
+| Winsorized expectancy (1× cost) | +0.062R [CI: +0.011, +0.116] |
+| MAR | 0.13 (vs SPY 8.57) |
+| Verdict | **FAIL pre-registered bar** |
+
+Edge is confirmed as **SELECTION** (right-tail peak gains from discovery + direction), not mechanical entry/exit geometry. Automation and the v1 boundary remain gated on a passing P2. An exit-premise check (5 rule families, oracle ceiling, 907 OOS trades) confirmed no exit overlay improves on hold-to-structural-stop.
+
+**Daily action notifier** (`actions.py`) — notify-only, runs as a launchd job, diffs the latest 2 bars and emits ENTRY/EXIT/TRAIL events. Does not place orders.
+
+**Health signals** (`health.py`) — anti-predictive (contrarian buyable-dip markers). Marked dormant; do not surface or trade.
+
+---
+
 ## Limitations / honest stub list
 
 Some features genuinely require paid market-data subscriptions or proprietary infrastructure:
@@ -236,9 +268,9 @@ Some features genuinely require paid market-data subscriptions or proprietary in
 - **SMS / WhatsApp alerts** — only email, Telegram, and webhook are wired.
 - **Full ICS / Wyckoff / Elliott** — heuristic agents, not production-grade pattern recognition.
 - **Live order chaining beyond bracket orders** — market and bracket via ib_insync. OCA, scaling-out, trailing stops not exposed.
-- **Macro sentiment / FinBERT scoring** — deferred to WS-3b (FinBERT already installed); WS-3a ships Discord ingest + yfinance/IBKR per-ticker news only.
-- **Economic calendar** — deferred to WS-3c.
-- **Morning report + whale alerts** — deferred to WS-3d.
+- **Macro sentiment / FinBERT** — live (WS-3b). Gauges embedded in morning brief.
+- **Economic calendar** — live (WS-3c). BLS/FOMC/BEA + earnings ingested.
+- **Morning report + whale alerts** — live (WS-3d). Appended to daily Obsidian report at 8am ET.
 
 Everything else — the 70-agent ensemble, Action Card, screener, period-return panel, portfolio edge overlay, catalyst leg (via bridge), alerts, FastAPI server, MCP server — runs end-to-end on your machine.
 
@@ -290,6 +322,20 @@ argus/
 │   │   ├── gex.py               # BS-gamma spot-sweep profile + levels
 │   │   ├── clock.py             # market-session helpers
 │   │   └── label_sheet.py       # blind labelling CSV for scorer validation
+│   ├── position_engine/         # WS-4: two-axis state machine (bias × overlay)
+│   │   ├── engine.py            # core FLAT→ARMED→LONG→EXIT→COOLDOWN FSM
+│   │   ├── replay.py            # bar-by-bar replay runner → trades / position_signals
+│   │   ├── levels.py            # entry/stop/target levels (STRUCT_LB overhead resistance)
+│   │   ├── fills.py             # FillModel (5bps slippage + $0.005/share)
+│   │   ├── backtest.py          # per-name backtest (price_trades, buy-and-hold)
+│   │   ├── metrics.py           # R-space metrics + block-bootstrap CI
+│   │   ├── validation.py        # corpus-wide baseline validation (robust stats, R-clip)
+│   │   ├── corpus.py            # 618-name yfinance corpus loader (survivorship caveat)
+│   │   ├── actions.py           # daily action notifier (ENTRY/EXIT/TRAIL diffs, notify-only)
+│   │   ├── exits.py             # 5-rule exit family (premise-check only — NO-GO verdict)
+│   │   ├── premise.py           # oracle ceiling + bootstrap exit-premise evaluator
+│   │   ├── health.py            # ⚠️ anti-predictive signals — dormant, do not trade
+│   │   └── schema.py            # 4-table SQLite schema
 │   ├── alerts/dispatcher.py     # email / telegram / webhook
 │   ├── alerts/log.py            # SQLite alert log
 │   ├── chat/chart_chat.py       # Anthropic-grounded analysis

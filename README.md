@@ -26,6 +26,8 @@ of future results. The author accepts no liability for any financial loss.
 | 3. Fundamental leg | **Catalyst** (`argus/argus/catalyst/`) | 5 votes: event catalyst, earnings proximity, squeeze setup, growth/profitability, analyst upside |
 | 4. Blend + report | **`sentiment_bridge.py`** | Weighted 3-leg score, regime gating, sector rotation panel, Markdown + CSV |
 | 5. Dashboard | **`dashboard/`** | Interactive view of today's bridge signals |
+| 6. Position Engine | **`argus/argus/position_engine/`** | WS-4: two-axis state machine (bias × overlay) for per-ticker signal timing. Built + validated; automation gated on pre-registered success bar. |
+| 7. 0DTE hub | **`~/OptionsAnalysis`** (separate repo) | WS-5: QQQ 0DTE analytics — live IBKR ingest, IV surface, delta/gamma/charm exposures, MSI/MTC ladder. Analytics only, no orders. |
 
 **Typical daily funnel:** ~480 discovered → ~70 actionable → ~22 technically analysed → ~13 fully aligned longs → ~6 high-conviction.
 
@@ -129,7 +131,7 @@ Start the Argus API on `:8088` for live quotes, screener, and portfolio pages.
 | Doc | Contents |
 |-----|----------|
 | [`OVERVIEW.md`](OVERVIEW.md) | Product positioning, funnel, performance stats, stack |
-| [`argus/README.md`](argus/README.md) | Agent families, REST API, MCP, IBKR, alerts, limitations |
+| [`argus/README.md`](argus/README.md) | Agent families, REST API, MCP, IBKR, alerts, Position Engine, limitations |
 | [`dashboard/README.md`](dashboard/README.md) | Dashboard pages, data sources, dev setup |
 | [`docs/SESSION_HANDOFF.md`](docs/SESSION_HANDOFF.md) | Latest pipeline changes and open follow-ups |
 

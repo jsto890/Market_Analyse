@@ -42,7 +42,9 @@ Three ingestion paths feed one ticker pool — not just the curated follow list:
 
 ---
 
-## Evidence (point-in-time)
+## Evidence
+
+### Selection performance (point-in-time, May–Jun 2026)
 
 Every *Aligned* selection from **2026-05-07 → 06-08 (65 names)** was re-tested by truncating each ticker's price history to its first-flagged date, re-running the current engine, and measuring what happened next:
 
@@ -58,12 +60,28 @@ Every *Aligned* selection from **2026-05-07 → 06-08 (65 names)** was re-tested
 
 Supporting exhibits: `reports/selection_performance.csv`, `reports/selection_backtest.csv`, `docs/label_efficacy/`.
 
+### Phase-2 mechanical backtest (2014–2024, 608 names)
+
+A pre-registered baseline validation of the **WS-4 Position Engine** — a two-axis state-machine (bias × overlay) that runs independently on each name and emits ENTRY/EXIT/TRAIL signals — was run over the full corpus (608 usable names, 10,525 trades, 11 years). Results are outlier-robust (winsorized at ±25R; one DXC 2015 artifact at +344,397R was the sole clipped trade):
+
+| Cost tier | Trades | WR | Median R | Trimmed mean | Winsorized exp | 95% CI | MAR |
+|-----------|--------|----|----------|--------------|----------------|--------|-----|
+| Baseline (1×) | 10,525 | 43.5% | −0.223 | −0.007 | +0.062 | [+0.011, +0.116] | 0.13 |
+| 2× fills | 10,525 | 43.2% | −0.251 | −0.033 | +0.033 | [−0.017, +0.088] | 0.07 |
+| 3× fills | 10,525 | 42.9% | −0.281 | −0.058 | +0.005 | [−0.045, +0.058] | 0.01 |
+
+SPY MAR over the same window: **8.57**.
+
+**Verdict: FAIL vs the pre-registered success bar.** There is a statistically real but economically tiny right-tail expectancy at baseline costs (+0.062R/trade, CI excludes zero) — but it evaporates under cost stress and the MAR is negligible. The median trade loses 0.22R; all net edge lives in the top 5% of trades. This is consistent with the project's confirmed signal: **the edge is SELECTION (discovery + direction), not mechanical entry/exit geometry**. The Position Engine's automation gate and v1 boundary remain on hold until the bar is met.
+
+A companion exit-premise check (907 trades, 5 rule families + oracle ceiling) confirmed no exit overlay improves on hold-to-structural-stop OOS.
+
 ---
 
 ## What it is / isn't
 
-- **Is:** a daily, defensible, point-in-time-validated **discovery + long-selection** engine with transparent reasoning (every agent vote and account is inspectable).
-- **Isn't (yet):** a complete trading system. No automated exit, sizing, or portfolio-level risk claim.
+- **Is:** a daily, defensible, point-in-time-validated **discovery + long-selection** engine with transparent reasoning (every agent vote and account is inspectable). Includes a built and validated Position Engine (WS-4) that runs a two-axis state machine for signal timing.
+- **Isn't (yet):** a live trading bot. The Position Engine is built and mechanically validated; its pre-registered success bar was not met in the 2014–2024 backtest, so automated order execution and the v1 boundary remain gated.
 
 ## Stack
 
