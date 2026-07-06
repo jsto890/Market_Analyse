@@ -38,6 +38,7 @@ const ACCEPTABLE_FAIL_PREFIXES = [
   "/api/argus/history",
   "/api/argus/rail/quotes", // 404 until live API restarts post-integration (WS-2 pre-integration state)
   "/api/odte/health",
+  "/api/odte/symbol",
 ];
 
 // Next.js dev-server static chunks that may 404 transiently during warmup
@@ -74,6 +75,15 @@ async function checkRails(page, label) {
   const right = await page.locator('aside:has-text("NEWS")').count();
   if (left === 0) return `${label}: left quote rail not rendered`;
   if (right === 0) return `${label}: right news rail not rendered`;
+  return null;
+}
+
+async function checkOdteSelector(page, label) {
+  for (const sym of ["SPY", "QQQ", "IWM", "DIA"]) {
+    if ((await page.locator(`button:text-is("${sym}")`).count()) === 0) {
+      return `${label}: symbol button ${sym} missing`;
+    }
+  }
   return null;
 }
 
@@ -205,6 +215,12 @@ async function main() {
     if (route.path === "/" && !navError) {
       const railErr = await checkRails(page, route.label);
       if (railErr) chartPillErrors.push(railErr);
+    }
+
+    // For odte route: check the symbol selector rendered
+    if (route.path === "/odte" && !navError) {
+      const selErr = await checkOdteSelector(page, route.label);
+      if (selErr) chartPillErrors.push(selErr);
     }
 
     // For home route: try clicking first table row to expand it

@@ -1,8 +1,16 @@
+export const odteSymbols = ["SPY", "QQQ", "IWM", "DIA"] as const;
+export type OdteSymbol = (typeof odteSymbols)[number];
+
+export function isOdteSymbol(value: string): value is OdteSymbol {
+  return (odteSymbols as readonly string[]).includes(value);
+}
+
 export interface OdteHealth {
   ok: boolean;
   ibkr_connected: boolean;
   subscriptions?: number;
   server_ts_ms?: number;
+  symbol?: string;
 }
 
 export type OdteTone = "live" | "warn" | "down";

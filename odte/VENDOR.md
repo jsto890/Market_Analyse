@@ -1,9 +1,10 @@
 # Vendored: OptionsAnalysis
 
 Source: ~/OptionsAnalysis
-Commit: f7c1240aed9cfd21cdfcd0e3a7679a69573fe53d
-Vendored: 2026-06-30
+Commit: b44868206555dbbd8e76b9ca4a3347f1f8ac7d89
+Vendored: 2026-07-06
 Reason: WS-5 SP1 — embed the QQQ 0DTE ladder into the Market_Analyse dashboard.
+        WS-5 SP2a — in-process ETF symbol switch (SPY/QQQ/IWM/DIA).
 
 ## Rules
 - Treat this tree as OPAQUE. Do not edit internals.

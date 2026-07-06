@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { odteBadge } from "@/lib/odte";
+import { odteBadge, odteSymbols, isOdteSymbol } from "@/lib/odte";
 
 describe("odteBadge", () => {
   it("Live when ok and ibkr connected", () => {
@@ -16,5 +16,31 @@ describe("odteBadge", () => {
   });
   it("Service down when health is undefined (first render)", () => {
     expect(odteBadge(undefined)).toEqual({ label: "Service down", tone: "down" });
+  });
+});
+
+describe("odteSymbols", () => {
+  it("is exactly the four switchable ETFs", () => {
+    expect(odteSymbols).toEqual(["SPY", "QQQ", "IWM", "DIA"]);
+  });
+});
+
+describe("isOdteSymbol", () => {
+  it("accepts every allow-list member", () => {
+    for (const s of odteSymbols) expect(isOdteSymbol(s)).toBe(true);
+  });
+  it("rejects unknown, empty, and lowercase symbols", () => {
+    expect(isOdteSymbol("TSLA")).toBe(false);
+    expect(isOdteSymbol("")).toBe(false);
+    expect(isOdteSymbol("spy")).toBe(false);
+  });
+});
+
+describe("odteBadge with symbol field", () => {
+  it("is unaffected by symbol in the health payload", () => {
+    expect(odteBadge({ ok: true, ibkr_connected: true, symbol: "SPY" })).toEqual({
+      label: "Live",
+      tone: "live",
+    });
   });
 });
