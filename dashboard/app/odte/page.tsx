@@ -1,7 +1,8 @@
 "use client";
 
+import { useState } from "react";
 import useSWR from "swr";
-import { odteBadge, type OdteHealth } from "@/lib/odte";
+import { odteBadge, odteSymbols, type OdteHealth, type OdteSymbol } from "@/lib/odte";
 
 const ODTE_APP_URL = "http://127.0.0.1:8788/app";
 const fetcher = (u: string) => fetch(u, { cache: "no-store" }).then((r) => r.json());
@@ -12,19 +13,56 @@ const toneClass: Record<string, string> = {
 };
 
 export default function OdtePage() {
-  const { data, error } = useSWR<OdteHealth>("/api/odte/health", fetcher, {
+  const { data, error, mutate } = useSWR<OdteHealth>("/api/odte/health", fetcher, {
     refreshInterval: 5000,
     shouldRetryOnError: false,
   });
+  const [pending, setPending] = useState<OdteSymbol | null>(null);
   const health = error ? null : data;
   const badge = odteBadge(health);
   const down = badge.tone === "down";
+  const activeSymbol = health?.symbol;
+
+  async function switchSymbol(symbol: OdteSymbol) {
+    if (symbol === activeSymbol || pending !== null) return;
+    setPending(symbol);
+    try {
+      await fetch("/api/odte/symbol", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ symbol }),
+      });
+      await mutate();
+    } finally {
+      setPending(null);
+    }
+  }
 
   return (
     <main className="flex flex-col font-mono h-full">
       <div className="flex items-center justify-between px-4 py-2 border-b border-line">
-        <h1 className="text-sm font-semibold">Index 0DTE · QQQ</h1>
-        <span className={`px-2 py-0.5 text-xs rounded ${toneClass[badge.tone]}`}>{badge.label}</span>
+        <h1 className="text-sm font-semibold">Index 0DTE{activeSymbol ? ` · ${activeSymbol}` : ""}</h1>
+        <div className="flex items-center gap-3">
+          <div className="flex rounded border border-line overflow-hidden">
+            {odteSymbols.map((symbol) => (
+              <button
+                key={symbol}
+                onClick={() => switchSymbol(symbol)}
+                disabled={down}
+                className={`px-2 py-0.5 text-xs ${
+                  symbol === activeSymbol
+                    ? "bg-green-500/20 text-green-400"
+                    : symbol === pending
+                      ? "bg-yellow-500/20 text-yellow-400"
+                      : "text-muted"
+                }`}
+              >
+                {symbol}
+              </button>
+            ))}
+          </div>
+          <span className={`px-2 py-0.5 text-xs rounded ${toneClass[badge.tone]}`}>{badge.label}</span>
+        </div>
       </div>
       <div className="relative flex-1 min-h-0">
         {down ? (

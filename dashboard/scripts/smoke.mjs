@@ -78,6 +78,15 @@ async function checkRails(page, label) {
   return null;
 }
 
+async function checkOdteSelector(page, label) {
+  for (const sym of ["SPY", "QQQ", "IWM", "DIA"]) {
+    if ((await page.locator(`button:text-is("${sym}")`).count()) === 0) {
+      return `${label}: symbol button ${sym} missing`;
+    }
+  }
+  return null;
+}
+
 async function checkChartPills(page, label) {
   for (const pill of ["3M", "1Y", "2Y", "6M"]) {
     const btn = page.locator(`button:text-is("${pill}")`).first();
@@ -206,6 +215,12 @@ async function main() {
     if (route.path === "/" && !navError) {
       const railErr = await checkRails(page, route.label);
       if (railErr) chartPillErrors.push(railErr);
+    }
+
+    // For odte route: check the symbol selector rendered
+    if (route.path === "/odte" && !navError) {
+      const selErr = await checkOdteSelector(page, route.label);
+      if (selErr) chartPillErrors.push(selErr);
     }
 
     // For home route: try clicking first table row to expand it
