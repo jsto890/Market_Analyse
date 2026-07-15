@@ -90,6 +90,15 @@ async function checkOdteSelector(page, label) {
   return null;
 }
 
+async function checkOdteGrid(page, label) {
+  for (const title of ["Gamma exposure", "Unusual activity", "Put/call ratio", "Spot"]) {
+    if ((await page.locator(`text="${title}"`).count()) === 0) {
+      return `${label}: companion card "${title}" missing`;
+    }
+  }
+  return null;
+}
+
 async function checkChartPills(page, label) {
   for (const pill of ["3M", "1Y", "2Y", "6M"]) {
     const btn = page.locator(`button:text-is("${pill}")`).first();
@@ -224,6 +233,8 @@ async function main() {
     if (route.path === "/odte" && !navError) {
       const selErr = await checkOdteSelector(page, route.label);
       if (selErr) chartPillErrors.push(selErr);
+      const gridErr = await checkOdteGrid(page, route.label);
+      if (gridErr) chartPillErrors.push(gridErr);
     }
 
     // For home route: try clicking first table row to expand it

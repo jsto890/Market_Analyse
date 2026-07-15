@@ -3,6 +3,12 @@
 import { useState } from "react";
 import useSWR from "swr";
 import { odteBadge, odteSymbols, type OdteHealth, type OdteSymbol } from "@/lib/odte";
+import { companionSymbol, type GexLevels } from "@/lib/odteCompanion";
+import { useRailQuotes } from "@/lib/rail-quotes";
+import GexCard from "@/components/odte/GexCard";
+import UnusualCard from "@/components/odte/UnusualCard";
+import PcrCard from "@/components/odte/PcrCard";
+import SpotCard from "@/components/odte/SpotCard";
 
 const ODTE_APP_URL = "http://127.0.0.1:8788/app";
 const fetcher = (u: string) => fetch(u, { cache: "no-store" }).then((r) => r.json());
@@ -21,7 +27,21 @@ export default function OdtePage() {
   const health = error ? null : data;
   const badge = odteBadge(health);
   const down = badge.tone === "down";
-  const activeSymbol = health?.symbol;
+  const activeSymbol = health?.symbol as OdteSymbol | undefined;
+  const gridSymbol = activeSymbol ?? "QQQ";
+  const { data: gexData } = useSWR<GexLevels>(
+    `/api/odte/gex?symbol=${gridSymbol}`,
+    (url: string) =>
+      fetch(url).then((r) => {
+        if (!r.ok) throw new Error(`${r.status}`);
+        return r.json();
+      }),
+    { refreshInterval: 60_000 }
+  );
+  const zeroGamma = gexData?.zero_gamma ?? null;
+  const { data: railData } = useRailQuotes();
+  const spot =
+    railData?.quotes.find((q) => q.symbol === companionSymbol(gridSymbol))?.price ?? null;
 
   async function switchSymbol(symbol: OdteSymbol) {
     if (symbol === activeSymbol || pending !== null) return;
@@ -39,7 +59,7 @@ export default function OdtePage() {
   }
 
   return (
-    <main className="flex flex-col font-mono h-full">
+    <main className="flex flex-col font-mono h-full overflow-y-auto">
       <div className="flex items-center justify-between px-4 py-2 border-b border-line">
         <h1 className="text-sm font-semibold">Index 0DTE{activeSymbol ? ` · ${activeSymbol}` : ""}</h1>
         <div className="flex items-center gap-3">
@@ -64,7 +84,7 @@ export default function OdtePage() {
           <span className={`px-2 py-0.5 text-xs rounded ${toneClass[badge.tone]}`}>{badge.label}</span>
         </div>
       </div>
-      <div className="relative flex-1 min-h-0">
+      <div className="relative h-[62vh] min-h-[420px]">
         {down ? (
           <div className="absolute inset-0 flex items-center justify-center text-muted text-sm">
             Ladder offline — 0DTE service not reachable.
@@ -73,6 +93,12 @@ export default function OdtePage() {
           <iframe src={ODTE_APP_URL} title="0DTE ladder" className="w-full h-full border-0" />
         )}
       </div>
+      <section className="grid grid-cols-1 lg:grid-cols-2 gap-3 p-3">
+        <GexCard symbol={gridSymbol} />
+        <UnusualCard symbol={gridSymbol} />
+        <PcrCard symbol={gridSymbol} />
+        <SpotCard symbol={gridSymbol} spot={spot} zeroGamma={zeroGamma} />
+      </section>
     </main>
   );
 }
