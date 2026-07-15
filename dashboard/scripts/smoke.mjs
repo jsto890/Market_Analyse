@@ -39,6 +39,9 @@ const ACCEPTABLE_FAIL_PREFIXES = [
   "/api/argus/rail/quotes", // 404 until live API restarts post-integration (WS-2 pre-integration state)
   "/api/odte/health",
   "/api/odte/symbol",
+  "/api/odte/gex",
+  "/api/odte/unusual",
+  "/api/odte/pcr",
 ];
 
 // Next.js dev-server static chunks that may 404 transiently during warmup
@@ -82,6 +85,15 @@ async function checkOdteSelector(page, label) {
   for (const sym of ["SPY", "QQQ", "IWM", "DIA"]) {
     if ((await page.locator(`button:text-is("${sym}")`).count()) === 0) {
       return `${label}: symbol button ${sym} missing`;
+    }
+  }
+  return null;
+}
+
+async function checkOdteGrid(page, label) {
+  for (const title of ["Gamma exposure", "Unusual activity", "Put/call ratio", "Spot"]) {
+    if ((await page.locator(`text="${title}"`).count()) === 0) {
+      return `${label}: companion card "${title}" missing`;
     }
   }
   return null;
@@ -221,6 +233,8 @@ async function main() {
     if (route.path === "/odte" && !navError) {
       const selErr = await checkOdteSelector(page, route.label);
       if (selErr) chartPillErrors.push(selErr);
+      const gridErr = await checkOdteGrid(page, route.label);
+      if (gridErr) chartPillErrors.push(gridErr);
     }
 
     // For home route: try clicking first table row to expand it

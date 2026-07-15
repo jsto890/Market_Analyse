@@ -223,6 +223,36 @@ def build_app() -> FastAPI:
         finally:
             conn.close()
 
+    @app.get("/api/pcr/{symbol}")
+    def pcr(symbol: str):
+        conn = get_conn()
+        ensure_schema(conn)
+        try:
+            latest = conn.execute(
+                "SELECT snap_date AS d, kind AS k FROM options_snapshots "
+                "WHERE symbol=? ORDER BY snap_date DESC, ts DESC LIMIT 1",
+                (symbol.upper(),)).fetchone()
+            if not latest or not latest["d"]:
+                raise HTTPException(404, "no snapshots for symbol")
+            rows = conn.execute(
+                "SELECT type, SUM(vol) AS vol, SUM(oi) AS oi FROM options_snapshots "
+                "WHERE symbol=? AND snap_date=? AND kind=? GROUP BY type",
+                (symbol.upper(), latest["d"], latest["k"])).fetchall()
+            agg = {r["type"]: {"vol": r["vol"] or 0, "oi": r["oi"] or 0} for r in rows}
+            call = agg.get("C", {"vol": 0, "oi": 0})
+            put = agg.get("P", {"vol": 0, "oi": 0})
+
+            def _ratio(p, c):
+                return round(p / c, 3) if c else None
+
+            return {"symbol": symbol.upper(), "as_of": latest["d"], "kind": latest["k"],
+                    "pcr_vol": _ratio(put["vol"], call["vol"]),
+                    "pcr_oi": _ratio(put["oi"], call["oi"]),
+                    "call_vol": call["vol"], "put_vol": put["vol"],
+                    "call_oi": call["oi"], "put_oi": put["oi"]}
+        finally:
+            conn.close()
+
     @app.get("/api/history/{symbol}")
     def history(symbol: str, period: str = "1y", interval: str = "1d"):
         df = get_history(symbol, period=period, interval=interval)
