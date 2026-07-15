@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { odteBadge, odteSymbols, isOdteSymbol } from "@/lib/odte";
+import { odteBadge, odteSymbols, isOdteSymbol, odteEtfSymbols, odteIndexSymbols } from "@/lib/odte";
 
 describe("odteBadge", () => {
   it("Live when ok and ibkr connected", () => {
@@ -20,8 +20,13 @@ describe("odteBadge", () => {
 });
 
 describe("odteSymbols", () => {
-  it("is exactly the four switchable ETFs", () => {
-    expect(odteSymbols).toEqual(["SPY", "QQQ", "IWM", "DIA"]);
+  it("covers all eight symbols in order", () => {
+    expect([...odteSymbols]).toEqual(["SPY", "QQQ", "IWM", "DIA", "SPX", "NDX", "RUT", "DJX"]);
+  });
+
+  it("splits ETF and index groups", () => {
+    expect([...odteEtfSymbols]).toEqual(["SPY", "QQQ", "IWM", "DIA"]);
+    expect([...odteIndexSymbols]).toEqual(["SPX", "NDX", "RUT", "DJX"]);
   });
 });
 
@@ -33,6 +38,10 @@ describe("isOdteSymbol", () => {
     expect(isOdteSymbol("TSLA")).toBe(false);
     expect(isOdteSymbol("")).toBe(false);
     expect(isOdteSymbol("spy")).toBe(false);
+  });
+  it("accepts index symbols in the guard", () => {
+    expect(isOdteSymbol("SPX")).toBe(true);
+    expect(isOdteSymbol("VIX")).toBe(false);
   });
 });
 

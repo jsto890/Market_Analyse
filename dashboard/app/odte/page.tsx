@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import useSWR from "swr";
-import { isOdteSymbol, odteBadge, odteSymbols, type OdteHealth, type OdteSymbol } from "@/lib/odte";
+import { isOdteSymbol, odteBadge, odteSymbols, odteEtfSymbols, odteIndexSymbols, type OdteHealth, type OdteSymbol } from "@/lib/odte";
 import { companionSymbol, type GexLevels } from "@/lib/odteCompanion";
 import { useRailQuotes } from "@/lib/rail-quotes";
 import GexCard from "@/components/odte/GexCard";
@@ -64,22 +64,45 @@ export default function OdtePage() {
         <h1 className="text-sm font-semibold">Index 0DTE{activeSymbol ? ` · ${activeSymbol}` : ""}</h1>
         <div className="flex items-center gap-3">
           <div className="flex rounded border border-line overflow-hidden">
-            {odteSymbols.map((symbol) => (
-              <button
-                key={symbol}
-                onClick={() => switchSymbol(symbol)}
-                disabled={down}
-                className={`px-2 py-0.5 text-xs ${
-                  symbol === activeSymbol
-                    ? "bg-green-500/20 text-green-400"
-                    : symbol === pending
-                      ? "bg-yellow-500/20 text-yellow-400"
-                      : "text-muted"
-                }`}
-              >
-                {symbol}
-              </button>
-            ))}
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-muted">ETF</span>
+              {odteEtfSymbols.map((symbol) => (
+                <button
+                  key={symbol}
+                  onClick={() => switchSymbol(symbol)}
+                  disabled={down}
+                  className={`px-2 py-0.5 text-xs ${
+                    symbol === activeSymbol
+                      ? "bg-green-500/20 text-green-400"
+                      : symbol === pending
+                        ? "bg-yellow-500/20 text-yellow-400"
+                        : "text-muted"
+                  }`}
+                >
+                  {symbol}
+                </button>
+              ))}
+            </div>
+            <span className="w-px h-4 bg-line mx-1" />
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-muted">INDEX</span>
+              {odteIndexSymbols.map((symbol) => (
+                <button
+                  key={symbol}
+                  onClick={() => switchSymbol(symbol)}
+                  disabled={down}
+                  className={`px-2 py-0.5 text-xs ${
+                    symbol === activeSymbol
+                      ? "bg-green-500/20 text-green-400"
+                      : symbol === pending
+                        ? "bg-yellow-500/20 text-yellow-400"
+                        : "text-muted"
+                  }`}
+                >
+                  {symbol}
+                </button>
+              ))}
+            </div>
           </div>
           <span className={`px-2 py-0.5 text-xs rounded ${toneClass[badge.tone]}`}>{badge.label}</span>
         </div>

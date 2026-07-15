@@ -1,4 +1,6 @@
-export const odteSymbols = ["SPY", "QQQ", "IWM", "DIA"] as const;
+export const odteSymbols = ["SPY", "QQQ", "IWM", "DIA", "SPX", "NDX", "RUT", "DJX"] as const;
+export const odteEtfSymbols = odteSymbols.slice(0, 4);
+export const odteIndexSymbols = odteSymbols.slice(4);
 export type OdteSymbol = (typeof odteSymbols)[number];
 
 export function isOdteSymbol(value: string): value is OdteSymbol {
