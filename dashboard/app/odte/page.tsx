@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import useSWR from "swr";
-import { odteBadge, odteSymbols, type OdteHealth, type OdteSymbol } from "@/lib/odte";
+import { isOdteSymbol, odteBadge, odteSymbols, type OdteHealth, type OdteSymbol } from "@/lib/odte";
 import { companionSymbol, type GexLevels } from "@/lib/odteCompanion";
 import { useRailQuotes } from "@/lib/rail-quotes";
 import GexCard from "@/components/odte/GexCard";
@@ -27,7 +27,7 @@ export default function OdtePage() {
   const health = error ? null : data;
   const badge = odteBadge(health);
   const down = badge.tone === "down";
-  const activeSymbol = health?.symbol as OdteSymbol | undefined;
+  const activeSymbol = health?.symbol && isOdteSymbol(health.symbol) ? health.symbol : undefined;
   const gridSymbol = activeSymbol ?? "QQQ";
   const { data: gexData } = useSWR<GexLevels>(
     `/api/odte/gex?symbol=${gridSymbol}`,
@@ -59,7 +59,7 @@ export default function OdtePage() {
   }
 
   return (
-    <main className="flex flex-col font-mono h-full overflow-y-auto">
+    <main className="flex flex-col font-mono h-full">
       <div className="flex items-center justify-between px-4 py-2 border-b border-line">
         <h1 className="text-sm font-semibold">Index 0DTE{activeSymbol ? ` · ${activeSymbol}` : ""}</h1>
         <div className="flex items-center gap-3">
