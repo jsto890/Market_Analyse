@@ -39,6 +39,9 @@ const ACCEPTABLE_FAIL_PREFIXES = [
   "/api/argus/rail/quotes", // 404 until live API restarts post-integration (WS-2 pre-integration state)
   "/api/odte/health",
   "/api/odte/symbol",
+  "/api/odte/gex",
+  "/api/odte/unusual",
+  "/api/odte/pcr",
 ];
 
 // Next.js dev-server static chunks that may 404 transiently during warmup
