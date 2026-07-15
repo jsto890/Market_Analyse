@@ -229,14 +229,15 @@ def build_app() -> FastAPI:
         ensure_schema(conn)
         try:
             latest = conn.execute(
-                "SELECT MAX(snap_date) AS d, MAX(kind) AS k FROM options_snapshots "
-                "WHERE symbol=?", (symbol.upper(),)).fetchone()
+                "SELECT snap_date AS d, kind AS k FROM options_snapshots "
+                "WHERE symbol=? ORDER BY snap_date DESC, ts DESC LIMIT 1",
+                (symbol.upper(),)).fetchone()
             if not latest or not latest["d"]:
                 raise HTTPException(404, "no snapshots for symbol")
             rows = conn.execute(
                 "SELECT type, SUM(vol) AS vol, SUM(oi) AS oi FROM options_snapshots "
-                "WHERE symbol=? AND snap_date=? GROUP BY type",
-                (symbol.upper(), latest["d"])).fetchall()
+                "WHERE symbol=? AND snap_date=? AND kind=? GROUP BY type",
+                (symbol.upper(), latest["d"], latest["k"])).fetchall()
             agg = {r["type"]: {"vol": r["vol"] or 0, "oi": r["oi"] or 0} for r in rows}
             call = agg.get("C", {"vol": 0, "oi": 0})
             put = agg.get("P", {"vol": 0, "oi": 0})
