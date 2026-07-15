@@ -53,6 +53,22 @@ describe("odteCompanion", () => {
     it("returns em-dash for null", () => {
       expect(fmtGex(null)).toBe("—");
     });
+
+    it("boundary: large negative value in billions with U+2212 minus", () => {
+      expect(fmtGex(-1.2e9)).toBe("−1.20B");
+    });
+
+    it("boundary: sub-billion value in millions", () => {
+      expect(fmtGex(50_000_000)).toBe("+50M");
+    });
+
+    it("boundary: exactly at 1e8 threshold renders as billions", () => {
+      expect(fmtGex(100_000_000)).toBe("+0.10B");
+    });
+
+    it("boundary: sub-million value formats as integer", () => {
+      expect(fmtGex(500)).toBe("+500");
+    });
   });
 
   describe("pcrTone", () => {
@@ -81,6 +97,10 @@ describe("odteCompanion", () => {
 
     it("returns em-dash for null inputs", () => {
       expect(pctFrom(null, 5)).toBe("—");
+    });
+
+    it("zero spot guard: returns em-dash when spot is zero", () => {
+      expect(pctFrom(0, 5)).toBe("—");
     });
   });
 });

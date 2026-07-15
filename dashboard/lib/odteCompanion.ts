@@ -57,7 +57,7 @@ export interface PcrPayload {
   put_oi: number;
 }
 
-/** Billions/millions compaction for total GEX: 350030658 -> "+0.35B" */
+/** Billions/millions compaction for total GEX: values ≥ 1e8 render as B, ≥ 1e6 as M. Example: 350030658 -> "+0.35B" */
 export function fmtGex(value: number | null): string {
   if (value == null) return "—";
   const sign = value >= 0 ? "+" : "−";
