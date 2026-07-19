@@ -35,6 +35,7 @@ def rail_quotes(fetch: Callable = _default_fetch) -> dict:
     close = close.ffill()
     last = close.iloc[-1]
     prev = close.iloc[-2] if len(close) > 1 else last
+    prev2 = close.iloc[-3] if len(close) > 2 else prev
     quotes, groups = [], {"futures": [], "indices": [], "forex": []}
     for sym in RAIL_BASKET:
         if sym not in close.columns:
@@ -43,8 +44,14 @@ def rail_quotes(fetch: Callable = _default_fetch) -> dict:
         if p is None or pd.isna(p):
             continue
         chg_pct = float((p / pr - 1) * 100) if pr and not pd.isna(pr) and pr != 0 else 0.0
+        pr2 = prev2.get(sym)
+        last_close = float(pr) if pr is not None and not pd.isna(pr) else float(p)
+        prev_close = float(pr2) if pr2 is not None and not pd.isna(pr2) else last_close
         q = {"symbol": sym, "price": round(float(p), 4),
-             "change_pct": round(chg_pct, 2), "group": _GROUP[sym]}
+             "change_pct": round(chg_pct, 2),
+             "last_close": round(last_close, 4),
+             "prev_close": round(prev_close, 4),
+             "group": _GROUP[sym]}
         quotes.append(q)
         groups[_GROUP[sym]].append(sym)
     return {"quotes": quotes, "groups": groups, "error": None}

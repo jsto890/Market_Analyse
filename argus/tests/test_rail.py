@@ -23,3 +23,25 @@ def test_rail_quotes_per_symbol_last_valid(monkeypatch):
 def test_rail_quotes_survives_empty(monkeypatch):
     out = rail_quotes(fetch=lambda symbols, **k: pd.DataFrame())
     assert out["quotes"] == [] and out["error"] == "no data"
+
+
+def _fake_fetch_three_rows(symbols, **kwargs):
+    idx = pd.to_datetime(["2026-07-16", "2026-07-17", "2026-07-20"])
+    return pd.DataFrame({s: [98.0, 100.0, 101.0] for s in RAIL_BASKET}, index=idx)
+
+
+def test_rail_quotes_include_three_closes():
+    q = rail_quotes(fetch=_fake_fetch_three_rows)["quotes"][0]
+    assert q["price"] == 101.0
+    assert q["last_close"] == 100.0
+    assert q["prev_close"] == 98.0
+    assert q["change_pct"] == 1.0  # unchanged legacy field
+
+
+def test_rail_quotes_two_rows_fallback():
+    def fetch_two(symbols, **kwargs):
+        idx = pd.to_datetime(["2026-07-17", "2026-07-20"])
+        return pd.DataFrame({s: [100.0, 101.0] for s in RAIL_BASKET}, index=idx)
+    q = rail_quotes(fetch=fetch_two)["quotes"][0]
+    assert q["last_close"] == 100.0
+    assert q["prev_close"] == 100.0  # falls back to last_close
