@@ -32,21 +32,20 @@ def rail_quotes(fetch: Callable = _default_fetch) -> dict:
     if close is None or close.empty or len(close) < 1:
         return {"quotes": [], "groups": {"futures": [], "indices": [], "forex": []},
                 "error": "no data"}
-    close = close.ffill()
-    last = close.iloc[-1]
-    prev = close.iloc[-2] if len(close) > 1 else last
-    prev2 = close.iloc[-3] if len(close) > 2 else prev
     quotes, groups = [], {"futures": [], "indices": [], "forex": []}
     for sym in RAIL_BASKET:
         if sym not in close.columns:
             continue
-        p, pr = last.get(sym), prev.get(sym)
-        if p is None or pd.isna(p):
+        # Per-symbol real prints only: the basket index is the union of dates
+        # across symbols (futures trade Sunday, equities don't), so padded rows
+        # must not count as closes.
+        series = close[sym].dropna()
+        if series.empty:
             continue
-        chg_pct = float((p / pr - 1) * 100) if pr and not pd.isna(pr) and pr != 0 else 0.0
-        pr2 = prev2.get(sym)
-        last_close = float(pr) if pr is not None and not pd.isna(pr) else float(p)
-        prev_close = float(pr2) if pr2 is not None and not pd.isna(pr2) else last_close
+        p = series.iloc[-1]
+        last_close = float(series.iloc[-2]) if len(series) > 1 else float(p)
+        prev_close = float(series.iloc[-3]) if len(series) > 2 else last_close
+        chg_pct = float((p / last_close - 1) * 100) if last_close else 0.0
         q = {"symbol": sym, "price": round(float(p), 4),
              "change_pct": round(chg_pct, 2),
              "last_close": round(last_close, 4),

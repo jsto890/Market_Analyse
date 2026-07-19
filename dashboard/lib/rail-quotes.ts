@@ -6,6 +6,8 @@ export interface RailQuote {
   symbol: string;
   price: number;
   change_pct: number;
+  last_close?: number;
+  prev_close?: number;
   group: "futures" | "indices" | "forex";
 }
 export interface RailData {

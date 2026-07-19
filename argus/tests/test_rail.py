@@ -45,3 +45,21 @@ def test_rail_quotes_two_rows_fallback():
     q = rail_quotes(fetch=fetch_two)["quotes"][0]
     assert q["last_close"] == 100.0
     assert q["prev_close"] == 100.0  # falls back to last_close
+
+
+def test_rail_quotes_union_index_weekend_rows():
+    # Futures trade Sunday; SPY doesn't — union index gives SPY NaN weekend
+    # rows that ffill would flatten. Closes must come from each symbol's own
+    # real prints, not the padded frame.
+    def fetch_union(symbols, **kwargs):
+        idx = pd.to_datetime(["2026-07-16", "2026-07-17", "2026-07-19", "2026-07-20"])
+        data = {s: [98.0, 100.0, float("nan"), float("nan")] for s in RAIL_BASKET}
+        data["ES=F"] = [7400.0, 7497.75, 7490.0, 7497.5]  # trades the weekend
+        return pd.DataFrame(data, index=idx)
+
+    by = {q["symbol"]: q for q in rail_quotes(fetch=fetch_union)["quotes"]}
+    assert by["SPY"]["price"] == 100.0
+    assert by["SPY"]["last_close"] == 98.0     # Thursday, not ffilled Friday
+    assert by["ES=F"]["price"] == 7497.5
+    assert by["ES=F"]["last_close"] == 7490.0
+    assert by["ES=F"]["prev_close"] == 7497.75
