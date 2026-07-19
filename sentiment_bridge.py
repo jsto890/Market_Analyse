@@ -868,6 +868,25 @@ def _candidate_table(rows: list[dict]) -> list[str]:
     return out
 
 
+def _sentiment_freshness_note() -> str:
+    # Meta stamp written by Market_Review fetch-x / fetch-fallback; lives at
+    # <review-repo>/data/state/sentiment_meta.json relative to the setups CSV.
+    meta_path = REVIEW_REPORT.parent.parent / "data" / "state" / "sentiment_meta.json"
+    try:
+        meta = json.loads(meta_path.read_text(encoding="utf-8"))
+        last = datetime.fromisoformat(meta["last_success_utc"].replace("Z", "+00:00"))
+    except Exception:
+        return ""
+    from datetime import timezone as _tz
+    age_h = (datetime.now(_tz.utc) - last).total_seconds() / 3600
+    source = meta.get("source", "unknown")
+    if age_h > 36:
+        return f"**⚠ SENTIMENT STALE** — last successful fetch {age_h / 24:.1f}d ago (source: {source})"
+    if source != "x":
+        return f"**Sentiment source:** {source} fallback (X API unavailable), fetched {age_h:.0f}h ago"
+    return ""
+
+
 def _write_markdown(
     results: list[dict],
     out_path: Path,
@@ -876,12 +895,17 @@ def _write_markdown(
     regime_note: str = "",
     rotation_md: str | None = None,
 ) -> None:
-    ts = datetime.now().strftime("%Y-%m-%d %H:%M")
+    from datetime import timezone, timedelta
+    et = timezone(timedelta(hours=-5))
+    ts = datetime.now(et).strftime("%Y-%m-%d %H:%M")
     lines = [
         "# Daily Report",
         f"*Generated {ts}*",
         "",
     ]
+    freshness = _sentiment_freshness_note()
+    if freshness:
+        lines += [freshness, ""]
     if regime_note:
         lines += [f"**Market regime:** {regime_note}", ""]
 
@@ -1083,7 +1107,9 @@ def main() -> None:
     results.sort(key=lambda r: r["combined_score"], reverse=True)
 
     # ── write outputs ─────────────────────────────────────────────────────────
-    ts_tag = datetime.now().strftime("%Y%m%d_%H%M")
+    from datetime import timezone, timedelta
+    et = timezone(timedelta(hours=-5))
+    ts_tag = datetime.now(et).strftime("%Y%m%d_%H%M")
     regime_note = (f"{regime_label} — risk-{'on' if risk_on else 'off'}; "
                    f"chase entries {'ON' if include_chase else 'OFF'}")
     # Compute the rotation section ONCE (it fetches prices + writes a rank
