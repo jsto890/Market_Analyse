@@ -43,7 +43,26 @@ export function MorningReport() {
           {data.day_ahead.synthesis}
         </p>
       )}
+      {data.day_ahead?.gex_line && (
+        <p className="text-[11px] font-mono text-muted leading-relaxed mb-1">
+          {data.day_ahead.gex_line}
+        </p>
+      )}
       <p className="text-xs text-foreground/90 leading-relaxed mb-2">{plain(data.tone)}</p>
+      {data.day_ahead && data.day_ahead.watchlist_news.length > 0 && (
+        <div className="flex flex-wrap gap-1.5 mb-2">
+          {data.day_ahead.watchlist_news.slice(0, 5).map((n, i) => (
+            <a
+              key={i}
+              href={`/t/${n.ticker}`}
+              title={n.headline}
+              className="text-[10px] font-mono border border-line rounded px-1.5 py-px text-accent hover:bg-elevated"
+            >
+              ${n.ticker} news
+            </a>
+          ))}
+        </div>
+      )}
 
       {data.futures.length > 0 && (
         <div className="flex flex-wrap gap-x-3 gap-y-1 mb-2 border-t border-line pt-2">

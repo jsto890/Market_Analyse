@@ -17,6 +17,8 @@ export interface DayAhead {
   synthesis: string;
   earnings_today: DayAheadEarning[];
   earnings_tomorrow: DayAheadEarning[];
+  gex_line: string | null;
+  watchlist_news: { ticker: string; headline: string }[];
 }
 export interface MorningReport {
   date: string; weekday: string; tone: string;

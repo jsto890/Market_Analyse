@@ -109,3 +109,31 @@ def test_render_markdown_includes_day_ahead():
                                       DAY_AHEAD_FUTURES, watchlist={"OKLO"}))
     assert "**Day ahead:**" in md
     assert "OKLO BMO" in md
+
+
+def test_gex_line_sticky_and_squeezy():
+    from argus.report.morning import gex_line
+    # spot above zero-gamma, positive GEX -> sticky
+    s = gex_line(spot=750.0, zero_gamma=748.9, total_gex=1.5e9)
+    assert "supportive" in s and "dips likely bought" in s
+    # spot below zero-gamma -> moves extend
+    s2 = gex_line(spot=740.0, zero_gamma=748.9, total_gex=-2e8)
+    assert "below zero-gamma" in s2 and "moves extend" in s2
+    assert gex_line(spot=None, zero_gamma=748.9, total_gex=1e9) is None
+    assert gex_line(spot=750.0, zero_gamma=None, total_gex=1e9) is None
+
+
+def test_day_ahead_includes_gex_and_watchlist_news():
+    r = build_report(_now(), GAUGES, DAY_AHEAD_EVENTS, HEADLINES, DAY_AHEAD_FUTURES,
+                     watchlist={"NVDA", "OKLO"},
+                     gex={"spot": 750.0, "zero_gamma": 748.9, "total_gex": 1.5e9})
+    da = r["day_ahead"]
+    assert "supportive" in da["gex_line"]
+    # NVDA headline is in HEADLINES and in the watchlist -> surfaced
+    assert da["watchlist_news"] == [{"ticker": "NVDA", "headline": "Chips rally on AI demand"}]
+
+
+def test_day_ahead_gex_absent_is_none():
+    r = build_report(_now(), GAUGES, DAY_AHEAD_EVENTS, HEADLINES, DAY_AHEAD_FUTURES)
+    assert r["day_ahead"]["gex_line"] is None
+    assert r["day_ahead"]["watchlist_news"] == []
