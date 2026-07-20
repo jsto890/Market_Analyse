@@ -65,9 +65,24 @@ def _synthesis(futures: list[dict], today_events: list[dict],
     return " · ".join(parts) if parts else "Quiet slate."
 
 
+def gex_line(spot: float | None, zero_gamma: float | None,
+             total_gex: float | None) -> str | None:
+    """One-sentence GEX risk read — shared contract with the ODTE Levels verdict."""
+    if spot is None or zero_gamma is None or not spot or not zero_gamma:
+        return None
+    dist = (spot / zero_gamma - 1) * 100
+    gex_b = (total_gex or 0) / 1e9
+    if spot >= zero_gamma:
+        return (f"GEX supportive ({gex_b:+.1f}B, spot {dist:+.1f}% vs zero-gamma) — "
+                "dips likely bought")
+    return (f"GEX fragile ({gex_b:+.1f}B, spot {dist:+.1f}% below zero-gamma) — "
+            "moves extend")
+
+
 def build_report(now: datetime, gauges: list[dict], events: list[dict],
                  headlines: list[dict], futures: list[dict],
-                 watchlist: set[str] | None = None) -> dict:
+                 watchlist: set[str] | None = None,
+                 gex: dict | None = None) -> dict:
     """Pure assembler. gauges = macro_sentiment rows; events = econ_calendar rows
     (chronological); headlines = news rows (any order); futures = [{symbol,change_pct}];
     watchlist = tickers whose earnings rank first in day_ahead."""
@@ -85,6 +100,13 @@ def build_report(now: datetime, gauges: list[dict], events: list[dict],
         "synthesis": _synthesis(futures, today_events, earn_today, watchlist),
         "earnings_today": earn_today,
         "earnings_tomorrow": earn_tomorrow,
+        "gex_line": gex_line(gex.get("spot"), gex.get("zero_gamma"),
+                             gex.get("total_gex")) if gex else None,
+        "watchlist_news": [
+            {"ticker": h["ticker"], "headline": h["headline"]}
+            for h in headlines
+            if h.get("ticker") and h["ticker"].upper() in watchlist
+        ],
     }
     return {
         "day_ahead": day_ahead,
@@ -157,10 +179,26 @@ def generate(conn=None, now: datetime | None = None) -> dict:
         headlines = [dict(r) for r in reversed(fetch_latest(conn, 8))]
         futures = _futures_snapshot()
         return build_report(now, gauges, events, headlines, futures,
-                            watchlist=_watchlist_tickers())
+                            watchlist=_watchlist_tickers(),
+                            gex=_gex_snapshot(conn))
     finally:
         if own:
             conn.close()
+
+
+def _gex_snapshot(conn) -> dict | None:
+    """Latest SPY gex_levels row + rail spot for the day-ahead GEX line."""
+    try:
+        row = conn.execute(
+            "SELECT zero_gamma, total_gex FROM gex_levels WHERE symbol='SPY' "
+            "ORDER BY date DESC LIMIT 1").fetchone()
+        if row is None:
+            return None
+        from ..data.rail import rail_quotes
+        spot = next((q["price"] for q in rail_quotes()["quotes"] if q["symbol"] == "SPY"), None)
+        return {"spot": spot, "zero_gamma": row["zero_gamma"], "total_gex": row["total_gex"]}
+    except Exception:
+        return None
 
 
 def _watchlist_tickers() -> set[str]:
