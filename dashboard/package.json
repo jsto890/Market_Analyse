@@ -8,7 +8,10 @@
     "start": "next start",
     "lint": "next lint",
     "test": "vitest run",
-    "ingest": "tsx scripts/ingest.ts"
+    "ingest": "tsx scripts/ingest.ts",
+    "build:standalone": "next build && cp -r .next/static .next/standalone/.next/static",
+    "app:build": "npm run build:standalone && tauri build",
+    "tauri": "tauri"
   },
   "dependencies": {
     "@radix-ui/react-popover": "^1.1.16",
@@ -24,6 +27,7 @@
     "swr": "^2.4.1"
   },
   "devDependencies": {
+    "@tauri-apps/cli": "^2.11.4",
     "@types/better-sqlite3": "^7.6.13",
     "@types/node": "^20",
     "@types/papaparse": "^5.5.2",
