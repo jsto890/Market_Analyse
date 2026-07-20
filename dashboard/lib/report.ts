@@ -9,8 +9,18 @@ export interface MorningEvent {
 export interface MorningHeadline {
   headline: string; ticker: string | null; source: string; is_breaking: number;
 }
+export interface DayAheadEarning extends MorningEvent {
+  session: "BMO" | "AMC" | "—";
+  watchlist: boolean;
+}
+export interface DayAhead {
+  synthesis: string;
+  earnings_today: DayAheadEarning[];
+  earnings_tomorrow: DayAheadEarning[];
+}
 export interface MorningReport {
   date: string; weekday: string; tone: string;
+  day_ahead?: DayAhead;
   futures: { symbol: string; change_pct: number }[];
   today_events: MorningEvent[];
   macro_events: MorningEvent[];

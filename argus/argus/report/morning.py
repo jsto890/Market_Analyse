@@ -3,7 +3,7 @@ own data: macro_sentiment + rail quotes + econ_calendar + news. build_report and
 render_markdown are pure (inputs injected) for testability; generate() wires the
 DB + rail. Surfaces as the dashboard landing header and is appended to the daily
 Obsidian report."""
-from datetime import datetime
+from datetime import datetime, timedelta
 
 # upper bound (inclusive) → label, ascending
 _TONE = [(-0.20, "bearish"), (-0.05, "cautious"), (0.05, "neutral"),
@@ -29,17 +29,65 @@ def _tone_sentence(us: dict | None, glob: dict | None, today_events: list[dict])
     return sent
 
 
+def _earnings_session(time_et: str | None) -> str:
+    if not time_et:
+        return "—"
+    if time_et < "09:30":
+        return "BMO"
+    return "AMC" if time_et >= "16:00" else "—"
+
+
+def _day_ahead_earnings(rows: list[dict], watchlist: set[str]) -> list[dict]:
+    out = [{**e, "session": _earnings_session(e.get("time_et")),
+            "watchlist": (e.get("ticker") or "").upper() in watchlist}
+           for e in rows]
+    return sorted(out, key=lambda e: not e["watchlist"])  # stable: watchlist first
+
+
+def _synthesis(futures: list[dict], today_events: list[dict],
+               earn_today: list[dict], watchlist: set[str]) -> str:
+    parts = []
+    by = {q["symbol"]: q["change_pct"] for q in futures}
+    if "ES=F" in by:
+        parts.append(f"ES {by['ES=F']:+.1f}%")
+    if len(by) > 1:
+        lag = min(by, key=lambda s: by[s])
+        led = max(by, key=lambda s: by[s])
+        if led != lag and by[led] - by[lag] >= 0.3:
+            parts.append(f"{lag.replace('=F', '')} lagging")
+    high = [e for e in today_events if e["importance"] == "high"]
+    if high:
+        e = high[0]
+        parts.append(f"{e['event']} {e['time_et']} ET" if e.get("time_et") else e["event"])
+    if earn_today:
+        wl = sum(1 for e in earn_today if (e.get("ticker") or "").upper() in watchlist)
+        parts.append(f"{len(earn_today)} earnings today" + (f" ({wl} watchlist)" if wl else ""))
+    return " · ".join(parts) if parts else "Quiet slate."
+
+
 def build_report(now: datetime, gauges: list[dict], events: list[dict],
-                 headlines: list[dict], futures: list[dict]) -> dict:
+                 headlines: list[dict], futures: list[dict],
+                 watchlist: set[str] | None = None) -> dict:
     """Pure assembler. gauges = macro_sentiment rows; events = econ_calendar rows
-    (chronological); headlines = news rows (any order); futures = [{symbol,change_pct}]."""
+    (chronological); headlines = news rows (any order); futures = [{symbol,change_pct}];
+    watchlist = tickers whose earnings rank first in day_ahead."""
+    watchlist = {t.upper() for t in (watchlist or set())}
     g = {(x["scope"], x["window"]): x for x in gauges}
     us, glob = g.get(("us", "1d")), g.get(("global", "1d"))
     today = now.strftime("%Y-%m-%d")
+    tomorrow = (now + timedelta(days=1)).strftime("%Y-%m-%d")
     today_events = [e for e in events if e["date"] == today]
     earnings = [e for e in events if e.get("category") == "earnings"]
     macro_events = [e for e in events if e.get("category") != "earnings"]
+    earn_today = _day_ahead_earnings([e for e in earnings if e["date"] == today], watchlist)
+    earn_tomorrow = _day_ahead_earnings([e for e in earnings if e["date"] == tomorrow], watchlist)
+    day_ahead = {
+        "synthesis": _synthesis(futures, today_events, earn_today, watchlist),
+        "earnings_today": earn_today,
+        "earnings_tomorrow": earn_tomorrow,
+    }
     return {
+        "day_ahead": day_ahead,
         "date": today,
         "weekday": now.strftime("%A"),
         "tone": _tone_sentence(us, glob, today_events),
@@ -59,6 +107,13 @@ def _fmt_event(e: dict) -> str:
 
 def render_markdown(r: dict) -> str:
     lines = [f"## Morning Brief — {r['date']} ({r['weekday']})", "", r["tone"], ""]
+    da = r.get("day_ahead") or {}
+    if da.get("synthesis") and da["synthesis"] != "Quiet slate.":
+        lines += [f"**Day ahead:** {da['synthesis']}", ""]
+    if da.get("earnings_today"):
+        earn = " · ".join(f"{e.get('ticker') or e['event']} {e['session']}"
+                          for e in da["earnings_today"])
+        lines += [f"**Earnings today:** {earn}", ""]
     if r["futures"]:
         fut = " · ".join(f"{q['symbol']} {q['change_pct']:+.2f}%" for q in r["futures"])
         lines += [f"**Futures:** {fut}", ""]
@@ -101,10 +156,24 @@ def generate(conn=None, now: datetime | None = None) -> dict:
         # newest headlines first
         headlines = [dict(r) for r in reversed(fetch_latest(conn, 8))]
         futures = _futures_snapshot()
-        return build_report(now, gauges, events, headlines, futures)
+        return build_report(now, gauges, events, headlines, futures,
+                            watchlist=_watchlist_tickers())
     finally:
         if own:
             conn.close()
+
+
+def _watchlist_tickers() -> set[str]:
+    """Tickers in the latest bridge CSV — used to rank day-ahead earnings."""
+    import csv
+    import os
+    from pathlib import Path
+    base = os.environ.get("BRIDGE_DIR") or str(Path(__file__).resolve().parents[3] / "reports")
+    try:
+        with open(Path(base) / "bridge_latest.csv", newline="", encoding="utf-8") as fh:
+            return {row["ticker"].upper() for row in csv.DictReader(fh) if row.get("ticker")}
+    except Exception:
+        return set()
 
 
 def _futures_snapshot() -> list[dict]:
