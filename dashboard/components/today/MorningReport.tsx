@@ -1,6 +1,17 @@
 "use client";
 
-import { useMorningReport, plain, type MorningEvent } from "@/lib/report";
+import { useMorningReport, plain, type MorningEvent, type DayAheadEarning } from "@/lib/report";
+
+function EarningsRow({ e }: { e: DayAheadEarning }) {
+  return (
+    <li>
+      <span className={e.watchlist ? "text-accent" : "text-foreground/80"}>
+        {e.ticker ?? e.event}
+      </span>{" "}
+      <span className="text-muted">{e.session}</span>
+    </li>
+  );
+}
 
 function FutureChip({ symbol, change_pct }: { symbol: string; change_pct: number }) {
   const tone = change_pct > 0.02 ? "text-accent" : change_pct < -0.02 ? "text-warn" : "text-muted";
@@ -27,6 +38,11 @@ export function MorningReport() {
         <h2 className="text-sm font-semibold">Morning Brief</h2>
         <span className="text-[11px] font-mono text-muted">{data.weekday} {data.date}</span>
       </div>
+      {data.day_ahead && data.day_ahead.synthesis !== "Quiet slate." && (
+        <p className="text-xs text-foreground leading-relaxed mb-1 font-medium" id="day-ahead">
+          {data.day_ahead.synthesis}
+        </p>
+      )}
       <p className="text-xs text-foreground/90 leading-relaxed mb-2">{plain(data.tone)}</p>
 
       {data.futures.length > 0 && (
@@ -48,7 +64,21 @@ export function MorningReport() {
             </ul>
           </div>
         )}
-        {data.earnings.length > 0 && (
+        {data.day_ahead && (data.day_ahead.earnings_today.length > 0 || data.day_ahead.earnings_tomorrow.length > 0) ? (
+          <div>
+            <div className="text-[10px] uppercase tracking-wide text-muted mb-0.5">Earnings</div>
+            <ul className="text-[11px] font-mono space-y-0.5">
+              {data.day_ahead.earnings_today.slice(0, 3).map((e, i) => (
+                <EarningsRow key={`t${i}`} e={e} />
+              ))}
+              {data.day_ahead.earnings_tomorrow.slice(0, 2).map((e, i) => (
+                <li key={`m${i}`} className="text-muted">
+                  tmrw · {e.ticker ?? e.event} {e.session}
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : data.earnings.length > 0 ? (
           <div>
             <div className="text-[10px] uppercase tracking-wide text-muted mb-0.5">Earnings</div>
             <ul className="text-[11px] font-mono text-foreground/80 space-y-0.5">
@@ -57,7 +87,7 @@ export function MorningReport() {
               ))}
             </ul>
           </div>
-        )}
+        ) : null}
       </div>
     </section>
   );

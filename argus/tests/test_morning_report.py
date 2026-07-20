@@ -62,3 +62,50 @@ def test_build_report_handles_empty():
     assert "**neutral** (+0.00)" in r["tone"]
     md = render_markdown(r)
     assert md.startswith("## Morning Brief")
+
+
+DAY_AHEAD_EVENTS = EVENTS + [
+    {"date": "2026-06-17", "time_et": "08:00", "event": "OKLO earnings",
+     "category": "earnings", "importance": "medium", "source": "earnings", "ticker": "OKLO"},
+    {"date": "2026-06-17", "time_et": "16:30", "event": "AAPL earnings",
+     "category": "earnings", "importance": "medium", "source": "earnings", "ticker": "AAPL"},
+    {"date": "2026-06-18", "time_et": None, "event": "SMR earnings",
+     "category": "earnings", "importance": "medium", "source": "earnings", "ticker": "SMR"},
+]
+DAY_AHEAD_FUTURES = FUTURES + [{"symbol": "RTY=F", "change_pct": -0.22}]
+
+
+def test_day_ahead_earnings_split_session_and_rank():
+    r = build_report(_now(), GAUGES, DAY_AHEAD_EVENTS, HEADLINES, DAY_AHEAD_FUTURES,
+                     watchlist={"OKLO", "SMR"})
+    da = r["day_ahead"]
+    today = da["earnings_today"]
+    # Watchlist name ranks first even though AAPL sorts later in input order
+    assert [e["ticker"] for e in today] == ["OKLO", "AAPL"]
+    assert today[0]["session"] == "BMO" and today[0]["watchlist"] is True
+    assert today[1]["session"] == "AMC" and today[1]["watchlist"] is False
+    assert [e["ticker"] for e in da["earnings_tomorrow"]] == ["SMR"]
+    assert da["earnings_tomorrow"][0]["session"] == "—"
+
+
+def test_day_ahead_synthesis_line():
+    r = build_report(_now(), GAUGES, DAY_AHEAD_EVENTS, HEADLINES, DAY_AHEAD_FUTURES,
+                     watchlist={"OKLO"})
+    s = r["day_ahead"]["synthesis"]
+    assert "ES +0.3%" in s
+    assert "RTY lagging" in s
+    assert "FOMC rate decision 14:00 ET" in s
+    assert "2 earnings today (1 watchlist)" in s
+
+
+def test_day_ahead_empty_inputs():
+    r = build_report(_now(), [], [], [], [])
+    assert r["day_ahead"]["synthesis"] == "Quiet slate."
+    assert r["day_ahead"]["earnings_today"] == []
+
+
+def test_render_markdown_includes_day_ahead():
+    md = render_markdown(build_report(_now(), GAUGES, DAY_AHEAD_EVENTS, HEADLINES,
+                                      DAY_AHEAD_FUTURES, watchlist={"OKLO"}))
+    assert "**Day ahead:**" in md
+    assert "OKLO BMO" in md
