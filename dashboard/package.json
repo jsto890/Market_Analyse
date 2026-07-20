@@ -9,7 +9,7 @@
     "lint": "next lint",
     "test": "vitest run",
     "ingest": "tsx scripts/ingest.ts",
-    "build:standalone": "next build && cp -r .next/static .next/standalone/.next/static",
+    "build:standalone": "next build && rm -rf dist-app && cp -r .next/standalone dist-app && cp -r .next/static dist-app/.next/static",
     "app:build": "npm run build:standalone && tauri build",
     "tauri": "tauri"
   },

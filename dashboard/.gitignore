@@ -37,3 +37,6 @@ next-env.d.ts
 
 # smoke test screenshots
 .smoke/
+
+# Tauri standalone server bundle (build artifact)
+dist-app/

@@ -35,7 +35,9 @@ fn find_node() -> String {
 fn spawn_server() -> Option<Child> {
     let repo = repo_dir();
     let dash = repo.join("dashboard");
-    let server = dash.join(".next/standalone/server.js");
+    // dist-app is the build:standalone output — lives outside .next so that
+    // `next dev` (which rewrites .next) can never clobber the app's server.
+    let server = dash.join("dist-app/server.js");
     if !server.exists() {
         log::error!("standalone build missing: {}", server.display());
         return None;
@@ -77,8 +79,15 @@ pub fn run() {
             };
             *app.state::<ServerChild>().0.lock().unwrap() = child;
 
-            let url = format!("http://127.0.0.1:{PORT}").parse().unwrap();
-            WebviewWindowBuilder::new(app, "main", WebviewUrl::External(url))
+            // If the server never came up, show the bundled error page instead
+            // of a white window pointed at a dead port.
+            let url = if port_open(PORT) {
+                WebviewUrl::External(format!("http://127.0.0.1:{PORT}").parse().unwrap())
+            } else {
+                log::error!("dashboard server not reachable on {PORT}");
+                WebviewUrl::App("index.html".into())
+            };
+            WebviewWindowBuilder::new(app, "main", url)
                 .title("Market Analyse")
                 .inner_size(1440.0, 900.0)
                 .build()?;
