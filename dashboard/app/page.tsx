@@ -6,7 +6,8 @@ import { diffReports, loadYesterdayRows, type DiffRow } from "@/lib/diff";
 import type { BridgeRow, ReportGroup } from "@/types/bridge";
 import DiffStrip from "@/components/today/DiffStrip";
 import SignalGroups from "@/components/today/SignalGroups";
-import RotationPanel, { type RotationRow } from "@/components/today/RotationPanel";
+import Link from "next/link";
+import { type RotationRow } from "@/components/today/RotationPanel";
 import { MorningReport } from "@/components/today/MorningReport";
 
 export const dynamic = "force-dynamic";
@@ -128,7 +129,14 @@ export default async function Home() {
 
       <SignalGroups groups={groups} newTickers={diffData.newTickers} sectors={sectors} />
 
-      {rotation && <RotationPanel rows={rotation} />}
+      {rotation && (
+        <Link
+          href="/rotation"
+          className="block rounded-lg border border-line bg-surface px-4 py-2.5 text-[13px] text-muted hover:text-white transition-colors"
+        >
+          Sector rotation → {rotation.length} sectors tracked
+        </Link>
+      )}
     </main>
   );
 }
