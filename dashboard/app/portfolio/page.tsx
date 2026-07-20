@@ -76,7 +76,7 @@ export default function PortfolioPage() {
           <div className="bg-[#161b22] border border-[#30363d] rounded p-8 text-center space-y-3 max-w-md">
             <p className="text-sm font-semibold text-gray-200">IBKR Gateway Offline</p>
             <p className="text-xs text-gray-500">
-              Connect IBKR Gateway on port 4002 to see live positions.
+              Connect IBKR Gateway on port 4002 (paper) to see positions.
             </p>
             <button
               onClick={() => void mutate()}

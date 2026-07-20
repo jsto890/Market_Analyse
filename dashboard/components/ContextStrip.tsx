@@ -1,129 +1,127 @@
-import fs from "fs";
-import path from "path";
+"use client";
+
+import Link from "next/link";
+import { useEffect, useState } from "react";
+import useSWR from "swr";
 import * as Tooltip from "@radix-ui/react-tooltip";
-import { loadBridgeSignals, resolveBridgePath } from "@/lib/bridge";
+import { usMarketState, futuresMarketState, type UsMarketState } from "@/lib/market-clock";
+import type { StatusPayload, DotState } from "@/lib/status";
 
-interface BridgeMeta {
-  generated_at?: string;
-  regime?: string;
-  chase_enabled?: boolean;
-  counts?: {
-    aligned?: number;
-    pullback?: number;
-    tech_fund?: number;
-  };
+const fetcher = (url: string) =>
+  fetch(url).then((r) => {
+    if (!r.ok) throw new Error(`${r.status}`);
+    return r.json();
+  });
+
+const SESSION_CHIP: Record<UsMarketState, string> = {
+  pre: "PRE",
+  regular: "RTH",
+  after: "AH",
+  closed: "CLOSED",
+};
+
+const DOT_CLASS: Record<DotState, string> = {
+  ok: "bg-teal",
+  warn: "bg-warn",
+  down: "bg-neg",
+  idle: "bg-muted",
+};
+
+function sessionChip(): string {
+  const us = usMarketState();
+  if (us === "closed" && futuresMarketState() === "open") return "OVN";
+  return SESSION_CHIP[us];
 }
 
-function resolveMetaPath(): string {
-  const base = process.env.BRIDGE_DIR ?? path.join(process.cwd(), "..", "reports");
-  return path.join(base, "bridge_meta.json");
+function fmtBridgeTime(iso: string | null): string {
+  if (!iso) return "—";
+  return new Date(iso).toLocaleTimeString("en-NZ", {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  });
 }
 
-function computeCounts(): { aligned: number; pullback: number; tech_fund: number } {
-  try {
-    const rows = loadBridgeSignals();
-    let aligned = 0;
-    let pullback = 0;
-    let tech_fund = 0;
-    for (const row of rows) {
-      if (row.group1) {
-        aligned++;
-      } else if (row.group2 && row.conviction === "high" && row.sentiment_score < 0.2) {
-        pullback++;
-      } else if (row.group2) {
-        tech_fund++;
-      }
-    }
-    return { aligned, pullback, tech_fund };
-  } catch {
-    return { aligned: 0, pullback: 0, tech_fund: 0 };
-  }
+/** 4px marker rendered beside items that changed since the last visit. */
+function ChangedDot() {
+  return <span className="inline-block w-1 h-1 rounded-full bg-warn align-middle ml-0.5" />;
 }
 
-function freshnessClass(generatedAt: string | null): "pos" | "warn" | "neg" {
-  if (!generatedAt) return "neg";
-  const ms = Date.now() - new Date(generatedAt).getTime();
-  const hours = ms / 3_600_000;
-  if (hours < 24) return "pos";
-  if (hours < 48) return "warn";
-  return "neg";
-}
-
-function formatTime(generatedAt: string | null): string {
-  if (!generatedAt) return "—";
-  const d = new Date(generatedAt);
-  return d.toLocaleTimeString("en-NZ", { hour: "2-digit", minute: "2-digit", hour12: false });
+interface Snapshot {
+  regime: string | null;
+  aggregate: DotState;
+  aligned: number;
 }
 
 export default function ContextStrip() {
-  let meta: BridgeMeta | null = null;
-  let generatedAt: string | null = null;
+  const { data } = useSWR<StatusPayload>("/api/status", fetcher, {
+    refreshInterval: 60_000,
+    shouldRetryOnError: true,
+  });
+  const [changed, setChanged] = useState<{ regime: boolean; health: boolean; aligned: boolean }>({
+    regime: false,
+    health: false,
+    aligned: false,
+  });
 
-  try {
-    const raw = fs.readFileSync(resolveMetaPath(), "utf-8");
-    meta = JSON.parse(raw) as BridgeMeta;
-    generatedAt = meta.generated_at ?? null;
-  } catch {
+  // Changed-since-last-visit: compare once per mount against the stored snapshot.
+  useEffect(() => {
+    if (!data) return;
     try {
-      const stat = fs.statSync(resolveBridgePath());
-      generatedAt = stat.mtime.toISOString();
-    } catch {
-      generatedAt = null;
-    }
-  }
-
-  const counts = meta?.counts
-    ? {
-        aligned: meta.counts.aligned ?? 0,
-        pullback: meta.counts.pullback ?? 0,
-        tech_fund: meta.counts.tech_fund ?? 0,
+      const raw = window.localStorage.getItem("strip-snapshot");
+      if (raw) {
+        const prev = JSON.parse(raw) as Snapshot;
+        setChanged({
+          regime: prev.regime !== data.regime,
+          health: prev.aggregate !== data.aggregate,
+          aligned: prev.aligned !== data.counts.aligned,
+        });
       }
-    : computeCounts();
+      const snap: Snapshot = {
+        regime: data.regime,
+        aggregate: data.aggregate,
+        aligned: data.counts.aligned,
+      };
+      window.localStorage.setItem("strip-snapshot", JSON.stringify(snap));
+    } catch {
+      // localStorage unavailable — markers just stay off
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [data == null]);
 
-  const freshClass = freshnessClass(generatedAt);
-  const timeStr = formatTime(generatedAt);
-  const freshSymbol = freshClass === "pos" ? "✓" : "!";
+  const regime = data?.regime ?? null;
+  const regimeText = regime
+    ? `${regime.replace("_", "-")}${data?.chase != null ? ` · chase ${data.chase ? "ON" : "OFF"}` : ""}`
+    : null;
+  const regimeColor = regime?.toLowerCase().includes("on")
+    ? "text-teal border-teal/40"
+    : "text-warn border-warn/40";
 
-  const freshTitle =
-    freshClass === "neg"
-      ? "run_daily may have failed"
-      : freshClass === "warn"
-      ? "Data is 24–48h old"
-      : "Data is fresh";
-
-  const freshColor =
-    freshClass === "pos"
-      ? "text-pos"
-      : freshClass === "warn"
-      ? "text-warn"
-      : "text-neg";
-
-  const regimeText =
-    meta?.regime != null
-      ? `◇ ${meta.regime.replace("_", "-")}${meta.chase_enabled != null ? ` · chase ${meta.chase_enabled ? "ON" : "OFF"}` : ""}`
-      : null;
-
-  const regimeColor =
-    meta?.regime?.toLowerCase().includes("risk_on") || meta?.regime?.toLowerCase().includes("on")
-      ? "text-teal border-teal/40"
-      : "text-warn border-warn/40";
+  const aggregate: DotState = data?.aggregate ?? "idle";
 
   return (
     <div className="flex items-center gap-3 text-[13px] leading-none">
+      {/* Cluster 1 — regime + session */}
       {regimeText && (
         <span className={`border rounded px-1.5 py-px font-medium ${regimeColor}`}>
           {regimeText}
+          {changed.regime && <ChangedDot />}
         </span>
       )}
+      <span className="text-muted font-mono text-[11px] border border-line rounded px-1 py-px select-none">
+        {sessionChip()}
+      </span>
 
+      {/* Cluster 2 — freshness + aggregate health dot */}
       <Tooltip.Root>
         <Tooltip.Trigger asChild>
-          <span className="text-muted font-mono tabular-nums cursor-default select-none">
-            bridge {timeStr}{" "}
-            <span className={freshColor} title={freshTitle}>
-              {freshSymbol}
-            </span>{" "}
-            · {counts.aligned}/{counts.pullback}/{counts.tech_fund}
+          <span className="text-muted font-mono tabular-nums cursor-default select-none flex items-center gap-1.5">
+            {data?.sentiment
+              ? `sent: ${data.sentiment.source} ${data.sentiment.ageHours.toFixed(0)}h`
+              : "sent: —"}
+            {" · "}bridge {fmtBridgeTime(data?.bridgeTime ?? null)}
+            <span className={`inline-block w-2 h-2 rounded-full ${DOT_CLASS[aggregate]}`} />
+            {changed.health && <ChangedDot />}
           </span>
         </Tooltip.Trigger>
         <Tooltip.Portal>
@@ -131,11 +129,33 @@ export default function ContextStrip() {
             side="bottom"
             className="rounded bg-elevated border border-line px-2 py-1 text-[12px] text-muted shadow-lg z-50"
           >
-            aligned / pullback / tech+fund
+            {(data?.services ?? []).map((s) => (
+              <div key={s.name} className="flex items-center gap-1.5 py-0.5">
+                <span className={`inline-block w-1.5 h-1.5 rounded-full ${DOT_CLASS[s.state]}`} />
+                <span className="font-mono">{s.name}</span> — {s.detail}
+              </div>
+            ))}
+            {!data && <div>status unavailable</div>}
             <Tooltip.Arrow className="fill-elevated" />
           </Tooltip.Content>
         </Tooltip.Portal>
       </Tooltip.Root>
+
+      {/* Cluster 3 — counts, linked */}
+      <span className="text-muted font-mono tabular-nums select-none">
+        <Link href="/#signals" className="hover:text-white cursor-pointer">
+          ALIGNED {data?.counts.aligned ?? 0}
+          {changed.aligned && <ChangedDot />}
+        </Link>
+        {" · "}
+        <Link href="/watchlist" className="hover:text-white cursor-pointer">
+          watch {data?.counts.pullback ?? 0}
+        </Link>
+        {" · "}
+        <Link href="/#day-ahead" className="hover:text-white cursor-pointer">
+          earnings {data?.counts.earningsToday ?? 0}
+        </Link>
+      </span>
     </div>
   );
 }

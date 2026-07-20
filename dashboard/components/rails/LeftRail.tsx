@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRailQuotes, RAIL_LABEL, type RailQuote } from "@/lib/rail-quotes";
+import { pickChangeBasis } from "@/lib/change-basis";
 import { usMarketState, STATE_LABEL } from "@/lib/market-clock";
 import { forexSessions, type FxSession } from "@/lib/forex-session";
 import { QuoteRow } from "./QuoteRow";
@@ -218,13 +219,17 @@ export function LeftRail() {
         <QuoteRow key={sym} symbol={sym} price={0} changePct={0} skeleton />
       ));
     }
-    // Live data
+    // Live data. Server pct is price vs last real close — correct while the
+    // market is open (live vs settle) AND while closed (last session's move,
+    // since the newest print IS the last close). The basis only labels it.
+    const basis = pickChangeBasis({ group });
     return groupQuotes(group).map((q) => (
       <QuoteRow
         key={q.symbol}
         symbol={q.symbol}
         price={q.price}
         changePct={q.change_pct}
+        prevBasis={basis === "prev"}
       />
     ));
   }

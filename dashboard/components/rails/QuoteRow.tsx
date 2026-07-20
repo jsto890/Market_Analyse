@@ -6,6 +6,8 @@ interface QuoteRowProps {
   symbol: string;
   price: number;
   changePct: number;
+  /** True when the pct shows the last completed session (market closed). */
+  prevBasis?: boolean;
   skeleton?: boolean;
 }
 
@@ -48,7 +50,7 @@ function pctColor(pct: number): string {
   return pct > 0 ? "text-pos" : "text-neg";
 }
 
-export function QuoteRow({ symbol, price, changePct, skeleton }: QuoteRowProps) {
+export function QuoteRow({ symbol, price, changePct, prevBasis, skeleton }: QuoteRowProps) {
   const label = RAIL_LABEL[symbol] ?? symbol;
 
   if (skeleton) {
@@ -82,6 +84,9 @@ export function QuoteRow({ symbol, price, changePct, skeleton }: QuoteRowProps) 
         className={`w-14 text-right text-[11px] font-mono font-medium tabular-nums leading-none ${pctColor(changePct)}`}
       >
         {formatPct(changePct)}
+        {prevBasis && (
+          <span className="text-muted text-[9px] ml-0.5 font-normal">prev</span>
+        )}
       </span>
     </div>
   );
