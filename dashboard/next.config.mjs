@@ -1,6 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
+  output: "standalone",
   experimental: { serverComponentsExternalPackages: ["better-sqlite3"] },
   async redirects() {
     return [
@@ -8,7 +9,7 @@ const nextConfig = {
       { source: "/options/:ticker", destination: "/t/:ticker", permanent: true },
       { source: "/options", destination: "/", permanent: true },
       { source: "/agents", destination: "/", permanent: true },
-      { source: "/accounts", destination: "/sources", permanent: true },
+      { source: "/accounts", destination: "/", permanent: true },
     ];
   },
 };
