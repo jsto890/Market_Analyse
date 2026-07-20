@@ -223,6 +223,21 @@ def build_app() -> FastAPI:
         finally:
             conn.close()
 
+    @app.get("/api/ladder/{symbol}")
+    def ladder(symbol: str, expiries: int = 4, band: float = 0.06):
+        from ..options_intel.ladder import strike_ladder
+        conn = get_conn()
+        ensure_schema(conn)
+        try:
+            q = get_quote(symbol) or {}
+            out = strike_ladder(conn, symbol, q.get("price"),
+                                max_expiries=min(expiries, 6), band=band)
+            if out is None:
+                raise HTTPException(404, "no options snapshots for symbol")
+            return out
+        finally:
+            conn.close()
+
     @app.get("/api/pcr/{symbol}")
     def pcr(symbol: str):
         conn = get_conn()
