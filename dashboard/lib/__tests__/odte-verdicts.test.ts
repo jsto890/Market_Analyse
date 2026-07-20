@@ -4,19 +4,19 @@ import { deriveLevels, deriveFlow, deriveShape } from "../odte-verdicts";
 describe("deriveLevels", () => {
   it("above zero-gamma with positive GEX -> good/supportive", () => {
     const v = deriveLevels({ spot: 752, zeroGamma: 748.9, callWall: 755, putWall: 745, totalGex: 1.5e9 });
-    expect(v.status).toBe("good");
-    expect(v.sentence).toContain("supportive");
-    expect(v.sentence).toContain("+0.4%");
+    expect(v?.status).toBe("good");
+    expect(v?.sentence).toContain("supportive");
+    expect(v?.sentence).toContain("+0.4%");
   });
   it("below zero-gamma -> caution/fragile", () => {
     const v = deriveLevels({ spot: 743.3, zeroGamma: 748.9, callWall: 745, putWall: 745, totalGex: 1.5e9 });
-    expect(v.status).toBe("caution");
-    expect(v.sentence).toContain("below zero-gamma");
+    expect(v?.status).toBe("caution");
+    expect(v?.sentence).toContain("below zero-gamma");
   });
   it("pinned within 0.3% -> neutral", () => {
     const v = deriveLevels({ spot: 749.5, zeroGamma: 748.9, callWall: 750, putWall: 745, totalGex: 5e8 });
-    expect(v.status).toBe("neutral");
-    expect(v.sentence).toContain("pinned");
+    expect(v?.status).toBe("neutral");
+    expect(v?.sentence).toContain("pinned");
   });
   it("missing inputs -> null", () => {
     expect(deriveLevels({ spot: null, zeroGamma: 748.9, callWall: null, putWall: null, totalGex: null })).toBeNull();
