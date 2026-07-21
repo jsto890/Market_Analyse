@@ -129,8 +129,15 @@ export default function Header({
   const { data: quote } = useSWR<QuoteData>(
     `/api/argus/quote/${ticker}`,
     fetcher,
-    { refreshInterval: 30000, shouldRetryOnError: false }
+    { refreshInterval: 10000, revalidateOnFocus: true, shouldRetryOnError: false }
   );
+  // Shares SWR cache with CatalystsCard (same key) — no extra request.
+  const { data: fundamentals } = useSWR<{ name?: string | null }>(
+    `/api/argus/fundamentals/${ticker}`,
+    fetcher,
+    { shouldRetryOnError: false, revalidateOnFocus: false }
+  );
+  const companyName = fundamentals?.name ?? null;
 
   const price = quote?.price ?? null;
   const changePct = quote?.change_pct ?? null;
@@ -210,6 +217,11 @@ export default function Header({
         <span className="text-[28px] font-mono font-semibold leading-none text-foreground tabular-nums">
           {ticker}
         </span>
+        {companyName && (
+          <span className="max-w-[300px] truncate text-[14px] text-muted" title={companyName}>
+            {companyName}
+          </span>
+        )}
 
         <div className="flex items-baseline gap-2">
           {price !== null ? (

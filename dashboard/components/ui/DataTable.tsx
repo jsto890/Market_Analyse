@@ -176,7 +176,7 @@ export default function DataTable<T>({
       className="overflow-x-auto outline-none"
     >
       <table className="w-full border-collapse text-[13px]">
-        <thead className="sticky z-30 bg-surface" style={{ top: "var(--nav-h)" }}>
+        <thead className="sticky top-0 z-30 bg-surface">
           <tr>
             {columns.map((col, ci) => (
               <th

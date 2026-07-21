@@ -25,6 +25,7 @@ import GexCard from "@/components/odte/GexCard";
 import UnusualCard from "@/components/odte/UnusualCard";
 import PcrCard from "@/components/odte/PcrCard";
 import SpotCard from "@/components/odte/SpotCard";
+import StrikeGuidance from "@/components/odte/StrikeGuidance";
 import VerdictCard from "@/components/odte/VerdictCard";
 import Panel from "@/components/ui/Panel";
 
@@ -284,7 +285,18 @@ export default function OdtePage() {
       </section>
 
       <div className="p-3">
-        <Panel title="Companion grid" collapsible persistKey="odte-companion-grid">
+        <StrikeGuidance
+          spot={spot}
+          zeroGamma={zeroGamma}
+          callWall={callWall}
+          putWall={putWall}
+          atm={atmRow?.strike ?? null}
+          emPct={firstExpiry?.expected_move_pct ?? null}
+        />
+      </div>
+
+      <div className="px-3 pb-3">
+        <Panel title="Companion grid">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
             <GexCard symbol={activeSymbol} />
             <UnusualCard symbol={activeSymbol} />

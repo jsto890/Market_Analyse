@@ -32,7 +32,8 @@ const fetcher = (url: string) =>
 
 export function useRailQuotes() {
   return useSWR<RailData>("/api/argus/rail/quotes", fetcher, {
-    refreshInterval: 45_000,
+    refreshInterval: 10_000,
+    revalidateOnFocus: true,
     shouldRetryOnError: false,
   });
 }
