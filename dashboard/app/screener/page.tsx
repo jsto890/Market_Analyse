@@ -2,6 +2,7 @@
 import PageHeader from "@/components/ui/PageHeader";
 
 import { useMemo, useState } from "react";
+import { Search, ArrowRight, Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import useSWR from "swr";
 import type { ScreenerResult } from "@/types/argus";
@@ -254,15 +255,21 @@ export default function ScreenerPage() {
         <PageHeader title="Screener" subtitle="Agent-ranked long candidates" />
 
         {/* Controls */}
-        <div className="flex flex-wrap gap-2 items-center">
-          <input
-            type="text"
-            value={tickerInput}
-            onChange={(e) => setTickerInput(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder="AAPL, TSLA, NVDA…"
-            className="bg-surface border border-line rounded px-3 py-1.5 text-sm text-foreground placeholder-muted/60 focus:outline-none focus:border-accent w-60"
-          />
+        <div className="flex flex-wrap items-center gap-2 rounded-md border border-line bg-elevated px-3 py-2.5">
+          <div className="relative">
+            <Search
+              size={14}
+              className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-muted"
+            />
+            <input
+              type="text"
+              value={tickerInput}
+              onChange={(e) => setTickerInput(e.target.value)}
+              onKeyDown={handleKeyDown}
+              placeholder="Filter tickers — AAPL, TSLA, NVDA…"
+              className="h-9 w-64 rounded border border-line bg-raised pl-8 pr-3 text-sm text-foreground placeholder-muted focus:border-accent focus:outline-none"
+            />
+          </div>
           <label className="flex items-center gap-1.5 text-xs text-muted">
             Min score
             <input
@@ -272,41 +279,59 @@ export default function ScreenerPage() {
               step="0.05"
               min="0"
               max="1"
-              className="bg-surface border border-line rounded px-2 py-1.5 text-sm text-foreground w-16 focus:outline-none focus:border-accent"
+              className="h-9 w-16 rounded border border-line bg-raised px-2 text-sm text-foreground focus:border-accent focus:outline-none"
             />
           </label>
-          <button
-            onClick={handleRun}
-            disabled={loading}
-            className="bg-accent hover:opacity-90 disabled:opacity-50 text-foreground text-sm font-medium px-4 py-1.5 rounded transition-colors"
-          >
-            {loading ? "Running…" : "Run ›"}
-          </button>
-          <button
-            onClick={() => {
-              setTickerInput("");
-              void runScreener(null);
-            }}
-            disabled={loading}
-            className="bg-elevated hover:bg-elevated/70 disabled:opacity-50 text-foreground text-sm font-medium px-4 py-1.5 rounded transition-colors"
-          >
-            {loading ? "Running…" : "Run default universe"}
-          </button>
+          <div className="ml-auto flex items-center gap-2">
+            <button
+              onClick={handleRun}
+              disabled={loading}
+              className="inline-flex h-9 items-center gap-1.5 rounded-md bg-accent px-4 text-sm font-semibold text-white shadow-sm transition-opacity hover:opacity-90 disabled:opacity-50"
+            >
+              {loading ? (
+                <>
+                  <Loader2 size={14} className="animate-spin" /> Running…
+                </>
+              ) : (
+                <>
+                  Run <ArrowRight size={14} />
+                </>
+              )}
+            </button>
+            <button
+              onClick={() => {
+                setTickerInput("");
+                void runScreener(null);
+              }}
+              disabled={loading}
+              className="inline-flex h-9 items-center rounded-md border border-line bg-raised px-4 text-sm font-medium text-foreground transition-colors hover:border-line-strong disabled:opacity-50"
+            >
+              Full universe
+            </button>
+          </div>
         </div>
 
         {/* States */}
         {loading && (
-          <p className="text-xs font-mono text-muted">Running agents… (may take 10–30s)</p>
+          <p className="flex items-center gap-1.5 text-xs font-mono text-muted">
+            <Loader2 size={12} className="animate-spin" /> Running agent ensemble… (10–30s)
+          </p>
         )}
 
         {error && (
-          <div className="bg-neg/10 border border-neg/50 rounded px-3 py-2 text-sm text-neg">
+          <div className="rounded-md border border-neg/50 bg-neg/10 px-3 py-2 text-sm text-neg">
             {error}
           </div>
         )}
 
         {!loading && !error && results === null && (
-          <p className="text-sm text-muted">Enter tickers or run the default universe</p>
+          <div className="rounded-md border border-dashed border-line bg-elevated/40 px-6 py-12 text-center">
+            <p className="text-sm text-foreground">Rank long candidates with the agent ensemble</p>
+            <p className="mx-auto mt-1.5 max-w-md text-xs text-muted">
+              Enter tickers to score a shortlist, or run the full universe. Sort any column, click a
+              row to open the ticker, and pin candidates to your watchlist.
+            </p>
+          </div>
         )}
 
         {!loading && !error && results !== null && (
