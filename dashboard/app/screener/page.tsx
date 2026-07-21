@@ -1,4 +1,5 @@
 "use client";
+import PageHeader from "@/components/ui/PageHeader";
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -51,8 +52,8 @@ function PinCell({
       className={[
         "px-1.5 py-0.5 rounded border text-[11px] font-mono transition-colors",
         pinned
-          ? "border-amber-400 text-warn bg-amber-400/10"
-          : "border-[var(--border)] text-muted hover:border-gray-400 hover:text-foreground",
+          ? "border-warn text-warn bg-warn/10"
+          : "border-line text-muted hover:border-line-strong hover:text-foreground",
       ].join(" ")}
       aria-label={pinned ? `Unpin ${symbol}` : `Pin ${symbol}`}
     >
@@ -111,7 +112,7 @@ export default function ScreenerPage() {
       key: "symbol",
       header: "Ticker",
       render: (r) => (
-        <span className="font-mono font-semibold text-white">{r.symbol}</span>
+        <span className="font-mono font-semibold text-foreground">{r.symbol}</span>
       ),
     },
     {
@@ -248,9 +249,9 @@ export default function ScreenerPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[var(--bg)] text-white">
+    <div className="min-h-screen bg-bg text-foreground">
       <div className="max-w-6xl mx-auto px-4 py-6 space-y-4">
-        <h1 className="text-base font-semibold text-white">Screener</h1>
+        <PageHeader title="Screener" subtitle="Agent-ranked long candidates" />
 
         {/* Controls */}
         <div className="flex flex-wrap gap-2 items-center">
@@ -260,7 +261,7 @@ export default function ScreenerPage() {
             onChange={(e) => setTickerInput(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder="AAPL, TSLA, NVDA…"
-            className="bg-[var(--surface)] border border-[var(--border)] rounded px-3 py-1.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-gray-500 w-60"
+            className="bg-surface border border-line rounded px-3 py-1.5 text-sm text-foreground placeholder-muted/60 focus:outline-none focus:border-accent w-60"
           />
           <label className="flex items-center gap-1.5 text-xs text-muted">
             Min score
@@ -271,13 +272,13 @@ export default function ScreenerPage() {
               step="0.05"
               min="0"
               max="1"
-              className="bg-[var(--surface)] border border-[var(--border)] rounded px-2 py-1.5 text-sm text-white w-16 focus:outline-none focus:border-gray-500"
+              className="bg-surface border border-line rounded px-2 py-1.5 text-sm text-foreground w-16 focus:outline-none focus:border-accent"
             />
           </label>
           <button
             onClick={handleRun}
             disabled={loading}
-            className="bg-accent hover:opacity-90 disabled:opacity-50 text-white text-sm font-medium px-4 py-1.5 rounded transition-colors"
+            className="bg-accent hover:opacity-90 disabled:opacity-50 text-foreground text-sm font-medium px-4 py-1.5 rounded transition-colors"
           >
             {loading ? "Running…" : "Run ›"}
           </button>
@@ -287,7 +288,7 @@ export default function ScreenerPage() {
               void runScreener(null);
             }}
             disabled={loading}
-            className="bg-elevated hover:bg-elevated/70 disabled:opacity-50 text-white text-sm font-medium px-4 py-1.5 rounded transition-colors"
+            className="bg-elevated hover:bg-elevated/70 disabled:opacity-50 text-foreground text-sm font-medium px-4 py-1.5 rounded transition-colors"
           >
             {loading ? "Running…" : "Run default universe"}
           </button>
@@ -316,7 +317,7 @@ export default function ScreenerPage() {
             {results.length === 0 ? (
               <p className="text-sm text-muted">No results above threshold.</p>
             ) : (
-              <div className="bg-[var(--surface)] border border-[var(--border)] rounded p-4">
+              <div className="bg-surface border border-line rounded p-4">
                 <DataTable
                   columns={columns}
                   rows={results}

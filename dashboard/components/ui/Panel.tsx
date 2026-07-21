@@ -17,7 +17,7 @@ export default function Panel({
   title,
   subtitle,
   collapsible,
-  defaultOpen = true,
+  defaultOpen = false,
   persistKey,
   actions,
   children,
@@ -46,43 +46,41 @@ export default function Panel({
     }
   }
 
+  const Title = (
+    <>
+      <span className="tick truncate text-[13px] font-semibold text-foreground">{title}</span>
+      {subtitle && <span className="truncate text-[12px] text-muted">{subtitle}</span>}
+    </>
+  );
+
   return (
-    <section className="rounded-lg border border-line bg-surface">
-      <div className="flex items-center gap-2 px-4 py-3">
+    <section className="rounded-md border border-line bg-elevated">
+      <div className="flex items-center gap-2 px-4 py-2.5">
         {collapsible ? (
           <button
             type="button"
             onClick={toggle}
-            className="flex flex-1 items-center gap-2 text-left min-w-0"
+            className="flex min-w-0 flex-1 items-center gap-2 text-left"
             aria-expanded={open}
             aria-controls={id}
           >
-            <span className="font-medium text-[13px] truncate">{title}</span>
-            {subtitle && (
-              <span className="text-[12px] text-muted truncate">{subtitle}</span>
-            )}
+            {Title}
             <ChevronDown
               size={14}
-              className="shrink-0 text-muted transition-transform duration-200"
+              className="ml-auto shrink-0 text-muted transition-transform duration-200"
               style={{ transform: open ? "rotate(0deg)" : "rotate(-90deg)" }}
             />
           </button>
         ) : (
-          <div className="flex flex-1 items-center gap-2 min-w-0">
-            <span className="font-medium text-[13px] truncate">{title}</span>
-            {subtitle && (
-              <span className="text-[12px] text-muted truncate">{subtitle}</span>
-            )}
-          </div>
+          <div className="flex min-w-0 flex-1 items-center gap-2">{Title}</div>
         )}
-        {actions && <div className="flex items-center gap-2 shrink-0">{actions}</div>}
+        {actions && <div className="flex shrink-0 items-center gap-2">{actions}</div>}
       </div>
       <div
         id={id}
         className="overflow-hidden transition-[max-height] duration-200"
         style={{
-          maxHeight:
-            !collapsible || (hydrated ? open : defaultOpen) ? "9999px" : "0px",
+          maxHeight: !collapsible || (hydrated ? open : defaultOpen) ? "9999px" : "0px",
         }}
       >
         <div className="border-t border-line px-4 py-3">{children}</div>
