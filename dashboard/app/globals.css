@@ -3,11 +3,11 @@
 @tailwind utilities;
 
 :root {
-  --bg: #0b0e14;
-  --surface: #11151c;
-  --elevated: #1a1f2b;
-  --border: #222936;
-  --text: #e6e8ec;
+  --bg: #080b12;
+  --surface: #10141d;
+  --elevated: #1a212d;
+  --border: #252d3b;
+  --text: #eef1f6;
   --muted: #8b93a3;
   --accent: #4c8dff;
   --green: #3fb950;
@@ -15,6 +15,9 @@
   --amber: #d29922;
   --teal: #2dd4bf;
   --nav-h: 44px;
+  /* Aliases so Tailwind's background/foreground tokens resolve. */
+  --background: var(--bg);
+  --foreground: var(--text);
 }
 
 *:focus-visible {
@@ -26,4 +29,28 @@ html,
 body {
   background: var(--bg);
   color: var(--text);
+  font-family: var(--font-sans), system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* Tabular figures everywhere numbers matter (prices, %, counts). */
+.font-mono,
+[class*="tabular"] {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Polish: smooth interactive feedback without animating layout (checklist §7). */
+a,
+button,
+[role="button"] {
+  transition: color 150ms ease, background-color 150ms ease, border-color 150ms ease,
+    opacity 150ms ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    transition: none !important;
+    animation: none !important;
+  }
 }

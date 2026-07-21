@@ -84,9 +84,6 @@ export function QuoteRow({ symbol, price, changePct, prevBasis, skeleton }: Quot
         className={`w-14 text-right text-[11px] font-mono font-medium tabular-nums leading-none ${pctColor(changePct)}`}
       >
         {formatPct(changePct)}
-        {prevBasis && (
-          <span className="text-muted text-[9px] ml-0.5 font-normal">prev</span>
-        )}
       </span>
     </div>
   );

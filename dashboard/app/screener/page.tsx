@@ -9,15 +9,15 @@ import DataTable, { Column } from "@/components/ui/DataTable";
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
 function verdictColor(v: string): string {
-  if (v === "LONG") return "text-green-400";
-  if (v === "SHORT") return "text-red-400";
-  return "text-amber-400";
+  if (v === "LONG") return "text-pos";
+  if (v === "SHORT") return "text-neg";
+  return "text-warn";
 }
 
 function scoreColor(s: number): string {
-  if (s >= 0.7) return "text-green-400";
-  if (s >= 0.5) return "text-amber-400";
-  return "text-gray-400";
+  if (s >= 0.7) return "text-pos";
+  if (s >= 0.5) return "text-warn";
+  return "text-muted";
 }
 
 function fmtPct(v: number | null): string {
@@ -27,8 +27,8 @@ function fmtPct(v: number | null): string {
 }
 
 function RetCell({ v }: { v: number | null }) {
-  if (v === null) return <span className="text-gray-600">—</span>;
-  const cls = v >= 0 ? "text-green-400" : "text-red-400";
+  if (v === null) return <span className="text-muted">—</span>;
+  const cls = v >= 0 ? "text-pos" : "text-neg";
   return <span className={cls}>{fmtPct(v)}</span>;
 }
 
@@ -51,8 +51,8 @@ function PinCell({
       className={[
         "px-1.5 py-0.5 rounded border text-[11px] font-mono transition-colors",
         pinned
-          ? "border-amber-400 text-amber-400 bg-amber-400/10"
-          : "border-[#30363d] text-gray-500 hover:border-gray-400 hover:text-gray-300",
+          ? "border-amber-400 text-warn bg-amber-400/10"
+          : "border-[var(--border)] text-muted hover:border-gray-400 hover:text-foreground",
       ].join(" ")}
       aria-label={pinned ? `Unpin ${symbol}` : `Pin ${symbol}`}
     >
@@ -137,19 +137,19 @@ export default function ScreenerPage() {
       key: "long_votes",
       header: "L",
       align: "right",
-      render: (r) => <span className="text-green-400">{r.long_votes}</span>,
+      render: (r) => <span className="text-pos">{r.long_votes}</span>,
     },
     {
       key: "short_votes",
       header: "S",
       align: "right",
-      render: (r) => <span className="text-red-400">{r.short_votes}</span>,
+      render: (r) => <span className="text-neg">{r.short_votes}</span>,
     },
     {
       key: "wait_votes",
       header: "W",
       align: "right",
-      render: (r) => <span className="text-amber-400">{r.wait_votes}</span>,
+      render: (r) => <span className="text-warn">{r.wait_votes}</span>,
     },
     {
       key: "agreement_pct",
@@ -157,7 +157,7 @@ export default function ScreenerPage() {
       align: "right",
       sortable: true,
       sortFn: (a, b) => a.agreement_pct - b.agreement_pct,
-      render: (r) => <span className="text-gray-300">{r.agreement_pct.toFixed(0)}%</span>,
+      render: (r) => <span className="text-foreground">{r.agreement_pct.toFixed(0)}%</span>,
     },
     {
       key: "high_conviction",
@@ -165,9 +165,9 @@ export default function ScreenerPage() {
       align: "center",
       render: (r) =>
         r.high_conviction ? (
-          <span className="text-amber-400 font-bold">HC</span>
+          <span className="text-warn font-bold">HC</span>
         ) : (
-          <span className="text-gray-700">—</span>
+          <span className="text-muted">—</span>
         ),
     },
     {
@@ -176,7 +176,7 @@ export default function ScreenerPage() {
       align: "right",
       sortable: true,
       sortFn: (a, b) => a.risk_reward - b.risk_reward,
-      render: (r) => <span className="text-gray-300">{r.risk_reward.toFixed(1)}</span>,
+      render: (r) => <span className="text-foreground">{r.risk_reward.toFixed(1)}</span>,
     },
     {
       key: "ret_1d",
@@ -248,7 +248,7 @@ export default function ScreenerPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#0d1117] text-white">
+    <div className="min-h-screen bg-[var(--bg)] text-white">
       <div className="max-w-6xl mx-auto px-4 py-6 space-y-4">
         <h1 className="text-base font-semibold text-white">Screener</h1>
 
@@ -260,9 +260,9 @@ export default function ScreenerPage() {
             onChange={(e) => setTickerInput(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder="AAPL, TSLA, NVDA…"
-            className="bg-[#161b22] border border-[#30363d] rounded px-3 py-1.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-gray-500 w-60"
+            className="bg-[var(--surface)] border border-[var(--border)] rounded px-3 py-1.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-gray-500 w-60"
           />
-          <label className="flex items-center gap-1.5 text-xs text-gray-400">
+          <label className="flex items-center gap-1.5 text-xs text-muted">
             Min score
             <input
               type="number"
@@ -271,13 +271,13 @@ export default function ScreenerPage() {
               step="0.05"
               min="0"
               max="1"
-              className="bg-[#161b22] border border-[#30363d] rounded px-2 py-1.5 text-sm text-white w-16 focus:outline-none focus:border-gray-500"
+              className="bg-[var(--surface)] border border-[var(--border)] rounded px-2 py-1.5 text-sm text-white w-16 focus:outline-none focus:border-gray-500"
             />
           </label>
           <button
             onClick={handleRun}
             disabled={loading}
-            className="bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-sm font-medium px-4 py-1.5 rounded transition-colors"
+            className="bg-accent hover:opacity-90 disabled:opacity-50 text-white text-sm font-medium px-4 py-1.5 rounded transition-colors"
           >
             {loading ? "Running…" : "Run ›"}
           </button>
@@ -287,7 +287,7 @@ export default function ScreenerPage() {
               void runScreener(null);
             }}
             disabled={loading}
-            className="bg-gray-700 hover:bg-gray-600 disabled:opacity-50 text-white text-sm font-medium px-4 py-1.5 rounded transition-colors"
+            className="bg-elevated hover:bg-elevated/70 disabled:opacity-50 text-white text-sm font-medium px-4 py-1.5 rounded transition-colors"
           >
             {loading ? "Running…" : "Run default universe"}
           </button>
@@ -295,28 +295,28 @@ export default function ScreenerPage() {
 
         {/* States */}
         {loading && (
-          <p className="text-xs font-mono text-gray-400">Running agents… (may take 10–30s)</p>
+          <p className="text-xs font-mono text-muted">Running agents… (may take 10–30s)</p>
         )}
 
         {error && (
-          <div className="bg-red-900/20 border border-red-800 rounded px-3 py-2 text-sm text-red-400">
+          <div className="bg-neg/10 border border-neg/50 rounded px-3 py-2 text-sm text-neg">
             {error}
           </div>
         )}
 
         {!loading && !error && results === null && (
-          <p className="text-sm text-gray-500">Enter tickers or run the default universe</p>
+          <p className="text-sm text-muted">Enter tickers or run the default universe</p>
         )}
 
         {!loading && !error && results !== null && (
           <>
-            <p className="text-xs text-gray-500 font-mono">
+            <p className="text-xs text-muted font-mono">
               {results.length} signal{results.length !== 1 ? "s" : ""} found
             </p>
             {results.length === 0 ? (
-              <p className="text-sm text-gray-500">No results above threshold.</p>
+              <p className="text-sm text-muted">No results above threshold.</p>
             ) : (
-              <div className="bg-[#161b22] border border-[#30363d] rounded p-4">
+              <div className="bg-[var(--surface)] border border-[var(--border)] rounded p-4">
                 <DataTable
                   columns={columns}
                   rows={results}

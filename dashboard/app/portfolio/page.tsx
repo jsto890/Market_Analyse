@@ -31,13 +31,13 @@ function isErrorSentinel(rows: PositionRow[]): boolean {
 }
 
 function verdictChip(verdict: string | undefined): React.ReactNode {
-  if (!verdict) return <span className="text-gray-600">—</span>;
+  if (!verdict) return <span className="text-muted">—</span>;
   const cls =
     verdict === "LONG"
-      ? "bg-green-900/50 text-green-400 border border-green-800"
+      ? "bg-green-900/50 text-pos border border-green-800"
       : verdict === "SHORT"
-      ? "bg-red-900/50 text-red-400 border border-red-800"
-      : "bg-amber-900/50 text-amber-400 border border-amber-800";
+      ? "bg-neg/10 text-neg border border-neg/50"
+      : "bg-amber-900/50 text-warn border border-amber-800";
   return (
     <span className={`text-xs font-mono font-semibold px-1.5 py-0.5 rounded ${cls}`}>
       {verdict}
@@ -46,10 +46,10 @@ function verdictChip(verdict: string | undefined): React.ReactNode {
 }
 
 function scoreClass(s: number | undefined): string {
-  if (s == null) return "text-gray-400";
-  if (s > 0) return "text-green-400";
-  if (s < 0) return "text-red-400";
-  return "text-gray-400";
+  if (s == null) return "text-muted";
+  if (s > 0) return "text-pos";
+  if (s < 0) return "text-neg";
+  return "text-muted";
 }
 
 export default function PortfolioPage() {
@@ -72,22 +72,22 @@ export default function PortfolioPage() {
   const isEmpty = !isLoading && isList(data) && !offline && positions.length === 0;
 
   return (
-    <div className="min-h-screen bg-[#0d1117] text-white">
+    <div className="min-h-screen bg-[var(--bg)] text-white">
       <div className="max-w-5xl mx-auto px-4 py-6 space-y-4">
         <h1 className="text-base font-semibold text-white">Portfolio</h1>
 
-        {isLoading && <p className="text-xs font-mono text-gray-500">Loading…</p>}
+        {isLoading && <p className="text-xs font-mono text-muted">Loading…</p>}
 
         {!isLoading && offline && (
           <div className="space-y-4">
-            <div className="flex flex-wrap items-center gap-3 rounded border border-[#30363d] bg-[#161b22] px-4 py-2.5">
-              <p className="text-sm font-semibold text-gray-200">IBKR Gateway Offline</p>
-              <p className="text-xs text-gray-500">
+            <div className="flex flex-wrap items-center gap-3 rounded border border-[var(--border)] bg-[var(--surface)] px-4 py-2.5">
+              <p className="text-sm font-semibold text-foreground">IBKR Gateway Offline</p>
+              <p className="text-xs text-muted">
                 Connect IBKR Gateway on port 4002 (paper) to see live positions.
               </p>
               <button
                 onClick={() => void mutate()}
-                className="ml-auto text-xs bg-[#21262d] hover:bg-[#30363d] border border-[#30363d] text-gray-300 px-3 py-1 rounded transition-colors"
+                className="ml-auto text-xs bg-[var(--elevated)] hover:bg-[var(--border)] border border-[var(--border)] text-foreground px-3 py-1 rounded transition-colors"
               >
                 Retry
               </button>
@@ -95,20 +95,20 @@ export default function PortfolioPage() {
 
             {pinned.length > 0 ? (
               <div className="space-y-2">
-                <p className="text-[11px] font-mono text-amber-500/80">
+                <p className="text-[11px] font-mono text-warn/80">
                   Showing your pinned watchlist ({pinned.length}) while the gateway is offline
                 </p>
-                <div className="bg-[#161b22] border border-[#30363d] rounded p-2 overflow-x-auto">
+                <div className="bg-[var(--surface)] border border-[var(--border)] rounded p-2 overflow-x-auto">
                   <table className="w-full text-sm border-collapse">
                     <tbody>
                       {pinned.map((p) => (
-                        <tr key={p.ticker} className="border-b border-[#21262d] last:border-0">
+                        <tr key={p.ticker} className="border-b border-[var(--elevated)] last:border-0">
                           <td className="py-1.5 px-2">
                             <Link href={`/t/${p.ticker}`} className="font-mono text-accent hover:underline">
                               {p.ticker}
                             </Link>
                           </td>
-                          <td className="py-1.5 px-2 text-right text-[11px] text-gray-500 font-mono">
+                          <td className="py-1.5 px-2 text-right text-[11px] text-muted font-mono">
                             pinned {new Date(p.pinned_at).toLocaleDateString()}
                           </td>
                         </tr>
@@ -118,31 +118,31 @@ export default function PortfolioPage() {
                 </div>
               </div>
             ) : (
-              <p className="text-xs text-gray-500">No pinned watchlist tickers to fall back to.</p>
+              <p className="text-xs text-muted">No pinned watchlist tickers to fall back to.</p>
             )}
           </div>
         )}
 
         {!isLoading && isEmpty && (
-          <p className="text-sm text-gray-500">No open positions.</p>
+          <p className="text-sm text-muted">No open positions.</p>
         )}
 
         {!isLoading && !offline && positions.length > 0 && (
           <>
             <div className="flex items-center gap-3">
-              <p className="text-xs text-gray-500 font-mono">
+              <p className="text-xs text-muted font-mono">
                 {positions.length} position{positions.length !== 1 ? "s" : ""}
               </p>
               {liveOffline && (
-                <span className="text-[10px] font-mono text-amber-500/80">
+                <span className="text-[10px] font-mono text-warn/80">
                   watchlist fallback (IBKR offline)
                 </span>
               )}
             </div>
-            <div className="bg-[#161b22] border border-[#30363d] rounded p-4 overflow-x-auto">
+            <div className="bg-[var(--surface)] border border-[var(--border)] rounded p-4 overflow-x-auto">
               <table className="w-full text-sm border-collapse">
                 <thead>
-                  <tr className="text-left text-xs text-gray-500 border-b border-[#30363d]">
+                  <tr className="text-left text-xs text-muted border-b border-[var(--border)]">
                     <th className="pb-1.5 pr-4 font-medium">Symbol</th>
                     <th className="pb-1.5 pr-4 font-medium text-right">Position</th>
                     <th className="pb-1.5 pr-4 font-medium text-right">Avg Cost</th>
@@ -157,16 +157,16 @@ export default function PortfolioPage() {
                     const rowBg = i % 2 === 0 ? "" : "bg-white/[0.02]";
                     const posClass =
                       pos.position == null
-                        ? "text-gray-500"
+                        ? "text-muted"
                         : pos.position > 0
-                        ? "text-green-400"
+                        ? "text-pos"
                         : pos.position < 0
-                        ? "text-red-400"
-                        : "text-gray-400";
+                        ? "text-neg"
+                        : "text-muted";
                     return (
                       <tr
                         key={pos.symbol}
-                        className={`${rowBg} hover:bg-gray-800/30 transition-colors`}
+                        className={`${rowBg} hover:bg-elevated/30 transition-colors`}
                       >
                         <td className="py-1.5 pr-4 font-mono font-semibold text-white">
                           {pos.symbol}
@@ -174,20 +174,20 @@ export default function PortfolioPage() {
                         <td className={`py-1.5 pr-4 text-right tabular-nums font-mono ${posClass}`}>
                           {pos.position == null ? "—" : pos.position}
                         </td>
-                        <td className="py-1.5 pr-4 text-right tabular-nums text-gray-300 font-mono">
+                        <td className="py-1.5 pr-4 text-right tabular-nums text-foreground font-mono">
                           {pos.avg_cost == null ? "—" : `$${pos.avg_cost.toFixed(2)}`}
                         </td>
                         <td className="py-1.5 pr-4">{verdictChip(pos.verdict)}</td>
                         <td className={`py-1.5 pr-4 text-right tabular-nums font-mono ${scoreClass(pos.score)}`}>
                           {pos.score == null ? "—" : pos.score.toFixed(2)}
                         </td>
-                        <td className="py-1.5 pr-4 font-mono text-xs text-gray-400">
+                        <td className="py-1.5 pr-4 font-mono text-xs text-muted">
                           {pos.edge ?? "—"}
                         </td>
                         <td className="py-1.5">
                           <button
                             onClick={() => router.push(`/t/${pos.symbol}`)}
-                            className="text-xs text-blue-400 hover:text-blue-300 font-mono"
+                            className="text-xs text-accent hover:text-accent font-mono"
                           >
                             ›
                           </button>
