@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import useSWR from "swr";
 
@@ -58,6 +59,11 @@ export default function PortfolioPage() {
     fetcher,
     { refreshInterval: 60000 }
   );
+  const { data: wl } = useSWR<{ watchlist: { ticker: string; pinned_at: string }[] }>(
+    "/api/watchlist",
+    fetcher
+  );
+  const pinned = wl?.watchlist ?? [];
 
   const rows = isList(data) ? data : [];
   const offline = !isList(data) || isErrorSentinel(rows);
@@ -73,17 +79,47 @@ export default function PortfolioPage() {
         {isLoading && <p className="text-xs font-mono text-gray-500">Loading…</p>}
 
         {!isLoading && offline && (
-          <div className="bg-[#161b22] border border-[#30363d] rounded p-8 text-center space-y-3 max-w-md">
-            <p className="text-sm font-semibold text-gray-200">IBKR Gateway Offline</p>
-            <p className="text-xs text-gray-500">
-              Connect IBKR Gateway on port 4002 (paper) to see positions.
-            </p>
-            <button
-              onClick={() => void mutate()}
-              className="text-xs bg-[#21262d] hover:bg-[#30363d] border border-[#30363d] text-gray-300 px-4 py-1.5 rounded transition-colors"
-            >
-              Retry
-            </button>
+          <div className="space-y-4">
+            <div className="flex flex-wrap items-center gap-3 rounded border border-[#30363d] bg-[#161b22] px-4 py-2.5">
+              <p className="text-sm font-semibold text-gray-200">IBKR Gateway Offline</p>
+              <p className="text-xs text-gray-500">
+                Connect IBKR Gateway on port 4002 (paper) to see live positions.
+              </p>
+              <button
+                onClick={() => void mutate()}
+                className="ml-auto text-xs bg-[#21262d] hover:bg-[#30363d] border border-[#30363d] text-gray-300 px-3 py-1 rounded transition-colors"
+              >
+                Retry
+              </button>
+            </div>
+
+            {pinned.length > 0 ? (
+              <div className="space-y-2">
+                <p className="text-[11px] font-mono text-amber-500/80">
+                  Showing your pinned watchlist ({pinned.length}) while the gateway is offline
+                </p>
+                <div className="bg-[#161b22] border border-[#30363d] rounded p-2 overflow-x-auto">
+                  <table className="w-full text-sm border-collapse">
+                    <tbody>
+                      {pinned.map((p) => (
+                        <tr key={p.ticker} className="border-b border-[#21262d] last:border-0">
+                          <td className="py-1.5 px-2">
+                            <Link href={`/t/${p.ticker}`} className="font-mono text-accent hover:underline">
+                              {p.ticker}
+                            </Link>
+                          </td>
+                          <td className="py-1.5 px-2 text-right text-[11px] text-gray-500 font-mono">
+                            pinned {new Date(p.pinned_at).toLocaleDateString()}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            ) : (
+              <p className="text-xs text-gray-500">No pinned watchlist tickers to fall back to.</p>
+            )}
           </div>
         )}
 
