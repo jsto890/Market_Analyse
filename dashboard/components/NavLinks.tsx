@@ -9,6 +9,7 @@ const LINKS = [
   { href: "/odte", label: "0DTE" },
   { href: "/rotation", label: "Rotation" },
   { href: "/screener", label: "Screener" },
+  { href: "/portfolio", label: "Portfolio" },
 ] as const;
 
 export default function NavLinks() {

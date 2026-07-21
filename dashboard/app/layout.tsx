@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import "./globals.css";
 import Nav from "@/components/Nav";
 import ContextStrip from "@/components/ContextStrip";
-import StatusDot from "@/components/StatusDot";
 import CommandK from "@/components/CommandK";
 import HelpOverlay from "@/components/HelpOverlay";
 import TooltipProvider from "@/components/ui/TooltipProvider";
@@ -24,7 +23,7 @@ export default function RootLayout({
     <html lang="en">
       <body style={{ fontFamily: "system-ui, sans-serif" }}>
         <TooltipProvider>
-          <Nav contextStrip={<ContextStrip />} statusDot={<StatusDot />} />
+          <Nav contextStrip={<ContextStrip />} />
           <CommandK />
           <HelpOverlay />
           <RailShell>{children}</RailShell>
