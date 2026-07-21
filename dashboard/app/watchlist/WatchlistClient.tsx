@@ -7,6 +7,7 @@ import DataTable, { Column } from "@/components/ui/DataTable";
 import StatChip from "@/components/ui/StatChip";
 import Badge from "@/components/ui/Badge";
 import EmptyState from "@/components/ui/EmptyState";
+import PageHeader from "@/components/ui/PageHeader";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -600,7 +601,7 @@ export default function WatchlistClient({
 
   return (
     <main className="max-w-5xl mx-auto px-4 py-6 space-y-4">
-      <h1 className="text-2xl font-bold">Watchlist</h1>
+      <PageHeader title="Watchlist" subtitle="Pinned names + auto-flagged recent picks" />
       <PinnedSection entries={entries} onUnpin={handleUnpin} onAdded={mutate} />
       <RecentPicksSection medianDaysToPeak={medianDaysToPeak} />
     </main>
