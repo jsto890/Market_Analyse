@@ -124,7 +124,7 @@ function OffBridgeCatalysts({ ticker }: { ticker: string }) {
 
   const offline = error != null || data == null || data.error != null;
   if (offline) {
-    return <p className="text-[12px] text-muted">No fundamental data — IBKR offline</p>;
+    return <p className="text-[12px] text-muted">No fundamental data available</p>;
   }
 
   const fields: { label: string; value: string }[] = [];
