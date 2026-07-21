@@ -19,6 +19,28 @@ function fmtNum(v: number | null | undefined): string {
   return v != null ? String(v) : "—";
 }
 
+function fmtLvl(v: number | null | undefined): string {
+  return v != null ? v.toFixed(0) : "—";
+}
+
+function LegendItem({ code, cls, label }: { code: string; cls: string; label: string }) {
+  return (
+    <span className="inline-flex items-center gap-1">
+      <span className={`font-mono font-semibold ${cls}`}>{code}</span>
+      <span className="text-muted">{label}</span>
+    </span>
+  );
+}
+
+function Lvl({ label, value }: { label: string; value: string }) {
+  return (
+    <span className="inline-flex items-center gap-1 font-mono">
+      <span className="text-muted">{label}</span>
+      <span className="text-foreground">{value}</span>
+    </span>
+  );
+}
+
 export default function OdteStrikesPage() {
   const [activeSymbol, switchSymbol] = useOdteSymbol();
   const [expiryIdx, setExpiryIdx] = useState(0);
@@ -117,6 +139,29 @@ export default function OdteStrikesPage() {
             ))}
           </div>
 
+          {/* Legend + critical levels */}
+          <div className="flex flex-wrap items-center gap-x-5 gap-y-1.5 border-b border-line px-4 py-2 text-[11px]">
+            <span className="eyebrow">Markers</span>
+            <LegendItem code="SPOT" cls="text-warn" label="last price" />
+            <LegendItem code="ZG" cls="text-teal" label="zero-gamma flip" />
+            <LegendItem code="CW" cls="text-pos" label="call wall (resistance)" />
+            <LegendItem code="PW" cls="text-neg" label="put wall (support)" />
+            <span className="h-3 w-px bg-line" />
+            <span className="eyebrow">Levels</span>
+            <Lvl label="zero-γ" value={fmtLvl(data.levels.zero_gamma)} />
+            <Lvl label="call wall" value={fmtLvl(data.levels.call_wall)} />
+            <Lvl label="put wall" value={fmtLvl(data.levels.put_wall)} />
+            <Lvl label="net GEX" value={fmtGex(data.levels.total_gex)} />
+            <Lvl
+              label="exp. move"
+              value={
+                expiries[idx]?.expected_move_pct != null
+                  ? `±${expiries[idx].expected_move_pct.toFixed(2)}%`
+                  : "—"
+              }
+            />
+          </div>
+
           <div className="flex-1 overflow-y-auto p-3">
             <div className="bg-surface border border-line rounded overflow-x-auto max-h-[70vh] overflow-y-auto">
               <table className="w-full font-mono text-[11px] tabular-nums border-collapse">
@@ -195,6 +240,75 @@ export default function OdteStrikesPage() {
                 </tbody>
               </table>
             </div>
+
+            {/* Educational footer */}
+            <section className="mt-4 rounded-md border border-line bg-elevated">
+              <div className="px-4 py-2.5">
+                <span className="tick text-[13px] font-semibold text-foreground">
+                  How to read this ladder
+                </span>
+              </div>
+              <div className="grid gap-x-8 gap-y-3 border-t border-line px-4 py-3 text-[12px] leading-relaxed text-muted sm:grid-cols-2">
+                <div>
+                  <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-foreground">
+                    Markers
+                  </p>
+                  <ul className="space-y-1">
+                    <li>
+                      <b className="font-mono text-warn">SPOT</b> — current underlying price; the
+                      ladder auto-centers here on load.
+                    </li>
+                    <li>
+                      <b className="font-mono text-teal">ZG</b> — zero-gamma flip. Below it dealers
+                      are short gamma and hedging <b className="text-foreground">extends</b> moves;
+                      above it they&apos;re long gamma and moves <b className="text-foreground">
+                        pin / dampen
+                      </b>
+                      .
+                    </li>
+                    <li>
+                      <b className="font-mono text-pos">CW</b> — call wall: heaviest dealer gamma
+                      above spot; acts as resistance and an upside magnet.
+                    </li>
+                    <li>
+                      <b className="font-mono text-neg">PW</b> — put wall: heaviest dealer gamma
+                      below spot; acts as support.
+                    </li>
+                  </ul>
+                </div>
+                <div>
+                  <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-foreground">
+                    Columns
+                  </p>
+                  <ul className="space-y-1">
+                    <li>
+                      <b className="text-foreground">OI / Vol</b> — open interest &amp; today&apos;s
+                      volume per strike (puts on the left, calls on the right of the strike).
+                    </li>
+                    <li>
+                      <b className="text-foreground">IV</b> — implied volatility at that strike.
+                    </li>
+                    <li>
+                      <b className="text-foreground">GEX</b> — dealer-signed gamma exposure. Green
+                      (positive) dampens; red (negative) amplifies.
+                    </li>
+                  </ul>
+                </div>
+                <div className="sm:col-span-2">
+                  <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-foreground">
+                    Picking a strike
+                  </p>
+                  <p>
+                    Start <b className="text-foreground">ATM</b> (nearest SPOT) for delta, then let
+                    the walls frame the trade: buy toward the wall in your direction (
+                    <b className="font-mono text-pos">CW</b> for calls,{" "}
+                    <b className="font-mono text-neg">PW</b> for puts) as the magnet, and treat the
+                    opposite wall as where the move likely stalls. Strikes beyond the expected move
+                    are low-probability lottery tickets — cheap, but usually expire worthless.
+                  </p>
+                </div>
+              </div>
+            </section>
           </div>
         </>
       )}
