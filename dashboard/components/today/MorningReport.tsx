@@ -64,12 +64,6 @@ export function MorningReport() {
         </div>
       )}
 
-      {data.futures.length > 0 && (
-        <div className="flex flex-wrap gap-x-3 gap-y-1 mb-2 border-t border-line pt-2">
-          {data.futures.map((f) => <FutureChip key={f.symbol} {...f} />)}
-        </div>
-      )}
-
       <div className="grid sm:grid-cols-2 gap-x-6 gap-y-1">
         {data.macro_events.length > 0 && (
           <div>

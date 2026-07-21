@@ -243,6 +243,7 @@ export default function CandleChart({
           layout: {
             background: { type: ColorType.Solid, color: "#0b0e14" },
             textColor: "#8b93a3",
+            attributionLogo: false,
           },
           grid: {
             vertLines: { color: "#161b24" },

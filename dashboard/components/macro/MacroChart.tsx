@@ -28,7 +28,7 @@ export function MacroChart({ points, spx }: { points: MacroPoint[]; spx: SpxBar[
       const chart = createChart(ref.current, {
         autoSize: true,
         height: 320,
-        layout: { background: { type: ColorType.Solid, color: "transparent" }, textColor: "#8b93a3" },
+        layout: { background: { type: ColorType.Solid, color: "transparent" }, textColor: "#8b93a3", attributionLogo: false },
         grid: { vertLines: { visible: false }, horzLines: { color: "#161b24" } },
         rightPriceScale: { borderColor: "#222936" },
         leftPriceScale: { visible: true, borderColor: "#222936" },
