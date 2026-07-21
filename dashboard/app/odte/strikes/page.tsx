@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import {
   nearestStrikeIndex,
@@ -34,6 +34,14 @@ export default function OdteStrikesPage() {
     data?.levels.call_wall != null ? nearestStrikeIndex(rows, data.levels.call_wall) : -1;
   const putWallIdx =
     data?.levels.put_wall != null ? nearestStrikeIndex(rows, data.levels.put_wall) : -1;
+  const spotIdx = nearestStrikeIndex(rows, data?.spot ?? null);
+
+  // Anchor the ladder on the spot row so the pin zone (spot/walls/zero-gamma)
+  // is visible first instead of the lowest strike.
+  const spotRowRef = useRef<HTMLTableRowElement | null>(null);
+  useEffect(() => {
+    spotRowRef.current?.scrollIntoView({ block: "center" });
+  }, [activeSymbol, idx, spotIdx, data?.spot]);
 
   return (
     <main className="flex flex-col font-mono h-full">
@@ -42,37 +50,46 @@ export default function OdteStrikesPage() {
           <Link href="/odte" className="text-teal hover:underline text-xs">
             ← Overview
           </Link>
-          <h1 className="text-sm font-semibold">Strikes · {activeSymbol}</h1>
+          <h1 className="text-sm font-semibold">
+            Strikes · {activeSymbol}
+            {data?.spot != null && (
+              <span className="ml-2 font-mono text-[12px] font-normal text-warn tabular-nums">
+                spot {data.spot.toFixed(2)}
+              </span>
+            )}
+          </h1>
         </div>
-        <div className="flex rounded border border-line overflow-hidden">
-          <div className="flex items-center gap-2 px-2">
-            <span className="text-xs text-muted">ETF</span>
-            {odteEtfSymbols.map((symbol) => (
-              <button
-                key={symbol}
-                onClick={() => switchSymbol(symbol)}
-                className={`px-2 py-0.5 text-xs ${
-                  symbol === activeSymbol ? "bg-green-500/20 text-green-400" : "text-muted"
-                }`}
-              >
-                {symbol}
-              </button>
-            ))}
-          </div>
-          <span className="w-px h-4 bg-line mx-1" />
-          <div className="flex items-center gap-2 px-2">
-            <span className="text-xs text-muted">INDEX</span>
-            {odteIndexSymbols.map((symbol) => (
-              <button
-                key={symbol}
-                onClick={() => switchSymbol(symbol)}
-                className={`px-2 py-0.5 text-xs ${
-                  symbol === activeSymbol ? "bg-green-500/20 text-green-400" : "text-muted"
-                }`}
-              >
-                {symbol}
-              </button>
-            ))}
+        <div className="overflow-x-auto">
+          <div className="flex rounded border border-line overflow-hidden">
+            <div className="flex items-center gap-2 px-2">
+              <span className="text-xs text-muted">ETF</span>
+              {odteEtfSymbols.map((symbol) => (
+                <button
+                  key={symbol}
+                  onClick={() => switchSymbol(symbol)}
+                  className={`px-2 py-0.5 text-xs ${
+                    symbol === activeSymbol ? "bg-green-500/20 text-green-400" : "text-muted"
+                  }`}
+                >
+                  {symbol}
+                </button>
+              ))}
+            </div>
+            <span className="w-px h-4 bg-line mx-1" />
+            <div className="flex items-center gap-2 px-2">
+              <span className="text-xs text-muted">INDEX</span>
+              {odteIndexSymbols.map((symbol) => (
+                <button
+                  key={symbol}
+                  onClick={() => switchSymbol(symbol)}
+                  className={`px-2 py-0.5 text-xs ${
+                    symbol === activeSymbol ? "bg-green-500/20 text-green-400" : "text-muted"
+                  }`}
+                >
+                  {symbol}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
       </div>
@@ -122,19 +139,29 @@ export default function OdteStrikesPage() {
                     const isZg = i === zgIdx;
                     const isCallWall = i === callWallIdx;
                     const isPutWall = i === putWallIdx;
-                    const highlight = isZg || isCallWall || isPutWall;
+                    const isSpot = i === spotIdx;
+                    const highlight = isZg || isCallWall || isPutWall || isSpot;
+                    const leftBorder = isSpot
+                      ? "border-l-2 border-l-warn"
+                      : isZg
+                        ? "border-l-2 border-l-teal"
+                        : "";
                     return (
                       <tr
                         key={row.strike}
+                        ref={isSpot ? spotRowRef : undefined}
                         className={`border-t border-line/50 ${
                           highlight ? "bg-elevated" : ""
-                        } ${isZg ? "border-l-2 border-l-teal" : ""}`}
+                        } ${leftBorder}`}
                       >
                         <td className="text-right px-2 py-1 text-muted">{fmtNum(row.put?.oi)}</td>
                         <td className="text-right px-2 py-1 text-muted">{fmtNum(row.put?.vol)}</td>
                         <td className="text-right px-2 py-1 text-muted">{fmtIv(row.put?.iv)}</td>
                         <td className="text-center px-3 py-1 border-x border-line text-foreground">
                           <span>{row.strike}</span>
+                          {isSpot && (
+                            <span className="ml-1 text-[9px] text-warn align-middle">SPOT</span>
+                          )}
                           {isZg && (
                             <span className="ml-1 text-[9px] text-teal align-middle">ZG</span>
                           )}

@@ -350,10 +350,49 @@ def build_app() -> FastAPI:
     def fundamentals(symbol: str):
         import asyncio
         asyncio.set_event_loop(asyncio.new_event_loop())
+        sym = symbol.upper()
+
+        def _yf_fallback(reason: str) -> dict:
+            """yfinance fundamentals — used when IBKR/TWS is unavailable."""
+            try:
+                import yfinance as yf
+                info = yf.Ticker(sym).info or {}
+            except Exception as e:
+                return {"error": f"IBKR unavailable ({reason}); yfinance failed: {e}", "symbol": sym}
+
+            def _num(key, scale=1.0):
+                v = info.get(key)
+                try:
+                    return float(v) * scale if v is not None else None
+                except (TypeError, ValueError):
+                    return None
+
+            out = {
+                "symbol": sym,
+                "source": "yfinance",
+                "pe_ratio": _num("trailingPE"),
+                "eps_ttm": _num("trailingEps"),
+                "revenue_ttm": _num("revenueGrowth", 100.0),  # growth %, matches UI fmtPct
+                "market_cap": _num("marketCap"),
+                "analyst_target": _num("targetMeanPrice"),
+                "analyst_rating": info.get("recommendationKey"),
+                "short_pct_float": _num("shortPercentOfFloat", 100.0),
+            }
+            if all(out[k] is None for k in ("pe_ratio", "eps_ttm", "analyst_target")):
+                return {"error": f"no fundamentals for {sym} (IBKR + yfinance)", "symbol": sym}
+            return out
+
         try:
-            return IBKRClient.instance().fundamentals(symbol.upper())
+            data = IBKRClient.instance().fundamentals(sym)
         except Exception as e:
-            return {"error": str(e), "symbol": symbol.upper()}
+            return _yf_fallback(str(e))
+        # IBKR connected but returned nothing usable → still fall back.
+        if not isinstance(data, dict) or data.get("error") or all(
+            data.get(k) is None for k in ("pe_ratio", "eps_ttm", "analyst_target")
+        ):
+            return _yf_fallback("IBKR returned no fundamentals")
+        data.setdefault("source", "ibkr")
+        return data
 
     @app.get("/api/catalysts/{symbol}")
     def catalysts(symbol: str):

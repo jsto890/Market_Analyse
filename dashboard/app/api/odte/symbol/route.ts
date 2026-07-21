@@ -1,4 +1,4 @@
-import { isOdteSymbol } from "@/lib/odte";
+import { isOdteSymbol } from "@/lib/odte-core";
 
 export async function POST(req: Request) {
   let symbol: unknown;
@@ -8,7 +8,10 @@ export async function POST(req: Request) {
     return Response.json({ error: "invalid JSON body" }, { status: 400 });
   }
   if (typeof symbol !== "string" || !isOdteSymbol(symbol)) {
-    return Response.json({ error: "symbol must be one of SPY, QQQ, IWM, DIA" }, { status: 400 });
+    return Response.json(
+      { error: "symbol must be one of SPY, QQQ, IWM, DIA, SPX, NDX, RUT, DJX" },
+      { status: 400 }
+    );
   }
   try {
     const res = await fetch("http://127.0.0.1:8788/control/symbol", {

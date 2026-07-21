@@ -1,4 +1,4 @@
-import { odteSymbols, type OdteSymbol } from "@/lib/odte";
+import { odteSymbols, type OdteSymbol } from "@/lib/odte-core";
 
 export type CompanionEtf = "SPY" | "QQQ" | "IWM" | "DIA";
 

@@ -27,6 +27,13 @@ const DOT_CLASS: Record<DotState, string> = {
   idle: "bg-muted",
 };
 
+const PILL_CLASS: Record<DotState, string> = {
+  ok: "border-teal text-teal",
+  warn: "border-warn text-warn",
+  down: "border-neg text-neg",
+  idle: "border-muted text-muted",
+};
+
 function sessionChip(): string {
   const us = usMarketState();
   if (us === "closed" && futuresMarketState() === "open") return "OVN";
@@ -98,10 +105,17 @@ export default function ContextStrip() {
     : "text-warn border-warn/40";
 
   const aggregate: DotState = data?.aggregate ?? "idle";
+  const aligned = data?.counts.aligned ?? 0;
+  const pullback = data?.counts.pullback ?? 0;
+  const earningsToday = data?.counts.earningsToday ?? 0;
+
+  const freshnessText = `${
+    data?.sentiment ? `sent: ${data.sentiment.source} ${data.sentiment.ageHours.toFixed(0)}h` : "sent: —"
+  } · bridge ${fmtBridgeTime(data?.bridgeTime ?? null)}`;
 
   return (
     <div className="flex items-center gap-3 text-[13px] leading-none">
-      {/* Cluster 1 — regime + session */}
+      {/* Always visible — regime + session */}
       {regimeText && (
         <span className={`border rounded px-1.5 py-px font-medium ${regimeColor}`}>
           {regimeText}
@@ -112,22 +126,20 @@ export default function ContextStrip() {
         {sessionChip()}
       </span>
 
-      {/* Cluster 2 — freshness + aggregate health dot */}
+      {/* Always visible — SYS health pill; tooltip carries services + freshness + counts */}
       <Tooltip.Root>
         <Tooltip.Trigger asChild>
-          <span className="text-muted font-mono tabular-nums cursor-default select-none flex items-center gap-1.5">
-            {data?.sentiment
-              ? `sent: ${data.sentiment.source} ${data.sentiment.ageHours.toFixed(0)}h`
-              : "sent: —"}
-            {" · "}bridge {fmtBridgeTime(data?.bridgeTime ?? null)}
-            <span className={`inline-block w-2 h-2 rounded-full ${DOT_CLASS[aggregate]}`} />
+          <span
+            className={`inline-flex items-center gap-1 rounded-sm border border-line border-l-2 bg-elevated px-1.5 py-px font-mono text-[10px] font-semibold tracking-wide cursor-default select-none ${PILL_CLASS[aggregate]}`}
+          >
+            SYS
             {changed.health && <ChangedDot />}
           </span>
         </Tooltip.Trigger>
         <Tooltip.Portal>
           <Tooltip.Content
             side="bottom"
-            className="rounded bg-elevated border border-line px-2 py-1 text-[12px] text-muted shadow-lg z-50"
+            className="rounded bg-elevated border border-line px-2 py-1 text-[12px] text-muted shadow-lg z-50 min-w-[180px]"
           >
             {(data?.services ?? []).map((s) => (
               <div key={s.name} className="flex items-center gap-1.5 py-0.5">
@@ -136,24 +148,41 @@ export default function ContextStrip() {
               </div>
             ))}
             {!data && <div>status unavailable</div>}
+            <div className="mt-1 pt-1 border-t border-line/60 font-mono tabular-nums">{freshnessText}</div>
+            <div className="mt-1 pt-1 border-t border-line/60 flex items-center gap-2 font-mono tabular-nums">
+              <Link href="/#signals" className="hover:text-white cursor-pointer">
+                ALIGNED {aligned}
+              </Link>
+              <Link href="/#signals" className="hover:text-white cursor-pointer">
+                PB {pullback}
+              </Link>
+              <Link href="/#day-ahead" className="hover:text-white cursor-pointer">
+                earnings {earningsToday}
+              </Link>
+            </div>
             <Tooltip.Arrow className="fill-elevated" />
           </Tooltip.Content>
         </Tooltip.Portal>
       </Tooltip.Root>
 
-      {/* Cluster 3 — counts, linked */}
-      <span className="text-muted font-mono tabular-nums select-none">
+      {/* ≥1280px only — freshness text (also in tooltip above) */}
+      <span className="hidden xl:flex items-center gap-1 text-muted font-mono tabular-nums select-none">
+        {freshnessText}
+      </span>
+
+      {/* ≥1024px only — counts, linked (also in tooltip above) */}
+      <span className="hidden lg:flex items-center gap-1.5 text-muted font-mono tabular-nums select-none">
         <Link href="/#signals" className="hover:text-white cursor-pointer">
-          ALIGNED {data?.counts.aligned ?? 0}
+          ALIGNED {aligned}
           {changed.aligned && <ChangedDot />}
         </Link>
-        {" · "}
-        <Link href="/watchlist" className="hover:text-white cursor-pointer">
-          watch {data?.counts.pullback ?? 0}
+        <span className="text-muted">·</span>
+        <Link href="/#signals" className="hover:text-white cursor-pointer">
+          PB {pullback}
         </Link>
-        {" · "}
+        <span className="text-muted">·</span>
         <Link href="/#day-ahead" className="hover:text-white cursor-pointer">
-          earnings {data?.counts.earningsToday ?? 0}
+          earnings {earningsToday}
         </Link>
       </span>
     </div>

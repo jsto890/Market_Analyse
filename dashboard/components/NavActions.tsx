@@ -1,13 +1,6 @@
 "use client";
 
-import Link from "next/link";
-import { ReactNode } from "react";
-
-interface NavActionsProps {
-  statusDot: ReactNode;
-}
-
-export default function NavActions({ statusDot }: NavActionsProps) {
+export default function NavActions() {
   function openCommandK() {
     window.dispatchEvent(new CustomEvent("commandk:open"));
   }
@@ -22,12 +15,6 @@ export default function NavActions({ statusDot }: NavActionsProps) {
       >
         0DTE↗
       </a>
-      <Link
-        href="/portfolio"
-        className="text-[13px] text-muted hover:text-white transition-colors"
-      >
-        Portfolio
-      </Link>
       <button
         onClick={openCommandK}
         className="text-[13px] text-muted hover:text-white transition-colors font-mono"
@@ -35,7 +22,6 @@ export default function NavActions({ statusDot }: NavActionsProps) {
       >
         ⌘K
       </button>
-      {statusDot}
     </div>
   );
 }

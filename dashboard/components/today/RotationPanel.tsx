@@ -19,6 +19,8 @@ export interface RotationRow {
 
 interface RotationPanelProps {
   rows: RotationRow[];
+  defaultOpen?: boolean;
+  collapsible?: boolean;
 }
 
 const QUADRANT_TONE: Record<string, { color: string; label: string }> = {
@@ -138,7 +140,7 @@ function Ret({ v }: { v: number | null }) {
   );
 }
 
-export default function RotationPanel({ rows }: RotationPanelProps) {
+export default function RotationPanel({ rows, defaultOpen = false, collapsible = true }: RotationPanelProps) {
   const sorted = [...rows].sort((a, b) => a.rank - b.rank);
   const fading = rows.filter(
     (r) => r.quadrant === "weakening" || r.quadrant === "lagging"
@@ -155,8 +157,8 @@ export default function RotationPanel({ rows }: RotationPanelProps) {
     <Panel
       title="Sector rotation"
       subtitle={summary}
-      collapsible
-      defaultOpen={false}
+      collapsible={collapsible}
+      defaultOpen={defaultOpen}
       persistKey="rotation"
     >
       <div className="overflow-x-auto">

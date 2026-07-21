@@ -6,17 +6,35 @@ import { useNewsFeed, relTime, type NewsItem } from "@/lib/news";
 
 const LS_KEY = "rail-right-collapsed";
 
+const NARROW_QUERY = "(max-width: 1279px)";
+
 export function RightRail() {
-  // Start expanded SSR; sync from localStorage on mount to avoid hydration mismatch
+  // Start expanded SSR; reconcile from localStorage/viewport on mount to avoid hydration mismatch
   const [collapsed, setCollapsed] = useState(false);
 
   useEffect(() => {
-    try {
-      const stored = window.localStorage.getItem(LS_KEY);
-      if (stored === "1") setCollapsed(true);
-    } catch {
-      // localStorage unavailable (private browsing, SSR guard)
-    }
+    const readStored = (): string | null => {
+      try {
+        return window.localStorage.getItem(LS_KEY);
+      } catch {
+        return null;
+      }
+    };
+
+    const stored = readStored();
+    if (stored === "1") setCollapsed(true);
+    else if (stored === "0") setCollapsed(false);
+    else setCollapsed(window.innerWidth < 1280);
+
+    if (typeof window.matchMedia !== "function") return;
+    const mql = window.matchMedia(NARROW_QUERY);
+    const onChange = (e: MediaQueryListEvent) => {
+      // Explicit stored preference always wins over the media query.
+      if (readStored() !== null) return;
+      setCollapsed(e.matches);
+    };
+    mql.addEventListener("change", onChange);
+    return () => mql.removeEventListener("change", onChange);
   }, []);
 
   const toggle = () => {
