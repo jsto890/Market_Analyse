@@ -195,7 +195,7 @@ export default function CommandK() {
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder="Search ticker…"
-            className="flex-1 bg-transparent text-[13px] text-white placeholder:text-muted outline-none font-mono"
+            className="flex-1 bg-transparent text-[13px] text-foreground placeholder:text-muted outline-none font-mono"
             autoComplete="off"
             autoCorrect="off"
             spellCheck={false}
@@ -208,7 +208,7 @@ export default function CommandK() {
               <li
                 key={`${item.source}-${item.ticker}`}
                 className={`flex items-center justify-between px-3 py-2 cursor-pointer text-[13px] ${
-                  i === selectedIdx ? "bg-accent/10 text-white" : "text-white/70 hover:bg-elevated"
+                  i === selectedIdx ? "bg-accent/10 text-foreground" : "text-foreground/70 hover:bg-elevated"
                 }`}
                 onMouseEnter={() => setSelectedIdx(i)}
                 onClick={() => {

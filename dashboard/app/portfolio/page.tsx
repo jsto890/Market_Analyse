@@ -1,4 +1,5 @@
 "use client";
+import PageHeader from "@/components/ui/PageHeader";
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -34,10 +35,10 @@ function verdictChip(verdict: string | undefined): React.ReactNode {
   if (!verdict) return <span className="text-muted">—</span>;
   const cls =
     verdict === "LONG"
-      ? "bg-green-900/50 text-pos border border-green-800"
+      ? "bg-pos/10 text-pos border border-pos/40"
       : verdict === "SHORT"
       ? "bg-neg/10 text-neg border border-neg/50"
-      : "bg-amber-900/50 text-warn border border-amber-800";
+      : "bg-warn/10 text-warn border border-warn/40";
   return (
     <span className={`text-xs font-mono font-semibold px-1.5 py-0.5 rounded ${cls}`}>
       {verdict}
@@ -72,22 +73,22 @@ export default function PortfolioPage() {
   const isEmpty = !isLoading && isList(data) && !offline && positions.length === 0;
 
   return (
-    <div className="min-h-screen bg-[var(--bg)] text-white">
+    <div className="min-h-screen bg-bg text-foreground">
       <div className="max-w-5xl mx-auto px-4 py-6 space-y-4">
-        <h1 className="text-base font-semibold text-white">Portfolio</h1>
+        <PageHeader title="Portfolio" subtitle="Paper account · IBKR Gateway 4002" />
 
         {isLoading && <p className="text-xs font-mono text-muted">Loading…</p>}
 
         {!isLoading && offline && (
           <div className="space-y-4">
-            <div className="flex flex-wrap items-center gap-3 rounded border border-[var(--border)] bg-[var(--surface)] px-4 py-2.5">
+            <div className="flex flex-wrap items-center gap-3 rounded border border-line bg-surface px-4 py-2.5">
               <p className="text-sm font-semibold text-foreground">IBKR Gateway Offline</p>
               <p className="text-xs text-muted">
                 Connect IBKR Gateway on port 4002 (paper) to see live positions.
               </p>
               <button
                 onClick={() => void mutate()}
-                className="ml-auto text-xs bg-[var(--elevated)] hover:bg-[var(--border)] border border-[var(--border)] text-foreground px-3 py-1 rounded transition-colors"
+                className="ml-auto text-xs bg-elevated hover:bg-raised border border-line text-foreground px-3 py-1 rounded transition-colors"
               >
                 Retry
               </button>
@@ -98,7 +99,7 @@ export default function PortfolioPage() {
                 <p className="text-[11px] font-mono text-warn/80">
                   Showing your pinned watchlist ({pinned.length}) while the gateway is offline
                 </p>
-                <div className="bg-[var(--surface)] border border-[var(--border)] rounded p-2 overflow-x-auto">
+                <div className="bg-surface border border-line rounded p-2 overflow-x-auto">
                   <table className="w-full text-sm border-collapse">
                     <tbody>
                       {pinned.map((p) => (
@@ -139,10 +140,10 @@ export default function PortfolioPage() {
                 </span>
               )}
             </div>
-            <div className="bg-[var(--surface)] border border-[var(--border)] rounded p-4 overflow-x-auto">
+            <div className="bg-surface border border-line rounded p-4 overflow-x-auto">
               <table className="w-full text-sm border-collapse">
                 <thead>
-                  <tr className="text-left text-xs text-muted border-b border-[var(--border)]">
+                  <tr className="text-left text-xs text-muted border-b border-line">
                     <th className="pb-1.5 pr-4 font-medium">Symbol</th>
                     <th className="pb-1.5 pr-4 font-medium text-right">Position</th>
                     <th className="pb-1.5 pr-4 font-medium text-right">Avg Cost</th>
@@ -168,7 +169,7 @@ export default function PortfolioPage() {
                         key={pos.symbol}
                         className={`${rowBg} hover:bg-elevated/30 transition-colors`}
                       >
-                        <td className="py-1.5 pr-4 font-mono font-semibold text-white">
+                        <td className="py-1.5 pr-4 font-mono font-semibold text-foreground">
                           {pos.symbol}
                         </td>
                         <td className={`py-1.5 pr-4 text-right tabular-nums font-mono ${posClass}`}>
