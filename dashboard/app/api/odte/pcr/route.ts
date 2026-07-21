@@ -1,4 +1,4 @@
-import { isOdteSymbol } from "@/lib/odte";
+import { isOdteSymbol } from "@/lib/odte-core";
 import { companionSymbol } from "@/lib/odteCompanion";
 
 export async function GET(request: Request) {

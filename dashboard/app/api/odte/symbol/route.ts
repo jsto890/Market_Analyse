@@ -1,4 +1,4 @@
-import { isOdteSymbol } from "@/lib/odte";
+import { isOdteSymbol } from "@/lib/odte-core";
 
 export async function POST(req: Request) {
   let symbol: unknown;

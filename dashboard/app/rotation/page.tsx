@@ -25,7 +25,7 @@ export default function RotationPage() {
   return (
     <main className="mx-auto max-w-6xl space-y-4 px-4 py-6">
       {rotation ? (
-        <RotationPanel rows={rotation} />
+        <RotationPanel rows={rotation} defaultOpen collapsible={false} />
       ) : (
         <div className="rounded-lg border border-warn/50 bg-warn/10 px-4 py-2.5 text-[13px] text-warn">
           No rotation data — run_daily may have failed
