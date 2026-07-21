@@ -2,13 +2,26 @@
 
 import { useMorningReport, plain, type MorningEvent, type DayAheadEarning } from "@/lib/report";
 
+function SessionTag({ session }: { session: "BMO" | "AMC" | "—" }) {
+  if (session === "—") return null;
+  const cls =
+    session === "BMO"
+      ? "border-warn/50 text-warn bg-warn/10" // before open
+      : "border-accent/50 text-accent bg-accent/10"; // after close
+  return (
+    <span className={`ml-1 rounded border px-1 py-px text-[9px] font-medium ${cls}`}>
+      {session}
+    </span>
+  );
+}
+
 function EarningsRow({ e }: { e: DayAheadEarning }) {
   return (
     <li>
       <span className={e.watchlist ? "text-accent" : "text-foreground/80"}>
         {e.ticker ?? e.event}
-      </span>{" "}
-      <span className="text-muted">{e.session}</span>
+      </span>
+      <SessionTag session={e.session} />
     </li>
   );
 }
@@ -86,7 +99,8 @@ export function MorningReport() {
               ))}
               {data.day_ahead.earnings_tomorrow.slice(0, 2).map((e, i) => (
                 <li key={`m${i}`} className="text-muted">
-                  tmrw · {e.ticker ?? e.event} {e.session}
+                  tmrw · {e.ticker ?? e.event}
+                  <SessionTag session={e.session} />
                 </li>
               ))}
             </ul>

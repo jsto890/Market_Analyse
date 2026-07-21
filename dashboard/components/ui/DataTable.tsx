@@ -223,6 +223,7 @@ export default function DataTable<T>({
                   onClick={() => {
                     setFocusedKey(key);
                     if (expandedRender) toggleExpand(key);
+                    else onOpen?.(row);
                   }}
                   aria-expanded={expandedRender ? isExpanded : undefined}
                   className={[

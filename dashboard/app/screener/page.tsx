@@ -1,8 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import useSWR from "swr";
 import type { ScreenerResult } from "@/types/argus";
+import DataTable, { Column } from "@/components/ui/DataTable";
+
+const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
 function verdictColor(v: string): string {
   if (v === "LONG") return "text-green-400";
@@ -28,91 +32,32 @@ function RetCell({ v }: { v: number | null }) {
   return <span className={cls}>{fmtPct(v)}</span>;
 }
 
-function ResultsTable({
-  results,
-  onDrill,
+function PinCell({
+  symbol,
+  pinned,
+  onToggle,
 }: {
-  results: ScreenerResult[];
-  onDrill: (symbol: string) => void;
+  symbol: string;
+  pinned: boolean;
+  onToggle: (symbol: string, pinned: boolean) => void;
 }) {
   return (
-    <div className="overflow-x-auto">
-      <table className="w-full text-sm border-collapse">
-        <thead>
-          <tr className="text-left text-xs text-gray-500 border-b border-[#30363d]">
-            <th className="pb-1.5 pr-3 font-medium">Ticker</th>
-            <th className="pb-1.5 pr-3 font-medium">Verdict</th>
-            <th className="pb-1.5 pr-3 font-medium text-right">Score</th>
-            <th className="pb-1.5 pr-3 font-medium text-right">L</th>
-            <th className="pb-1.5 pr-3 font-medium text-right">S</th>
-            <th className="pb-1.5 pr-3 font-medium text-right">W</th>
-            <th className="pb-1.5 pr-3 font-medium text-right">Agree%</th>
-            <th className="pb-1.5 pr-3 font-medium text-center">HC</th>
-            <th className="pb-1.5 pr-3 font-medium text-right">R:R</th>
-            <th className="pb-1.5 pr-3 font-medium text-right">1d%</th>
-            <th className="pb-1.5 pr-3 font-medium text-right">5d%</th>
-            <th className="pb-1.5 font-medium"></th>
-          </tr>
-        </thead>
-        <tbody>
-          {results.map((r, i) => {
-            const rowBg = i % 2 === 0 ? "" : "bg-white/[0.02]";
-            return (
-              <tr
-                key={r.symbol}
-                className={`${rowBg} hover:bg-gray-800/30 transition-colors`}
-              >
-                <td className="py-1.5 pr-3 font-mono font-semibold text-white">
-                  {r.symbol}
-                </td>
-                <td className={`py-1.5 pr-3 font-mono font-semibold ${verdictColor(r.verdict)}`}>
-                  {r.verdict}
-                </td>
-                <td className={`py-1.5 pr-3 text-right tabular-nums font-mono ${scoreColor(r.score)}`}>
-                  {r.score.toFixed(3)}
-                </td>
-                <td className="py-1.5 pr-3 text-right tabular-nums text-green-400">
-                  {r.long_votes}
-                </td>
-                <td className="py-1.5 pr-3 text-right tabular-nums text-red-400">
-                  {r.short_votes}
-                </td>
-                <td className="py-1.5 pr-3 text-right tabular-nums text-amber-400">
-                  {r.wait_votes}
-                </td>
-                <td className="py-1.5 pr-3 text-right tabular-nums text-gray-300">
-                  {r.agreement_pct.toFixed(0)}%
-                </td>
-                <td className="py-1.5 pr-3 text-center">
-                  {r.high_conviction ? (
-                    <span className="text-amber-400 font-bold">HC</span>
-                  ) : (
-                    <span className="text-gray-700">—</span>
-                  )}
-                </td>
-                <td className="py-1.5 pr-3 text-right tabular-nums text-gray-300">
-                  {r.risk_reward.toFixed(1)}
-                </td>
-                <td className="py-1.5 pr-3 text-right tabular-nums">
-                  <RetCell v={r.ret_1d} />
-                </td>
-                <td className="py-1.5 pr-3 text-right tabular-nums">
-                  <RetCell v={r.ret_5d} />
-                </td>
-                <td className="py-1.5">
-                  <button
-                    onClick={() => onDrill(r.symbol)}
-                    className="text-xs text-blue-400 hover:text-blue-300 font-mono"
-                  >
-                    ›
-                  </button>
-                </td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
-    </div>
+    <button
+      type="button"
+      onClick={(e) => {
+        e.stopPropagation();
+        onToggle(symbol, pinned);
+      }}
+      className={[
+        "px-1.5 py-0.5 rounded border text-[11px] font-mono transition-colors",
+        pinned
+          ? "border-amber-400 text-amber-400 bg-amber-400/10"
+          : "border-[#30363d] text-gray-500 hover:border-gray-400 hover:text-gray-300",
+      ].join(" ")}
+      aria-label={pinned ? `Unpin ${symbol}` : `Pin ${symbol}`}
+    >
+      {pinned ? "Pinned" : "Pin"}
+    </button>
   );
 }
 
@@ -129,6 +74,134 @@ export default function ScreenerPage() {
   const [results, setResults] = useState<ScreenerResult[] | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const { data: watchlistData, mutate: mutateWatchlist } = useSWR<{
+    watchlist: { ticker: string }[];
+  }>("/api/watchlist", fetcher, { revalidateOnFocus: false });
+
+  const pinnedSet = useMemo(
+    () => new Set((watchlistData?.watchlist ?? []).map((w) => w.ticker)),
+    [watchlistData]
+  );
+
+  async function togglePin(symbol: string, pinned: boolean) {
+    mutateWatchlist(
+      (prev) => {
+        if (!prev) return prev;
+        const wl = pinned
+          ? prev.watchlist.filter((w) => w.ticker !== symbol)
+          : [...prev.watchlist, { ticker: symbol }];
+        return { watchlist: wl };
+      },
+      false
+    );
+    try {
+      await fetch("/api/watchlist", {
+        method: pinned ? "DELETE" : "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ticker: symbol }),
+      });
+    } catch {
+      mutateWatchlist();
+    }
+  }
+
+  const columns: Column<ScreenerResult>[] = [
+    {
+      key: "symbol",
+      header: "Ticker",
+      render: (r) => (
+        <span className="font-mono font-semibold text-white">{r.symbol}</span>
+      ),
+    },
+    {
+      key: "verdict",
+      header: "Verdict",
+      render: (r) => (
+        <span className={`font-mono font-semibold ${verdictColor(r.verdict)}`}>
+          {r.verdict}
+        </span>
+      ),
+    },
+    {
+      key: "score",
+      header: "Score",
+      align: "right",
+      sortable: true,
+      sortFn: (a, b) => a.score - b.score,
+      render: (r) => (
+        <span className={`font-mono ${scoreColor(r.score)}`}>{r.score.toFixed(3)}</span>
+      ),
+    },
+    {
+      key: "long_votes",
+      header: "L",
+      align: "right",
+      render: (r) => <span className="text-green-400">{r.long_votes}</span>,
+    },
+    {
+      key: "short_votes",
+      header: "S",
+      align: "right",
+      render: (r) => <span className="text-red-400">{r.short_votes}</span>,
+    },
+    {
+      key: "wait_votes",
+      header: "W",
+      align: "right",
+      render: (r) => <span className="text-amber-400">{r.wait_votes}</span>,
+    },
+    {
+      key: "agreement_pct",
+      header: "Agree%",
+      align: "right",
+      sortable: true,
+      sortFn: (a, b) => a.agreement_pct - b.agreement_pct,
+      render: (r) => <span className="text-gray-300">{r.agreement_pct.toFixed(0)}%</span>,
+    },
+    {
+      key: "high_conviction",
+      header: "HC",
+      align: "center",
+      render: (r) =>
+        r.high_conviction ? (
+          <span className="text-amber-400 font-bold">HC</span>
+        ) : (
+          <span className="text-gray-700">—</span>
+        ),
+    },
+    {
+      key: "risk_reward",
+      header: "R:R",
+      align: "right",
+      sortable: true,
+      sortFn: (a, b) => a.risk_reward - b.risk_reward,
+      render: (r) => <span className="text-gray-300">{r.risk_reward.toFixed(1)}</span>,
+    },
+    {
+      key: "ret_1d",
+      header: "1d%",
+      align: "right",
+      sortable: true,
+      sortFn: (a, b) => (a.ret_1d ?? -Infinity) - (b.ret_1d ?? -Infinity),
+      render: (r) => <RetCell v={r.ret_1d} />,
+    },
+    {
+      key: "ret_5d",
+      header: "5d%",
+      align: "right",
+      sortable: true,
+      sortFn: (a, b) => (a.ret_5d ?? -Infinity) - (b.ret_5d ?? -Infinity),
+      render: (r) => <RetCell v={r.ret_5d} />,
+    },
+    {
+      key: "pin",
+      header: "",
+      render: (r) => (
+        <PinCell symbol={r.symbol} pinned={pinnedSet.has(r.symbol)} onToggle={togglePin} />
+      ),
+    },
+  ];
 
   async function runScreener(tickers: string[] | null) {
     setLoading(true);
@@ -244,9 +317,12 @@ export default function ScreenerPage() {
               <p className="text-sm text-gray-500">No results above threshold.</p>
             ) : (
               <div className="bg-[#161b22] border border-[#30363d] rounded p-4">
-                <ResultsTable
-                  results={results}
-                  onDrill={(symbol) => router.push(`/t/${symbol}`)}
+                <DataTable
+                  columns={columns}
+                  rows={results}
+                  rowKey={(r) => r.symbol}
+                  persistKey="screener-table"
+                  onOpen={(r) => router.push(`/t/${r.symbol}`)}
                 />
               </div>
             )}

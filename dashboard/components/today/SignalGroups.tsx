@@ -397,7 +397,17 @@ function GroupTable({
   onOpen: (r: BridgeRow) => void;
   persistKey: string;
 }) {
-  const columns = useMemo(() => columnsFor(newSet), [newSet]);
+  const columns = useMemo(() => {
+    const cols = columnsFor(newSet);
+    const anyFlag = rows.some(
+      (r) =>
+        r.is_extended ||
+        (r.earnings_in_days != null &&
+          Number.isFinite(r.earnings_in_days) &&
+          r.earnings_in_days <= 10)
+    );
+    return anyFlag ? cols : cols.filter((c) => c.key !== "flags");
+  }, [newSet, rows]);
   if (rows.length === 0) {
     return <p className="px-1 py-2 text-[13px] text-muted">none today</p>;
   }
