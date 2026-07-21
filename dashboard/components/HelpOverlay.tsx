@@ -41,13 +41,13 @@ export default function HelpOverlay() {
         className="bg-elevated border border-line rounded-lg p-5 w-72 shadow-xl"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="text-[13px] font-medium text-white mb-3">Keyboard shortcuts</div>
+        <div className="text-[13px] font-medium text-foreground mb-3">Keyboard shortcuts</div>
         <table className="w-full text-[12px] border-collapse">
           <tbody>
             {KEYS.map(({ key, desc }) => (
               <tr key={key} className="border-b border-line/40 last:border-0">
                 <td className="py-1.5 pr-4 font-mono text-muted whitespace-nowrap">{key}</td>
-                <td className="py-1.5 text-white/80">{desc}</td>
+                <td className="py-1.5 text-foreground/80">{desc}</td>
               </tr>
             ))}
           </tbody>

@@ -114,12 +114,12 @@ export default async function Home() {
     <main className="mx-auto max-w-6xl space-y-4 px-4 py-6">
       <MorningReport />
       {rows.length === 0 && (
-        <div className="rounded-lg border border-warn/50 bg-warn/10 px-4 py-2.5 text-[13px] text-warn">
+        <div className="rounded-md border border-warn/50 bg-warn/10 px-4 py-2.5 text-[13px] text-warn">
           No bridge data — run_daily may have failed
         </div>
       )}
       {stale && (
-        <div className="rounded-lg border border-warn/50 bg-warn/10 px-4 py-2.5 text-[13px] text-warn">
+        <div className="rounded-md border border-warn/50 bg-warn/10 px-4 py-2.5 text-[13px] text-warn">
           Bridge data is stale (generated {formatTime(meta.generated_at)}) — run_daily may
           have failed
         </div>
@@ -132,7 +132,7 @@ export default async function Home() {
       {rotation && (
         <Link
           href="/rotation"
-          className="block rounded-lg border border-line bg-surface px-4 py-2.5 text-[13px] text-muted hover:text-white transition-colors"
+          className="block rounded-md border border-line bg-elevated px-4 py-2.5 text-[13px] text-muted hover:text-foreground transition-colors"
         >
           Sector rotation → {rotation.length} sectors tracked
         </Link>

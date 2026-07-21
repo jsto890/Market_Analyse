@@ -46,9 +46,9 @@ export function MorningReport() {
   if (!data) return null;
 
   return (
-    <section className="mb-5 rounded-lg border border-line bg-surface p-4">
-      <div className="flex items-baseline justify-between mb-1">
-        <h2 className="text-sm font-semibold">Morning Brief</h2>
+    <section className="mb-5 rounded-md border border-line bg-elevated p-4">
+      <div className="flex items-baseline justify-between mb-2">
+        <h2 className="tick text-[13px] font-semibold text-foreground">Morning Brief</h2>
         <span className="text-[11px] font-mono text-muted">{data.weekday} {data.date}</span>
       </div>
       {data.day_ahead && data.day_ahead.synthesis !== "Quiet slate." && (

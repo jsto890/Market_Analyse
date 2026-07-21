@@ -366,7 +366,7 @@ export default function CandleChart({
               className={[
                 "px-2 py-0.5 rounded text-[11px] font-medium transition-colors",
                 activePeriod === p
-                  ? "bg-accent text-white"
+                  ? "bg-accent text-foreground"
                   : "bg-elevated text-muted hover:text-foreground",
               ].join(" ")}
             >
@@ -387,7 +387,7 @@ export default function CandleChart({
             className={[
               "px-2 py-0.5 rounded text-[11px] font-medium transition-colors border",
               emas[key]
-                ? "border-transparent text-white"
+                ? "border-transparent text-foreground"
                 : "bg-elevated text-muted border-line hover:text-foreground",
             ].join(" ")}
             style={emas[key] ? { backgroundColor: EMA_STYLE[key].color } : {}}
@@ -404,7 +404,7 @@ export default function CandleChart({
           className={[
             "px-2 py-0.5 rounded text-[11px] font-medium transition-colors",
             logScale
-              ? "bg-accent text-white"
+              ? "bg-accent text-foreground"
               : "bg-elevated text-muted hover:text-foreground",
           ].join(" ")}
         >
