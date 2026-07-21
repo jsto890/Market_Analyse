@@ -126,7 +126,7 @@ export default function OdtePage() {
     <main className="flex flex-col font-mono h-full">
       <div className="flex items-center justify-between px-4 py-2 border-b border-line">
         <h1 className="text-sm font-semibold">
-          Index 0DTE · {activeSymbol}
+          Options · {activeSymbol}
           {isProxied(activeSymbol) && (
             <span className="ml-1.5 font-mono text-[11px] font-normal text-muted">
               (via {companionSymbol(activeSymbol)})
