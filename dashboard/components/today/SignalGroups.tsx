@@ -4,7 +4,7 @@ import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import * as Tooltip from "@radix-ui/react-tooltip";
-import { Info } from "lucide-react";
+import { Info, Search, ChevronDown, X } from "lucide-react";
 import type { BridgeRow } from "@/types/bridge";
 import { tierSort } from "@/lib/groups";
 import DataTable, { Column } from "@/components/ui/DataTable";
@@ -181,6 +181,36 @@ function InfoTip({ text }: { text: string }) {
         </Tooltip.Content>
       </Tooltip.Portal>
     </Tooltip.Root>
+  );
+}
+
+function FilterSelect({
+  value,
+  onChange,
+  options,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  options: [string, string][];
+}) {
+  return (
+    <div className="relative">
+      <select
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="h-8 cursor-pointer appearance-none rounded border border-line bg-raised pl-2.5 pr-7 text-[13px] text-foreground focus:border-accent focus:outline-none"
+      >
+        {options.map(([v, l]) => (
+          <option key={v} value={v}>
+            {l}
+          </option>
+        ))}
+      </select>
+      <ChevronDown
+        size={13}
+        className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-muted"
+      />
+    </div>
   );
 }
 
@@ -466,47 +496,59 @@ export default function SignalGroups({
 
   return (
     <div className="space-y-3">
-      {/* Filters row */}
-      <div className="flex flex-wrap items-center gap-2">
-        <input
-          type="text"
-          value={active.search}
-          onChange={(e) => update({ search: e.target.value })}
-          placeholder="search…"
-          className="w-44 rounded border border-line bg-surface px-2.5 py-1 text-[13px] text-foreground placeholder-muted focus:border-accent focus:outline-none"
-        />
+      {/* Filters toolbar */}
+      <div className="flex flex-wrap items-center gap-2 rounded-md border border-line bg-elevated px-3 py-2">
+        <div className="relative">
+          <Search
+            size={13}
+            className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-muted"
+          />
+          <input
+            type="text"
+            value={active.search}
+            onChange={(e) => update({ search: e.target.value })}
+            placeholder="Search ticker…"
+            className="h-8 w-52 rounded border border-line bg-raised pl-8 pr-2.5 text-[13px] text-foreground placeholder-muted focus:border-accent focus:outline-none"
+          />
+        </div>
         <button
           type="button"
           onClick={() => update({ hcOnly: !active.hcOnly })}
-          className={`inline-flex items-center gap-1 rounded border px-2 py-1 text-[12px] ${
-            active.hcOnly ? "border-accent text-accent" : "border-line text-muted"
+          className={`inline-flex h-8 items-center gap-1 rounded border px-2.5 text-[12px] font-medium transition-colors ${
+            active.hcOnly
+              ? "border-accent bg-accent-dim text-accent"
+              : "border-line bg-raised text-muted hover:text-foreground"
           }`}
         >
-          HC
+          HC only
           <InfoTip text="consensus, not edge" />
         </button>
-        <select
+        <FilterSelect
           value={active.conviction}
-          onChange={(e) => update({ conviction: e.target.value })}
-          className="rounded border border-line bg-surface px-2 py-1 text-[13px] text-foreground focus:border-accent focus:outline-none"
-        >
-          <option value="">conviction</option>
-          <option value="high">high</option>
-          <option value="med">med</option>
-          <option value="low">low</option>
-        </select>
-        <select
+          onChange={(v) => update({ conviction: v })}
+          options={[
+            ["", "All conviction"],
+            ["high", "High"],
+            ["med", "Med"],
+            ["low", "Low"],
+          ]}
+        />
+        <FilterSelect
           value={active.sector}
-          onChange={(e) => update({ sector: e.target.value })}
-          className="rounded border border-line bg-surface px-2 py-1 text-[13px] text-foreground focus:border-accent focus:outline-none"
-        >
-          <option value="">sector</option>
-          {sectors.map((s) => (
-            <option key={s} value={s}>
-              {s}
-            </option>
-          ))}
-        </select>
+          onChange={(v) => update({ sector: v })}
+          options={[["", "All sectors"], ...sectors.map((s) => [s, s] as [string, string])]}
+        />
+        {(active.search || active.hcOnly || active.conviction || active.sector) && (
+          <button
+            type="button"
+            onClick={() =>
+              update({ search: "", hcOnly: false, conviction: "", sector: "" })
+            }
+            className="inline-flex h-8 items-center gap-1 rounded px-2 text-[12px] text-muted hover:text-foreground"
+          >
+            <X size={12} /> Clear
+          </button>
+        )}
       </div>
 
       {GROUP_META.filter((g) => sorted[g.key].length > 0).map((g) => (
