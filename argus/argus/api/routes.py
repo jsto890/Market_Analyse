@@ -370,6 +370,7 @@ def build_app() -> FastAPI:
             out = {
                 "symbol": sym,
                 "source": "yfinance",
+                "name": info.get("longName") or info.get("shortName"),
                 "pe_ratio": _num("trailingPE"),
                 "eps_ttm": _num("trailingEps"),
                 "revenue_ttm": _num("revenueGrowth", 100.0),  # growth %, matches UI fmtPct
