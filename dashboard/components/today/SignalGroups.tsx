@@ -499,7 +499,7 @@ export default function SignalGroups({
         </select>
       </div>
 
-      {GROUP_META.map((g) => (
+      {GROUP_META.filter((g) => sorted[g.key].length > 0).map((g) => (
         <Panel
           key={g.key}
           title={`${g.title}  (${sorted[g.key].length})`}
