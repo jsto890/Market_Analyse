@@ -152,11 +152,23 @@ export default function WhyPanel({ ticker }: { ticker: string }) {
   const [votesOpen, setVotesOpen] = useState(false);
   const votesId = useId();
 
-  const { data, error, isLoading, mutate } = useSWR<ActionCardData>(
+  const { data, error, isLoading, isValidating, mutate } = useSWR<ActionCardData>(
     `/api/argus/action_card/${ticker}`,
     fetcher,
-    { revalidateOnFocus: false, shouldRetryOnError: false }
+    {
+      revalidateOnFocus: false,
+      // Auto-retry once, but only on a scoring timeout (504) — not a true
+      // outage. Keeps last-good data on screen while it retries (see below).
+      shouldRetryOnError: true,
+      errorRetryCount: 1,
+      onErrorRetry: (err, _key, _config, revalidate, { retryCount }) => {
+        if ((err as Error)?.message !== "504" || retryCount > 1) return;
+        setTimeout(() => revalidate({ retryCount }), 1500);
+      },
+    }
   );
+
+  const timedOut = (error as Error | undefined)?.message === "504";
 
   if (isLoading) {
     return (
@@ -177,20 +189,35 @@ export default function WhyPanel({ ticker }: { ticker: string }) {
     );
   }
 
-  if (error || !data) {
+  // Only a hard-error panel when we have no cached card at all. A transient
+  // failure with prior data falls through to the normal render (stale-marked).
+  if (!data) {
+    const retrying = timedOut && isValidating;
     return (
       <Panel title="Why">
         <div className="space-y-2 py-1">
-          <p className="font-mono text-[12px] text-neg">
-            Argus API offline — <code className="text-muted">cd argus &amp;&amp; ./run.sh api</code>
+          <p className={`font-mono text-[12px] ${timedOut ? "text-warn" : "text-neg"}`}>
+            {timedOut ? (
+              retrying ? (
+                "Scoring timed out — retrying…"
+              ) : (
+                "Scoring timed out — the ensemble is slow, not offline."
+              )
+            ) : (
+              <>
+                Argus API offline — <code className="text-muted">cd argus &amp;&amp; ./run.sh api</code>
+              </>
+            )}
           </p>
-          <button
-            type="button"
-            onClick={() => mutate()}
-            className="font-mono text-[11px] text-accent border border-accent/40 rounded px-2 py-0.5 hover:bg-accent/10 transition-colors"
-          >
-            Retry
-          </button>
+          {!retrying && (
+            <button
+              type="button"
+              onClick={() => mutate()}
+              className="font-mono text-[11px] text-accent border border-accent/40 rounded px-2 py-0.5 hover:bg-accent/10 transition-colors"
+            >
+              Retry
+            </button>
+          )}
         </div>
       </Panel>
     );
@@ -299,6 +326,14 @@ export default function WhyPanel({ ticker }: { ticker: string }) {
       {ciWide && (
         <span className="inline-flex items-center rounded border border-warn/50 bg-warn/10 px-1.5 py-px font-mono text-[10px] text-warn">
           wide
+        </span>
+      )}
+      {error && (
+        <span
+          className="inline-flex items-center rounded border border-muted/40 bg-muted/10 px-1.5 py-px font-mono text-[10px] text-muted"
+          title={timedOut ? "scoring timed out — showing last result" : "refresh failed — showing last result"}
+        >
+          stale
         </span>
       )}
     </div>
