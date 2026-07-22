@@ -9,6 +9,14 @@ interface QuoteData {
   price: number;
 }
 
+interface ActionCard {
+  entry?: number | null;
+  stop?: number | null;
+  target?: number | null;
+  risk_reward?: number | null;
+  stop_anchor?: string | null;
+}
+
 const fetcher = (url: string) =>
   fetch(url).then((r) => {
     if (!r.ok) throw new Error(`${r.status}`);
@@ -37,7 +45,7 @@ function InfoTooltip({ text }: { text: string }) {
       <Tooltip.Trigger asChild>
         <button
           type="button"
-          className="text-muted text-[11px] font-mono leading-none cursor-default select-none ml-1"
+          className="ml-1 cursor-default select-none font-mono text-[11px] leading-none text-muted"
           aria-label="info"
         >
           i
@@ -45,7 +53,7 @@ function InfoTooltip({ text }: { text: string }) {
       </Tooltip.Trigger>
       <Tooltip.Portal>
         <Tooltip.Content
-          className="rounded bg-elevated px-2 py-1 text-[12px] text-muted shadow-lg border border-line z-50 max-w-[240px]"
+          className="z-50 max-w-[240px] rounded border border-line bg-elevated px-2 py-1 text-[12px] text-muted shadow-lg"
           sideOffset={4}
         >
           {text}
@@ -56,115 +64,206 @@ function InfoTooltip({ text }: { text: string }) {
   );
 }
 
+/** Horizontal range bar plotting stop / entry / current / target as positions. */
+function PriceRail({
+  stop,
+  entry,
+  target,
+  price,
+}: {
+  stop: number;
+  entry: number;
+  target: number;
+  price: number | null;
+}) {
+  const vals = [stop, entry, target, price].filter((v): v is number => v != null);
+  const lo = Math.min(...vals);
+  const hi = Math.max(...vals);
+  const span = hi - lo || 1;
+  const pos = (v: number) => ((v - lo) / span) * 100;
+  return (
+    <div className="pt-1">
+      <div className="relative h-1.5 rounded-full bg-line">
+        <div
+          className="absolute h-full rounded-l-full bg-neg/40"
+          style={{ left: `${pos(Math.min(stop, entry))}%`, width: `${Math.abs(pos(entry) - pos(stop))}%` }}
+        />
+        <div
+          className="absolute h-full rounded-r-full bg-pos/40"
+          style={{ left: `${pos(Math.min(entry, target))}%`, width: `${Math.abs(pos(target) - pos(entry))}%` }}
+        />
+        {[
+          { v: stop, cls: "bg-neg", label: "S" },
+          { v: entry, cls: "bg-foreground", label: "E" },
+          { v: target, cls: "bg-pos", label: "T" },
+        ].map((m) => (
+          <div
+            key={m.label}
+            className={`absolute top-1/2 h-2.5 w-0.5 -translate-y-1/2 ${m.cls}`}
+            style={{ left: `${pos(m.v)}%` }}
+          />
+        ))}
+        {price != null && (
+          <div
+            className="absolute top-1/2 h-3.5 w-3.5 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-accent bg-bg"
+            style={{ left: `${pos(price)}%` }}
+            title={`price ${price.toFixed(2)}`}
+          />
+        )}
+      </div>
+    </div>
+  );
+}
+
 export default function LevelsCard({ ticker, bridgeRow }: LevelsCardProps) {
   const [riskUsd, setRiskUsd] = useLocalStorage("dash:riskUsd", 500);
 
-  const { data: quote } = useSWR<QuoteData>(
-    `/api/argus/quote/${ticker}`,
-    fetcher,
-    { refreshInterval: 30000, shouldRetryOnError: false }
-  );
+  const { data: quote } = useSWR<QuoteData>(`/api/argus/quote/${ticker}`, fetcher, {
+    refreshInterval: 10000,
+    shouldRetryOnError: false,
+  });
+  // Prefer the live-computed action_card levels; the nightly bridge row often
+  // carries degenerate (entry==stop) placeholders. Shares SWR cache w/ WhyPanel.
+  const { data: card } = useSWR<ActionCard>(`/api/argus/action_card/${ticker}`, fetcher, {
+    shouldRetryOnError: false,
+    revalidateOnFocus: false,
+  });
 
-  const { entry, stop, target, risk_reward, stop_anchor } = bridgeRow;
+  const cardOk =
+    card != null &&
+    card.entry != null &&
+    card.stop != null &&
+    Number.isFinite(card.entry) &&
+    Number.isFinite(card.stop) &&
+    card.entry !== card.stop;
+
+  const entry = cardOk ? (card!.entry as number) : bridgeRow.entry;
+  const stop = cardOk ? (card!.stop as number) : bridgeRow.stop;
+  const target = cardOk ? card!.target ?? bridgeRow.target : bridgeRow.target;
+  const stop_anchor = (cardOk ? card!.stop_anchor : null) ?? bridgeRow.stop_anchor;
+
+  const risk_reward =
+    (cardOk ? card!.risk_reward : bridgeRow.risk_reward) ??
+    (entry != null && stop != null && target != null && entry !== stop
+      ? (target - entry) / (entry - stop)
+      : null);
 
   const livePrice = quote?.price ?? null;
 
+  // Levels are only meaningful when entry, stop and target are distinct.
+  const valid =
+    entry != null &&
+    stop != null &&
+    target != null &&
+    Number.isFinite(entry) &&
+    Number.isFinite(stop) &&
+    entry !== stop;
+
   const distToEntry =
-    Number.isFinite(entry) && entry !== null && entry !== 0 &&
-    Number.isFinite(livePrice) && livePrice !== null
-      ? (((livePrice - entry) / entry) * 100).toFixed(1)
+    valid && entry !== 0 && livePrice != null
+      ? (((livePrice - entry!) / entry!) * 100).toFixed(1)
       : null;
 
   const shares =
-    Number.isFinite(entry) && Number.isFinite(stop) &&
-    entry !== null && stop !== null &&
-    entry > stop && riskUsd > 0
-      ? Math.floor(riskUsd / (entry - stop))
-      : null;
+    valid && entry! > stop! && riskUsd > 0 ? Math.floor(riskUsd / (entry! - stop!)) : null;
 
-  const rrLabel =
-    risk_reward != null ? risk_reward.toFixed(2) : "—";
-
+  const rrLabel = risk_reward != null ? risk_reward.toFixed(2) : "—";
   const anchorLabel = stop_anchor ? stopAnchorLabel(stop_anchor) : null;
 
   return (
-    <section className="rounded-lg border border-line bg-surface">
-      <div className="flex items-center gap-2 px-4 py-3 border-b border-line">
-        <span className="font-medium text-[13px]">Levels</span>
-        <InfoTooltip text="Indicative levels only — not an exit system. Mechanical exits backtested ~breakeven." />
+    <section className="rounded-md border border-line bg-elevated">
+      <div className="flex items-center gap-2 border-b border-line px-4 py-3">
+        <span className="tick text-[13px] font-semibold text-foreground">Trade levels</span>
+        <InfoTooltip text="Entry/stop/target from the live scorer. Context, not a mechanical exit system." />
       </div>
-      <div className="px-4 py-3 space-y-3">
-        {/* E / S / T / R:R grid */}
-        <div className="grid grid-cols-4 gap-2 text-center">
-          <div>
-            <p className="text-[10px] text-muted uppercase tracking-wide mb-0.5">Entry</p>
-            <p className="font-mono text-[14px] tabular-nums text-foreground">
-              {entry?.toFixed(2) ?? "—"}
-            </p>
-          </div>
-          <div>
-            <p className="text-[10px] text-muted uppercase tracking-wide mb-0.5">Stop</p>
-            <p className="font-mono text-[14px] tabular-nums text-neg">
-              {stop?.toFixed(2) ?? "—"}
-            </p>
-          </div>
-          <div>
-            <p className="text-[10px] text-muted uppercase tracking-wide mb-0.5">Target</p>
-            <p className="font-mono text-[14px] tabular-nums text-pos">
-              {target?.toFixed(2) ?? "—"}
-            </p>
-          </div>
-          <div>
-            <p className="text-[10px] text-muted uppercase tracking-wide mb-0.5">R:R</p>
-            <p className="font-mono text-[14px] tabular-nums text-foreground">
-              {rrLabel}
-            </p>
-          </div>
-        </div>
 
-        {/* Dist-to-entry line */}
-        {distToEntry !== null && (
-          <p className="text-[12px] font-mono tabular-nums text-muted">
-            price{" "}
-            <span className={Number(distToEntry) >= 0 ? "text-pos" : "text-neg"}>
-              {Number(distToEntry) >= 0 ? "+" : ""}
-              {distToEntry}%
-            </span>{" "}
-            {Number(distToEntry) >= 0 ? "above" : "below"} entry
+      {!valid ? (
+        <div className="px-4 py-4 text-[12px] text-muted">
+          No trade levels for {ticker} yet — the scorer needs a directional setup (entry, stop and
+          target must differ).
+        </div>
+      ) : (
+        <div className="space-y-3 px-4 py-3">
+          <div className="grid grid-cols-4 gap-2 text-center">
+            <div>
+              <p className="mb-0.5 text-[10px] uppercase tracking-wide text-muted">Entry</p>
+              <p className="font-mono text-[14px] tabular-nums text-foreground">
+                {entry!.toFixed(2)}
+              </p>
+            </div>
+            <div>
+              <p className="mb-0.5 text-[10px] uppercase tracking-wide text-muted">Stop</p>
+              <p className="font-mono text-[14px] tabular-nums text-neg">{stop!.toFixed(2)}</p>
+            </div>
+            <div>
+              <p className="mb-0.5 text-[10px] uppercase tracking-wide text-muted">Target</p>
+              <p className="font-mono text-[14px] tabular-nums text-pos">{target!.toFixed(2)}</p>
+            </div>
+            <div>
+              <p className="mb-0.5 text-[10px] uppercase tracking-wide text-muted">R:R</p>
+              <p
+                className={`font-mono text-[14px] tabular-nums ${
+                  risk_reward != null && risk_reward >= 2
+                    ? "text-pos"
+                    : risk_reward != null && risk_reward < 1
+                      ? "text-warn"
+                      : "text-foreground"
+                }`}
+              >
+                {rrLabel}
+              </p>
+            </div>
+          </div>
+
+          <PriceRail stop={stop!} entry={entry!} target={target!} price={livePrice} />
+
+          {distToEntry !== null && (
+            <p className="font-mono text-[12px] tabular-nums text-muted">
+              price{" "}
+              <span className={Number(distToEntry) >= 0 ? "text-pos" : "text-neg"}>
+                {Number(distToEntry) >= 0 ? "+" : ""}
+                {distToEntry}%
+              </span>{" "}
+              {Number(distToEntry) >= 0 ? "above" : "below"} entry
+            </p>
+          )}
+
+          {anchorLabel && <p className="text-[12px] text-muted">{anchorLabel}</p>}
+
+          <div className="space-y-2 border-t border-line pt-3">
+            <div className="flex flex-wrap items-center gap-2">
+              <label className="font-mono text-[11px] text-muted">Risk $</label>
+              <input
+                type="number"
+                min={0}
+                step={50}
+                value={riskUsd}
+                onChange={(e) => {
+                  const v = Number(e.target.value);
+                  if (!isNaN(v) && v >= 0) setRiskUsd(v);
+                }}
+                className="w-20 rounded border border-line bg-raised px-2 py-0.5 font-mono text-[12px] tabular-nums text-foreground focus:border-accent focus:outline-none"
+              />
+              {shares !== null ? (
+                <span className="font-mono text-[13px] tabular-nums text-foreground">
+                  = <span className="text-accent">{shares}</span> shares
+                  <span className="ml-2 text-muted">
+                    ${(shares * entry!).toLocaleString(undefined, { maximumFractionDigits: 0 })}{" "}
+                    notional
+                  </span>
+                </span>
+              ) : (
+                <span className="font-mono text-[13px] text-muted">—</span>
+              )}
+            </div>
+          </div>
+
+          <p className="pt-1 text-[10px] leading-snug text-muted">
+            Sizing from your risk budget ÷ (entry − stop). Levels are context, not a mechanical exit
+            system.
           </p>
-        )}
-
-        {/* Stop anchor sentence */}
-        {anchorLabel && (
-          <p className="text-[12px] text-muted">{anchorLabel}</p>
-        )}
-
-        {/* Size calculator */}
-        <div className="border-t border-line pt-3 space-y-2">
-          <div className="flex items-center gap-2">
-            <label className="text-[11px] text-muted font-mono">Risk $</label>
-            <input
-              type="number"
-              min={0}
-              step={50}
-              value={riskUsd}
-              onChange={(e) => {
-                const v = Number(e.target.value);
-                if (!isNaN(v) && v >= 0) setRiskUsd(v);
-              }}
-              className="w-20 rounded border border-line bg-elevated px-2 py-0.5 font-mono text-[12px] text-foreground tabular-nums focus:outline-none focus:border-accent"
-            />
-            <span className="font-mono text-[13px] tabular-nums text-foreground ml-2">
-              {shares !== null ? `= ${shares} shares` : "—"}
-            </span>
-          </div>
         </div>
-
-        {/* Footnote */}
-        <p className="text-[10px] text-muted leading-snug pt-1">
-          Calculator only — levels are context, not an exit system (mechanical exits backtested ~breakeven).
-        </p>
-      </div>
+      )}
     </section>
   );
 }

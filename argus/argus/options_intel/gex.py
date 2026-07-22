@@ -30,6 +30,11 @@ DEALER_SIGN = {"C": -1.0, "P": +1.0}
 SWEEP_PCT = 0.15
 SWEEP_POINTS = 61
 DEFAULT_IV = 0.20
+# Minimum open-interest base for the derived GEX levels to be trustworthy.
+# Below this the chain is degenerate (e.g. yfinance index options carry volume
+# but ~no OI) and we return no levels rather than confident-garbage walls.
+MIN_OI_CONTRACTS = 8
+MIN_TOTAL_OI = 100
 
 
 def bs_gamma(s: float, k: float, t: float, sigma: float) -> float:
@@ -72,6 +77,14 @@ def compute_gex(conn, symbol: str, snap_date: str, spot: float | None,
         "WHERE symbol=? AND snap_date=? AND kind='close' AND expiry=? AND oi>0",
         (symbol, snap_date, expiry)).fetchall()
     if not rows:
+        return None
+    # Guard degenerate chains: some sources (e.g. yfinance ^SPX index options)
+    # return volume but almost no open interest, leaving a handful of deep-OTM
+    # contracts that produce confident-but-garbage walls/zero-gamma. Require a
+    # real OI base before trusting the derived levels — honest absence beats
+    # wrong numbers.
+    total_oi = sum(r["oi"] or 0 for r in rows)
+    if len(rows) < MIN_OI_CONTRACTS or total_oi < MIN_TOTAL_OI:
         return None
     t_years = max((date.fromisoformat(expiry) - date.fromisoformat(today)).days, 1) / 365.0
 

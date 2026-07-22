@@ -59,7 +59,7 @@ export interface LadderPayload {
   symbol: string;
   snap_date: string;
   spot: number;
-  levels: LadderLevels;
+  levels: LadderLevels | null;
   expiries: LadderExpiry[];
 }
 

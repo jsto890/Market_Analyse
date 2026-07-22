@@ -51,11 +51,11 @@ export default function OdteStrikesPage() {
   const active = expiries[idx];
   const rows = active?.rows ?? [];
 
-  const zgIdx = nearestStrikeIndex(rows, data?.levels.zero_gamma ?? null);
+  const zgIdx = nearestStrikeIndex(rows, data?.levels?.zero_gamma ?? null);
   const callWallIdx =
-    data?.levels.call_wall != null ? nearestStrikeIndex(rows, data.levels.call_wall) : -1;
+    data?.levels?.call_wall != null ? nearestStrikeIndex(rows, data.levels.call_wall) : -1;
   const putWallIdx =
-    data?.levels.put_wall != null ? nearestStrikeIndex(rows, data.levels.put_wall) : -1;
+    data?.levels?.put_wall != null ? nearestStrikeIndex(rows, data.levels.put_wall) : -1;
   const spotIdx = nearestStrikeIndex(rows, data?.spot ?? null);
 
   // Anchor the ladder on the spot row so the pin zone (spot/walls/zero-gamma)
@@ -148,10 +148,10 @@ export default function OdteStrikesPage() {
             <LegendItem code="PW" cls="text-neg" label="put wall (support)" />
             <span className="h-3 w-px bg-line" />
             <span className="eyebrow">Levels</span>
-            <Lvl label="zero-γ" value={fmtLvl(data.levels.zero_gamma)} />
-            <Lvl label="call wall" value={fmtLvl(data.levels.call_wall)} />
-            <Lvl label="put wall" value={fmtLvl(data.levels.put_wall)} />
-            <Lvl label="net GEX" value={fmtGex(data.levels.total_gex)} />
+            <Lvl label="zero-γ" value={fmtLvl(data.levels?.zero_gamma)} />
+            <Lvl label="call wall" value={fmtLvl(data.levels?.call_wall)} />
+            <Lvl label="put wall" value={fmtLvl(data.levels?.put_wall)} />
+            <Lvl label="net GEX" value={fmtGex(data.levels?.total_gex ?? null)} />
             <Lvl
               label="exp. move"
               value={
