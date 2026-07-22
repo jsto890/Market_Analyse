@@ -19,6 +19,7 @@ Single-user, no auth (binds to 127.0.0.1 by default). Argus feature set:
 """
 from __future__ import annotations
 
+import asyncio
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional, List
@@ -46,6 +47,19 @@ from ..screener import screen_universe, DEFAULT_UNIVERSE
 from ..flow import flow_summary
 from ..portfolio import PortfolioTracker
 from ..chat import chart_chat, written_analysis
+
+
+def _ensure_thread_loop() -> None:
+    """ib_insync needs an event loop in the calling thread. Reuse the thread's
+    existing loop if one is set and open; only create a new loop otherwise — the
+    old code made a fresh loop per request and never closed it, leaking loops/fds
+    under polling."""
+    try:
+        loop = asyncio.get_event_loop()
+        if loop.is_closed():
+            raise RuntimeError
+    except RuntimeError:
+        asyncio.set_event_loop(asyncio.new_event_loop())
 from ..alerts import dispatch_alert, AlertChannels, AlertLog
 from ..news.schema import ensure_news_schema
 from ..news.store import fetch_after, fetch_latest
@@ -330,8 +344,7 @@ def build_app() -> FastAPI:
 
     @app.get("/api/portfolio")
     def portfolio():
-        import asyncio
-        asyncio.set_event_loop(asyncio.new_event_loop())
+        _ensure_thread_loop()
         try:
             return PortfolioTracker().positions_with_edge()
         except Exception as e:
@@ -339,8 +352,7 @@ def build_app() -> FastAPI:
 
     @app.get("/api/account")
     def account():
-        import asyncio
-        asyncio.set_event_loop(asyncio.new_event_loop())
+        _ensure_thread_loop()
         try:
             return IBKRClient.instance().account_summary()
         except Exception as e:
@@ -348,8 +360,7 @@ def build_app() -> FastAPI:
 
     @app.get("/api/fundamentals/{symbol}")
     def fundamentals(symbol: str):
-        import asyncio
-        asyncio.set_event_loop(asyncio.new_event_loop())
+        _ensure_thread_loop()
         sym = symbol.upper()
 
         def _yf_fallback(reason: str) -> dict:
