@@ -12,7 +12,7 @@ from typing import Optional, Union
 
 from ..db import get_conn
 
-INDEX_UNDERLYINGS = ["SPY", "QQQ", "IWM", "DIA"]
+INDEX_UNDERLYINGS = ["SPY", "QQQ", "IWM", "DIA", "SPX", "NDX", "RUT", "DJX"]
 
 
 def _watchlist(db_path) -> list[str]:

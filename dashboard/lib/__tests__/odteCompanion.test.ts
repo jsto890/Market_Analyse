@@ -17,20 +17,20 @@ describe("odteCompanion", () => {
       expect(companionSymbol("DIA" as OdteSymbol)).toBe("DIA");
     });
 
-    it("maps index symbols to ETF proxies", () => {
-      expect(companionSymbol("SPX" as OdteSymbol)).toBe("SPY");
-      expect(companionSymbol("NDX" as OdteSymbol)).toBe("QQQ");
-      expect(companionSymbol("RUT" as OdteSymbol)).toBe("IWM");
-      expect(companionSymbol("DJX" as OdteSymbol)).toBe("DIA");
+    it("returns identity for index symbols (real chains, no ETF proxy)", () => {
+      expect(companionSymbol("SPX" as OdteSymbol)).toBe("SPX");
+      expect(companionSymbol("NDX" as OdteSymbol)).toBe("NDX");
+      expect(companionSymbol("RUT" as OdteSymbol)).toBe("RUT");
+      expect(companionSymbol("DJX" as OdteSymbol)).toBe("DJX");
     });
   });
 
   describe("isProxied", () => {
-    it("returns true for index symbols", () => {
-      expect(isProxied("SPX" as OdteSymbol)).toBe(true);
-      expect(isProxied("NDX" as OdteSymbol)).toBe(true);
-      expect(isProxied("RUT" as OdteSymbol)).toBe(true);
-      expect(isProxied("DJX" as OdteSymbol)).toBe(true);
+    it("returns false for index symbols (real chains now exist)", () => {
+      expect(isProxied("SPX" as OdteSymbol)).toBe(false);
+      expect(isProxied("NDX" as OdteSymbol)).toBe(false);
+      expect(isProxied("RUT" as OdteSymbol)).toBe(false);
+      expect(isProxied("DJX" as OdteSymbol)).toBe(false);
     });
 
     it("returns false for ETF symbols", () => {

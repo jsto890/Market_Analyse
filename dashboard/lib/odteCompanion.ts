@@ -1,21 +1,17 @@
 import { odteSymbols, type OdteSymbol } from "@/lib/odte-core";
 
-export type CompanionEtf = "SPY" | "QQQ" | "IWM" | "DIA";
-
-const indexProxy: Record<string, CompanionEtf> = {
-  SPX: "SPY",
-  NDX: "QQQ",
-  RUT: "IWM",
-  DJX: "DIA",
-};
-
-/** WS-1 data exists for ETFs only; indexes borrow their ETF proxy. */
-export function companionSymbol(symbol: OdteSymbol): CompanionEtf {
-  return (indexProxy[symbol] ?? symbol) as CompanionEtf;
+/**
+ * Every underlying now has its own real option chain — indices are fetched from
+ * yfinance under their caret symbol (^SPX, ^NDX, …) in the Argus data layer and
+ * stored/served under the plain symbol. No ETF proxying: the companion IS the
+ * symbol. Kept as a function so existing call sites don't need to change.
+ */
+export function companionSymbol(symbol: OdteSymbol): OdteSymbol {
+  return symbol;
 }
 
-export function isProxied(symbol: OdteSymbol): boolean {
-  return symbol in indexProxy;
+export function isProxied(_symbol: OdteSymbol): boolean {
+  return false;
 }
 
 export interface GexLevels {

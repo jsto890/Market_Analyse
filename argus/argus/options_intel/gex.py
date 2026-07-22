@@ -46,7 +46,15 @@ def _nearest_eligible_expiry(conn, symbol: str, snap_date: str, today: str) -> s
         (symbol, snap_date)).fetchall()
     for r in rows:
         dte = (date.fromisoformat(r["expiry"]) - date.fromisoformat(today)).days
-        if dte >= 1:
+        if dte < 1:
+            continue
+        # Thin index weeklies (RUT/DJX) can have a near expiry with zero open
+        # interest — skip to the first expiry that actually carries OI.
+        has_oi = conn.execute(
+            "SELECT 1 FROM options_snapshots WHERE symbol=? AND snap_date=? "
+            "AND kind='close' AND expiry=? AND oi>0 LIMIT 1",
+            (symbol, snap_date, r["expiry"])).fetchone()
+        if has_oi:
             return r["expiry"]
     return None
 

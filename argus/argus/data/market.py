@@ -19,6 +19,16 @@ import yfinance as yf
 
 _OHLCV_COLS = ["open", "high", "low", "close", "volume"]
 
+# Index underlyings trade options under a caret symbol on yfinance (^SPX …),
+# while the rest of the app uses the plain form (SPX, NDX, RUT, DJX). Map ONLY
+# at the yfinance boundary so history/quotes/chains are still stored and served
+# under the plain symbol.
+_INDEX_YF_ALIAS = {"SPX": "^SPX", "NDX": "^NDX", "RUT": "^RUT", "DJX": "^DJX"}
+
+
+def yf_symbol(symbol: str) -> str:
+    return _INDEX_YF_ALIAS.get(symbol.upper(), symbol.upper())
+
 
 def _normalise(df: pd.DataFrame) -> pd.DataFrame:
     df = df.rename(columns=str.lower)
@@ -65,7 +75,7 @@ def get_history(
 ) -> pd.DataFrame:
     """Return OHLCV history for `symbol`. Columns: open, high, low, close, volume."""
     bucket = _cache_bucket(interval)
-    df = _fetch_cached(symbol.upper(), period, interval, bucket).copy()
+    df = _fetch_cached(yf_symbol(symbol), period, interval, bucket).copy()
     df.attrs["ticker"] = symbol.upper()
     return df
 
@@ -120,7 +130,7 @@ def get_extended_quote(symbol: str) -> Optional[dict]:
     """Last traded price including pre/post sessions (1m prepost bars)."""
     sym = symbol.upper()
     try:
-        df = yf.Ticker(sym).history(period="1d", interval="1m", prepost=True)
+        df = yf.Ticker(yf_symbol(sym)).history(period="1d", interval="1m", prepost=True)
     except Exception:
         return None
     if df is None or df.empty:
@@ -137,7 +147,7 @@ def get_options_chain(symbol: str, expiration: Optional[str] = None) -> dict:
     Real options-flow products license vendor feeds (Cboe, etc.). The
     free-data version computes call/put OI ratios as a flow proxy.
     """
-    tk = yf.Ticker(symbol.upper())
+    tk = yf.Ticker(yf_symbol(symbol))
     try:
         expiries = tk.options
     except Exception:
