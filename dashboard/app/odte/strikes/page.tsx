@@ -32,6 +32,31 @@ function LegendItem({ code, cls, label }: { code: string; cls: string; label: st
   );
 }
 
+/** OI/Vol cell with a background bar; put bars grow toward the strike from the
+ * left, call bars from the right — a mirrored liquidity profile. */
+function BarCell({
+  value,
+  max,
+  side,
+  tone,
+}: {
+  value: number | null | undefined;
+  max: number;
+  side: "put" | "call";
+  tone: string;
+}) {
+  const w = value != null && max > 0 ? Math.min(100, (value / max) * 100) : 0;
+  return (
+    <td className={`relative px-2 py-1 text-muted ${side === "put" ? "text-right" : "text-left"}`}>
+      <div
+        className={`absolute inset-y-[3px] ${side === "put" ? "right-0" : "left-0"} rounded-sm ${tone}`}
+        style={{ width: `${w}%` }}
+      />
+      <span className="relative">{fmtNum(value)}</span>
+    </td>
+  );
+}
+
 function Lvl({ label, value }: { label: string; value: string }) {
   return (
     <span className="inline-flex items-center gap-1 font-mono">
@@ -57,6 +82,11 @@ export default function OdteStrikesPage() {
   const putWallIdx =
     data?.levels?.put_wall != null ? nearestStrikeIndex(rows, data.levels.put_wall) : -1;
   const spotIdx = nearestStrikeIndex(rows, data?.spot ?? null);
+
+  // Scale maxes for the visual profile bars (per active expiry).
+  const maxOi = Math.max(1, ...rows.flatMap((r) => [r.put?.oi ?? 0, r.call?.oi ?? 0]));
+  const maxVol = Math.max(1, ...rows.flatMap((r) => [r.put?.vol ?? 0, r.call?.vol ?? 0]));
+  const maxGex = Math.max(1, ...rows.map((r) => Math.abs(r.gex ?? 0)));
 
   // Anchor the ladder on the spot row so the pin zone (spot/walls/zero-gamma)
   // is visible first instead of the lowest strike.
@@ -199,8 +229,8 @@ export default function OdteStrikesPage() {
                           highlight ? "bg-elevated" : ""
                         } ${leftBorder}`}
                       >
-                        <td className="text-right px-2 py-1 text-muted">{fmtNum(row.put?.oi)}</td>
-                        <td className="text-right px-2 py-1 text-muted">{fmtNum(row.put?.vol)}</td>
+                        <BarCell value={row.put?.oi} max={maxOi} side="put" tone="bg-neg/20" />
+                        <BarCell value={row.put?.vol} max={maxVol} side="put" tone="bg-neg/10" />
                         <td className="text-right px-2 py-1 text-muted">{fmtIv(row.put?.iv)}</td>
                         <td className="text-center px-3 py-1 border-x border-line text-foreground">
                           <span>{row.strike}</span>
@@ -218,14 +248,24 @@ export default function OdteStrikesPage() {
                           )}
                         </td>
                         <td className="text-left px-2 py-1 text-muted">{fmtIv(row.call?.iv)}</td>
-                        <td className="text-left px-2 py-1 text-muted">{fmtNum(row.call?.vol)}</td>
-                        <td className="text-left px-2 py-1 text-muted">{fmtNum(row.call?.oi)}</td>
-                        <td
-                          className={`text-left px-2 py-1 ${
-                            row.gex >= 0 ? "text-pos" : "text-neg"
-                          }`}
-                        >
-                          {fmtGex(row.gex)}
+                        <BarCell value={row.call?.vol} max={maxVol} side="call" tone="bg-pos/10" />
+                        <BarCell value={row.call?.oi} max={maxOi} side="call" tone="bg-pos/20" />
+                        <td className="relative px-2 py-1 text-left">
+                          <div
+                            className={`absolute inset-y-[3px] rounded-sm ${
+                              row.gex >= 0 ? "bg-pos/30" : "bg-neg/30"
+                            }`}
+                            style={{
+                              left:
+                                row.gex >= 0
+                                  ? "50%"
+                                  : `${50 - Math.min(50, (Math.abs(row.gex) / maxGex) * 50)}%`,
+                              width: `${Math.min(50, (Math.abs(row.gex) / maxGex) * 50)}%`,
+                            }}
+                          />
+                          <span className={`relative ${row.gex >= 0 ? "text-pos" : "text-neg"}`}>
+                            {fmtGex(row.gex)}
+                          </span>
                         </td>
                       </tr>
                     );
