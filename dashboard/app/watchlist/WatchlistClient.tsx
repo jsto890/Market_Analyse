@@ -8,6 +8,7 @@ import StatChip from "@/components/ui/StatChip";
 import Badge from "@/components/ui/Badge";
 import EmptyState from "@/components/ui/EmptyState";
 import PageHeader from "@/components/ui/PageHeader";
+import { heatBg } from "@/lib/heat";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -72,7 +73,10 @@ function fmtPct(v: number | null): React.ReactNode {
   if (v === null) return <span className="text-muted">—</span>;
   const cls = v >= 0 ? "text-pos" : "text-neg";
   return (
-    <span className={`tabular-nums ${cls}`}>
+    <span
+      className={`inline-block rounded px-1.5 py-0.5 tabular-nums ${cls}`}
+      style={{ backgroundColor: heatBg(v) }}
+    >
       {v >= 0 ? "+" : ""}{v.toFixed(1)}%
     </span>
   );
