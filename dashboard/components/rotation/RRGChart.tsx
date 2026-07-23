@@ -74,11 +74,30 @@ function RRGTooltip({ active, payload }: { active?: boolean; payload?: TooltipPa
   );
 }
 
+// Sectors whose relative-strength line is flat (constituent closes failed to
+// load) come out exactly at 100/100 — meaningless points that pile up on the
+// origin and collide. Drop them from the plot.
+function isDegenerate(r: RotationRow): boolean {
+  return Math.abs(r.rs_ratio - 100) < 0.05 && Math.abs(r.rs_mom - 100) < 0.05;
+}
+
 export default function RRGChart({ rows }: { rows: RotationRow[] }) {
   if (!rows.length) return null;
 
-  const ratios = rows.map((r) => r.rs_ratio);
-  const moms = rows.map((r) => r.rs_mom);
+  const plotted = rows.filter((r) => !isDegenerate(r));
+  const hidden = rows.length - plotted.length;
+  if (!plotted.length) {
+    return (
+      <Panel title="Relative Rotation Graph" subtitle="RS-Ratio vs RS-Momentum">
+        <p className="px-1 py-6 text-center text-[13px] text-muted">
+          No sector data available — the rotation job returned no populated sectors.
+        </p>
+      </Panel>
+    );
+  }
+
+  const ratios = plotted.map((r) => r.rs_ratio);
+  const moms = plotted.map((r) => r.rs_mom);
   const minR = Math.min(...ratios, 100);
   const maxR = Math.max(...ratios, 100);
   const minM = Math.min(...moms, 100);
@@ -90,10 +109,15 @@ export default function RRGChart({ rows }: { rows: RotationRow[] }) {
   const xDomain: [number, number] = [minR - padR, maxR + padR];
   const yDomain: [number, number] = [minM - padM, maxM + padM];
 
-  const data = rows.map((r) => ({ ...r, quadrantKey: deriveQuadrant(r) }));
+  const data = plotted.map((r) => ({ ...r, quadrantKey: deriveQuadrant(r) }));
 
   return (
-    <Panel title="Relative Rotation Graph" subtitle="RS-Ratio vs RS-Momentum">
+    <Panel
+      title="Relative Rotation Graph"
+      subtitle={`RS-Ratio vs RS-Momentum · ${plotted.length} sectors${
+        hidden > 0 ? ` · ${hidden} hidden (no data)` : ""
+      }`}
+    >
       <div style={{ width: "100%", height: 420 }}>
         <ResponsiveContainer width="100%" height="100%">
           <ScatterChart margin={{ top: 16, right: 24, bottom: 8, left: 8 }}>
@@ -170,10 +194,27 @@ export default function RRGChart({ rows }: { rows: RotationRow[] }) {
                 const p = props as { cx?: number; cy?: number; payload?: (typeof data)[number] };
                 if (p.cx == null || p.cy == null || !p.payload) return <g />;
                 const color = QUADRANT_COLOR[p.payload.quadrantKey] ?? "var(--accent)";
+                // Push the label outward from the 100/100 origin (right/left,
+                // up/down by quadrant) to reduce central label collision, and
+                // give it a bg halo so overlaps stay readable.
+                const right = p.payload.rs_ratio >= 100;
+                const up = p.payload.rs_mom >= 100;
                 return (
                   <g>
                     <circle cx={p.cx} cy={p.cy} r={4} fill={color} stroke="var(--bg)" strokeWidth={1} />
-                    <text x={p.cx + 8} y={p.cy} dy={3} fontSize={10} fill="#8b93a3">
+                    <text
+                      x={p.cx + (right ? 7 : -7)}
+                      y={p.cy + (up ? -3 : 9)}
+                      fontSize={10}
+                      fill="#c3c9d4"
+                      textAnchor={right ? "start" : "end"}
+                      style={{
+                        paintOrder: "stroke",
+                        stroke: "var(--bg)",
+                        strokeWidth: 3,
+                        strokeLinejoin: "round",
+                      }}
+                    >
                       {abbreviate(p.payload.industry)}
                     </text>
                   </g>

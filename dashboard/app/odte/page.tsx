@@ -79,10 +79,10 @@ export default function OdtePage() {
     ladder?.spot ??
     null;
 
-  const zeroGamma = gexData?.zero_gamma ?? ladder?.levels.zero_gamma ?? null;
-  const callWall = gexData?.call_wall ?? ladder?.levels.call_wall ?? null;
-  const putWall = gexData?.put_wall ?? ladder?.levels.put_wall ?? null;
-  const totalGex = gexData?.total_gex ?? ladder?.levels.total_gex ?? null;
+  const zeroGamma = gexData?.zero_gamma ?? ladder?.levels?.zero_gamma ?? null;
+  const callWall = gexData?.call_wall ?? ladder?.levels?.call_wall ?? null;
+  const putWall = gexData?.put_wall ?? ladder?.levels?.put_wall ?? null;
+  const totalGex = gexData?.total_gex ?? ladder?.levels?.total_gex ?? null;
 
   const levelsVerdict = deriveLevels({ spot, zeroGamma, callWall, putWall, totalGex });
   const flowVerdict = deriveFlow({

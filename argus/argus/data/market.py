@@ -53,14 +53,31 @@ def _cache_bucket(interval: str) -> int:
 
 @lru_cache(maxsize=512)
 def _fetch_cached(symbol: str, period: str, interval: str, bucket: int) -> pd.DataFrame:
-    raw = yf.download(
-        symbol,
-        period=period,
-        interval=interval,
-        auto_adjust=False,
-        progress=False,
-        threads=False,
-    )
+    # yfinance is the price backbone and can hang or transiently rate-limit;
+    # bound it with a timeout and one backoff retry so a blip doesn't stall the
+    # request thread indefinitely.
+    raw = None
+    last_exc = None
+    for attempt in range(2):
+        try:
+            raw = yf.download(
+                symbol,
+                period=period,
+                interval=interval,
+                auto_adjust=False,
+                progress=False,
+                threads=False,
+                timeout=15,
+            )
+            break
+        except Exception as e:  # network / rate-limit / parse
+            last_exc = e
+            time.sleep(0.6 * (attempt + 1))
+    if raw is None:
+        if last_exc is not None:
+            import logging
+            logging.getLogger(__name__).warning("yfinance fetch failed for %s: %s", symbol, last_exc)
+        return pd.DataFrame(columns=_OHLCV_COLS)
     if raw is None or raw.empty:
         return pd.DataFrame(columns=_OHLCV_COLS)
     if isinstance(raw.columns, pd.MultiIndex):
