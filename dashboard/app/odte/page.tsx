@@ -31,9 +31,9 @@ import Panel from "@/components/ui/Panel";
 
 const fetcher = (u: string) => fetch(u, { cache: "no-store" }).then((r) => r.json());
 const toneClass: Record<string, string> = {
-  live: "bg-green-500/20 text-green-400",
-  warn: "bg-yellow-500/20 text-yellow-400",
-  down: "bg-red-500/20 text-red-400",
+  live: "bg-teal/15 text-teal",
+  warn: "bg-warn/15 text-warn",
+  down: "bg-neg/15 text-neg",
 };
 
 export default function OdtePage() {
@@ -142,7 +142,7 @@ export default function OdtePage() {
                   key={symbol}
                   onClick={() => switchSymbol(symbol)}
                   className={`px-2 py-0.5 text-xs ${
-                    symbol === activeSymbol ? "bg-green-500/20 text-green-400" : "text-muted"
+                    symbol === activeSymbol ? "bg-accent-dim text-accent" : "text-muted hover:text-foreground"
                   }`}
                 >
                   {symbol}
@@ -157,7 +157,7 @@ export default function OdtePage() {
                   key={symbol}
                   onClick={() => switchSymbol(symbol)}
                   className={`px-2 py-0.5 text-xs ${
-                    symbol === activeSymbol ? "bg-green-500/20 text-green-400" : "text-muted"
+                    symbol === activeSymbol ? "bg-accent-dim text-accent" : "text-muted hover:text-foreground"
                   }`}
                 >
                   {symbol}
