@@ -23,6 +23,24 @@ export async function GET(
   }
 }
 
+export async function DELETE(
+  request: Request,
+  { params }: { params: { path: string[] } }
+) {
+  const argusPath = params.path.join("/");
+  try {
+    const res = await fetch(`${ARGUS_BASE}/${argusPath}`, {
+      method: "DELETE",
+      next: { revalidate: 0 },
+      signal: AbortSignal.timeout(15000),
+    });
+    const data = await res.json();
+    return Response.json(data, { status: res.status });
+  } catch {
+    return Response.json({ error: "Argus API offline" }, { status: 503 });
+  }
+}
+
 export async function POST(
   request: Request,
   { params }: { params: { path: string[] } }
