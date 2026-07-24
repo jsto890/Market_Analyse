@@ -10,6 +10,7 @@ const LINKS = [
   { href: "/rotation", label: "Rotation" },
   { href: "/screener", label: "Screener" },
   { href: "/portfolio", label: "Portfolio" },
+  { href: "/alerts", label: "Alerts" },
 ] as const;
 
 export default function NavLinks() {

@@ -99,6 +99,12 @@ class AlertReq(BaseModel):
     telegram: bool = True
     webhook: bool = True
 
+class AlertRuleReq(BaseModel):
+    kind: str            # "verdict" | "earnings" | "price"
+    symbol: str
+    params: dict = {}
+    note: Optional[str] = None
+
 
 def build_app() -> FastAPI:
     app = FastAPI(title="Argus", version="0.1.0")
@@ -466,5 +472,53 @@ def build_app() -> FastAPI:
         alert_log.log_alert(req.title, req.body, req.payload,
                             {"results": out.results})
         return {"results": out.results}
+
+    # ── Alert rules engine ──────────────────────────────────────────────────
+    @app.get("/api/alerts/rules")
+    def alert_rules_list():
+        from ..alerts.rules import list_rules
+        conn = get_conn()
+        try:
+            return {"rules": list_rules(conn)}
+        finally:
+            conn.close()
+
+    @app.post("/api/alerts/rules")
+    def alert_rules_create(req: AlertRuleReq):
+        from ..alerts.rules import add_rule
+        conn = get_conn()
+        try:
+            return add_rule(conn, req.kind, req.symbol, req.params, req.note)
+        except ValueError as e:
+            raise HTTPException(400, str(e))
+        finally:
+            conn.close()
+
+    @app.delete("/api/alerts/rules/{rule_id}")
+    def alert_rules_delete(rule_id: int):
+        from ..alerts.rules import delete_rule
+        conn = get_conn()
+        try:
+            if not delete_rule(conn, rule_id):
+                raise HTTPException(404, "no such rule")
+            return {"deleted": rule_id}
+        finally:
+            conn.close()
+
+    @app.post("/api/alerts/evaluate")
+    def alert_rules_evaluate():
+        from ..alerts.rules import evaluate_rules
+        return {"fired": evaluate_rules()}
+
+    @app.get("/api/alerts/log")
+    def alert_rules_log(limit: int = 50):
+        conn = get_conn()
+        try:
+            rows = conn.execute(
+                "SELECT id, ts, title, body FROM alerts_log ORDER BY id DESC LIMIT ?",
+                (limit,)).fetchall()
+            return {"items": [dict(r) for r in rows]}
+        finally:
+            conn.close()
 
     return app
