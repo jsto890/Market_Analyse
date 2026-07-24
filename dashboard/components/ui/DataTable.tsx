@@ -1,11 +1,11 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback, useMemo, KeyboardEvent, Fragment } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo, KeyboardEvent, Fragment, type ReactNode } from "react";
 import { ChevronUp, ChevronDown } from "lucide-react";
 
 export interface Column<T> {
   key: string;
-  header: string;
+  header: ReactNode;
   width?: string;
   align?: "left" | "right" | "center";
   sortable?: boolean;
@@ -227,7 +227,8 @@ export default function DataTable<T>({
                   }}
                   aria-expanded={expandedRender ? isExpanded : undefined}
                   className={[
-                    "cursor-pointer transition-colors hover:bg-elevated scroll-mt-[var(--nav-h)]",
+                    "cursor-pointer transition-colors hover:bg-raised scroll-mt-[var(--nav-h)]",
+                    onOpen ? "hover:shadow-[inset_2px_0_0_0_var(--accent)]" : "",
                     isEven ? "bg-surface" : "bg-bg",
                     isFocused ? "bg-elevated ring-1 ring-inset ring-accent" : "",
                   ].join(" ")}

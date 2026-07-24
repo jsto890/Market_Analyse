@@ -9,6 +9,7 @@ import type { BridgeRow } from "@/types/bridge";
 import { tierSort } from "@/lib/groups";
 import DataTable, { Column } from "@/components/ui/DataTable";
 import Panel from "@/components/ui/Panel";
+import { heatBg } from "@/lib/heat";
 import Badge from "@/components/ui/Badge";
 import ConvictionDot from "@/components/ui/ConvictionDot";
 import MicroBar from "@/components/ui/MicroBar";
@@ -81,7 +82,12 @@ function Ret({ v }: { v: number | null }) {
   }
   const sign = v >= 0 ? "+" : "";
   return (
-    <span className={`font-mono tabular-nums ${v >= 0 ? "text-pos" : "text-neg"}`}>
+    <span
+      className={`inline-block rounded px-1.5 py-0.5 font-mono tabular-nums ${
+        v >= 0 ? "text-pos" : "text-neg"
+      }`}
+      style={{ backgroundColor: heatBg(v) }}
+    >
       {sign}
       {v.toFixed(1)}
     </span>
@@ -181,6 +187,30 @@ function InfoTip({ text }: { text: string }) {
         </Tooltip.Content>
       </Tooltip.Portal>
     </Tooltip.Root>
+  );
+}
+
+function HeaderTip({ label, tip }: { label: string; tip: string }) {
+  return (
+    <span className="inline-flex items-center gap-1">
+      {label}
+      <Tooltip.Root>
+        <Tooltip.Trigger asChild>
+          <span className="cursor-default text-muted/70">
+            <Info size={11} />
+          </span>
+        </Tooltip.Trigger>
+        <Tooltip.Portal>
+          <Tooltip.Content
+            className="z-50 max-w-[260px] rounded border border-line bg-elevated px-2 py-1.5 text-[12px] font-normal normal-case tracking-normal text-muted shadow-lg"
+            sideOffset={4}
+          >
+            {tip}
+            <Tooltip.Arrow className="fill-elevated" />
+          </Tooltip.Content>
+        </Tooltip.Portal>
+      </Tooltip.Root>
+    </span>
   );
 }
 
@@ -373,13 +403,18 @@ function columnsFor(newSet: Set<string>): Column<BridgeRow>[] {
     },
     {
       key: "conv",
-      header: "C",
+      header: <HeaderTip label="C" tip="Conviction — model confidence in the call. More filled dots = higher conviction." />,
       align: "center",
       render: (r) => <ConvictionDot value={r.conviction} />,
     },
     {
       key: "legs",
-      header: "Sent · Tech · Fund",
+      header: (
+        <HeaderTip
+          label="Sent · Tech · Fund"
+          tip="The three legs of the signal — Sentiment (X chatter), Technical (indicator ensemble), Fundamental (catalyst/valuation). Fuller green bars are stronger; all three lit = aligned."
+        />
+      ),
       render: (r) => <LegBars s={r.sentiment_score} t={r.tech_score} f={r.catalyst_score} />,
     },
     {

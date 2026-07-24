@@ -15,6 +15,8 @@ interface ActionCard {
   target?: number | null;
   risk_reward?: number | null;
   stop_anchor?: string | null;
+  verdict?: string | null;
+  high_conviction?: boolean | null;
 }
 
 const fetcher = (url: string) =>
@@ -170,6 +172,24 @@ export default function LevelsCard({ ticker, bridgeRow }: LevelsCardProps) {
   const rrLabel = risk_reward != null ? risk_reward.toFixed(2) : "—";
   const anchorLabel = stop_anchor ? stopAnchorLabel(stop_anchor) : null;
 
+  const verdict = (cardOk ? card!.verdict : null) ?? bridgeRow.action_label ?? null;
+  const hc = cardOk ? card!.high_conviction === true : false;
+  const verdictLong = verdict != null && /LONG|BUY|PRIME|BREAKOUT|STANDARD/i.test(verdict);
+  const verdictShort = verdict != null && /SHORT|SELL/i.test(verdict);
+  // Fall back to the level structure (target vs entry vs stop) for WATCH-type
+  // names that still carry a directional setup.
+  const structLong = valid && target! > entry! && entry! > stop!;
+  const structShort = valid && target! < entry! && entry! < stop!;
+  const isLong = verdictLong || (!verdictShort && structLong);
+  const isShort = verdictShort || (!verdictLong && structShort);
+  const dir = isLong ? "long" : isShort ? "short" : null;
+  // "committed" = the model actually issued the call; otherwise it's a watch-bias.
+  const committed = verdictLong || verdictShort;
+  const stopPct =
+    valid && entry !== 0 ? (((stop! - entry!) / entry!) * 100).toFixed(1) : null;
+  const tgtPct =
+    valid && entry !== 0 ? (((target! - entry!) / entry!) * 100).toFixed(1) : null;
+
   return (
     <section className="rounded-md border border-line bg-elevated">
       <div className="flex items-center gap-2 border-b border-line px-4 py-3">
@@ -184,6 +204,46 @@ export default function LevelsCard({ ticker, bridgeRow }: LevelsCardProps) {
         </div>
       ) : (
         <div className="space-y-3 px-4 py-3">
+          {/* Directional trade plan synthesized from the model verdict + levels */}
+          <div
+            className={`rounded border px-3 py-2 text-[12px] leading-relaxed ${
+              dir === "long"
+                ? "border-pos/30 bg-pos/[0.06]"
+                : dir === "short"
+                  ? "border-neg/30 bg-neg/[0.06]"
+                  : "border-line bg-raised/40"
+            }`}
+          >
+            {dir ? (
+              <>
+                <span className={`font-semibold ${dir === "long" ? "text-pos" : "text-neg"}`}>
+                  {dir === "long" ? "Long" : "Short"} {committed ? "plan" : "bias"}
+                </span>
+                {!committed && (
+                  <span className="ml-1.5 text-[10px] font-medium uppercase text-muted">watch</span>
+                )}
+                {hc && <span className="ml-1.5 text-[10px] font-semibold text-warn">HIGH CONV</span>}
+                <span className="text-muted">
+                  {" — "}
+                  {dir === "long" ? "enter near" : "sell near"}{" "}
+                  <span className="font-mono text-foreground">{entry!.toFixed(2)}</span>, stop{" "}
+                  <span className="font-mono text-neg">{stop!.toFixed(2)}</span>
+                  {stopPct != null && ` (${stopPct}%)`}, target{" "}
+                  <span className="font-mono text-pos">{target!.toFixed(2)}</span>
+                  {tgtPct != null && ` (${Number(tgtPct) >= 0 ? "+" : ""}${tgtPct}%)`} at{" "}
+                  <span className="font-mono text-foreground">{rrLabel}</span> R:R. Invalidates on a
+                  close {dir === "long" ? "below" : "above"}{" "}
+                  <span className="font-mono text-foreground">{stop!.toFixed(2)}</span>.
+                </span>
+              </>
+            ) : (
+              <span className="text-muted">
+                <span className="font-semibold text-foreground">No directional call</span> — levels
+                below are reference only; wait for a cleaner setup.
+              </span>
+            )}
+          </div>
+
           <div className="grid grid-cols-4 gap-2 text-center">
             <div>
               <p className="mb-0.5 text-[10px] uppercase tracking-wide text-muted">Entry</p>

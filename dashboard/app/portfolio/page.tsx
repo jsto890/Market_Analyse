@@ -1,5 +1,6 @@
 "use client";
 import PageHeader from "@/components/ui/PageHeader";
+import SkeletonTable from "@/components/ui/SkeletonTable";
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -121,6 +122,16 @@ export default function PortfolioPage() {
             ) : (
               <p className="text-xs text-muted">No pinned watchlist tickers to fall back to.</p>
             )}
+
+            <div>
+              <p className="mb-1.5 text-[11px] uppercase tracking-wide text-muted/60">
+                Positions (connect gateway)
+              </p>
+              <SkeletonTable
+                headers={["Symbol", "Position", "Avg Cost", "Argus", "Score", "Edge"]}
+                rows={4}
+              />
+            </div>
           </div>
         )}
 
