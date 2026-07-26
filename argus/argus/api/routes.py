@@ -330,9 +330,34 @@ def build_app() -> FastAPI:
         return [{"name": a.name, "family": a.family} for a in all_agents()]
 
     @app.get("/api/screener")
-    def screener_get(min_conviction: float = 0.3):
-        cards = screen_universe(DEFAULT_UNIVERSE, min_conviction=min_conviction)
-        return {"results": [c.to_dict() for c in cards]}
+    def screener_get(min_conviction: float = 0.3, refresh: int = 0):
+        # The default-universe scan takes ~30s; cache it so the page loads fast
+        # and only re-runs on ?refresh=1 (or when there's no cached result).
+        import json as _json
+        conn = get_conn()
+        try:
+            conn.execute(
+                "CREATE TABLE IF NOT EXISTS screener_cache "
+                "(id INTEGER PRIMARY KEY CHECK (id=1), ts TEXT, min_conviction REAL, results_json TEXT)")
+            conn.commit()
+            if not refresh:
+                row = conn.execute("SELECT ts, min_conviction, results_json FROM screener_cache WHERE id=1").fetchone()
+                if row and row["results_json"]:
+                    results = _json.loads(row["results_json"])
+                    if row["min_conviction"] is not None and min_conviction > row["min_conviction"]:
+                        results = [r for r in results if abs(r.get("score", 0)) >= min_conviction]
+                    return {"results": results, "as_of": row["ts"], "cached": True}
+            cards = screen_universe(DEFAULT_UNIVERSE, min_conviction=min_conviction)
+            results = [c.to_dict() for c in cards]
+            ts = datetime.now(timezone.utc).isoformat()
+            conn.execute(
+                "INSERT INTO screener_cache (id, ts, min_conviction, results_json) VALUES (1,?,?,?) "
+                "ON CONFLICT(id) DO UPDATE SET ts=excluded.ts, min_conviction=excluded.min_conviction, results_json=excluded.results_json",
+                (ts, min_conviction, _json.dumps(results)))
+            conn.commit()
+            return {"results": results, "as_of": ts, "cached": False}
+        finally:
+            conn.close()
 
     @app.post("/api/screener")
     def screener(req: ScreenReq):

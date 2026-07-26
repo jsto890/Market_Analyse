@@ -64,7 +64,9 @@ function PinCell({
   );
 }
 
-type ApiResponse = { results: ScreenerResult[] } | { error: string };
+type ApiResponse =
+  | { results: ScreenerResult[]; as_of?: string; cached?: boolean }
+  | { error: string };
 
 function isErrorResponse(r: ApiResponse): r is { error: string } {
   return "error" in r;
@@ -77,6 +79,8 @@ export default function ScreenerPage() {
   const [results, setResults] = useState<ScreenerResult[] | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [asOf, setAsOf] = useState<string | null>(null);
+  const [cached, setCached] = useState(false);
 
   const { data: watchlistData, mutate: mutateWatchlist } = useSWR<{
     watchlist: { ticker: string }[];
@@ -206,13 +210,13 @@ export default function ScreenerPage() {
     },
   ];
 
-  async function runScreener(tickers: string[] | null) {
+  async function runScreener(tickers: string[] | null, refresh = false) {
     setLoading(true);
     setError(null);
     try {
       let res: Response;
       if (tickers === null) {
-        res = await fetch("/api/argus/screener");
+        res = await fetch(`/api/argus/screener${refresh ? "?refresh=1" : ""}`);
       } else {
         res = await fetch("/api/argus/screener", {
           method: "POST",
@@ -229,6 +233,8 @@ export default function ScreenerPage() {
         setResults(null);
       } else {
         setResults(data.results);
+        setAsOf(data.as_of ?? null);
+        setCached(data.cached ?? false);
       }
     } catch (e) {
       setError(e instanceof Error ? e.message : "Network error");
@@ -350,9 +356,24 @@ export default function ScreenerPage() {
 
         {!loading && !error && results !== null && (
           <>
-            <p className="text-xs text-muted font-mono">
-              {results.length} signal{results.length !== 1 ? "s" : ""} found
-            </p>
+            <div className="flex flex-wrap items-center gap-2 text-xs font-mono text-muted">
+              <span>
+                {results.length} signal{results.length !== 1 ? "s" : ""} found
+              </span>
+              {asOf && (
+                <span className="text-muted/70">
+                  · {cached ? "cached" : "fresh"} {new Date(asOf).toLocaleString()}
+                </span>
+              )}
+              {cached && (
+                <button
+                  onClick={() => void runScreener(null, true)}
+                  className="ml-auto inline-flex items-center gap-1 rounded border border-line px-2 py-0.5 text-muted transition-colors hover:border-line-strong hover:text-foreground"
+                >
+                  Re-run (~30s)
+                </button>
+              )}
+            </div>
             {results.length === 0 ? (
               <p className="text-sm text-muted">No results above threshold.</p>
             ) : (
