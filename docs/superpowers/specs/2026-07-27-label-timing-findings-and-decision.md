@@ -493,3 +493,36 @@ names do not:
 So IB retains delisted equities in the *reference* database but not the historical
 price database. The contract resolves; the bars are gone. Tier 3 remains blocked on
 a paid delisting-inclusive feed (Sharadar SEP / Polygon / EODHD, ~$50-100/mo).
+
+## 17. Gate cleanup applied
+
+§6a tested the PRIME/STANDARD gates one at a time on the OOS long-verdict pool. Four
+were retired in `_classify_action`:
+
+| gate | OOS lift | disposition |
+|---|---|---|
+| `combo[:4] in _STRONG_COMBOS` (PRIME) | −0.096pp | removed |
+| `wk_dir == "L"` (PRIME) | −0.118pp | removed |
+| `combo[:4] in _WEAK_COMBOS` (veto → WATCH) | +0.301pp, CI [+0.017, +0.411] | removed |
+| `inflation_gap < 0.15` (STANDARD) | passes 75,356 of 75,385 | removed as dead |
+
+The `_WEAK_COMBOS` veto was **retired to neutral, not inverted.** Its +0.301pp lift has
+a CI clear of zero, so flipping it into a buy rule is tempting — but it is measured on a
+survivor-only large-cap corpus (§14) whose reversal effect is concentrated in mega-caps
+(§9), and the live screener trades small/mid caps. Removing a filter that demonstrably
+does not work is supported; building a new signal out of its inverse is not.
+
+`inflation_gap` is still computed and returned for display; only the gate is gone. The
+`_WEAK_COMBOS` / `_STRONG_COMBOS` constants remain defined for the analysis tools.
+
+**Measured effect.** Recomputed both gate versions on identical rows (30-name subset,
+2,070 signals): PRIME_LONG 4.1% → 12.5% (+8.4pp), STANDARD_LONG 19.6% → 15.0%,
+WATCH 37.1% → 33.4%, WAIT and AVOID unchanged (the gates only touch the long branch).
+9.0% of all labels change. Forward 5d by label moved little and is not evidence either
+way here — raw returns, not peer-demeaned, one small subset, all eras pooled.
+
+**What this does not fix.** `adj >= 0.40` is itself the worst gate in the table
+(−0.166pp) and was kept only because it constitutes PRIME_LONG's definition. With every
+gate either inverted or neutral, the tier has no measured support as a quality ranking;
+it survives as a state marker ("EXTENDED"). Deleting it outright is the logically clean
+end-point and is deferred as a schema decision touching dashboard, alerts and screener.

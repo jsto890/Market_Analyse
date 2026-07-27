@@ -501,9 +501,12 @@ def _classify_action(
     elif ma_dir == "L" and mo_dir == "L" and regime != "trending_late":
         adj -= 0.05   # extension penalty (not applied in weakening-trend regime)
 
-    # Weak combo veto — match against first 4 chars only (family combos are 4-char patterns)
-    if combo[:4] in _WEAK_COMBOS:
-        return "MIXED", "WATCH"
+    # The _WEAK_COMBOS veto used to return WATCH here. Retired: on 75,385 OOS signals
+    # the vetoed names went on to OUTPERFORM the ones that passed by +0.301pp forward
+    # 20d, with a confidence interval clear of zero -- the veto was backwards. It is
+    # retired to neutral rather than inverted, because a +0.301pp edge measured on a
+    # survivor-only large-cap corpus is not evidence for a buy rule on the small/mid
+    # caps this system actually screens. _WEAK_COMBOS is kept for the analysis tools.
 
     # Trade style
     _trend_regimes = ("trending", "trending_late", "neutral")
@@ -519,23 +522,37 @@ def _classify_action(
         trade_style = "MIXED"
 
     # Tier assignment. Combo[:4] = 4-char daily family pattern; combo[4] = weekly direction.
-    # trending_late qualifies for PRIME_LONG — oscillators are more reliable when ADX is declining.
-    # wk_dir == "L" required: PRIME_LONG backtest wk=L→55.3% WR vs wk=S→35.7% WR. Multi-timeframe
-    # alignment (daily STRONG_COMBO + weekly structural LONG) is the highest-quality entry.
-    # Ranging regime excluded because wk=L requires weekly uptrend — incompatible with ranging.
+    #
+    # Two former PRIME gates were retired after the 2015-2024 OOS backtest tested them
+    # one at a time on the long-verdict pool and found both pointing the wrong way:
+    # `combo[:4] in _STRONG_COMBOS` cost -0.096pp of forward 20d return, and
+    # `wk_dir == "L"` cost -0.118pp. The original wk=L justification (55.3% vs 35.7% WR)
+    # came from the calibration window and did not survive out of sample.
+    # `inflation_gap < 0.15` was retired as dead, not wrong: it rejected 29 of 75,385
+    # signals. The gap is still computed and returned for display.
+    #
+    # What remains is a plain description of the state PRIME_LONG actually marks -- a
+    # high-scoring, moderately-agreed name outside an established trend. Note this is a
+    # WIDER set than the gated version: on a 30-name subset it takes PRIME_LONG from
+    # 4.1% of signals to 12.5%, changing 9.0% of all labels. That is intended: the tier
+    # is now rendered as "EXTENDED" and is the weakest forward bucket in the backtest,
+    # so admitting more names to it flags more extension, it does not promise more upside.
+    #
+    # Honest caveat: `adj >= 0.40` is itself inverted OOS (-0.166pp, the worst of the
+    # seven gates tested). It is kept because it IS the tier's definition -- remove it
+    # and PRIME_LONG stops meaning "high score" and stops meaning anything. The real
+    # conclusion from 6a is that no gate supports this tier as a quality ranking. That
+    # argues for deleting PRIME_LONG outright, which is a schema change across the
+    # dashboard, alerts and screener, so it is left as a separate decision.
     is_prime = (
-        combo[:4] in _STRONG_COMBOS
-        and adj >= 0.40
+        adj >= 0.40
         and 2.0 <= n_eff <= 3.0
         and regime in ("neutral", "trending_late")
-        and wk_dir == "L"
     )
     is_standard = (
         adj >= 0.30
         and n_eff > 1.4
-        and inflation_gap < 0.15
         and regime in _trend_regimes
-        and combo[:4] not in _WEAK_COMBOS
         and wk_dir != "S"   # weekly bearish = fighting higher-timeframe trend
     )
 
