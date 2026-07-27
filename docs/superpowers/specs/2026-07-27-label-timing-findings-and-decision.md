@@ -344,3 +344,51 @@ fitting beta.
 | Unreachable `BREAKOUT_LONG` tier test removed | `tools/backtest/backtest_agents.py` | done |
 | Harness R:R mirrors production instead of an ad-hoc per-regime table | `tools/backtest/backtest_agents.py` | done |
 | Tier badges render state, not conviction (`PRIME_LONG` → "EXTENDED", `AVOID` → "WEAK", evidence in tooltip; stored value unchanged) | `dashboard/components/ui/Badge.tsx` | done, typecheck clean |
+
+---
+
+## 13. Tier 2 — event-conditioned drift: a real forward signal, on the negative side only
+
+`tools/analysis/event_drift.py`. The §9 scan tested the panel *unconditionally* and
+found nothing. The robust documented anomalies are event-conditioned, so this
+restricts attention to the days after a surprise. No earnings feed is needed:
+earnings show up as an outsized return against the name's own trailing volatility,
+on heavy volume, roughly quarterly. At 2σ / 1.5× volume the filter fires **3.32
+times per name per year** — a plausible earnings cadence, which is the check that
+the proxy is behaving. Events within 20 sessions of each other are collapsed so a
+multi-day reaction counts once. Returns are peer-demeaned; t-stats cluster by ticker.
+
+**OOS (2015-01 … 2024-06), cumulative peer-excess %, (t):**
+
+| | 1d | 2d | 5d | 20d | 40d |
+|---|---|---|---|---|---|
+| positive surprise (n=9,529) | +0.050 (+1.3) | +0.048 (+1.3) | +0.057 (+1.2) | +0.115 (+0.5) | +0.169 (+0.3) |
+| **negative surprise (n=11,852)** | −0.089 (−2.3) | **−0.124 (−4.1)** | −0.094 (−1.4) | **−0.074 (−2.3)** | −0.022 (−1.5) |
+
+**The asymmetry replicates in the calibration era** (2024-06 →): negative surprises
+−0.360% at 20d (t −2.1) and −0.552% at 40d; positive surprises null at every horizon
+(all |t| ≤ 0.9). Two independent eras, same shape.
+
+**This is the first forward signal found anywhere in this investigation that clears
+|t| = 2 in a stable direction.** The 2d negative-leg result (t −4.1) survives
+Bonferroni across all 16 direction × horizon tests.
+
+It is **not** explained by the trailing state already measured: splitting by prior
+20d peer-excess return (window ending the day *before* the event, so the surprise
+cannot sort itself), negative surprises on previously-*strong* names still drift
+−0.012% at 20d with t −2.0.
+
+**What it is and is not.** It is a *veto*: names that just had a bad surprise keep
+underperforming for days-to-weeks. It is **not** the pre-large-move buy signal the
+brief asked for — the positive leg is null in both eras, so good news carries no
+tradeable follow-through in this universe. Effect sizes (~0.1% over 2-20d) are too
+small to trade as a short after costs, but are meaningful as an **exclusion rule**
+applied to a book that is being selected on other grounds.
+
+**Caveats.** The proxy also catches guidance, M&A and sector shocks, so this is
+"post-shock drift" rather than PEAD strictly. PEAD is documented as strongest in
+small caps, which this corpus does not contain — see Tier 3.
+
+**Recommended use:** a forward-looking negative overlay on the label — suppress or
+downgrade any long signal within ~20 sessions of a negative surprise event. This is
+the one place in the stack where a genuinely forward-looking input is now evidenced.
