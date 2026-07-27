@@ -19,7 +19,7 @@ ranking.
 
 | | |
 |---|---|
-| Corpus | `argus/backtests/_corpus/corpus.db` — point-in-time S&P 500, survivorship-free |
+| Corpus | `argus/backtests/_corpus/corpus.db` — point-in-time S&P 500 membership, but **not** survivorship-free: see §14 |
 | Universe | 300 names sampled (seed 17) from the 581 with ≥1500 bars |
 | Period | 2015-01-14 … 2026-05-27, weekly signals |
 | Signals | 167,499 |
@@ -392,3 +392,45 @@ small caps, which this corpus does not contain — see Tier 3.
 **Recommended use:** a forward-looking negative overlay on the label — suppress or
 downgrade any long signal within ~20 sessions of a negative surprise event. This is
 the one place in the stack where a genuinely forward-looking input is now evidenced.
+
+---
+
+## 14. Correction: the corpus is not survivorship-free
+
+Earlier sections of this document (and the original commit message) described the
+corpus as survivorship-free. **That is wrong** and the error is worth stating
+plainly, because it bears on the headline.
+
+`argus/position_engine/corpus.py` carries the caveat in its own docstring:
+membership is point-in-time correct, but yfinance cannot serve most delisted
+*departed* tickers, so the build fetched **618 of 738 names — 120 skipped**. Every
+one of the 618 present runs to the corpus end date; **no name in the corpus ever
+stops trading.** The population is survivors only.
+
+Exposure is worst exactly where the OOS sample is densest:
+
+| year | members | missing | % missing |
+|---|---|---|---|
+| 2015 | 567 | 106 | **18.7%** |
+| 2017 | 544 | 71 | 13.1% |
+| 2019 | 526 | 55 | 10.5% |
+| 2021 | 515 | 35 | 6.8% |
+| 2023 | 506 | 16 | 3.2% |
+| 2024 | 506 | 11 | 2.2% |
+
+**Likely direction of the bias.** The skipped names are dominated by M&A exits, not
+bankruptcies — ABMD, ALXN, AGN, ALTR, ARG, ACE, ADS, ANSS are all acquisitions.
+An acquisition ends with a takeover premium, a large positive jump that is missing
+from the data. Targets typically *underperform* their peers going into a bid, which
+under this labelling means they would have been sitting in `AVOID` shortly before
+the jump. If so, the missing data **understates `AVOID`'s forward return** — and
+`AVOID` is already the best-performing bucket, so correcting the bias would
+*strengthen* the documented inversion rather than explain it away.
+
+That is a reasoned expectation from the composition of the missing set, **not a
+measurement**. It cannot be settled without a delisting-inclusive feed.
+
+**This raises Tier 3's priority.** A delisting-inclusive source is no longer just
+the route to the small/mid-cap universe the live system actually screens — it is
+also what is needed to validate the large-cap result already in hand. Both the
+§1-2 inversion and the §13 event drift are measured on a survivor-only population.
