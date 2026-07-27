@@ -434,3 +434,62 @@ measurement**. It cannot be settled without a delisting-inclusive feed.
 the route to the small/mid-cap universe the live system actually screens — it is
 also what is needed to validate the large-cap result already in hand. Both the
 §1-2 inversion and the §13 event drift are measured on a survivor-only population.
+
+## 15. Retraction: the §13 negative-surprise veto is not implementable
+
+§13 closed with a recommendation to "suppress or downgrade any long signal within
+~20 sessions of a negative surprise event", called there "the one place in the stack
+where a genuinely forward-looking input is now evidenced". Implementing it disproved
+it. The recommendation is withdrawn.
+
+**What the implementation attempt showed.** Tagging every name-day within 20 sessions
+of a negative surprise covers 23.3% of the panel, and those days have a *higher*
+forward 20d peer-excess return than untagged days (+0.042% vs −0.020%). A window
+scan finds no length that works — at 1, 2, 3, 5, 10 and 20 sessions the vetoed days
+match or beat the rest on forward 5d return, with the difference never reaching
+significance (best |t| 0.83).
+
+**Why §13 read as a signal when it isn't.** §13 measured drift cumulating from the
+*event day's close*. But the label is computed from data through the event day, so
+the earliest an action can be taken is the day+1 close. Re-measuring the same
+isolated events (n=11,852 OOS) from a day+1 entry dissolves the effect:
+
+| horizon | from event close (§13) | from day+1 entry |
+|---|---|---|
+| 1d | −0.089% (t −2.3) | −0.035% (t −2.1) |
+| 2d | −0.124% (t −4.1) | +0.004% (t −0.4) |
+| 3d | −0.085% (t −1.9) | −0.001% (t −0.0) |
+| 5d | −0.094% (t −1.4) | +0.002% (t +0.2) |
+| 20d | −0.074% (t −2.3) | +0.094% (t −0.4) |
+
+Essentially all of the drift is the event day's own continuation into day+1 — the
+immediate reaction, already in the price before anything could act on the label.
+What remains after that is −3.5bp for one day and nothing thereafter, an order of
+magnitude below costs.
+
+**Status.** Reverted; no production change. §13's measurement stands as reported —
+the drift is real and replicates — but it is not capturable, so it does not
+constitute a forward-looking input to the label. The correct reading of §13 is now
+the same as §9: **no forward signal has been found in this panel.** The unresolved
+leads remain the ones in §10 that were never tested here — the non-technical legs
+(options, catalyst, sentiment), and a universe that is not survivor-only large caps.
+
+## 16. IBKR cannot supply the Tier 3 corpus
+
+Tested directly against a live IB Gateway on port 4002 (paper session, server
+v176). Live symbols work — AAPL resolves and returns 251 daily bars. Delisted
+names do not:
+
+- `reqContractDetails` via SMART/NASDAQ/NYSE returns error 200, "no security
+  definition", for all of ABMD, ALXN, AGN, ALTR, ADS, ANSS, XLNX, MXIM.
+- `reqMatchingSymbols` *does* find them, under the pseudo-exchange `VALUE`, with
+  real conIds and company names (ABMD → 265655 "ABIOMED INC", XLNX → 276222
+  "XILINX INC", AGN → 196610642 "ALLERGAN PLC").
+- Requesting history on those conIds returns **0 bars** at every exchange tried
+  (`VALUE`, `SMART`, `NASDAQ`, `NYSE`), including for windows when the name was
+  actively trading — a 1-year request ending 2022-06 for ABMD, which traded until
+  its December 2022 acquisition, comes back empty.
+
+So IB retains delisted equities in the *reference* database but not the historical
+price database. The contract resolves; the bars are gone. Tier 3 remains blocked on
+a paid delisting-inclusive feed (Sharadar SEP / Polygon / EODHD, ~$50-100/mo).
