@@ -189,3 +189,90 @@ These would have corrupted any re-run of `tools/backtest/backtest_agents.py`:
    information, the forward expectation has to come from elsewhere — the catalyst /
    sentiment leg. Worth testing whether sentiment adds forward signal *conditional on*
    technical state, which is the combination the stack was originally premised on.
+
+---
+
+## 9. Follow-up scan: is the inversion Argus-specific, and is there anything to build on?
+
+`tools/analysis/scan_forward_features.py` — all 618 corpus names, cross-sectional,
+5d rebalance, 20d forward excess, 475 OOS dates, Newey-West t on the IC series.
+
+**The inversion is not an Argus defect — it is the generic 1-month reversal, which
+the ensemble happens to measure very well.** Naive 20d trailing return has IC
+−0.0154 (t −1.46) on the same corpus: same sign, same shape, weaker. Argus is a
+high-fidelity trailing-strength detector, so it concentrates the reversal leg more
+sharply than raw return does. Notably reversal is a **mega-cap** effect — in the
+thickest liquidity tercile rev_20 runs t **−2.07**, in the thinnest it is ~0.
+
+**No classic pre-move feature carries forward information here.** Every candidate
+was flat (OOS IC / Newey-West t):
+
+| feature | IC | t |
+|---|---|---|
+| volatility compression | −0.0016 | −0.22 |
+| range contraction | −0.0014 | −0.17 |
+| volume dry-up | +0.0060 | +1.12 |
+| accumulation (signed volume) | −0.0065 | −0.79 |
+| distance from 52w high | +0.0028 | +0.16 |
+| position in 52w range | +0.0051 | +0.32 |
+| base depth | +0.0049 | +0.35 |
+| 12-1 momentum (skip month) | +0.0091 | +0.56 |
+
+Nothing clears |t| = 2. **There is no forward signal in daily price/volume on this
+universe to relabel toward** — which also means fitting a model on this feature
+space would only learn noise.
+
+**The one construction pointing the right way is exactly the one the brief asks
+for: strong long-term, *not* recently extended.**
+
+| construction | IC 5d | IC 20d | IC 60d |
+|---|---|---|---|
+| `mom_12_1` | +0.019 / +1.8 | +0.009 / +0.6 | +0.009 / +0.4 |
+| `rev_20` | −0.010 / −1.2 | −0.015 / −1.5 | −0.011 / −1.0 |
+| **`mom_12_1 − rev_20`** | **+0.017 / +2.0** | +0.015 / +1.3 | +0.012 / +0.8 |
+
+2×2 on OOS dates (forward 20d excess): **strong/quiet +0.110%** vs strong/hot
+−0.093%, weak/quiet +0.044%, weak/hot −0.041%. Right ordering, ~0.2pp spread,
+t 0.91 — the correct *shape*, below cost on this universe.
+
+**Momentum here is universe- and regime-conditional**, which is what produced the
+overfit: `mom_12_1` IC is +0.021 (t 1.31) in the thin tercile vs +0.008 (t 0.45)
+in the thick; and **+0.0364 (t 1.79) in 2024-06→2026 against +0.0091 (t 0.56)
+across 2015-2024**. Any threshold fitted on the calibration era inherits a
+momentum tailwind that is absent in the holdout.
+
+## 10. Pathways
+
+**A. Separate state from setup (free, do first).** Keep the ensemble as what it is
+— a state classifier — and stop rendering it as conviction. Two axes: *state*
+(trend intact / extended / broken) × *setup* (forward-looking). `PRIME_LONG` today
+means "most extended", which is why it ranks last OOS.
+
+**B. Re-shape the ranker to skip-month + non-extension.** Replace the absolute
+threshold gates (`score>=0.40`, `wk=L`, combo sets — all inverted or dead OOS) with
+a cross-sectional composite along `mom_12_1 − rev_20`. This is the standard
+skip-month construction and matches the brief directly: long-horizon strength,
+short-horizon quiet. Cross-sectional ranks, not absolute cutoffs, so it cannot go
+stale the way a fitted threshold does.
+
+**C. Fix the universe — highest leverage.** Every conclusion above is gated on
+testing large caps, the one universe where reversal dominates and momentum is
+weakest, while the live system screens sentiment-discovered small/mid caps. The
+liquidity split already hints the effects differ by size. A small/mid-cap
+point-in-time corpus (the IBKR paper feed can source it) is the prerequisite for
+believing any redesign, and would also extend past the corpus end of 2026-06-26.
+
+**D. Change the information source.** Price/volume is exhausted on this universe.
+The forward expectation has to come from the legs the stack already has and does
+not yet test for forward content: options intel (skew, unusual activity), catalyst
+/ earnings (PEAD, estimate revisions), sentiment. Test each *conditional on*
+technical state — the combination the stack was originally premised on.
+
+**E. Change the objective.** If no forward ranker survives, use the label for what
+it demonstrably does: eligibility/veto (the extension veto is the one gate pointing
+the right way), position sizing, and exits — plus the separable `trending` R:R fix
+in §5.
+
+**Not worth doing:** re-tuning the existing thresholds on 2024-26 (that is what
+produced this result); fitting an ML model on this feature space (§9 shows nothing
+to learn); fading `PRIME_LONG` (0.2–0.3pp does not survive costs).
