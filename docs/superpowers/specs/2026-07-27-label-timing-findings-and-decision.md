@@ -131,8 +131,15 @@ one gate pointing the right way), and `AVOID` as a genuine *negative* signal
 
 `trending` regime uses a 2.0/4.0 ATR stop/target. Median MFE in that regime is
 **2.17 ATR** against a **4.0 ATR** target; only 20.9% of trades ever touch it. Result:
-25.4% WR, **−0.24R** — by far the worst regime. The target is placed roughly twice as
-far as price actually travels.
+25.4% WR, **−0.24R** — by far the worst regime.
+
+> **Correction (see §11).** The obvious reading — "the target is twice as far as price
+> travels, so move it nearer" — is **wrong**, and the recorded MFE cannot support it.
+> MFE here is censored by the exit rule that produced it: paths are terminated at the
+> stop or the 20d cap, so the observed maximum understates how far price would have
+> run. A first-touch sweep on uncensored paths shows expectancy *rising* monotonically
+> with target distance in every regime. The real defect is that the target scaled with
+> **conviction**, which §11 shows is unjustified.
 
 Giveback is also material: 76.7% of the long book reaches +1 ATR and 32.8% of those
 still stop out; 54.0% reach +2 ATR and 21.0% of those still stop out.
@@ -276,3 +283,64 @@ in §5.
 **Not worth doing:** re-tuning the existing thresholds on 2024-26 (that is what
 produced this result); fitting an ML model on this feature space (§9 shows nothing
 to learn); fading `PRIME_LONG` (0.2–0.3pp does not survive costs).
+
+---
+
+## 11. Exit geometry, settled on uncensored paths
+
+`tools/analysis/sweep_exits.py` re-walks the real forward path for all 75,385 OOS
+long signals straight from the corpus (no agent re-run needed) and resolves each
+trade by **first touch** under a grid of stop and R:R multiples. Ties inside a bar
+resolve to the stop. Costs charged at a flat 0.05R.
+
+Expectancy in R, after costs:
+
+| stop \ R:R | 0.75 | 1.0 | 1.5 | 2.0 | 2.5 | 3.0 |
+|---|---|---|---|---|---|---|
+| 1.0 ATR | −0.015 | +0.003 | +0.032 | +0.059 | +0.078 | +0.093 |
+| 1.5 ATR | +0.008 | +0.025 | +0.052 | +0.072 | +0.087 | **+0.099** |
+| 2.0 ATR | +0.017 | +0.034 | +0.057 | +0.073 | +0.083 | +0.089 |
+| 3.0 ATR | +0.021 | +0.033 | +0.049 | +0.055 | +0.058 | +0.060 |
+
+**Every row improves monotonically with target distance** — including `trending`,
+the regime §5 flagged. So the §5 reading was an artifact of censored MFE, and
+targets are not too far.
+
+**Two caveats that stop this being good news.** These R-multiples are **not**
+market-demeaned, so a positive number anywhere across a 2015-2024 bull decade is
+mostly long-side beta rather than edge. And the sweep has **no interior maximum**;
+"wider is always better" out to the edge of the grid is the signature of upward
+drift on the 20d mark-to-market, not a located optimum. Nothing here should be read
+as "the exits are profitable".
+
+**What the sweep does settle** is the conviction scaling. Production used
+`rr_mult = 2.0 + min(|score|, 1.0)`, widening the target for higher-scored names.
+That is only justified if the best R:R rises with score. At the production 2.0 ATR
+stop, the argmax R:R is **3.0 in every score quintile** — perfectly flat:
+
+| quintile | R:R 1.0 | R:R 2.0 | R:R 3.0 | argmax |
+|---|---|---|---|---|
+| q1 (lowest score) | +0.062 | +0.120 | **+0.143** | 3.0 |
+| q3 | +0.041 | +0.080 | +0.102 | 3.0 |
+| q5 (highest score) | +0.008 | +0.037 | +0.045 | 3.0 |
+
+Score carries **no** information about how far price travels, so scaling the target
+by it is unjustified. The q1-vs-q5 gap (+0.143R vs +0.045R at matched R:R) is the
+selection inversion from §1-2 showing up again, not a target-placement effect —
+widening the target on high-score names does not address it.
+
+**Change made:** `builder._RR_MULT = 2.0`, flat. The scaling is removed; the level is
+left where the old low end was, because raising it to 3.0 on this evidence would be
+fitting beta.
+
+## 12. Tier 1 changes applied
+
+| change | file | status |
+|---|---|---|
+| Target no longer scales with conviction | `argus/action_card/builder.py` | done, 234 tests pass |
+| Earnings look-ahead neutered at module scope | `tools/backtest/backtest_agents.py` | done |
+| Agreement divided by actionable votes | `tools/backtest/backtest_agents.py` | done |
+| `RS vs Sector` vote retained | `tools/backtest/backtest_agents.py` | done |
+| Unreachable `BREAKOUT_LONG` tier test removed | `tools/backtest/backtest_agents.py` | done |
+| Harness R:R mirrors production instead of an ad-hoc per-regime table | `tools/backtest/backtest_agents.py` | done |
+| Tier badges render state, not conviction (`PRIME_LONG` → "EXTENDED", `AVOID` → "WEAK", evidence in tooltip; stored value unchanged) | `dashboard/components/ui/Badge.tsx` | done, typecheck clean |

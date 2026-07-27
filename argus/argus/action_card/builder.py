@@ -152,6 +152,19 @@ _WEAK_COMBOS: frozenset[str] = frozenset({"LNNL", "LLNL", "LLLL"})
 # All show 50-53% WR in neutral+ranging regime (n>=10).
 _STRONG_COMBOS: frozenset[str] = frozenset({"LSNS", "LNLL", "LSNL", "LLNS", "LLLS"})
 
+# Target distance as a multiple of risk. Was `2.0 + min(abs(score), 1.0)`, so the
+# target widened with conviction. A first-touch sweep over 75,385 OOS signals on
+# real paths (tools/analysis/sweep_exits.py) says that scaling is unjustified: the
+# best R:R is identical for every score quintile, so score carries no information
+# about how far price travels. High-score names did fill worse (expectancy +0.120R
+# in the lowest quintile vs +0.037R in the highest at matched R:R) but that is the
+# selection inversion documented in the labelling spec, not a target-placement
+# effect -- widening their target does not address it.
+# Level left at 2.0: the sweep improves monotonically out to 3.0 with no interior
+# maximum, which is the signature of 2015-2024 upward drift on the 20d
+# mark-to-market rather than a real optimum. Revisit on market-neutral paths.
+_RR_MULT: float = 2.0
+
 
 def _detect_ticker_regime(df: pd.DataFrame) -> str:
     """Classify per-ticker market regime from recent OHLCV + indicators."""
@@ -726,7 +739,7 @@ def _entry_stop_target(
             stop = round(last - base_mult * atr, 2)
             stop_anchor = "ATR"
         risk = last - stop
-        rr_mult = 2.0 + min(abs(score), 1.0)
+        rr_mult = _RR_MULT
         tech_target = _find_level_for_target(df, last, risk, "long")
         target = round(tech_target if tech_target is not None else last + rr_mult * risk, 2)
 
@@ -748,7 +761,7 @@ def _entry_stop_target(
             stop = round(last + base_mult * atr, 2)
             stop_anchor = "ATR"
         risk = stop - last
-        rr_mult = 2.0 + min(abs(score), 1.0)
+        rr_mult = _RR_MULT
         tech_target = _find_level_for_target(df, last, risk, "short")
         target = round(tech_target if tech_target is not None else last - rr_mult * risk, 2)
 
