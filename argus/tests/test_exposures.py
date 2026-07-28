@@ -125,10 +125,10 @@ class TestComputeExposures:
         assert "call_dex_by_strike" in result
         assert "put_dex_by_strike" in result
 
-        # Validate call GEX: -1.0 * 0.01 * 1000 * 100 * 100 = -1,000,000
-        assert result["call_gex_by_strike"][100.0] == -1_000_000.0
-        # Validate put GEX: +1.0 * 0.01 * 1000 * 100 * 100 = 1,000,000
-        assert result["put_gex_by_strike"][100.0] == 1_000_000.0
+        # Validate call GEX: -1.0 * 0.01 * 1000 * 100 * 100 = -100,000
+        assert result["call_gex_by_strike"][100.0] == -100_000.0
+        # Validate put GEX: +1.0 * 0.01 * 1000 * 100 * 100 = 100,000
+        assert result["put_gex_by_strike"][100.0] == 100_000.0
 
     def test_multiple_strikes(self):
         """Test computation for multiple strikes."""
@@ -157,8 +157,8 @@ class TestComputeExposures:
         quotes = {100.0: (call_opt, None)}
         result = compute_exposures(quotes, 100.0, multiplier=100)
 
-        # Call exposures should be computed: -1.0 * 0.01 * 1000 * 100 * 100 = -1,000,000
-        assert result["call_gex_by_strike"][100.0] == -1_000_000.0
+        # Call exposures should be computed: -1.0 * 0.01 * 1000 * 100 * 100 = -100,000
+        assert result["call_gex_by_strike"][100.0] == -100_000.0
         # Put exposures should be 0
         assert result["put_gex_by_strike"][100.0] == 0.0
 
