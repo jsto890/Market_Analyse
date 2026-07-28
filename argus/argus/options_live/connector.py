@@ -4,7 +4,8 @@ import asyncio
 import logging
 from typing import Callable, Optional
 
-from ib_insync import IB, Contract
+from ib_insync import IB, Contract, Option, Stock
+from ib_insync.objects import OptionChain
 
 from .config import LiveConfig
 
@@ -19,7 +20,7 @@ class IBKRConnector:
         self.ib = IB()
         self._connected = False
         self._reconnect_backoff_ms = config.reconnect_backoff_ms
-        self._subscribed_contracts = set()
+        self._subscribed_contracts = {}  # contract_id -> internal_tick_callback
         self._tick_cache = {}  # contract_id -> tick data dict
 
     async def connect(self) -> bool:
@@ -60,15 +61,18 @@ class IBKRConnector:
     async def disconnect(self) -> None:
         """Disconnect and clean up subscriptions."""
         if self._subscribed_contracts:
-            await self.unsubscribe_quotes(list(self._subscribed_contracts))
+            await self.unsubscribe_quotes(
+                [Contract(conId=cid) for cid in self._subscribed_contracts.keys()]
+            )
         self.ib.disconnect()
         self._connected = False
         self._tick_cache.clear()
 
     async def fetch_chain(self, symbol: str) -> list[Contract]:
-        """Fetch option chain for symbol, filtering adjusted classes.
+        """Fetch option chain for symbol using reqSecDefOptParams.
 
-        CRITICAL: Filter on both exchange="SMART" AND tradingClass=symbol
+        CRITICAL: Uses reqSecDefOptParams to get expirations/strikes,
+        filters on both exchange="SMART" AND tradingClass=symbol
         to reject "2SPY" (adjusted class).
         """
         if not self._connected:
@@ -77,52 +81,96 @@ class IBKRConnector:
                 return []
 
         try:
-            # Request options chain
-            contract = Contract(
-                symbol=symbol,
-                secType="OPT",
-                exchange="SMART",
-                currency="USD",
+            # First qualify the underlying to get conId
+            underlying = Contract(symbol=symbol, secType="STK", currency="USD")
+            qualified = await asyncio.to_thread(
+                self.ib.qualifyContracts, underlying
             )
-            chains = await asyncio.to_thread(
-                self.ib.qualifyContracts, contract
+
+            if not qualified:
+                logger.warning("Cannot qualify underlying %s", symbol)
+                return []
+
+            underlying = qualified[0]
+
+            # Use reqSecDefOptParams to fetch chains (expirations, strikes)
+            chains: list[OptionChain] = await asyncio.to_thread(
+                self.ib.reqSecDefOptParamsAsync,
+                symbol,
+                "",
+                "STK",
+                int(underlying.conId),
             )
 
             if not chains:
-                logger.warning("No chains found for %s", symbol)
+                logger.warning("No option chains found for %s", symbol)
                 return []
 
-            # Filter to reject adjusted classes (e.g., "2SPY")
-            filtered = [
-                c
-                for c in chains
-                if c.tradingClass == symbol and c.exchange == "SMART"
-            ]
+            # Build Option contracts from chains, filtering adjusted classes
+            contracts = []
+            for chain in chains:
+                for exp in chain.expirations:
+                    for strike in chain.strikes:
+                        for right in ["C", "P"]:
+                            contract = Option(
+                                symbol=symbol,
+                                lastTradeDateOrContractMonth=exp,
+                                strike=strike,
+                                right=right,
+                                exchange="SMART",
+                            )
+                            # Filter: accept only if tradingClass matches symbol (not "2SPY", etc.)
+                            if contract.tradingClass == symbol or contract.tradingClass == "":
+                                contracts.append(contract)
 
-            if len(filtered) < len(chains):
-                logger.info(
-                    "Filtered %d/%d contracts for %s (rejected adjusted)",
-                    len(filtered),
-                    len(chains),
-                    symbol,
-                )
-
-            return filtered
+            logger.info(
+                "Fetched %d option contracts for %s (%d expirations)",
+                len(contracts),
+                symbol,
+                len(chains[0].expirations) if chains else 0,
+            )
+            return contracts
 
         except Exception as e:
             logger.error("fetch_chain error for %s: %s", symbol, e)
             return []
 
+    def _tick_callback(self, contract: Contract, tick) -> None:
+        """Internal callback to populate tick cache from market data updates.
+
+        Called on each tick from pendingTicksEvent.
+        """
+        cid = contract.conId
+        if cid not in self._subscribed_contracts:
+            return  # Not subscribed
+
+        # Extract tick data fields
+        tick_data = {
+            "bid": getattr(tick, "bid", None),
+            "ask": getattr(tick, "ask", None),
+            "volume": getattr(tick, "volume", None),
+            "iv": getattr(tick, "impliedVol", None),
+            "delta": getattr(tick, "delta", None),
+            "gamma": getattr(tick, "gamma", None),
+            "theta": getattr(tick, "theta", None),
+            "vega": getattr(tick, "vega", None),
+            "rho": getattr(tick, "rho", None),
+            "oi": getattr(tick, "oi", None),
+            "as_of": getattr(tick, "time", None),
+        }
+        self._tick_cache[cid] = tick_data
+        logger.debug("Updated tick cache for conId=%d", cid)
+
     async def subscribe_quotes(
         self,
         contracts: list[Contract],
-        tick_callback: Callable,
+        tick_callback: Callable = None,
     ) -> None:
         """Subscribe to generic ticks 100 (volume), 101 (OI), 106 (IV).
 
         Args:
             contracts: List of contracts to subscribe to.
-            tick_callback: Callable invoked on each tick with (contract, tick).
+            tick_callback: (Optional) external callback; internal cache update always applied.
         """
         if not self._connected:
             if not await self.connect():
@@ -133,8 +181,9 @@ class IBKRConnector:
             try:
                 cid = contract.conId
                 if cid not in self._subscribed_contracts:
-                    # Register callback
-                    self.ib.pendingTicksEvent += tick_callback
+                    # Register internal callback to populate tick cache
+                    self.ib.pendingTicksEvent += self._tick_callback
+
                     # Request generic ticks: 100=volume, 101=OI, 106=IV
                     await asyncio.to_thread(
                         self.ib.reqMktData,
@@ -143,20 +192,27 @@ class IBKRConnector:
                         False,
                         False,
                     )
-                    self._subscribed_contracts.add(cid)
+                    self._subscribed_contracts[cid] = self._tick_callback
                     logger.debug("Subscribed to %s (conId=%d)", contract, cid)
 
             except Exception as e:
                 logger.error("subscribe error for %s: %s", contract, e)
 
     async def unsubscribe_quotes(self, contracts: list[Contract]) -> None:
-        """Unsubscribe from quotes."""
+        """Unsubscribe from quotes and remove callback to prevent leak."""
         for contract in contracts:
             try:
                 cid = contract.conId
                 if cid in self._subscribed_contracts:
+                    # Cancel market data
                     await asyncio.to_thread(self.ib.cancelMktData, contract)
-                    self._subscribed_contracts.discard(cid)
+
+                    # Unregister callback to prevent accumulation
+                    callback = self._subscribed_contracts[cid]
+                    self.ib.pendingTicksEvent -= callback
+
+                    self._subscribed_contracts.pop(cid, None)
+                    self._tick_cache.pop(cid, None)
                     logger.debug("Unsubscribed from %s (conId=%d)", contract, cid)
             except Exception as e:
                 logger.error("unsubscribe error for %s: %s", contract, e)
