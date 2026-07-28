@@ -10,7 +10,6 @@ import {
   useOdteSymbol,
 } from "@/lib/odte";
 import { fmtGex } from "@/lib/odteCompanion";
-import GexChart from "@/components/GexChart";
 import { fetchOptionsLive, LadderSnapshot } from "@/lib/optionsLive";
 
 function fmtIv(iv: number | null | undefined): string {
@@ -267,6 +266,7 @@ export default function OdteStrikesPage() {
                       <th className="px-1 py-1 text-center text-teal">Γ</th>
                       <th className="px-1 py-1 text-center text-teal">Θ</th>
                       <th className="px-1 py-1 text-center text-teal">ν</th>
+                      <th className="px-1 py-1 text-center text-teal">ρ</th>
                       <th className="px-1 py-1 text-center text-teal">Vol</th>
                       <th className="px-1 py-1 text-center text-teal">OI</th>
                       <th className="px-1 py-1 text-center text-teal">GEX</th>
@@ -278,6 +278,7 @@ export default function OdteStrikesPage() {
                       <th className="px-1 py-1 text-center text-neg">Γ</th>
                       <th className="px-1 py-1 text-center text-neg">Θ</th>
                       <th className="px-1 py-1 text-center text-neg">ν</th>
+                      <th className="px-1 py-1 text-center text-neg">ρ</th>
                       <th className="px-1 py-1 text-center text-neg">Vol</th>
                       <th className="px-1 py-1 text-center text-neg">OI</th>
                       <th className="px-1 py-1 text-center text-neg">GEX</th>
@@ -315,6 +316,9 @@ export default function OdteStrikesPage() {
                           {level.call.vega != null ? level.call.vega.toFixed(3) : "—"}
                         </td>
                         <td className="px-1 py-1 text-center">
+                          {level.call.rho != null ? level.call.rho.toFixed(3) : "—"}
+                        </td>
+                        <td className="px-1 py-1 text-center">
                           {level.call.volume != null ? level.call.volume.toFixed(0) : "—"}
                         </td>
                         <td className="px-1 py-1 text-center">
@@ -346,6 +350,9 @@ export default function OdteStrikesPage() {
                           {level.put.vega != null ? level.put.vega.toFixed(3) : "—"}
                         </td>
                         <td className="px-1 py-1 text-center">
+                          {level.put.rho != null ? level.put.rho.toFixed(3) : "—"}
+                        </td>
+                        <td className="px-1 py-1 text-center">
                           {level.put.volume != null ? level.put.volume.toFixed(0) : "—"}
                         </td>
                         <td className="px-1 py-1 text-center">
@@ -360,13 +367,7 @@ export default function OdteStrikesPage() {
                 </table>
               </div>
 
-              {/* GEX Profile Chart */}
-              {liveLadder.gex_profile_json && (
-                <div className="border-t border-line px-4 py-3">
-                  <h3 className="text-sm font-semibold mb-3">GEX Profile (Dealer Gamma)</h3>
-                  <GexChart gexProfileJson={liveLadder.gex_profile_json} />
-                </div>
-              )}
+              {/* GEX Profile Chart — implementation deferred to Task 12 */}
             </>
           )}
         </>
@@ -511,11 +512,7 @@ export default function OdteStrikesPage() {
               </table>
             </div>
 
-            {/* GEX Profile Chart */}
-            <div className="mt-4 px-3">
-              <h3 className="text-sm font-semibold mb-3">GEX Profile (Dealer Gamma)</h3>
-              <GexChart gexProfileJson={data?.gex_profile_json || null} />
-            </div>
+            {/* GEX Profile Chart — implementation deferred to Task 12 */}
 
             {/* Educational footer */}
             <section className="mt-4 rounded-md border border-line bg-elevated">
