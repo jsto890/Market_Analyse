@@ -181,10 +181,8 @@ class IBKRConnector:
             try:
                 cid = contract.conId
                 if cid not in self._subscribed_contracts:
-                    # Register internal callback to populate tick cache
-                    self.ib.pendingTicksEvent += self._tick_callback
-
                     # Request generic ticks: 100=volume, 101=OI, 106=IV
+                    # MUST succeed before registering callback to prevent leak
                     await asyncio.to_thread(
                         self.ib.reqMktData,
                         contract,
@@ -192,6 +190,8 @@ class IBKRConnector:
                         False,
                         False,
                     )
+                    # Register internal callback ONLY after reqMktData succeeds
+                    self.ib.pendingTicksEvent += self._tick_callback
                     self._subscribed_contracts[cid] = self._tick_callback
                     logger.debug("Subscribed to %s (conId=%d)", contract, cid)
 
