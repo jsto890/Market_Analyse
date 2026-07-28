@@ -10,6 +10,8 @@ import {
   useOdteSymbol,
 } from "@/lib/odte";
 import { fmtGex } from "@/lib/odteCompanion";
+import GexChart from "@/components/GexChart";
+import { fetchOptionsLive, LadderSnapshot } from "@/lib/optionsLive";
 
 function fmtIv(iv: number | null | undefined): string {
   return iv != null ? `${(iv * 100).toFixed(1)}%` : "—";
@@ -71,6 +73,29 @@ export default function OdteStrikesPage() {
   const [expiryIdx, setExpiryIdx] = useState(0);
   const { data, error, isLoading } = useLadder(activeSymbol, 4, 0.06);
 
+  // Live ladder state with 500ms polling
+  const [liveLadder, setLiveLadder] = useState<LadderSnapshot | null>(null);
+  const [liveError, setLiveError] = useState<string | null>(null);
+  const [showLive, setShowLive] = useState(false);
+
+  useEffect(() => {
+    const fetchLive = async () => {
+      const ladder = await fetchOptionsLive(activeSymbol, "0DTE");
+      if (ladder) {
+        setLiveLadder(ladder);
+        setLiveError(null);
+      } else {
+        setLiveError("Live data unavailable");
+      }
+    };
+
+    if (showLive) {
+      fetchLive();
+      const interval = setInterval(fetchLive, 500);
+      return () => clearInterval(interval);
+    }
+  }, [activeSymbol, showLive]);
+
   const expiries = data?.expiries ?? [];
   const idx = Math.min(expiryIdx, Math.max(expiries.length - 1, 0));
   const active = expiries[idx];
@@ -111,6 +136,16 @@ export default function OdteStrikesPage() {
             )}
           </h1>
         </div>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setShowLive(!showLive)}
+            className={`px-2 py-1 text-xs rounded ${
+              showLive ? "bg-blue-500/30 text-blue-300" : "bg-gray-500/20 text-gray-400"
+            }`}
+          >
+            {showLive ? "LIVE" : "live"}
+          </button>
+        </div>
         <div className="overflow-x-auto">
           <div className="flex rounded border border-line overflow-hidden">
             <div className="flex items-center gap-2 px-2">
@@ -146,11 +181,198 @@ export default function OdteStrikesPage() {
         </div>
       </div>
 
-      {isLoading && !data && (
-        <p className="text-[11px] text-muted font-mono p-4">loading ladder…</p>
+      {/* Live Ladder Section */}
+      {showLive && (
+        <>
+          {liveError && (
+            <div className="px-4 py-2 border-b border-line">
+              <p className="text-[11px] text-neg">{liveError}</p>
+            </div>
+          )}
+
+          {liveLadder && (
+            <>
+              {/* Provenance Badge + Metadata */}
+              <div className="flex items-center justify-between px-4 py-2 border-b border-line bg-elevated/30">
+                <div className="flex items-center gap-3">
+                  <span
+                    className={`px-2 py-0.5 text-xs rounded font-semibold ${
+                      liveLadder.source === "LIVE"
+                        ? "bg-green-500/30 text-green-300"
+                        : liveLadder.source === "FROZEN"
+                          ? "bg-yellow-500/30 text-yellow-300"
+                          : "bg-gray-500/30 text-gray-300"
+                    }`}
+                  >
+                    {liveLadder.source}
+                  </span>
+                  <span className="text-[11px] text-muted">
+                    {new Date(liveLadder.as_of).toLocaleTimeString()}
+                  </span>
+                  {liveLadder.stale_ms > 0 && (
+                    <span className="text-[11px] text-warn">{liveLadder.stale_ms}ms stale</span>
+                  )}
+                </div>
+                <span className="text-[11px] text-muted">
+                  Fresh {(liveLadder.fresh_contract_ratio * 100).toFixed(0)}% · GEX {liveLadder.net_gex_band}
+                </span>
+              </div>
+
+              {/* Levels Summary Strip */}
+              <div className="grid grid-cols-6 gap-2 border-b border-line px-4 py-2 text-[11px]">
+                <div>
+                  <span className="text-muted">ATM</span>
+                  <span className="ml-2 font-semibold">{liveLadder.atm_strike.toFixed(0)}</span>
+                </div>
+                <div>
+                  <span className="text-muted">Max Pain</span>
+                  <span className="ml-2 font-semibold">
+                    {liveLadder.max_pain != null ? liveLadder.max_pain.toFixed(2) : "—"}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-muted">Pin Risk</span>
+                  <span className="ml-2 font-semibold">{liveLadder.pin_risk.toFixed(0)}</span>
+                </div>
+                <div>
+                  <span className="text-muted">Zero Gamma</span>
+                  <span className="ml-2 font-semibold">
+                    {liveLadder.zero_gamma_strike != null ? liveLadder.zero_gamma_strike.toFixed(0) : "—"}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-muted">MSI Call/Put</span>
+                  <span className="ml-2 font-semibold">
+                    {liveLadder.msi_call_strike != null ? liveLadder.msi_call_strike.toFixed(0) : "—"} /
+                    {liveLadder.msi_put_strike != null ? " " + liveLadder.msi_put_strike.toFixed(0) : " —"}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-muted">Net GEX</span>
+                  <span className="ml-2 font-semibold">{liveLadder.net_gex_band}</span>
+                </div>
+              </div>
+
+              {/* 23-Column Live Ladder Table */}
+              <div className="flex-1 overflow-auto">
+                <table className="w-full text-[11px] border-collapse">
+                  <thead className="sticky top-0 bg-elevated">
+                    <tr className="border-b border-line">
+                      <th className="px-2 py-1 text-left font-semibold">Strike</th>
+                      {/* Call Headers */}
+                      <th className="px-1 py-1 text-center text-teal">C Bid</th>
+                      <th className="px-1 py-1 text-center text-teal">Ask</th>
+                      <th className="px-1 py-1 text-center text-teal">IV</th>
+                      <th className="px-1 py-1 text-center text-teal">Δ</th>
+                      <th className="px-1 py-1 text-center text-teal">Γ</th>
+                      <th className="px-1 py-1 text-center text-teal">Θ</th>
+                      <th className="px-1 py-1 text-center text-teal">ν</th>
+                      <th className="px-1 py-1 text-center text-teal">Vol</th>
+                      <th className="px-1 py-1 text-center text-teal">OI</th>
+                      <th className="px-1 py-1 text-center text-teal">GEX</th>
+                      {/* Put Headers */}
+                      <th className="px-1 py-1 text-center text-neg">P Bid</th>
+                      <th className="px-1 py-1 text-center text-neg">Ask</th>
+                      <th className="px-1 py-1 text-center text-neg">IV</th>
+                      <th className="px-1 py-1 text-center text-neg">Δ</th>
+                      <th className="px-1 py-1 text-center text-neg">Γ</th>
+                      <th className="px-1 py-1 text-center text-neg">Θ</th>
+                      <th className="px-1 py-1 text-center text-neg">ν</th>
+                      <th className="px-1 py-1 text-center text-neg">Vol</th>
+                      <th className="px-1 py-1 text-center text-neg">OI</th>
+                      <th className="px-1 py-1 text-center text-neg">GEX</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {liveLadder.levels.map((level) => (
+                      <tr
+                        key={level.strike}
+                        className={`border-b border-line/50 ${
+                          level.strike === liveLadder.zero_gamma_strike ? "bg-yellow-500/10" : ""
+                        } ${level.strike === liveLadder.atm_strike ? "bg-blue-500/10" : ""}`}
+                      >
+                        <td className="px-2 py-1 font-bold">{level.strike.toFixed(0)}</td>
+                        {/* Call Greeks */}
+                        <td className="px-1 py-1 text-center">
+                          {level.call.bid != null ? level.call.bid.toFixed(2) : "—"}
+                        </td>
+                        <td className="px-1 py-1 text-center">
+                          {level.call.ask != null ? level.call.ask.toFixed(2) : "—"}
+                        </td>
+                        <td className="px-1 py-1 text-center">
+                          {level.call.iv != null ? (level.call.iv * 100).toFixed(1) : "—"}
+                        </td>
+                        <td className="px-1 py-1 text-center">
+                          {level.call.delta != null ? level.call.delta.toFixed(3) : "—"}
+                        </td>
+                        <td className="px-1 py-1 text-center">
+                          {level.call.gamma != null ? level.call.gamma.toFixed(5) : "—"}
+                        </td>
+                        <td className="px-1 py-1 text-center">
+                          {level.call.theta != null ? level.call.theta.toFixed(3) : "—"}
+                        </td>
+                        <td className="px-1 py-1 text-center">
+                          {level.call.vega != null ? level.call.vega.toFixed(3) : "—"}
+                        </td>
+                        <td className="px-1 py-1 text-center">
+                          {level.call.volume != null ? level.call.volume.toFixed(0) : "—"}
+                        </td>
+                        <td className="px-1 py-1 text-center">
+                          {level.call.oi != null ? level.call.oi.toFixed(0) : "—"}
+                        </td>
+                        <td className="px-1 py-1 text-center">
+                          {level.gex_by_strike != null ? (level.gex_by_strike / 1000).toFixed(0) : "—"}
+                        </td>
+                        {/* Put Greeks */}
+                        <td className="px-1 py-1 text-center">
+                          {level.put.bid != null ? level.put.bid.toFixed(2) : "—"}
+                        </td>
+                        <td className="px-1 py-1 text-center">
+                          {level.put.ask != null ? level.put.ask.toFixed(2) : "—"}
+                        </td>
+                        <td className="px-1 py-1 text-center">
+                          {level.put.iv != null ? (level.put.iv * 100).toFixed(1) : "—"}
+                        </td>
+                        <td className="px-1 py-1 text-center">
+                          {level.put.delta != null ? level.put.delta.toFixed(3) : "—"}
+                        </td>
+                        <td className="px-1 py-1 text-center">
+                          {level.put.gamma != null ? level.put.gamma.toFixed(5) : "—"}
+                        </td>
+                        <td className="px-1 py-1 text-center">
+                          {level.put.theta != null ? level.put.theta.toFixed(3) : "—"}
+                        </td>
+                        <td className="px-1 py-1 text-center">
+                          {level.put.vega != null ? level.put.vega.toFixed(3) : "—"}
+                        </td>
+                        <td className="px-1 py-1 text-center">
+                          {level.put.volume != null ? level.put.volume.toFixed(0) : "—"}
+                        </td>
+                        <td className="px-1 py-1 text-center">
+                          {level.put.oi != null ? level.put.oi.toFixed(0) : "—"}
+                        </td>
+                        <td className="px-1 py-1 text-center">
+                          {level.gex_by_strike != null ? (level.gex_by_strike / 1000).toFixed(0) : "—"}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </>
+          )}
+        </>
       )}
-      {error && !data && (
-        <p className="text-[11px] text-muted font-mono p-4">no data — source unavailable</p>
+
+      {!showLive && (
+        <>
+          {isLoading && !data && (
+            <p className="text-[11px] text-muted font-mono p-4">loading ladder…</p>
+          )}
+          {error && !data && (
+            <p className="text-[11px] text-muted font-mono p-4">no data — source unavailable</p>
+          )}
+        </>
       )}
 
       {data && (
@@ -279,6 +501,12 @@ export default function OdteStrikesPage() {
                   )}
                 </tbody>
               </table>
+            </div>
+
+            {/* GEX Profile Chart */}
+            <div className="mt-4 px-3">
+              <h3 className="text-sm font-semibold mb-3">GEX Profile (Dealer Gamma)</h3>
+              <GexChart gexProfileJson={data?.gex_profile_json || null} />
             </div>
 
             {/* Educational footer */}
