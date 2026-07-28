@@ -359,6 +359,14 @@ export default function OdteStrikesPage() {
                   </tbody>
                 </table>
               </div>
+
+              {/* GEX Profile Chart */}
+              {liveLadder.gex_profile_json && (
+                <div className="border-t border-line px-4 py-3">
+                  <h3 className="text-sm font-semibold mb-3">GEX Profile (Dealer Gamma)</h3>
+                  <GexChart gexProfileJson={liveLadder.gex_profile_json} />
+                </div>
+              )}
             </>
           )}
         </>

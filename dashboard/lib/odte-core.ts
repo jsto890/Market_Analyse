@@ -61,6 +61,7 @@ export interface LadderPayload {
   spot: number;
   levels: LadderLevels | null;
   expiries: LadderExpiry[];
+  gex_profile_json?: string | null;
 }
 
 /** Nearest strike row to a target level (e.g. zero-gamma or a wall). */
