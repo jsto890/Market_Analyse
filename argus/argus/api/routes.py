@@ -68,6 +68,9 @@ from ..macro.schema import ensure_macro_schema
 from ..macro.store import latest_macro, macro_series
 from ..calendar.schema import ensure_calendar_schema
 from ..calendar.store import upcoming as calendar_upcoming
+from ..options_live.session import Session
+from ..options_live.config import LiveConfig
+from ..options_live.transport import serialize_ladder
 
 
 UI_DIR = Path(__file__).parent.parent / "ui"
@@ -372,6 +375,42 @@ def build_app() -> FastAPI:
     @app.get("/api/options/{symbol}")
     def options(symbol: str, expiration: Optional[str] = None):
         return get_options_chain(symbol, expiration)
+
+    # Global session for live options (TODO: make per-user or per-gateway-pool)
+    _live_session: Optional[Session] = None
+
+    def _get_live_session() -> Session:
+        """Lazy-initialize live options session."""
+        nonlocal _live_session
+        if _live_session is None:
+            _live_session = Session(LiveConfig())
+        return _live_session
+
+    @app.get("/api/options/live/{symbol}")
+    async def options_live(symbol: str, expiry: str = "0DTE"):
+        """Fetch live options ladder for symbol/expiry.
+
+        Returns LadderSnapshot with all levels, analytics, and provenance.
+        On error (missing data, no connection), returns error dict.
+        """
+        try:
+            session = _get_live_session()
+
+            # Ensure subscription
+            subscribed = await session.subscribe(symbol, expiry)
+            if not subscribed:
+                return {"error": f"Failed to subscribe to {symbol} {expiry}"}
+
+            # Coalesce ticks at cadence
+            ladder = await session.tick_and_coalesce()
+
+            if ladder:
+                return serialize_ladder(ladder)
+            else:
+                return {"error": "No data available yet; try again in 500ms"}
+
+        except Exception as e:
+            return {"error": f"Exception: {str(e)}"}
 
     @app.get("/api/portfolio")
     def portfolio():
