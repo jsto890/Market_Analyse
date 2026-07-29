@@ -4,7 +4,7 @@ import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import * as Tooltip from "@radix-ui/react-tooltip";
-import { Info, Search, ChevronDown, X } from "lucide-react";
+import { Info, Search, X } from "lucide-react";
 import type { BridgeRow } from "@/types/bridge";
 import { tierSort } from "@/lib/groups";
 import DataTable, { Column } from "@/components/ui/DataTable";
@@ -14,6 +14,10 @@ import Badge from "@/components/ui/Badge";
 import ConvictionDot from "@/components/ui/ConvictionDot";
 import MicroBar from "@/components/ui/MicroBar";
 import Sparkline from "@/components/ui/Sparkline";
+import Select from "@/components/ui/Select";
+import Input from "@/components/ui/Input";
+import InfoTip from "@/components/ui/InfoTip";
+import Button from "@/components/ui/Button";
 
 const FILTERS_KEY = "dash:today:filters";
 
@@ -169,7 +173,7 @@ function CatalystCount({ value }: { value: string | null }) {
   );
 }
 
-function InfoTip({ text }: { text: string }) {
+function LegacyInfoTip({ text }: { text: string }) {
   return (
     <Tooltip.Root>
       <Tooltip.Trigger asChild>
@@ -211,36 +215,6 @@ function HeaderTip({ label, tip }: { label: string; tip: string }) {
         </Tooltip.Portal>
       </Tooltip.Root>
     </span>
-  );
-}
-
-function FilterSelect({
-  value,
-  onChange,
-  options,
-}: {
-  value: string;
-  onChange: (v: string) => void;
-  options: [string, string][];
-}) {
-  return (
-    <div className="relative">
-      <select
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        className="h-8 cursor-pointer appearance-none rounded border border-line bg-raised pl-2.5 pr-7 text-[13px] text-foreground focus:border-accent focus:outline-none"
-      >
-        {options.map(([v, l]) => (
-          <option key={v} value={v}>
-            {l}
-          </option>
-        ))}
-      </select>
-      <ChevronDown
-        size={13}
-        className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-muted"
-      />
-    </div>
   );
 }
 
@@ -314,7 +288,7 @@ function ExpandedRow({ row }: { row: BridgeRow }) {
       </div>
       <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
         <span className="inline-flex items-center gap-1">
-          comb {fmtScore(row.combined_score)} <InfoTip text="magnitude does not predict returns (r≈0)" />
+          comb {fmtScore(row.combined_score)} <LegacyInfoTip text="magnitude does not predict returns (r≈0)" />
         </span>
         <span className="text-muted">·</span>
         <span>quality {fmtNum(row.quality_score, 1)}</span>
@@ -533,22 +507,18 @@ export default function SignalGroups({
     <div className="space-y-3">
       {/* Filters toolbar */}
       <div className="flex flex-wrap items-center gap-2 rounded-md border border-line bg-elevated px-3 py-2">
-        <div className="relative">
-          <Search
-            size={13}
-            className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-muted"
-          />
-          <input
-            type="text"
-            value={active.search}
-            onChange={(e) => update({ search: e.target.value })}
-            placeholder="Search ticker…"
-            className="h-8 w-52 rounded border border-line bg-raised pl-8 pr-2.5 text-[13px] text-foreground placeholder-muted focus:border-accent focus:outline-none"
-          />
-        </div>
+        <Input
+          icon={<Search size={13} />}
+          type="text"
+          value={active.search}
+          onChange={(e) => update({ search: e.target.value })}
+          placeholder="Search ticker…"
+          className="w-52"
+        />
         <button
           type="button"
           onClick={() => update({ hcOnly: !active.hcOnly })}
+          aria-pressed={active.hcOnly}
           className={`inline-flex h-8 items-center gap-1 rounded border px-2.5 text-[12px] font-medium transition-colors ${
             active.hcOnly
               ? "border-accent bg-accent-dim text-accent"
@@ -556,50 +526,56 @@ export default function SignalGroups({
           }`}
         >
           HC only
-          <InfoTip text="consensus, not edge" />
+          <InfoTip content="High-conviction — ≥75% indicator agreement. Consensus, not edge." label="Conviction filter info" />
         </button>
-        <FilterSelect
+        <Select
+          aria-label="Filter by conviction"
           value={active.conviction}
-          onChange={(v) => update({ conviction: v })}
+          onChange={(e) => update({ conviction: e.target.value })}
+          className="w-32"
           options={[
-            ["", "All conviction"],
-            ["high", "High"],
-            ["med", "Med"],
-            ["low", "Low"],
+            { value: "", label: "All conviction" },
+            { value: "high", label: "High" },
+            { value: "med", label: "Med" },
+            { value: "low", label: "Low" },
           ]}
         />
-        <FilterSelect
+        <Select
+          aria-label="Filter by sector"
           value={active.sector}
-          onChange={(v) => update({ sector: v })}
-          options={[["", "All sectors"], ...sectors.map((s) => [s, s] as [string, string])]}
+          onChange={(e) => update({ sector: e.target.value })}
+          className="w-40"
+          options={[
+            { value: "", label: "All sectors" },
+            ...sectors.map((s) => ({ value: s, label: s })),
+          ]}
         />
         {(active.search || active.hcOnly || active.conviction || active.sector) && (
-          <button
-            type="button"
-            onClick={() =>
-              update({ search: "", hcOnly: false, conviction: "", sector: "" })
-            }
-            className="inline-flex h-8 items-center gap-1 rounded px-2 text-[12px] text-muted hover:text-foreground"
-          >
-            <X size={12} /> Clear
-          </button>
+          <Button variant="ghost" size="sm" icon={<X size={12} />} onClick={() => update({ search: "", hcOnly: false, conviction: "", sector: "" })}>
+            Clear filters
+          </Button>
         )}
       </div>
 
-      {GROUP_META.filter((g) => sorted[g.key].length > 0).map((g) => (
-        <Panel
-          key={g.key}
-          title={`${g.title}  (${sorted[g.key].length})`}
-          subtitle={g.rationale}
-        >
-          <GroupTable
-            rows={sorted[g.key]}
-            newSet={newSet}
-            onOpen={onOpen}
-            persistKey={`today-${g.key}`}
-          />
-        </Panel>
-      ))}
+      {GROUP_META.map((g) => {
+        const shown = sorted[g.key].length;
+        const total = groups[g.key].length;
+        const hidden = total - shown;
+        const title =
+          hidden > 0
+            ? `${g.title}  (${shown} shown · ${hidden} hidden by filters)`
+            : `${g.title}  (${shown})`;
+        return (
+          <Panel key={g.key} title={title} subtitle={g.rationale}>
+            <GroupTable
+              rows={sorted[g.key]}
+              newSet={newSet}
+              onOpen={onOpen}
+              persistKey={`today-${g.key}`}
+            />
+          </Panel>
+        );
+      })}
 
       <Panel
         title={`Everything else  (${sorted.other.length})`}
