@@ -2,6 +2,7 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import type { IChartApi, ISeriesApi, UTCTimestamp } from "lightweight-charts";
 import EmptyState from "@/components/ui/EmptyState";
+import Toggle from "@/components/ui/Toggle";
 import { visibleRangeFor, type ChartPeriod as Period } from "@/lib/chart-range";
 
 export interface Level {
@@ -67,13 +68,13 @@ interface Props {
 
 const LEVEL_STYLE = {
   entry: { color: "#e6e8ec", lineStyle: 2, title: "E" },
-  stop: { color: "#f85149", lineStyle: 0, title: "S" },
-  target: { color: "#3fb950", lineStyle: 0, title: "T" },
+  stop: { color: "var(--red)", lineStyle: 0, title: "S" },
+  target: { color: "var(--green)", lineStyle: 0, title: "T" },
 } as const;
 
 const EMA_STYLE = {
-  e20: { color: "#4c8dff", title: "EMA 20" },
-  e50: { color: "#d29922", title: "EMA 50" },
+  e20: { color: "var(--accent)", title: "EMA 20" },
+  e50: { color: "var(--amber)", title: "EMA 50" },
   e200: { color: "#8b93a3", title: "EMA 200" },
 };
 const EMA_PERIOD = { e20: 20, e50: 50, e200: 200 } as const;
@@ -237,6 +238,16 @@ export default function CandleChart({
       ({ createChart, ColorType, LineStyle }) => {
         if (destroyed || !containerRef.current) return;
 
+        // lightweight-charts hands series/price-line colors straight to the Canvas 2D
+        // context (and, for price-line/last-value axis labels, through its own color
+        // parser which throws on unrecognized strings) — raw `var(--x)` strings are not
+        // resolved in either path, so resolve the CSS custom properties once here.
+        const rootStyle = getComputedStyle(document.documentElement);
+        const resolvedRed = rootStyle.getPropertyValue("--red").trim() || "#f85149";
+        const resolvedGreen = rootStyle.getPropertyValue("--green").trim() || "#3fb950";
+        const resolvedAccent = rootStyle.getPropertyValue("--accent").trim() || "#4c8dff";
+        const resolvedAmber = rootStyle.getPropertyValue("--amber").trim() || "#d29922";
+
         const chart = createChart(containerRef.current, {
           autoSize: true,
           height,
@@ -266,11 +277,14 @@ export default function CandleChart({
 
         // levels are drawn once at mount — static per page load by design
         for (const l of levels) {
+          const levelColor =
+            l.kind === "stop" ? resolvedRed : l.kind === "target" ? resolvedGreen : LEVEL_STYLE[l.kind].color;
           candleSeries.createPriceLine({
             price: l.price,
             lineWidth: 1,
             axisLabelVisible: true,
             ...LEVEL_STYLE[l.kind],
+            color: levelColor,
             lineStyle: LEVEL_STYLE[l.kind].lineStyle as 0 | 1 | 2 | 3 | 4,
           });
         }
@@ -285,7 +299,7 @@ export default function CandleChart({
 
         const emaSeries = {
           e20: chart.addLineSeries({
-            color: EMA_STYLE.e20.color,
+            color: resolvedAccent,
             lineWidth: 1,
             title: EMA_STYLE.e20.title,
             visible: DEFAULT_PERSIST.emas.e20,
@@ -293,7 +307,7 @@ export default function CandleChart({
             lastValueVisible: false,
           }),
           e50: chart.addLineSeries({
-            color: EMA_STYLE.e50.color,
+            color: resolvedAmber,
             lineWidth: 1,
             title: EMA_STYLE.e50.title,
             visible: DEFAULT_PERSIST.emas.e50,
@@ -399,17 +413,10 @@ export default function CandleChart({
         <span className="text-line text-[11px]">|</span>
 
         {/* Log toggle */}
-        <button
-          onClick={() => setLogScale((v) => !v)}
-          className={[
-            "px-2 py-0.5 rounded text-[11px] font-medium transition-colors",
-            logScale
-              ? "bg-accent text-foreground"
-              : "bg-elevated text-muted hover:text-foreground",
-          ].join(" ")}
-        >
-          log
-        </button>
+        <div className="flex items-center gap-1.5">
+          <Toggle checked={logScale} onChange={setLogScale} label="Logarithmic Y-axis" />
+          <span className="text-[11px] font-medium text-muted">log</span>
+        </div>
       </div>
 
       {/* Chart canvas */}
