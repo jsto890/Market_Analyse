@@ -20,6 +20,43 @@ import Button from "@/components/ui/Button";
 
 const FILTERS_KEY = "dash:today:filters";
 
+// ---------- shared history cache (TD-08) ----------
+// Page-lifetime cache keyed by fetch symbol; intentionally not persisted to
+// localStorage — this is request de-duplication, not a user preference.
+type HistoryEntry = number[] | "failed" | "pending";
+const historyCache = new Map<string, HistoryEntry>();
+
+function fetchHistoryFor(symbol: string): Promise<number[] | "failed"> {
+  const cached = historyCache.get(symbol);
+  if (cached && cached !== "pending") return Promise.resolve(cached);
+  if (cached === "pending") {
+    return new Promise((resolve) => {
+      const check = () => {
+        const c = historyCache.get(symbol);
+        if (c === "pending") setTimeout(check, 50);
+        else resolve((c ?? "failed") as number[] | "failed");
+      };
+      check();
+    });
+  }
+  historyCache.set(symbol, "pending");
+  return fetch(`/api/argus/history/${symbol}?period=3mo`)
+    .then((r) => r.json())
+    .then((data) => {
+      const raw = Array.isArray(data?.bars) ? data.bars : [];
+      const closes = raw
+        .map((b: { close: number }) => b.close)
+        .filter((c: number) => Number.isFinite(c));
+      const result: number[] | "failed" = closes.length >= 2 ? closes : "failed";
+      historyCache.set(symbol, result);
+      return result;
+    })
+    .catch(() => {
+      historyCache.set(symbol, "failed");
+      return "failed" as const;
+    });
+}
+
 interface GroupedRows {
   aligned: BridgeRow[];
   pullback: BridgeRow[];
@@ -165,29 +202,25 @@ function fmtNum(v: number | null | undefined, dp = 2): string {
 }
 
 function ExpandedRow({ row }: { row: BridgeRow }) {
-  const [bars, setBars] = useState<number[] | null>(null);
-  const [failed, setFailed] = useState(false);
+  const symbol = row.fetch_symbol || row.ticker;
+  const cached = historyCache.get(symbol);
+  const [bars, setBars] = useState<number[] | null>(
+    cached && cached !== "pending" && cached !== "failed" ? cached : null
+  );
+  const [failed, setFailed] = useState(cached === "failed");
 
   useEffect(() => {
+    if (bars !== null || failed) return; // cache hit at mount, or hover-prefetch already resolved it
     let cancelled = false;
-    fetch(`/api/argus/history/${row.fetch_symbol || row.ticker}?period=3mo`)
-      .then((r) => r.json())
-      .then((data) => {
-        if (cancelled) return;
-        const raw = Array.isArray(data?.bars) ? data.bars : [];
-        const closes = raw
-          .map((b: { close: number }) => b.close)
-          .filter((c: number) => Number.isFinite(c));
-        if (closes.length >= 2) setBars(closes);
-        else setFailed(true);
-      })
-      .catch(() => {
-        if (!cancelled) setFailed(true);
-      });
+    fetchHistoryFor(symbol).then((result) => {
+      if (cancelled) return;
+      if (result === "failed") setFailed(true);
+      else setBars(result);
+    });
     return () => {
       cancelled = true;
     };
-  }, [row.fetch_symbol, row.ticker]);
+  }, [symbol, bars, failed]);
 
   const accts = (row.top_accounts ?? "")
     .split(";")
@@ -399,6 +432,9 @@ function GroupTable({
       rowKey={(r) => r.ticker}
       persistKey={persistKey}
       onOpen={onOpen}
+      onRowHover={(r) => {
+        fetchHistoryFor(r.fetch_symbol || r.ticker);
+      }}
       expandedRender={(r) => <ExpandedRow row={r} />}
     />
   );

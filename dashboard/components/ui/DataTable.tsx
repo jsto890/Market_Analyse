@@ -21,6 +21,7 @@ export interface DataTableProps<T> {
   expandedRender?: (row: T) => React.ReactNode;
   persistKey?: string;
   onOpen?: (row: T) => void;
+  onRowHover?: (row: T) => void;
   /** Visually-hidden <caption> giving the table an accessible name. Optional for backward compat; new/touched tables should always pass one. */
   caption?: string;
 }
@@ -46,6 +47,7 @@ export default function DataTable<T>({
   expandedRender,
   persistKey,
   onOpen,
+  onRowHover,
   caption,
 }: DataTableProps<T>) {
   const storageKey = persistKey ? `dash:table:${persistKey}:sort` : null;
@@ -53,7 +55,6 @@ export default function DataTable<T>({
   const [sort, setSort] = useState<SortState | null>(defaultSort ?? null);
   const [hydrated, setHydrated] = useState(false);
   const [expandedKeys, setExpandedKeys] = useState<Set<string>>(new Set());
-  const [everExpandedKeys, setEverExpandedKeys] = useState<Set<string>>(new Set());
   const [focusedKey, setFocusedKey] = useState<string | null>(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(false);
@@ -136,7 +137,6 @@ export default function DataTable<T>({
       else next.add(key);
       return next;
     });
-    setEverExpandedKeys((prev) => new Set(prev).add(key));
   }
 
   const handleContainerKeyDown = useCallback(
@@ -249,6 +249,7 @@ export default function DataTable<T>({
                       if (el) rowRefs.current.set(key, el);
                       else rowRefs.current.delete(key);
                     }}
+                    onMouseEnter={() => onRowHover?.(row)}
                     onClick={() => {
                       setFocusedKey(key);
                       if (expandedRender) toggleExpand(key);
@@ -278,21 +279,10 @@ export default function DataTable<T>({
                       </td>
                     ))}
                   </tr>
-                  {expandedRender && everExpandedKeys.has(key) && (
+                  {expandedRender && isExpanded && (
                     <tr>
-                      <td
-                        colSpan={columns.length}
-                        className={isExpanded ? "border-b border-line bg-elevated" : ""}
-                        style={{ padding: isExpanded ? undefined : "0" }}
-                      >
-                        <div
-                          className="grid transition-[grid-template-rows] duration-200 ease-out"
-                          style={{ gridTemplateRows: isExpanded ? "1fr" : "0fr" }}
-                        >
-                          <div className={["overflow-hidden", isExpanded ? "px-3" : ""].join(" ")}>
-                            {expandedRender(row)}
-                          </div>
-                        </div>
+                      <td colSpan={columns.length} className="border-b border-line bg-elevated">
+                        <div className="px-3">{expandedRender(row)}</div>
                       </td>
                     </tr>
                   )}

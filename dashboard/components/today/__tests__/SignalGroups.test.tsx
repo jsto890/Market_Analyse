@@ -237,3 +237,37 @@ describe("SignalGroups — visible caveats (TD-07/TD-14)", () => {
     ).toBeInTheDocument();
   });
 });
+
+describe("SignalGroups — history cache + hover prefetch (TD-08)", () => {
+  it("prefetches history on row hover so the fetch has already started by the time the row expands", async () => {
+    resetLocalStorage();
+    let fetchCount = 0;
+    mockFetchJson((url) => {
+      if (url.includes("/api/argus/history/")) fetchCount += 1;
+      return { bars: [{ close: 10 }, { close: 11 }] };
+    });
+    // AMD (not NVDA) — historyCache is a page-lifetime module-scope Map shared
+    // by every test in this file; an earlier NVDA expand already cached it as
+    // "failed", which would make this hover a no-op cache hit instead of a
+    // fresh fetch.
+    const groups = {
+      aligned: [row({ ticker: "AMD", fetch_symbol: "AMD" })],
+      pullback: [],
+      tech_fund: [],
+      other: [],
+    };
+    const user = userEvent.setup();
+    render(<SignalGroups groups={groups} newTickers={[]} sectors={["Semiconductors"]} />);
+    await screen.findByText("AMD");
+    // Scoped to role "cell" — the sector filter's <select> also renders an
+    // <option>Semiconductors</option> with the same text (see the identical
+    // note in the TD-03/04/05/06 describe block above).
+    await user.hover(screen.getByRole("cell", { name: "Semiconductors" }));
+    expect(fetchCount).toBe(1);
+
+    await user.click(screen.getByRole("cell", { name: "Semiconductors" }));
+    await screen.findByText("Conviction");
+    // second call would only happen on a fresh (uncached) fetch — the hover already resolved it
+    expect(fetchCount).toBe(1);
+  });
+});

@@ -1,5 +1,6 @@
-import { describe, it, expect, beforeEach } from "vitest";
-import { render, screen, userEvent } from "@/test/render";
+import { describe, it, expect, beforeEach, vi } from "vitest";
+import { useEffect } from "react";
+import { render, screen, userEvent, fireEvent } from "@/test/render";
 import { resetLocalStorage } from "@/test/localStorage";
 import DataTable, { type Column } from "@/components/ui/DataTable";
 
@@ -54,7 +55,7 @@ describe("DataTable", () => {
     expect(screen.getByRole("columnheader", { name: /Score/ })).toHaveAttribute("scope", "col");
   });
 
-  it("expands a row via grid-template-rows, not a fixed max-height (UI-04)", async () => {
+  it("expands a row without a fixed max-height wrapper (UI-04)", async () => {
     const { container } = render(
       <DataTable
         columns={COLUMNS}
@@ -64,8 +65,57 @@ describe("DataTable", () => {
       />
     );
     await userEvent.click(screen.getByText("AAPL"));
-    const detailWrapper = screen.getByText("AAPL detail").closest("div[style]") as HTMLElement;
-    expect(detailWrapper.style.gridTemplateRows).toBe("1fr");
+    expect(screen.getByText("AAPL detail")).toBeInTheDocument();
     expect(container.innerHTML).not.toMatch(/max-height/);
+  });
+});
+
+interface HoverRow {
+  id: string;
+  name: string;
+}
+
+const hoverColumns: Column<HoverRow>[] = [
+  { key: "name", header: "Name", render: (r) => r.name },
+];
+const hoverRows: HoverRow[] = [{ id: "a", name: "Alpha" }];
+
+function Probe({ onUnmount }: { onUnmount: () => void }) {
+  useEffect(() => onUnmount, [onUnmount]);
+  return <div>expanded-content</div>;
+}
+
+describe("DataTable — expanded-row lifecycle (TD-08)", () => {
+  it("unmounts the expanded subtree on collapse instead of just hiding it", () => {
+    const onUnmount = vi.fn();
+    render(
+      <DataTable
+        columns={hoverColumns}
+        rows={hoverRows}
+        rowKey={(r) => r.id}
+        expandedRender={() => <Probe onUnmount={onUnmount} />}
+      />
+    );
+    fireEvent.click(screen.getByText("Alpha")); // expand
+    expect(screen.getByText("expanded-content")).toBeInTheDocument();
+    expect(onUnmount).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByText("Alpha")); // collapse
+    expect(screen.queryByText("expanded-content")).not.toBeInTheDocument();
+    expect(onUnmount).toHaveBeenCalledTimes(1);
+  });
+
+  it("calls onRowHover when the pointer enters a row", () => {
+    const onRowHover = vi.fn();
+    render(
+      <DataTable
+        columns={hoverColumns}
+        rows={hoverRows}
+        rowKey={(r) => r.id}
+        onRowHover={onRowHover}
+      />
+    );
+    fireEvent.mouseEnter(screen.getByText("Alpha").closest("tr")!);
+    expect(onRowHover).toHaveBeenCalledWith(hoverRows[0]);
   });
 });
