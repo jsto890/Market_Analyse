@@ -8,6 +8,7 @@ const LINKS = [
   { href: "/watchlist", label: "Watchlist" },
   { href: "/odte", label: "Options" },
   { href: "/rotation", label: "Rotation" },
+  { href: "/macro", label: "Macro" },
   { href: "/screener", label: "Screener" },
   { href: "/portfolio", label: "Portfolio" },
   { href: "/alerts", label: "Alerts" },
@@ -24,6 +25,7 @@ export default function NavLinks() {
           <Link
             key={href}
             href={href}
+            aria-current={active ? "page" : undefined}
             className={`relative flex items-center px-2.5 text-[13px] font-medium transition-colors ${
               active ? "text-foreground" : "text-muted hover:text-foreground"
             }`}
