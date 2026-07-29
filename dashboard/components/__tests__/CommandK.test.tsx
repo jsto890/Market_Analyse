@@ -51,3 +51,36 @@ it("does not open on a bare 'g' keypress while typing in an unrelated text field
 
   expect(screen.queryByPlaceholderText("Search ticker…")).not.toBeInTheDocument();
 });
+
+it("shows recent tickers and action commands with an empty query (G-04 default state)", async () => {
+  window.localStorage.setItem("dash:commandk:recent", JSON.stringify(["NVDA"]));
+  mockFetchJson({
+    "/api/bridge": { signals: [] },
+    "/api/watchlist": { watchlist: [] },
+  });
+
+  render(<CommandK />);
+  window.dispatchEvent(new Event("commandk:open"));
+
+  await screen.findByText("NVDA");
+  expect(screen.getByText("recent")).toBeInTheDocument();
+  expect(screen.getByText("Go to Watchlist")).toBeInTheDocument();
+  expect(screen.getByText("Go to Macro")).toBeInTheDocument();
+});
+
+it("selecting an action command navigates to its route, not a /t/ ticker route (G-04)", async () => {
+  mockFetchJson({
+    "/api/bridge": { signals: [] },
+    "/api/watchlist": { watchlist: [] },
+  });
+
+  render(<CommandK />);
+  window.dispatchEvent(new Event("commandk:open"));
+
+  const action = await screen.findByText("Go to Watchlist");
+  const { default: userEvent } = await import("@testing-library/user-event");
+  await userEvent.click(action);
+
+  expect(push).toHaveBeenCalledWith("/watchlist");
+  expect(push).not.toHaveBeenCalledWith(expect.stringMatching(/^\/t\//));
+});

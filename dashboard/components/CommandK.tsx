@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Badge from "@/components/ui/Badge";
 import { deriveGroup, GROUP_LABEL } from "@/lib/groups";
+import { STATIC_KEYS } from "@/lib/storageKeys";
 import type { BridgeRow } from "@/types/bridge";
 
 interface WatchlistEntry {
@@ -15,7 +16,53 @@ interface ResultItem {
   ticker: string;
   group?: string;
   tier?: string;
-  source: "bridge" | "watchlist" | "raw";
+  source: "bridge" | "watchlist" | "raw" | "recent" | "action";
+  label?: string;
+  href?: string;
+}
+
+const ACTIONS: { id: string; label: string; href: string }[] = [
+  { id: "today", label: "Go to Today", href: "/" },
+  { id: "watchlist", label: "Go to Watchlist", href: "/watchlist" },
+  { id: "options", label: "Go to Options", href: "/odte" },
+  { id: "rotation", label: "Go to Rotation", href: "/rotation" },
+  { id: "macro", label: "Go to Macro", href: "/macro" },
+  { id: "screener", label: "Go to Screener", href: "/screener" },
+  { id: "portfolio", label: "Go to Portfolio", href: "/portfolio" },
+  { id: "alerts", label: "Go to Alerts", href: "/alerts" },
+];
+
+function loadRecentTickers(): string[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = window.localStorage.getItem(STATIC_KEYS.commandkRecent);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed.filter((t): t is string => typeof t === "string") : [];
+  } catch {
+    return [];
+  }
+}
+
+function recordRecentTicker(ticker: string): string[] {
+  const next = [ticker, ...loadRecentTickers().filter((t) => t !== ticker)].slice(0, 5);
+  try {
+    window.localStorage.setItem(STATIC_KEYS.commandkRecent, JSON.stringify(next));
+  } catch {
+    // ignore quota/privacy-mode failures
+  }
+  return next;
+}
+
+function buildDefaultResults(recents: string[]): ResultItem[] {
+  const recentItems: ResultItem[] = recents.slice(0, 5).map((ticker) => ({ ticker, source: "recent" }));
+  const actionItems: ResultItem[] = ACTIONS.map((a) => ({
+    ticker: a.id,
+    label: a.label,
+    href: a.href,
+    source: "action",
+  }));
+  return [...recentItems, ...actionItems].slice(0, 12);
 }
 
 export function isEditableTarget(): boolean {
@@ -45,10 +92,11 @@ function matchQuery(query: string, ticker: string): boolean {
 function buildResults(
   query: string,
   bridgeRows: BridgeRow[],
-  watchlist: string[]
+  watchlist: string[],
+  recents: string[]
 ): ResultItem[] {
   const q = query.toUpperCase().trim();
-  if (!q) return [];
+  if (!q) return buildDefaultResults(recents);
 
   const seen = new Set<string>();
   const results: ResultItem[] = [];
@@ -77,6 +125,12 @@ function buildResults(
     results.push({ ticker: q, source: "raw" });
   }
 
+  for (const action of ACTIONS) {
+    if (action.label.toUpperCase().includes(q)) {
+      results.push({ ticker: action.id, label: action.label, href: action.href, source: "action" });
+    }
+  }
+
   return results.slice(0, 12);
 }
 
@@ -85,6 +139,7 @@ export default function CommandK() {
   const [query, setQuery] = useState("");
   const [bridgeRows, setBridgeRows] = useState<BridgeRow[]>([]);
   const [watchlistTickers, setWatchlistTickers] = useState<string[]>([]);
+  const [recents, setRecents] = useState<string[]>(() => loadRecentTickers());
   const [selectedIdx, setSelectedIdx] = useState(0);
   const router = useRouter();
   const inputRef = useRef<HTMLInputElement>(null);
@@ -135,15 +190,26 @@ export default function CommandK() {
           .catch(() => {});
       }
       fetchWatchlistTickers().then(setWatchlistTickers).catch(() => {});
+      setRecents(loadRecentTickers());
       return () => clearTimeout(id);
     }
   }, [open]);
 
-  const results = buildResults(query, bridgeRows, watchlistTickers);
+  const results = buildResults(query, bridgeRows, watchlistTickers, recents);
 
   useEffect(() => {
     setSelectedIdx(0);
   }, [query]);
+
+  function activate(item: ResultItem) {
+    if (item.source === "action" && item.href) {
+      router.push(item.href);
+    } else {
+      setRecents(recordRecentTicker(item.ticker));
+      router.push(`/t/${item.ticker}`);
+    }
+    close();
+  }
 
   function handleKeyDown(e: React.KeyboardEvent) {
     if (e.key === "ArrowDown") {
@@ -154,10 +220,7 @@ export default function CommandK() {
       setSelectedIdx((i) => Math.max(i - 1, 0));
     } else if (e.key === "Enter") {
       const item = results[selectedIdx];
-      if (item) {
-        router.push(`/t/${item.ticker}`);
-        close();
-      }
+      if (item) activate(item);
     } else if (e.key === "Escape") {
       close();
     }
@@ -199,12 +262,11 @@ export default function CommandK() {
                   i === selectedIdx ? "bg-accent/10 text-foreground" : "text-foreground/70 hover:bg-elevated"
                 }`}
                 onMouseEnter={() => setSelectedIdx(i)}
-                onClick={() => {
-                  router.push(`/t/${item.ticker}`);
-                  close();
-                }}
+                onClick={() => activate(item)}
               >
-                <span className="font-mono font-medium">{item.ticker}</span>
+                <span className="font-mono font-medium">
+                  {item.source === "action" ? item.label : item.ticker}
+                </span>
                 <span className="flex items-center gap-1.5 text-[11px]">
                   {item.source === "bridge" && item.group && (
                     <span className="text-muted uppercase tracking-wide">{GROUP_LABEL[item.group as keyof typeof GROUP_LABEL]}</span>
@@ -215,6 +277,7 @@ export default function CommandK() {
                   {item.source === "watchlist" && (
                     <span className="text-muted">watchlist</span>
                   )}
+                  {item.source === "recent" && <span className="text-muted">recent</span>}
                   {item.source === "raw" && (
                     <span className="text-muted">Open {item.ticker} →</span>
                   )}

@@ -9,6 +9,7 @@
  */
 export const STATIC_KEYS = {
   todayFilters: "dash:today:filters",
+  commandkRecent: "dash:commandk:recent",
 } as const;
 
 /**
