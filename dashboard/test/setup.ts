@@ -20,7 +20,7 @@ if (typeof window !== "undefined" && !("ResizeObserver" in window)) {
     unobserve() {}
     disconnect() {}
   }
-  window.ResizeObserver = ResizeObserverStub as unknown as typeof ResizeObserver;
+  (window as any).ResizeObserver = ResizeObserverStub as unknown as typeof ResizeObserver;
 }
 
 if (typeof window !== "undefined" && !window.HTMLElement.prototype.scrollIntoView) {

@@ -59,6 +59,31 @@ function formatTime(generatedAt: string | null): string {
   });
 }
 
+export type StatusMessage = { level: "error" | "warn"; text: string };
+
+export function statusMessage({
+  rows,
+  viewingHistory,
+  stale,
+  generatedAt,
+}: {
+  rows: BridgeRow[];
+  viewingHistory: boolean;
+  stale: boolean;
+  generatedAt: string | null;
+}): StatusMessage | null {
+  if (rows.length === 0 && !viewingHistory) {
+    return { level: "error", text: "No bridge data — run_daily may have failed" };
+  }
+  if (stale) {
+    return {
+      level: "warn",
+      text: `Bridge data is stale (generated ${formatTime(generatedAt)}) — run_daily may have failed`,
+    };
+  }
+  return null;
+}
+
 function toDiffRow(row: BridgeRow, group: ReportGroup): DiffRow {
   return {
     ticker: row.ticker.toUpperCase(),
@@ -143,17 +168,19 @@ export default async function Home({
         <MorningReport />
       </div>
       <DateStepper dates={dates} current={viewingHistory ? requestedDate : null} />
-      {rows.length === 0 && !viewingHistory && (
-        <div className="rounded-md border border-warn/50 bg-warn/10 px-4 py-2.5 text-[13px] text-warn">
-          No bridge data — run_daily may have failed
-        </div>
-      )}
-      {stale && (
-        <div className="rounded-md border border-warn/50 bg-warn/10 px-4 py-2.5 text-[13px] text-warn">
-          Bridge data is stale (generated {formatTime(meta.generated_at)}) — run_daily may
-          have failed
-        </div>
-      )}
+      {(() => {
+        const status = statusMessage({ rows, viewingHistory, stale, generatedAt: meta.generated_at });
+        if (!status) return null;
+        const tone =
+          status.level === "error"
+            ? "border-neg/50 bg-neg/10 text-neg"
+            : "border-warn/50 bg-warn/10 text-warn";
+        return (
+          <div role="status" className={`rounded-md border px-4 py-2.5 text-[13px] ${tone}`}>
+            {status.text}
+          </div>
+        );
+      })()}
 
       {hasYesterday && <DiffStrip diff={diffData} />}
 

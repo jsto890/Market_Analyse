@@ -3,6 +3,7 @@ import path from "path";
 
 export default defineConfig({
   resolve: { alias: { "@": path.resolve(__dirname) } },
+  // @ts-expect-error jsx "automatic" is used for React 18+ jsx transform and is valid at runtime
   oxc: { jsx: "automatic" },
   test: {
     globals: true,
