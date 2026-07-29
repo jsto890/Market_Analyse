@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { RAIL_LABEL } from "@/lib/rail-quotes";
 
 interface QuoteRowProps {
@@ -73,7 +74,7 @@ export function QuoteRow({ symbol, price, changePct, prevBasis, skeleton }: Quot
   // VIX special-case (spec §11): level has NO color (text-foreground is correct — just no
   // pos/neg applied to the price). The % change column still colors normally.
   return (
-    <div className="h-[26px] flex items-center px-3 hover:bg-elevated cursor-default">
+    <Link href={`/t/${symbol}`} className="h-[26px] flex items-center px-3 hover:bg-elevated">
       <span className="w-12 text-[11px] font-mono text-muted flex-shrink-0 leading-none">
         {label}
       </span>
@@ -85,6 +86,6 @@ export function QuoteRow({ symbol, price, changePct, prevBasis, skeleton }: Quot
       >
         {formatPct(changePct)}
       </span>
-    </div>
+    </Link>
   );
 }
