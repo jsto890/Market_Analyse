@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { isEditableTarget } from "@/components/CommandK";
 
 const KEYS: { key: string; desc: string }[] = [
-  { key: "g  /  ⌘K", desc: "Open command palette" },
+  { key: "⌘K", desc: "Open command palette" },
   { key: "j  /  k", desc: "Move row down / up" },
   { key: "Enter", desc: "Navigate to ticker" },
   { key: "Space", desc: "Expand / collapse row" },
@@ -26,8 +26,16 @@ export default function HelpOverlay() {
       }
     }
 
+    function onOpen() {
+      setOpen((v) => !v);
+    }
+
     document.addEventListener("keydown", onKeyDown);
-    return () => document.removeEventListener("keydown", onKeyDown);
+    window.addEventListener("helpoverlay:open", onOpen);
+    return () => {
+      document.removeEventListener("keydown", onKeyDown);
+      window.removeEventListener("helpoverlay:open", onOpen);
+    };
   }, []);
 
   if (!open) return null;
