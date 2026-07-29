@@ -98,16 +98,9 @@ export default function CommandK() {
 
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
-      const cmdK = (e.key === "k" && (e.metaKey || e.ctrlKey));
-      const bareG = e.key === "g" && !e.metaKey && !e.ctrlKey && !e.altKey;
+      const cmdK = e.key === "k" && (e.metaKey || e.ctrlKey);
 
       if (cmdK && !isEditableTarget()) {
-        e.preventDefault();
-        setOpen((v) => !v);
-        return;
-      }
-
-      if (bareG && !isEditableTarget()) {
         e.preventDefault();
         setOpen((v) => !v);
         return;

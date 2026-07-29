@@ -33,3 +33,21 @@ it("labels a bridge match using the canonical GROUP_LABEL wording (tech+fund, no
 
   await waitFor(() => expect(screen.getByText("tech+fund")).toBeInTheDocument());
 });
+
+it("does not open on a bare 'g' keypress while typing in an unrelated text field (G-03)", async () => {
+  mockFetchJson({
+    "/api/bridge": { signals: [] },
+    "/api/watchlist": { watchlist: [] },
+  });
+
+  document.body.innerHTML = '<textarea id="scratch"></textarea>';
+  const scratch = document.getElementById("scratch") as HTMLTextAreaElement;
+
+  render(<CommandK />);
+  expect(screen.queryByPlaceholderText("Search ticker…")).not.toBeInTheDocument();
+
+  scratch.dispatchEvent(new KeyboardEvent("keydown", { key: "g", bubbles: true }));
+  await waitFor(() => {});
+
+  expect(screen.queryByPlaceholderText("Search ticker…")).not.toBeInTheDocument();
+});
