@@ -4,7 +4,9 @@ import { useState, useEffect, useId, ReactNode } from "react";
 import { ChevronDown } from "lucide-react";
 
 interface PanelProps {
-  title: string;
+  title: ReactNode;
+  /** Optional count chip rendered next to the title, e.g. Panel's own row/section count. Replaces the old `` `${title}  (${count})` `` string-concat pattern. */
+  count?: number;
   subtitle?: string;
   collapsible?: boolean;
   defaultOpen?: boolean;
@@ -15,6 +17,7 @@ interface PanelProps {
 
 export default function Panel({
   title,
+  count,
   subtitle,
   collapsible,
   defaultOpen = false,
@@ -23,7 +26,7 @@ export default function Panel({
   children,
 }: PanelProps) {
   const id = useId();
-  const storageKey = persistKey ? `dash:panel:${persistKey}` : null;
+  const storageKey = persistKey ? `dash:collapsible:${persistKey}` : null;
 
   const [open, setOpen] = useState(defaultOpen);
   const [hydrated, setHydrated] = useState(false);
@@ -33,10 +36,21 @@ export default function Panel({
       const stored = localStorage.getItem(storageKey);
       if (stored !== null) {
         setOpen(stored === "true");
+      } else {
+        // One-time migration: check for legacy dash:panel: key (contract §F)
+        const legacyKey = `dash:panel:${persistKey}`;
+        const legacyStored = localStorage.getItem(legacyKey);
+        if (legacyStored !== null) {
+          // Migrate: use legacy value, write to new key, remove old key
+          const value = legacyStored === "true";
+          setOpen(value);
+          localStorage.setItem(storageKey, String(value));
+          localStorage.removeItem(legacyKey);
+        }
       }
     }
     setHydrated(true);
-  }, [storageKey]);
+  }, [storageKey, persistKey]);
 
   function toggle() {
     const next = !open;
@@ -49,9 +63,16 @@ export default function Panel({
   const Title = (
     <>
       <span className="tick truncate text-[13px] font-semibold text-foreground">{title}</span>
+      {count !== undefined && (
+        <span className="rounded bg-elevated px-1.5 py-px font-mono text-[11px] tabular-nums text-muted">
+          {count}
+        </span>
+      )}
       {subtitle && <span className="truncate text-[12px] text-muted">{subtitle}</span>}
     </>
   );
+
+  const isOpen = !collapsible || (hydrated ? open : defaultOpen);
 
   return (
     <section className="rounded-md border border-line bg-elevated">
@@ -78,12 +99,12 @@ export default function Panel({
       </div>
       <div
         id={id}
-        className="overflow-hidden transition-[max-height] duration-200"
-        style={{
-          maxHeight: !collapsible || (hydrated ? open : defaultOpen) ? "9999px" : "0px",
-        }}
+        className="grid transition-[grid-template-rows] duration-200 ease-out"
+        style={{ gridTemplateRows: isOpen ? "1fr" : "0fr" }}
       >
-        <div className="border-t border-line px-4 py-3">{children}</div>
+        <div className="overflow-hidden">
+          <div className="border-t border-line px-4 py-3">{children}</div>
+        </div>
       </div>
     </section>
   );
