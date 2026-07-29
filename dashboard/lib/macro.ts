@@ -30,7 +30,7 @@ export function scopeLabel(scope: string): string {
 
 /** −1..1 → tone class. Green above +0.05, red below −0.05, muted between. */
 export function toneClass(score: number): string {
-  if (score > 0.05) return "text-accent";
-  if (score < -0.05) return "text-warn";
+  if (score > 0.05) return "text-pos";
+  if (score < -0.05) return "text-neg";
   return "text-muted";
 }

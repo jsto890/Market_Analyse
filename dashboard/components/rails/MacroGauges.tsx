@@ -18,7 +18,7 @@ function Gauge({ g }: { g: MacroGauge }) {
       <div className="relative h-1 mt-0.5 bg-elevated rounded-full overflow-hidden">
         <span className="absolute left-1/2 top-0 h-full w-px bg-line" />
         <span
-          className={`absolute top-0 h-full ${pos ? "bg-accent" : "bg-warn"}`}
+          className={`absolute top-0 h-full ${pos ? "bg-pos" : "bg-neg"}`}
           style={{ left: pos ? "50%" : `${50 + pct}%`, width: `${Math.abs(pct)}%` }}
         />
       </div>
@@ -38,7 +38,7 @@ export function MacroGauges({ window = "1d" }: { window?: string }) {
   const show = [...head, ...sectors];
 
   return (
-    <div className="border-t border-line">
+    <div className="border-t border-line-strong">
       <div className="h-[24px] flex items-center justify-between px-3">
         <span className="text-[10px] font-medium uppercase tracking-[0.08em] text-muted font-mono leading-none">
           Macro
