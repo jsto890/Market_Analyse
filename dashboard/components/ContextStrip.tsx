@@ -1,7 +1,7 @@
 "use client";
 
 import useSWR from "swr";
-import * as Tooltip from "@radix-ui/react-tooltip";
+import * as Popover from "@radix-ui/react-popover";
 import { type UsMarketState } from "@/lib/market-clock";
 import { useMarketClock } from "@/lib/useMarketClock";
 import type { StatusPayload, DotState } from "@/lib/status";
@@ -56,18 +56,21 @@ export default function ContextStrip() {
         {sessionChip(clock)}
       </span>
 
-      {/* SYS health pill; tooltip lists per-service status */}
-      <Tooltip.Root>
-        <Tooltip.Trigger asChild>
-          <span
-            className={`inline-flex items-center gap-1 rounded-sm border border-line border-l-2 bg-elevated px-1.5 py-px font-mono text-[10px] font-semibold tracking-wide cursor-default select-none ${PILL_CLASS[aggregate]}`}
+      {/* SYS health popover; click/Enter/Space opens service-status list */}
+      <Popover.Root>
+        <Popover.Trigger asChild>
+          <button
+            type="button"
+            aria-label="System status"
+            className={`inline-flex items-center gap-1 rounded-sm border border-line border-l-2 bg-elevated px-1.5 py-px font-mono text-[10px] font-semibold tracking-wide select-none ${PILL_CLASS[aggregate]}`}
           >
             SYS
-          </span>
-        </Tooltip.Trigger>
-        <Tooltip.Portal>
-          <Tooltip.Content
+          </button>
+        </Popover.Trigger>
+        <Popover.Portal>
+          <Popover.Content
             side="bottom"
+            sideOffset={4}
             className="rounded bg-elevated border border-line px-2 py-1 text-[12px] text-muted shadow-lg z-50 min-w-[180px]"
           >
             {(data?.services ?? []).map((s) => (
@@ -77,10 +80,10 @@ export default function ContextStrip() {
               </div>
             ))}
             {!data && <div>status unavailable</div>}
-            <Tooltip.Arrow className="fill-elevated" />
-          </Tooltip.Content>
-        </Tooltip.Portal>
-      </Tooltip.Root>
+            <Popover.Arrow className="fill-elevated" />
+          </Popover.Content>
+        </Popover.Portal>
+      </Popover.Root>
     </div>
   );
 }
