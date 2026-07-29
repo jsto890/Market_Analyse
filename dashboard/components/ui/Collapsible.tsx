@@ -38,9 +38,22 @@ export default function Collapsible({
   useEffect(() => {
     if (storageKey) {
       const stored = localStorage.getItem(storageKey);
-      if (stored !== null) setOpen(stored === "true");
+      if (stored !== null) {
+        setOpen(stored === "true");
+      } else if (persistKey) {
+        // One-time migration: check for legacy dash:panel: key (contract §F)
+        const legacyKey = `dash:panel:${persistKey}`;
+        const legacyStored = localStorage.getItem(legacyKey);
+        if (legacyStored !== null) {
+          // Migrate: use legacy value, write to new key, remove old key
+          const value = legacyStored === "true";
+          setOpen(value);
+          localStorage.setItem(storageKey, String(value));
+          localStorage.removeItem(legacyKey);
+        }
+      }
     }
-  }, [storageKey]);
+  }, [storageKey, persistKey]);
 
   function toggle() {
     if (disabled) return;
