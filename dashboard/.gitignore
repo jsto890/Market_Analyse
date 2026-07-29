@@ -40,3 +40,7 @@ next-env.d.ts
 
 # Tauri standalone server bundle (build artifact)
 dist-app/
+
+# playwright
+/playwright-report/
+/test-results/
