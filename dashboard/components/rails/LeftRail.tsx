@@ -145,18 +145,35 @@ function MiniItem({ symbol, changePct }: MiniItemProps) {
 // ─── Main component ───────────────────────────────────────────────────────────
 
 const LS_KEY = "rail-left-collapsed";
+const NARROW_QUERY = "(max-width: 1279px)";
 
 export function LeftRail() {
-  // Collapse state — start expanded to avoid hydration mismatch, sync from localStorage on mount
+  // Start expanded SSR; reconcile from localStorage/viewport on mount to avoid hydration mismatch
   const [collapsed, setCollapsed] = useState(false);
 
   useEffect(() => {
-    try {
-      const stored = window.localStorage.getItem(LS_KEY);
-      if (stored === "1") setCollapsed(true);
-    } catch {
-      // localStorage unavailable (private browsing, SSR guard)
-    }
+    const readStored = (): string | null => {
+      try {
+        return window.localStorage.getItem(LS_KEY);
+      } catch {
+        return null;
+      }
+    };
+
+    const stored = readStored();
+    if (stored === "1") setCollapsed(true);
+    else if (stored === "0") setCollapsed(false);
+    else setCollapsed(window.innerWidth < 1280);
+
+    if (typeof window.matchMedia !== "function") return;
+    const mql = window.matchMedia(NARROW_QUERY);
+    const onChange = (e: MediaQueryListEvent) => {
+      // Explicit stored preference always wins over the media query.
+      if (readStored() !== null) return;
+      setCollapsed(e.matches);
+    };
+    mql.addEventListener("change", onChange);
+    return () => mql.removeEventListener("change", onChange);
   }, []);
 
   const toggle = () => {
@@ -180,7 +197,7 @@ export function LeftRail() {
     const vixQ = data?.quotes.find((q) => q.symbol === "^VIX");
 
     return (
-      <aside className="w-9 flex-shrink-0 flex flex-col items-center py-1 gap-0 border-r border-line bg-surface sticky top-[var(--nav-h)] h-[calc(100vh-var(--nav-h))] overflow-y-auto font-mono">
+      <aside className="w-9 flex-shrink-0 order-1 flex flex-col items-center py-1 gap-0 border-r border-line bg-surface sticky top-[var(--nav-h)] h-[calc(100vh-var(--nav-h))] overflow-y-auto font-mono">
         <MiniItem symbol="SPY" changePct={spyQ?.change_pct} />
         <MiniItem symbol="QQQ" changePct={qqqQ?.change_pct} />
         <MiniItem symbol="^VIX" changePct={vixQ?.change_pct} />
@@ -237,7 +254,7 @@ export function LeftRail() {
 
   return (
     <aside
-      className="w-[200px] flex-shrink-0 bg-surface border-r border-line font-mono sticky top-[var(--nav-h)] h-[calc(100vh-var(--nav-h))] overflow-y-auto"
+      className="w-[200px] flex-shrink-0 order-1 bg-surface border-r border-line font-mono sticky top-[var(--nav-h)] h-[calc(100vh-var(--nav-h))] overflow-y-auto"
     >
       <div className="pt-1 flex flex-col h-full">
         {/* FUTURES block — no badge */}
