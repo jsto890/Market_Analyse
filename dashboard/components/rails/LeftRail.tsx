@@ -290,9 +290,9 @@ export function LeftRail() {
 
   return (
     <aside
-      className="w-[200px] flex-shrink-0 order-1 bg-surface border-r border-line font-mono sticky top-[var(--nav-h)] h-[calc(100vh-var(--nav-h))] overflow-y-auto"
+      className="w-[200px] flex-shrink-0 order-1 bg-surface border-r border-line font-mono sticky top-[var(--nav-h)] h-[calc(100vh-var(--nav-h))] flex flex-col"
     >
-      <div className="pt-1 flex flex-col h-full">
+      <div className="pt-1 flex-1 min-h-0 overflow-y-auto">
         {error && (
           <div className="mx-3 mt-1 mb-0.5 px-2 py-1.5 rounded border border-warn/30 bg-warn/10 text-warn text-[10px] font-mono leading-snug">
             QUOTE FEED OFFLINE
@@ -316,11 +316,11 @@ export function LeftRail() {
 
         {/* What's-next economic calendar — WS-3c */}
         <EconCalendar days={7} />
+      </div>
 
-        {/* Macro sentiment gauges — WS-3b */}
-        <div className="mt-auto">
-          <MacroGauges window="1d" />
-        </div>
+      {/* Non-scrolling footer — always visible, no matter the viewport height (LR-05) */}
+      <div className="flex-shrink-0">
+        <MacroGauges window="1d" />
 
         {/* Collapse button per spec §8.5 */}
         <button

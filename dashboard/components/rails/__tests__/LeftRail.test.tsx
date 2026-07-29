@@ -68,3 +68,12 @@ describe("LeftRail collapsed-strip (LR-04)", () => {
     expect(screen.getByLabelText("Macro: +0.12")).toBeInTheDocument();
   });
 });
+
+describe("LeftRail sticky footer (LR-05)", () => {
+  it("keeps MacroGauges + the collapse control outside the scrolling content area", () => {
+    window.innerWidth = 1600;
+    render(<LeftRail />);
+    const collapseBtn = screen.getByLabelText("Collapse quote rail");
+    expect(collapseBtn.closest(".overflow-y-auto")).toBeNull();
+  });
+});
