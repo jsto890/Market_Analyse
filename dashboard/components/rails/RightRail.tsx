@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { AlertTriangle } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useNewsFeed, relTime, type NewsItem } from "@/lib/news";
 
@@ -52,7 +53,7 @@ export function RightRail() {
   // ── Minimised strip (36px) per spec §6.2 ─────────────────────────────────
   if (collapsed) {
     return (
-      <aside className="w-9 flex-shrink-0 flex flex-col items-center py-1 border-l border-line bg-surface sticky top-[var(--nav-h)] h-[calc(100vh-var(--nav-h))] font-mono">
+      <aside className="w-9 flex-shrink-0 flex flex-col items-center py-1 border-l border-line bg-surface sticky top-[var(--nav-h)] h-[calc(100vh-var(--nav-h))] font-mono order-3">
         {/* Expand button — top, per spec §6.2 */}
         <button
           onClick={toggle}
@@ -74,7 +75,7 @@ export function RightRail() {
 
   // ── Expanded shell per spec §7.1 ──────────────────────────────────────────
   return (
-    <aside className="w-[260px] flex-shrink-0 bg-surface border-l border-line font-mono sticky top-[var(--nav-h)] h-[calc(100vh-var(--nav-h))] overflow-y-auto">
+    <aside className="w-[260px] flex-shrink-0 bg-surface border-l border-line font-mono sticky top-[var(--nav-h)] h-[calc(100vh-var(--nav-h))] overflow-y-auto order-3">
       {/* Header row per spec §7.1 — NEWS label + live item count */}
       <div className="h-[24px] flex items-center justify-between px-3 border-b border-line">
         <span className="text-[10px] font-medium uppercase tracking-[0.08em] text-muted font-mono leading-none">
@@ -119,7 +120,7 @@ function shortSource(s: string): string {
 // ── Header right-side: item count indicator ───────────────────────────────────
 function NewsFeedHeader() {
   const { data, error } = useNewsFeed();
-  if (error) return <span className="text-[9px] text-muted leading-none">offline</span>;
+  if (error) return <span className="text-[9px] text-warn leading-none">offline</span>;
   if (!data) return <span className="text-[9px] text-muted opacity-40 leading-none">…</span>;
   return (
     <span className="text-[9px] text-muted leading-none">
@@ -134,7 +135,8 @@ function NewsFeedBody() {
 
   if (error) {
     return (
-      <p className="text-[11px] text-muted px-3 pt-3 leading-relaxed">
+      <p className="flex items-center gap-1.5 text-[11px] text-warn px-3 pt-3 leading-relaxed">
+        <AlertTriangle size={12} strokeWidth={2} className="flex-shrink-0" />
         news feed offline
       </p>
     );
