@@ -1,6 +1,8 @@
 "use client";
 
+import { useState } from "react";
 import useSWR from "swr";
+import { visibilityAwareInterval } from "@/lib/swr-visibility";
 
 export interface RailQuote {
   symbol: string;
@@ -31,9 +33,12 @@ const fetcher = (url: string) =>
   });
 
 export function useRailQuotes() {
-  return useSWR<RailData>("/api/argus/rail/quotes", fetcher, {
-    refreshInterval: 10_000,
+  const [updatedAt, setUpdatedAt] = useState<number | null>(null);
+  const swr = useSWR<RailData>("/api/argus/rail/quotes", fetcher, {
+    refreshInterval: visibilityAwareInterval(10_000),
     revalidateOnFocus: true,
     shouldRetryOnError: false,
+    onSuccess: () => setUpdatedAt(Date.now()),
   });
+  return { ...swr, updatedAt };
 }

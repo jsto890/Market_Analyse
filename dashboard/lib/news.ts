@@ -1,6 +1,7 @@
 "use client";
 
 import useSWR from "swr";
+import { visibilityAwareInterval } from "@/lib/swr-visibility";
 
 export interface NewsItem {
   id: number; ts: string; source: string; ticker: string | null;
@@ -12,7 +13,7 @@ const fetcher = (url: string) =>
 export function useNewsFeed() {
   return useSWR<{ items: NewsItem[]; cursor: number }>(
     "/api/argus/news?latest=60", fetcher,
-    { refreshInterval: 25_000, shouldRetryOnError: false }
+    { refreshInterval: visibilityAwareInterval(25_000), shouldRetryOnError: false }
   );
 }
 

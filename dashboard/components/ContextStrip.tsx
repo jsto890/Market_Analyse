@@ -5,6 +5,7 @@ import * as Tooltip from "@radix-ui/react-tooltip";
 import { type UsMarketState } from "@/lib/market-clock";
 import { useMarketClock } from "@/lib/useMarketClock";
 import type { StatusPayload, DotState } from "@/lib/status";
+import { visibilityAwareInterval } from "@/lib/swr-visibility";
 
 const fetcher = (url: string) =>
   fetch(url).then((r) => {
@@ -41,7 +42,8 @@ function sessionChip(clock: { us: UsMarketState; futures: "open" | "closed" }): 
 export default function ContextStrip() {
   const clock = useMarketClock();
   const { data } = useSWR<StatusPayload>("/api/status", fetcher, {
-    refreshInterval: 60_000,
+    refreshInterval: visibilityAwareInterval(60_000),
+    revalidateOnFocus: true,
     shouldRetryOnError: true,
   });
 

@@ -1,6 +1,7 @@
 "use client";
 
 import useSWR from "swr";
+import { visibilityAwareInterval } from "@/lib/swr-visibility";
 
 export interface MacroGauge {
   scope: string; window: string; score: number; n: number; ts: string;
@@ -12,14 +13,14 @@ const fetcher = (url: string) =>
 
 export function useMacro() {
   return useSWR<{ gauges: MacroGauge[] }>("/api/argus/macro", fetcher, {
-    refreshInterval: 60_000, shouldRetryOnError: false,
+    refreshInterval: visibilityAwareInterval(60_000), shouldRetryOnError: false,
   });
 }
 
 export function useMacroSeries(scope: string, window: string) {
   return useSWR<{ scope: string; window: string; points: MacroPoint[] }>(
     `/api/argus/macro/series?scope=${encodeURIComponent(scope)}&window=${window}`,
-    fetcher, { refreshInterval: 60_000, shouldRetryOnError: false });
+    fetcher, { refreshInterval: visibilityAwareInterval(60_000), shouldRetryOnError: false });
 }
 
 /** Human label for a scope key. "sector:AI / Compute" → "AI / Compute". */

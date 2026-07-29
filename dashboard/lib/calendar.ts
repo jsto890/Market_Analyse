@@ -1,6 +1,7 @@
 "use client";
 
 import useSWR from "swr";
+import { visibilityAwareInterval } from "@/lib/swr-visibility";
 
 export interface CalEvent {
   date: string; time_et: string | null; event: string;
@@ -13,7 +14,7 @@ const fetcher = (url: string) =>
 export function useCalendar(days = 7) {
   return useSWR<{ today: string; days: number; events: CalEvent[] }>(
     `/api/argus/calendar?days=${days}`, fetcher,
-    { refreshInterval: 300_000, shouldRetryOnError: false }
+    { refreshInterval: visibilityAwareInterval(300_000), shouldRetryOnError: false }
   );
 }
 
