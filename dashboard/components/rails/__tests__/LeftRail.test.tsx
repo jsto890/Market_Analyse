@@ -12,6 +12,26 @@ vi.mock("@/lib/rail-quotes", async (importOriginal) => {
 });
 vi.mock("@/components/rails/EconCalendar", () => ({ EconCalendar: () => <div /> }));
 vi.mock("@/components/rails/MacroGauges", () => ({ MacroGauges: () => <div /> }));
+vi.mock("@/lib/macro", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/macro")>();
+  return {
+    ...actual,
+    useMacro: () => ({ data: { gauges: [{ scope: "global", window: "1d", score: 0.12, n: 40, ts: "" }] } }),
+  };
+});
+vi.mock("@/lib/calendar", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/calendar")>();
+  return {
+    ...actual,
+    useCalendar: () => ({
+      data: {
+        today: "2026-07-28",
+        days: 1,
+        events: [{ date: "2026-07-28", time_et: "08:30", event: "CPI", category: "econ", importance: "high", source: "s", ticker: null }],
+      },
+    }),
+  };
+});
 
 beforeEach(() => {
   resetLocalStorage();
@@ -36,5 +56,15 @@ describe("LeftRail offline banner (LR-02)", () => {
     window.innerWidth = 1600;
     render(<LeftRail />);
     expect(screen.getAllByText("QUOTE FEED OFFLINE")).toHaveLength(1);
+  });
+});
+
+describe("LeftRail collapsed-strip (LR-04)", () => {
+  it("shows a glyph for each hidden block (FX, calendar, macro)", () => {
+    window.innerWidth = 1000;
+    render(<LeftRail />);
+    expect(screen.getByLabelText(/^FX:/)).toBeInTheDocument();
+    expect(screen.getByLabelText("Next: CPI")).toBeInTheDocument();
+    expect(screen.getByLabelText("Macro: +0.12")).toBeInTheDocument();
   });
 });

@@ -6,6 +6,8 @@ import { pickChangeBasis } from "@/lib/change-basis";
 import { STATE_LABEL } from "@/lib/market-clock";
 import { useMarketClock } from "@/lib/useMarketClock";
 import { forexSessions, type FxSession } from "@/lib/forex-session";
+import { useMacro } from "@/lib/macro";
+import { useCalendar } from "@/lib/calendar";
 import { QuoteRow } from "./QuoteRow";
 import { MacroGauges } from "./MacroGauges";
 import { EconCalendar } from "./EconCalendar";
@@ -142,6 +144,46 @@ function MiniItem({ symbol, changePct }: MiniItemProps) {
   );
 }
 
+/** Collapsed-strip glyphs for blocks the 36px strip otherwise drops entirely
+ * (LR-04) — one dot each for FX session, next calendar event, macro sentiment. */
+function HiddenBlockGlyphs() {
+  const { active, closed } = forexSessions();
+  const fxLabel = closed
+    ? "FX: closed"
+    : active.length > 1
+    ? `FX: ${active.join("/")} overlap`
+    : active.length === 1
+    ? `FX: ${active[0]}`
+    : "FX: between sessions";
+  const fxClass = closed ? "bg-warn" : active.length > 1 ? "bg-teal" : active.length === 1 ? "bg-accent" : "bg-muted";
+
+  const { data: macroData } = useMacro();
+  const globalGauge = (macroData?.gauges ?? []).find((g) => g.scope === "global" && g.window === "1d");
+  const macroLabel = globalGauge
+    ? `Macro: ${globalGauge.score >= 0 ? "+" : ""}${globalGauge.score.toFixed(2)}`
+    : "Macro: —";
+  const macroClass = !globalGauge
+    ? "bg-muted"
+    : globalGauge.score > 0.05
+    ? "bg-pos"
+    : globalGauge.score < -0.05
+    ? "bg-neg"
+    : "bg-muted";
+
+  const { data: calData } = useCalendar(1);
+  const nextEvent = calData?.events?.[0];
+  const calLabel = nextEvent ? `Next: ${nextEvent.event}` : "No events today";
+  const calClass = nextEvent ? "bg-accent" : "bg-muted";
+
+  return (
+    <div className="flex flex-col items-center gap-1.5 py-1.5 border-t border-line w-full">
+      <span aria-label={fxLabel} title={fxLabel} className={`w-1.5 h-1.5 rounded-full ${fxClass}`} />
+      <span aria-label={calLabel} title={calLabel} className={`w-1.5 h-1.5 rounded-full ${calClass}`} />
+      <span aria-label={macroLabel} title={macroLabel} className={`w-1.5 h-1.5 rounded-full ${macroClass}`} />
+    </div>
+  );
+}
+
 // ─── Main component ───────────────────────────────────────────────────────────
 
 const LS_KEY = "rail-left-collapsed";
@@ -201,6 +243,7 @@ export function LeftRail() {
         <MiniItem symbol="SPY" changePct={spyQ?.change_pct} />
         <MiniItem symbol="QQQ" changePct={qqqQ?.change_pct} />
         <MiniItem symbol="^VIX" changePct={vixQ?.change_pct} />
+        <HiddenBlockGlyphs />
         {/* Expand button — bottom */}
         <button
           onClick={toggle}
