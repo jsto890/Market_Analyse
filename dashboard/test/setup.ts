@@ -22,3 +22,10 @@ if (typeof window !== "undefined" && !("ResizeObserver" in window)) {
   }
   window.ResizeObserver = ResizeObserverStub as unknown as typeof ResizeObserver;
 }
+
+import { afterEach, vi } from "vitest";
+
+afterEach(() => {
+  window.localStorage.clear();
+  vi.unstubAllGlobals();
+});
