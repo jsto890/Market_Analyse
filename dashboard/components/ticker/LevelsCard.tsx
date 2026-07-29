@@ -3,6 +3,7 @@
 import * as Tooltip from "@radix-ui/react-tooltip";
 import { useLocalStorage } from "@/lib/useLocalStorage";
 import { useTickerData } from "@/lib/useTickerData";
+import { deriveLevels } from "@/lib/levels";
 import type { BridgeRow } from "@/types/bridge";
 
 interface LevelsCardProps {
@@ -106,24 +107,7 @@ export default function LevelsCard({ ticker, bridgeRow }: LevelsCardProps) {
   // carries degenerate (entry==stop) placeholders. Shares SWR cache w/ WhyPanel.
   const card = cardRes.data;
 
-  const cardOk =
-    card != null &&
-    card.entry != null &&
-    card.stop != null &&
-    Number.isFinite(card.entry) &&
-    Number.isFinite(card.stop) &&
-    card.entry !== card.stop;
-
-  const entry = cardOk ? (card!.entry as number) : bridgeRow.entry;
-  const stop = cardOk ? (card!.stop as number) : bridgeRow.stop;
-  const target = cardOk ? card!.target ?? bridgeRow.target : bridgeRow.target;
-  const stop_anchor = (cardOk ? card!.stop_anchor : null) ?? bridgeRow.stop_anchor;
-
-  const risk_reward =
-    (cardOk ? card!.risk_reward : bridgeRow.risk_reward) ??
-    (entry != null && stop != null && target != null && entry !== stop
-      ? (target - entry) / (entry - stop)
-      : null);
+  const { entry, stop, target, stop_anchor, risk_reward, source } = deriveLevels(bridgeRow, card);
 
   const livePrice = quote?.price ?? null;
 
@@ -147,8 +131,8 @@ export default function LevelsCard({ ticker, bridgeRow }: LevelsCardProps) {
   const rrLabel = risk_reward != null ? risk_reward.toFixed(2) : "—";
   const anchorLabel = stop_anchor ? stopAnchorLabel(stop_anchor) : null;
 
-  const verdict = (cardOk ? card!.verdict : null) ?? bridgeRow.action_label ?? null;
-  const hc = cardOk ? card!.high_conviction === true : false;
+  const verdict = (source === "live" ? card!.verdict : null) ?? bridgeRow.action_label ?? null;
+  const hc = source === "live" ? card!.high_conviction === true : false;
   const verdictLong = verdict != null && /LONG|BUY|PRIME|BREAKOUT|STANDARD/i.test(verdict);
   const verdictShort = verdict != null && /SHORT|SELL/i.test(verdict);
   // Fall back to the level structure (target vs entry vs stop) for WATCH-type

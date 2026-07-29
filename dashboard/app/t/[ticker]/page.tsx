@@ -1,8 +1,9 @@
-import CandleChart, { type Bar, type Level, type Marker } from "@/components/charts/CandleChart";
+import { type Bar, type Marker } from "@/components/charts/CandleChart";
 import Panel from "@/components/ui/Panel";
 import ChartInfoStrip from "@/components/ticker/ChartInfoStrip";
 import Header from "@/components/ticker/Header";
 import LevelsCard from "@/components/ticker/LevelsCard";
+import TickerChartSection from "@/components/ticker/TickerChartSection";
 import WhyPanel from "@/components/ticker/WhyPanel";
 import CatalystsCard from "@/components/ticker/CatalystsCard";
 import SentimentCard from "@/components/ticker/SentimentCard";
@@ -70,16 +71,6 @@ export default async function TickerPage({
   const lastSeen =
     history.length > 0 ? history[history.length - 1].date : null;
 
-  // Chart levels from bridge row
-  const levels: Level[] = (() => {
-    if (!bridgeRow) return [];
-    const l: Level[] = [];
-    if (Number.isFinite(bridgeRow.entry) && bridgeRow.entry !== null) l.push({ price: bridgeRow.entry, kind: "entry" });
-    if (Number.isFinite(bridgeRow.stop) && bridgeRow.stop !== null) l.push({ price: bridgeRow.stop, kind: "stop" });
-    if (Number.isFinite(bridgeRow.target) && bridgeRow.target !== null) l.push({ price: bridgeRow.target, kind: "target" });
-    return l;
-  })();
-
   // Chart markers from signal history — no text labels to avoid glyph spam
   const markers: Marker[] = history.map((row) => ({
     date: row.date,
@@ -107,11 +98,10 @@ export default async function TickerPage({
         <div className="space-y-4">
           <div className="min-h-[420px] 2xl:min-h-[560px]">
             <Panel title="Chart">
-              <CandleChart
+              <TickerChartSection
                 ticker={ticker}
+                bridgeRow={bridgeRow}
                 initialBars={bars}
-                initialPeriod="6M"
-                levels={levels}
                 markers={markers}
                 height={420}
                 className="min-h-[420px] 2xl:min-h-[560px]"

@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useRef, useState, useCallback } from "react";
-import type { IChartApi, ISeriesApi, UTCTimestamp } from "lightweight-charts";
+import type { IChartApi, ISeriesApi, IPriceLine, UTCTimestamp } from "lightweight-charts";
 import EmptyState from "@/components/ui/EmptyState";
 import Toggle from "@/components/ui/Toggle";
 import { visibleRangeFor, type ChartPeriod as Period } from "@/lib/chart-range";
@@ -100,6 +100,9 @@ export default function CandleChart({
 
   const barsRef = useRef<Bar[]>(initialBars);
   const aliveRef = useRef(true);
+  const priceLinesRef = useRef<IPriceLine[]>([]);
+  const levelsRef = useRef<Level[]>(levels);
+  const resolvedColorsRef = useRef<{ red: string; green: string }>({ red: "#f85149", green: "#3fb950" });
 
   const [activePeriod, setActivePeriod] = useState<Period>(
     initialPeriod ?? DEFAULT_PERSIST.period
@@ -200,6 +203,24 @@ export default function CandleChart({
     }
   }, [markers]);
 
+  const syncPriceLines = useCallback((series: ISeriesApi<"Candlestick">, lvls: Level[]) => {
+    for (const pl of priceLinesRef.current) {
+      series.removePriceLine(pl);
+    }
+    const { red, green } = resolvedColorsRef.current;
+    priceLinesRef.current = lvls.map((l) => {
+      const levelColor = l.kind === "stop" ? red : l.kind === "target" ? green : LEVEL_STYLE[l.kind].color;
+      return series.createPriceLine({
+        price: l.price,
+        lineWidth: 1,
+        axisLabelVisible: true,
+        ...LEVEL_STYLE[l.kind],
+        color: levelColor,
+        lineStyle: LEVEL_STYLE[l.kind].lineStyle as 0 | 1 | 2 | 3 | 4,
+      });
+    });
+  }, []);
+
   const applyPeriod = useCallback((p: Period) => {
     periodRef.current = p;
     setActivePeriod(p);
@@ -247,6 +268,7 @@ export default function CandleChart({
         const resolvedGreen = rootStyle.getPropertyValue("--green").trim() || "#3fb950";
         const resolvedAccent = rootStyle.getPropertyValue("--accent").trim() || "#4c8dff";
         const resolvedAmber = rootStyle.getPropertyValue("--amber").trim() || "#d29922";
+        resolvedColorsRef.current = { red: resolvedRed, green: resolvedGreen };
 
         const chart = createChart(containerRef.current, {
           autoSize: true,
@@ -275,19 +297,9 @@ export default function CandleChart({
           borderVisible: false,
         });
 
-        // levels are drawn once at mount — static per page load by design
-        for (const l of levels) {
-          const levelColor =
-            l.kind === "stop" ? resolvedRed : l.kind === "target" ? resolvedGreen : LEVEL_STYLE[l.kind].color;
-          candleSeries.createPriceLine({
-            price: l.price,
-            lineWidth: 1,
-            axisLabelVisible: true,
-            ...LEVEL_STYLE[l.kind],
-            color: levelColor,
-            lineStyle: LEVEL_STYLE[l.kind].lineStyle as 0 | 1 | 2 | 3 | 4,
-          });
-        }
+        // initial draw only — the levels-update effect below keeps these in sync
+        // with the `levels` prop as live action_card data arrives (TK-02)
+        syncPriceLines(candleSeries, levelsRef.current);
 
         const volSeries = chart.addHistogramSeries({
           priceScaleId: "vol",
@@ -362,6 +374,17 @@ export default function CandleChart({
     }
     // chart not ready yet → applyData will be called inside the .then above
   }, [initialBars, applyData]);
+
+  // Levels update effect — covers "levels changed after chart was ready".
+  // Price lines used to be drawn once at mount from a stale prop and never
+  // redrawn (TK-02: card and chart could show two different stops).
+  useEffect(() => {
+    levelsRef.current = levels;
+    if (seriesRef.current) {
+      syncPriceLines(seriesRef.current, levels);
+    }
+    // chart not ready yet → syncPriceLines runs inside the mount effect's .then() above
+  }, [levels, syncPriceLines]);
 
   if (initialBars.length === 0) {
     return <EmptyState message="no chart data" />;
