@@ -20,6 +20,7 @@ import ContextStrip from "@/components/ContextStrip";
 import CommandK from "@/components/CommandK";
 import HelpOverlay from "@/components/HelpOverlay";
 import TooltipProvider from "@/components/ui/TooltipProvider";
+import UndoToastProvider from "@/components/ui/UndoToastProvider";
 import RailShell from "@/components/rails/RailShell";
 
 export const dynamic = "force-dynamic";
@@ -38,10 +39,12 @@ export default function RootLayout({
     <html lang="en" className={`${firaSans.variable} ${firaCode.variable}`}>
       <body className="font-sans">
         <TooltipProvider>
-          <Nav contextStrip={<ContextStrip />} />
-          <CommandK />
-          <HelpOverlay />
-          <RailShell>{children}</RailShell>
+          <UndoToastProvider>
+            <Nav contextStrip={<ContextStrip />} />
+            <CommandK />
+            <HelpOverlay />
+            <RailShell>{children}</RailShell>
+          </UndoToastProvider>
         </TooltipProvider>
       </body>
     </html>
