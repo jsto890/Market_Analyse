@@ -54,6 +54,9 @@ const GROUP_META: { key: keyof GroupedRows; title: string; rationale: string }[]
   },
 ];
 
+const CAVEAT_LINE =
+  "Levels are indicative, not orders. Score magnitude does not predict returns (r≈0). High conviction means consensus, not edge.";
+
 // ---------- cell components ----------
 
 function TickerCell({ row, isNew }: { row: BridgeRow; isNew: boolean }) {
@@ -508,6 +511,7 @@ export default function SignalGroups({
             : `${g.title}  (${shown})`;
         return (
           <Panel key={g.key} title={title} subtitle={g.rationale}>
+            {sorted[g.key].length > 0 && <p className="mb-2 border-b border-line pb-2 text-[12px] text-muted">{CAVEAT_LINE}</p>}
             <GroupTable
               rows={sorted[g.key]}
               newSet={newSet}
@@ -520,10 +524,12 @@ export default function SignalGroups({
 
       <Panel
         title={`Everything else  (${sorted.other.length})`}
+        subtitle="didn't clear the bar for ALIGNED, PULLING BACK or TECHNICAL+FUNDAMENTAL — mixed or partial-agreement signals"
         collapsible
         defaultOpen={false}
         persistKey="today-other"
       >
+        {sorted.other.length > 0 && <p className="mb-2 border-b border-line pb-2 text-[12px] text-muted">{CAVEAT_LINE}</p>}
         <GroupTable
           rows={sorted.other}
           newSet={newSet}

@@ -205,3 +205,35 @@ describe("SignalGroups — row-encoding diet (TD-03/04/05/06)", () => {
     expect(screen.getByText("+40.2")).toBeInTheDocument();
   });
 });
+
+describe("SignalGroups — visible caveats (TD-07/TD-14)", () => {
+  it("shows the honest-voice disclaimer under a group title without requiring a hover", async () => {
+    resetLocalStorage();
+    mockFetchJson({});
+    const groups = {
+      aligned: [row({ ticker: "NVDA" })],
+      pullback: [],
+      tech_fund: [],
+      other: [],
+    };
+    render(<SignalGroups groups={groups} newTickers={[]} sectors={["Semiconductors"]} />);
+    expect(
+      await screen.findByText(/Score magnitude does not predict returns \(r≈0\)/)
+    ).toBeInTheDocument();
+  });
+
+  it("explains why a ticker lands in Everything else", async () => {
+    resetLocalStorage();
+    mockFetchJson({});
+    const groups = {
+      aligned: [],
+      pullback: [],
+      tech_fund: [],
+      other: [row({ ticker: "XOM" })],
+    };
+    render(<SignalGroups groups={groups} newTickers={[]} sectors={["Semiconductors"]} />);
+    expect(
+      await screen.findByText(/didn.t clear the bar for ALIGNED/)
+    ).toBeInTheDocument();
+  });
+});
