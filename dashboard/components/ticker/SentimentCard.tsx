@@ -4,19 +4,12 @@ import Link from "next/link";
 import Panel from "@/components/ui/Panel";
 import CenterBar from "@/components/ui/CenterBar";
 import ConvictionDot from "@/components/ui/ConvictionDot";
+import { splitAccounts } from "@/lib/sources";
 import type { BridgeRow, Conviction } from "@/types/bridge";
 
 interface SentimentCardProps {
   bridgeRow: BridgeRow | null;
   lastSeen: string | null;
-}
-
-function splitAccounts(value: string | null): string[] {
-  if (!value) return [];
-  return value
-    .split(";")
-    .map((s) => s.trim())
-    .filter(Boolean);
 }
 
 export default function SentimentCard({ bridgeRow, lastSeen }: SentimentCardProps) {
@@ -54,7 +47,7 @@ export default function SentimentCard({ bridgeRow, lastSeen }: SentimentCardProp
             {chips.map((acct) => (
               <Link
                 key={acct}
-                href="/sources"
+                href={`/sources?ticker=${bridgeRow.ticker.toUpperCase()}`}
                 className="inline-flex items-center rounded border-l-2 border-l-accent border border-line bg-surface pl-1.5 pr-2 py-0.5 font-mono text-[12px] text-muted hover:text-accent hover:border-accent/40 transition-colors"
               >
                 {acct}
