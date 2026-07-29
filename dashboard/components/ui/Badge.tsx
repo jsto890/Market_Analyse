@@ -2,7 +2,7 @@
 // cursor-default) so they read as labels — distinct from actual buttons, which
 // carry borders/solid fills + hover states.
 const TIER: Record<string, string> = {
-  PRIME_LONG: "bg-warn/20 text-warn",
+  PRIME_LONG: "bg-pos/25 text-pos",
   BREAKOUT_LONG: "bg-pos/15 text-pos",
   STANDARD_LONG: "bg-pos/12 text-pos",
   WATCH: "bg-muted/15 text-muted",

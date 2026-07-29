@@ -10,7 +10,20 @@ describe("Badge", () => {
 
   it("maps known tier values to their token classes", () => {
     render(<Badge variant="tier" value="PRIME_LONG" />);
-    expect(screen.getByText("PRIME_LONG")).toHaveClass("bg-warn/20", "text-warn");
+    expect(screen.getByText("PRIME_LONG")).toHaveClass("bg-pos/25", "text-pos");
+  });
+
+  it("PRIME_LONG is the most-saturated tier — strictly stronger tint than BREAKOUT_LONG/STANDARD_LONG", () => {
+    render(
+      <>
+        <Badge variant="tier" value="PRIME_LONG" />
+        <Badge variant="tier" value="BREAKOUT_LONG" />
+        <Badge variant="tier" value="STANDARD_LONG" />
+      </>
+    );
+    expect(screen.getByText("PRIME_LONG")).toHaveClass("bg-pos/25");
+    expect(screen.getByText("BREAKOUT_LONG")).toHaveClass("bg-pos/15");
+    expect(screen.getByText("STANDARD_LONG")).toHaveClass("bg-pos/12");
   });
 
   it("maps known verdict values to their token classes", () => {
