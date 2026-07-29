@@ -223,14 +223,7 @@ export function LeftRail() {
   const isLoading = !data && !error;
 
   function renderRows(group: "futures" | "indices" | "forex") {
-    if (error) {
-      // Offline banner per spec §5.5 / §8.6
-      return (
-        <div className="mx-3 my-1 px-2 py-1.5 rounded border border-warn/30 bg-warn/10 text-warn text-[10px] font-mono leading-snug">
-          QUOTE FEED OFFLINE
-        </div>
-      );
-    }
+    if (error) return null;
     if (isLoading) {
       // Skeleton rows per spec §5.3 / §8.8 — symbol labels stay, bars pulse
       return SKELETON_SYMBOLS[group].map((sym) => (
@@ -257,6 +250,12 @@ export function LeftRail() {
       className="w-[200px] flex-shrink-0 order-1 bg-surface border-r border-line font-mono sticky top-[var(--nav-h)] h-[calc(100vh-var(--nav-h))] overflow-y-auto"
     >
       <div className="pt-1 flex flex-col h-full">
+        {error && (
+          <div className="mx-3 mt-1 mb-0.5 px-2 py-1.5 rounded border border-warn/30 bg-warn/10 text-warn text-[10px] font-mono leading-snug">
+            QUOTE FEED OFFLINE
+          </div>
+        )}
+
         {/* FUTURES block — no badge */}
         <Block label="Futures">
           {renderRows("futures")}

@@ -7,7 +7,7 @@ vi.mock("@/lib/rail-quotes", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/rail-quotes")>();
   return {
     ...actual,
-    useRailQuotes: () => ({ data: undefined, error: undefined, updatedAt: null }),
+    useRailQuotes: () => ({ data: undefined, error: new Error("500"), updatedAt: null }),
   };
 });
 vi.mock("@/components/rails/EconCalendar", () => ({ EconCalendar: () => <div /> }));
@@ -28,5 +28,13 @@ describe("LeftRail width-based collapse (LR-01)", () => {
     window.innerWidth = 1600;
     render(<LeftRail />);
     expect(screen.getByLabelText("Collapse quote rail")).toBeInTheDocument();
+  });
+});
+
+describe("LeftRail offline banner (LR-02)", () => {
+  it("renders QUOTE FEED OFFLINE exactly once, not once per block", () => {
+    window.innerWidth = 1600;
+    render(<LeftRail />);
+    expect(screen.getAllByText("QUOTE FEED OFFLINE")).toHaveLength(1);
   });
 });
