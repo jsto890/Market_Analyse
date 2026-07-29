@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import Panel from "@/components/ui/Panel";
-import ScoreBar from "@/components/ui/ScoreBar";
+import CenterBar from "@/components/ui/CenterBar";
 import ConvictionDot from "@/components/ui/ConvictionDot";
 import type { BridgeRow, Conviction } from "@/types/bridge";
 
@@ -38,7 +38,7 @@ export default function SentimentCard({ bridgeRow, lastSeen }: SentimentCardProp
       <div className="space-y-3">
         {/* Score + stats line */}
         <div className="flex items-center gap-3 flex-wrap">
-          <ScoreBar value={sentiment_score} showValue />
+          <CenterBar value={sentiment_score} width={100} showValue />
           <span className="font-mono text-[13px] tabular-nums text-muted">
             <span className="text-foreground">{mentions}</span> mentions
           </span>
