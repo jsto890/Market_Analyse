@@ -9,6 +9,7 @@ import Badge from "@/components/ui/Badge";
 import EmptyState from "@/components/ui/EmptyState";
 import PageHeader from "@/components/ui/PageHeader";
 import { heatBg } from "@/lib/heat";
+import { price, pct, relativeAge } from "@/lib/format";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -77,24 +78,14 @@ function fmtPct(v: number | null): React.ReactNode {
       className={`inline-block rounded px-1.5 py-0.5 tabular-nums ${cls}`}
       style={{ backgroundColor: heatBg(v) }}
     >
-      {v >= 0 ? "+" : ""}{v.toFixed(1)}%
+      {pct(v, "percent")}
     </span>
   );
 }
 
 function fmtPrice(v: number | null): React.ReactNode {
   if (v === null) return <span className="text-muted">—</span>;
-  return <span className="tabular-nums">${v.toFixed(2)}</span>;
-}
-
-function fmtDate(iso: string): string {
-  return iso.slice(0, 10);
-}
-
-function daysSince(dateStr: string): number {
-  const d = new Date(dateStr + "T00:00:00Z");
-  const now = Date.now();
-  return Math.floor((now - d.getTime()) / 86400000);
+  return <span className="tabular-nums">{price(v)}</span>;
 }
 
 const CONCURRENCY = 5;
@@ -269,7 +260,7 @@ function PinnedSection({
     {
       key: "pinned_at",
       header: "Pinned",
-      render: (r) => <span className="text-muted text-[12px]">{fmtDate(r.pinned_at)}</span>,
+      render: (r) => <span className="text-muted text-[12px]">{r.pinned_at.slice(0, 10)}</span>,
     },
     {
       key: "price_at_pin",
@@ -372,21 +363,21 @@ function PinnedSection({
           {medianSince !== null && (
             <StatChip
               label="median since-pin"
-              value={`${medianSince >= 0 ? "+" : ""}${medianSince.toFixed(1)}%`}
+              value={pct(medianSince, "percent")}
               tone={medianSince >= 0 ? "pos" : "neg"}
             />
           )}
           {best && best.sincePin !== null && (
             <StatChip
               label={`best (${best.ticker})`}
-              value={`${best.sincePin >= 0 ? "+" : ""}${best.sincePin.toFixed(1)}%`}
+              value={pct(best.sincePin, "percent")}
               tone="pos"
             />
           )}
           {worst && worst.sincePin !== null && worst.ticker !== best?.ticker && (
             <StatChip
               label={`worst (${worst.ticker})`}
-              value={`${worst.sincePin >= 0 ? "+" : ""}${worst.sincePin.toFixed(1)}%`}
+              value={pct(worst.sincePin, "percent")}
               tone={worst.sincePin < 0 ? "neg" : "muted"}
             />
           )}
@@ -413,7 +404,7 @@ function PinnedSection({
 interface RecentFlagEnriched extends RecentFlag {
   now: number | null;
   sinceFlag: number | null;
-  ageDays: number;
+  ageSeconds: number;
   stillIn: boolean | null;
 }
 
@@ -447,7 +438,9 @@ function RecentPicksSection({ medianDaysToPeak }: { medianDaysToPeak: number }) 
       ...r,
       now,
       sinceFlag: sincePercent(r.entry_at_flag, now),
-      ageDays: daysSince(r.first_date),
+      ageSeconds: Math.floor(
+        (Date.now() - new Date(r.first_date + "T00:00:00Z").getTime()) / 1000
+      ),
       stillIn: latestDate !== null ? r.last_date === latestDate : null,
     };
   });
@@ -497,10 +490,10 @@ function RecentPicksSection({ medianDaysToPeak }: { medianDaysToPeak: number }) 
       render: (r) => fmtPct(r.sinceFlag),
     },
     {
-      key: "ageDays",
-      header: "Age (d)",
+      key: "ageSeconds",
+      header: "Age",
       align: "right",
-      render: (r) => <span className="tabular-nums text-muted">{r.ageDays}</span>,
+      render: (r) => <span className="tabular-nums text-muted">{relativeAge(r.ageSeconds)}</span>,
     },
     {
       key: "stillIn",
