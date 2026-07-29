@@ -46,7 +46,7 @@ export function MacroGauges({ window = "1d" }: { window?: string }) {
         <Link href="/macro" className="text-[10px] font-mono text-muted hover:text-accent">{window} ›</Link>
       </div>
       {show.length === 0
-        ? <p className="px-3 py-1 text-[10px] font-mono text-muted opacity-60">building…</p>
+        ? <p className="px-3 py-1 text-[10px] font-mono text-muted-2">building…</p>
         : show.map((g) => <Gauge key={`${g.scope}-${g.window}`} g={g} />)}
     </div>
   );

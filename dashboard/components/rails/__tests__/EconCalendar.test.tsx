@@ -33,4 +33,16 @@ describe("EconCalendar (LR-09, A11Y-03)", () => {
     expect(high.className).toContain("rounded-sm");
     expect(medium.className).toContain("rounded-full");
   });
+
+  it("renders time_et at a legible 10px with a token color, not a 9px opacity-60 fade", () => {
+    vi.mocked(calendarLib.useCalendar).mockReturnValue({
+      data: { today: "2026-07-29", days: 7, events: [mkEvent(1, "low")] },
+    } as ReturnType<typeof calendarLib.useCalendar>);
+    render(<EconCalendar days={7} max={6} />);
+    const time = screen.getByText("08:30");
+    expect(time.className).toContain("text-[10px]");
+    expect(time.className).toContain("text-muted-2");
+    expect(time.className).not.toContain("opacity-60");
+    expect(time.className).not.toContain("text-[9px]");
+  });
 });

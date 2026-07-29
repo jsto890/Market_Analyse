@@ -24,4 +24,12 @@ describe("MacroGauges (LR-07, LR-06)", () => {
     render(<MacroGauges window="1d" />);
     expect(document.querySelector(".border-line-strong")).not.toBeNull();
   });
+
+  it("renders the building… empty state with a token color, not opacity-60", () => {
+    vi.mocked(macroLib.useMacro).mockReturnValue({ data: { gauges: [] } } as ReturnType<typeof macroLib.useMacro>);
+    render(<MacroGauges window="1d" />);
+    const empty = screen.getByText("building…");
+    expect(empty.className).toContain("text-muted-2");
+    expect(empty.className).not.toContain("opacity-60");
+  });
 });

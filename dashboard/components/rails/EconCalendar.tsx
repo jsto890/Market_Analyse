@@ -13,7 +13,7 @@ function Row({ ev, today }: { ev: CalEvent; today: string }) {
         {dayLabel(ev.date, today)}
       </span>
       <span className="text-[10px] font-mono text-foreground truncate flex-1">{ev.event}</span>
-      {ev.time_et && <span className="text-[9px] font-mono text-muted opacity-60 flex-shrink-0">{ev.time_et}</span>}
+      {ev.time_et && <span className="text-[10px] font-mono text-muted-2 flex-shrink-0">{ev.time_et}</span>}
     </div>
   );
 }
