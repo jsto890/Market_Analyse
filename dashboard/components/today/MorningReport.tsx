@@ -1,5 +1,7 @@
 "use client";
 
+import Link from "next/link";
+import Collapsible from "@/components/ui/Collapsible";
 import { useMorningReport, plain, type MorningEvent, type DayAheadEarning } from "@/lib/report";
 
 function SessionTag({ session }: { session: "BMO" | "AMC" | "—" }) {
@@ -9,7 +11,7 @@ function SessionTag({ session }: { session: "BMO" | "AMC" | "—" }) {
       ? "border-warn/50 text-warn bg-warn/10" // before open
       : "border-accent/50 text-accent bg-accent/10"; // after close
   return (
-    <span className={`ml-1 rounded border px-1 py-px text-[9px] font-medium ${cls}`}>
+    <span className={`ml-1 rounded border px-1 py-px text-[11px] font-medium ${cls}`}>
       {session}
     </span>
   );
@@ -42,15 +44,47 @@ function eventLine(e: MorningEvent): string {
 }
 
 export function MorningReport() {
-  const { data } = useMorningReport();
+  const { data, error, isLoading } = useMorningReport();
+
+  if (isLoading) {
+    return (
+      <section
+        className="mb-5 rounded-md border border-line bg-elevated p-4"
+        aria-label="Loading Morning Brief"
+      >
+        <div className="h-4 w-32 animate-pulse rounded bg-raised mb-3" />
+        <div className="h-3 w-full animate-pulse rounded bg-raised mb-2" />
+        <div className="h-3 w-2/3 animate-pulse rounded bg-raised" />
+      </section>
+    );
+  }
+
+  if (error) {
+    return (
+      <section className="mb-5 rounded-md border border-line bg-elevated p-4">
+        <p className="text-[12px] text-muted">
+          Couldn't load the morning brief. It refreshes every 5 minutes — try reloading.
+        </p>
+      </section>
+    );
+  }
+
   if (!data) return null;
 
   return (
-    <section className="mb-5 rounded-md border border-line bg-elevated p-4">
-      <div className="flex items-baseline justify-between mb-2">
-        <h2 className="tick text-[13px] font-semibold text-foreground">Morning Brief</h2>
-        <span className="text-[11px] font-mono text-muted">{data.weekday} {data.date}</span>
-      </div>
+    <Collapsible
+      className="mb-5 rounded-md border border-line bg-elevated p-4"
+      persistKey="morning-report"
+      defaultOpen
+      trigger={
+        <div className="flex flex-1 items-baseline justify-between">
+          <h2 className="tick text-[13px] font-semibold text-foreground">Morning Brief</h2>
+          <span className="text-[11px] font-mono text-muted">
+            {data.weekday} {data.date}
+          </span>
+        </div>
+      }
+    >
       {data.day_ahead && data.day_ahead.synthesis !== "Quiet slate." && (
         <p className="text-xs text-foreground leading-relaxed mb-1 font-medium" id="day-ahead">
           {data.day_ahead.synthesis}
@@ -65,14 +99,14 @@ export function MorningReport() {
       {data.day_ahead && data.day_ahead.watchlist_news.length > 0 && (
         <div className="flex flex-wrap gap-1.5 mb-2">
           {data.day_ahead.watchlist_news.slice(0, 5).map((n, i) => (
-            <a
+            <Link
               key={i}
               href={`/t/${n.ticker}`}
               title={n.headline}
-              className="text-[10px] font-mono border border-line rounded px-1.5 py-px text-accent hover:bg-elevated"
+              className="text-[11px] font-mono border border-line rounded px-1.5 py-px text-accent hover:bg-elevated"
             >
               ${n.ticker} news
-            </a>
+            </Link>
           ))}
         </div>
       )}
@@ -80,7 +114,7 @@ export function MorningReport() {
       <div className="grid sm:grid-cols-2 gap-x-6 gap-y-1">
         {data.macro_events.length > 0 && (
           <div>
-            <div className="text-[10px] uppercase tracking-wide text-muted mb-0.5">What to expect</div>
+            <div className="text-[11px] uppercase tracking-wide text-muted mb-0.5">What to expect</div>
             <ul className="text-[11px] font-mono text-foreground/80 space-y-0.5">
               {data.macro_events.slice(0, 4).map((e, i) => (
                 <li key={i}>
@@ -92,7 +126,7 @@ export function MorningReport() {
         )}
         {data.day_ahead && (data.day_ahead.earnings_today.length > 0 || data.day_ahead.earnings_tomorrow.length > 0) ? (
           <div>
-            <div className="text-[10px] uppercase tracking-wide text-muted mb-0.5">Earnings</div>
+            <div className="text-[11px] uppercase tracking-wide text-muted mb-0.5">Earnings</div>
             <ul className="text-[11px] font-mono space-y-0.5">
               {data.day_ahead.earnings_today.slice(0, 3).map((e, i) => (
                 <EarningsRow key={`t${i}`} e={e} />
@@ -107,7 +141,7 @@ export function MorningReport() {
           </div>
         ) : data.earnings.length > 0 ? (
           <div>
-            <div className="text-[10px] uppercase tracking-wide text-muted mb-0.5">Earnings</div>
+            <div className="text-[11px] uppercase tracking-wide text-muted mb-0.5">Earnings</div>
             <ul className="text-[11px] font-mono text-foreground/80 space-y-0.5">
               {data.earnings.slice(0, 4).map((e, i) => (
                 <li key={i}>{e.date.slice(5)} · {e.ticker ?? e.event}</li>
@@ -116,6 +150,6 @@ export function MorningReport() {
           </div>
         ) : null}
       </div>
-    </section>
+    </Collapsible>
   );
 }
