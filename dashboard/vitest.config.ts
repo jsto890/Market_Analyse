@@ -13,6 +13,7 @@ export default defineConfig({
           name: "lib",
           environment: "node",
           include: ["lib/**/*.test.ts"],
+          exclude: ["lib/__tests__/storageKeys.test.ts"],
         },
       },
       {
@@ -24,6 +25,7 @@ export default defineConfig({
             "components/**/*.test.{ts,tsx}",
             "app/**/*.test.{ts,tsx}",
             "test/**/*.test.{ts,tsx}",
+            "lib/__tests__/storageKeys.test.ts",
           ],
           setupFiles: ["./test/setup.ts"],
         },
