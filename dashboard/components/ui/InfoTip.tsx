@@ -19,7 +19,7 @@ export default function InfoTip({ content, children, label, className }: InfoTip
       <Tooltip.Trigger asChild>
         <button
           type="button"
-          aria-label={children ? undefined : label ?? "More info"}
+          aria-label={label ?? (children ? undefined : "More info")}
           className={["inline-flex cursor-default items-center text-muted hover:text-foreground", className ?? ""].join(" ")}
         >
           {children ?? <Info size={12} />}

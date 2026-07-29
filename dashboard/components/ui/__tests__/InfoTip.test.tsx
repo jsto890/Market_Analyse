@@ -37,4 +37,15 @@ describe("InfoTip", () => {
     );
     expect(screen.getByRole("button")).toHaveTextContent("C");
   });
+
+  it("preserves aria-label when both children and label are provided", () => {
+    render(
+      withProvider(
+        <InfoTip content="gloss" label="Conviction: high">
+          <span>dots</span>
+        </InfoTip>
+      )
+    );
+    expect(screen.getByRole("button", { name: "Conviction: high" })).toBeInTheDocument();
+  });
 });
