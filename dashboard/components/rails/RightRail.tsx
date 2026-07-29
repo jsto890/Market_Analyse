@@ -269,7 +269,7 @@ function NewsRow({ item }: { item: NewsItem }) {
         {item.ticker && (
           <Link
             href={`/t/${item.ticker}`}
-            className="text-[10px] text-accent leading-none ml-auto"
+            className="text-[10px] text-accent leading-none ml-auto -my-1.5 py-1.5 px-1"
           >
             {item.ticker}
           </Link>

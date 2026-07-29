@@ -193,3 +193,17 @@ describe("NewsRow headline title attribute (RR-05)", () => {
     expect(screen.getByText("linked " + longHeadline)).toHaveAttribute("title", "linked " + longHeadline);
   });
 });
+
+describe("NewsRow ticker link hit area (RR-06)", () => {
+  it("pads the ticker link beyond the bare 10px text for a comfortable tap target", () => {
+    vi.mocked(watchlistLib.useWatchlistTickers).mockReturnValue(new Set());
+    vi.mocked(newsLib.useNewsFeed).mockReturnValue({
+      data: { items: [{ id: 1, ts: "2026-07-28 09:00:00", source: "yf", ticker: "AAPL", headline: "h", body: null, url: null, is_breaking: 0 }] },
+      error: undefined,
+    } as any);
+    render(<RightRail />);
+    const link = screen.getByRole("link", { name: "AAPL" });
+    expect(link.className).toContain("py-1.5");
+    expect(link.className).toContain("px-1");
+  });
+});
