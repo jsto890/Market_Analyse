@@ -26,7 +26,7 @@ describe("MacroGauges (LR-07, LR-06)", () => {
   });
 
   it("renders the building… empty state with a token color, not opacity-60", () => {
-    vi.mocked(macroLib.useMacro).mockReturnValue({ data: { gauges: [] } } as ReturnType<typeof macroLib.useMacro>);
+    vi.mocked(macroLib.useMacro).mockReturnValue({ data: { gauges: [] } } as any);
     render(<MacroGauges window="1d" />);
     const empty = screen.getByText("building…");
     expect(empty.className).toContain("text-muted-2");
