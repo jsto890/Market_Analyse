@@ -1,13 +1,24 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import { fireEvent } from "@testing-library/react";
 import { render, screen } from "@/test/render";
 import { RightRail } from "@/components/rails/RightRail";
 import * as newsLib from "@/lib/news";
+import * as watchlistLib from "@/lib/watchlist";
 
 vi.mock("@/lib/news", async (importOriginal) => {
   const actual = await importOriginal<typeof newsLib>();
   return { ...actual, useNewsFeed: vi.fn() };
 });
+
+vi.mock("@/lib/watchlist", async (importOriginal) => {
+  const actual = await importOriginal<typeof watchlistLib>();
+  return { ...actual, useWatchlistTickers: vi.fn() };
+});
+
+function mkItem(id: number, ts: string, ticker: string | null = null, headline = `h${id}`) {
+  return { id, ts, source: "yf", ticker, headline, body: null, url: null, is_breaking: 0 };
+}
 
 beforeEach(() => {
   // Mock localStorage to return null (no stored preference)
@@ -92,5 +103,59 @@ describe("RightRail feed order (RR-02)", () => {
     render(<RightRail />);
     const headlines = screen.getAllByText(/oldest|newest|middle/).map((el) => el.textContent);
     expect(headlines).toEqual(["newest", "middle", "oldest"]);
+  });
+});
+
+describe("RightRail ticker filter (RR-03)", () => {
+  it("filters to My tickers via chip, matching only watchlist symbols", () => {
+    vi.mocked(watchlistLib.useWatchlistTickers).mockReturnValue(new Set(["AAPL"]));
+    vi.mocked(newsLib.useNewsFeed).mockReturnValue({
+      data: {
+        items: [
+          mkItem(1, "2026-07-28 09:00:00", "AAPL", "aapl news"),
+          mkItem(2, "2026-07-28 10:00:00", "TSLA", "tsla news"),
+        ],
+      },
+      error: undefined,
+    } as any);
+    render(<RightRail />);
+    expect(screen.getByText("aapl news")).toBeInTheDocument();
+    expect(screen.getByText("tsla news")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "My tickers" }));
+    expect(screen.getByText("aapl news")).toBeInTheDocument();
+    expect(screen.queryByText("tsla news")).toBeNull();
+  });
+});
+
+describe("RightRail new-items pill (RR-03)", () => {
+  it("shows an N new pill after scrolling away when new items arrive, scroll-to-top clears it", () => {
+    vi.mocked(watchlistLib.useWatchlistTickers).mockReturnValue(new Set());
+    vi.mocked(newsLib.useNewsFeed).mockReturnValue({
+      data: {
+        items: [mkItem(1, "2026-07-28 09:00:00"), mkItem(2, "2026-07-28 10:00:00")],
+      },
+      error: undefined,
+    } as any);
+    const { rerender } = render(<RightRail />);
+
+    const aside = screen.getByLabelText("Collapse news rail").closest("aside") as HTMLElement;
+    fireEvent.scroll(aside, { target: { scrollTop: 100 } });
+
+    vi.mocked(newsLib.useNewsFeed).mockReturnValue({
+      data: {
+        items: [
+          mkItem(1, "2026-07-28 09:00:00"),
+          mkItem(2, "2026-07-28 10:00:00"),
+          mkItem(3, "2026-07-28 11:00:00"),
+        ],
+      },
+      error: undefined,
+    } as any);
+    rerender(<RightRail />);
+
+    expect(screen.getByText("1 new ↑")).toBeInTheDocument();
+    fireEvent.click(screen.getByText("1 new ↑"));
+    expect(screen.queryByText(/new ↑/)).toBeNull();
+    expect(aside.scrollTop).toBe(0);
   });
 });
