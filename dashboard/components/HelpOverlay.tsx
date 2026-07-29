@@ -60,6 +60,23 @@ export default function HelpOverlay() {
             ))}
           </tbody>
         </table>
+        <div className="text-[13px] font-medium text-foreground mt-4 mb-2">FX session legend</div>
+        <table className="w-full text-[12px] border-collapse">
+          <tbody>
+            {[
+              { key: "ASIA", desc: "00:00 – 09:00 UTC" },
+              { key: "LDN", desc: "07:00 – 16:00 UTC" },
+              { key: "NY", desc: "12:00 – 21:00 UTC" },
+              { key: "OPEN", desc: "Weekday, between sessions" },
+              { key: "CLOSED", desc: "Fri 21:00 UTC – Sun 21:00 UTC" },
+            ].map(({ key, desc }) => (
+              <tr key={key} className="border-b border-line/40 last:border-0">
+                <td className="py-1.5 pr-4 font-mono text-muted whitespace-nowrap">{key}</td>
+                <td className="py-1.5 text-foreground/80">{desc}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
     </div>
   );

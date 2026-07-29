@@ -5,7 +5,7 @@ import { useRailQuotes, RAIL_LABEL, type RailQuote } from "@/lib/rail-quotes";
 import { pickChangeBasis } from "@/lib/change-basis";
 import { STATE_LABEL } from "@/lib/market-clock";
 import { useMarketClock } from "@/lib/useMarketClock";
-import { forexSessions, type FxSession } from "@/lib/forex-session";
+import { forexSessions } from "@/lib/forex-session";
 import { useMacro } from "@/lib/macro";
 import { useCalendar } from "@/lib/calendar";
 import { QuoteRow } from "./QuoteRow";
@@ -33,49 +33,13 @@ function EquityBadge() {
   );
 }
 
-/** FX session chip per spec §3.3, handling ALL four states. */
+/** FX session chip: single label pattern, one tone, per LR-08. */
 function FxChip() {
   const { active, closed } = forexSessions();
-
-  if (closed) {
-    // Weekend / Friday-after-21:00 UTC
-    return (
-      <span className="rounded px-1.5 py-px text-[9px] font-mono font-medium leading-none bg-warn/10 text-warn">
-        CLOSED
-      </span>
-    );
-  }
-
-  if (active.length === 0) {
-    // Weekday open-between-sessions (after 21:00 UTC before ASIA opens next cycle)
-    // This state is real — must not crash or render blank
-    return (
-      <span className="rounded px-1.5 py-px text-[9px] font-mono font-medium leading-none bg-elevated text-muted">
-        OPEN
-      </span>
-    );
-  }
-
-  if (active.length > 1) {
-    // Overlap — teal per spec §3.3, §8.3
-    return (
-      <span className="rounded px-1.5 py-px text-[9px] font-mono font-medium leading-none bg-teal/15 text-teal">
-        {active.join("·")}
-      </span>
-    );
-  }
-
-  // Single session
-  const session = active[0] as FxSession;
-  const cls =
-    session === "NY"
-      ? "bg-elevated text-accent"
-      : session === "LDN"
-      ? "bg-elevated text-accent/80"
-      : "bg-elevated text-muted"; // ASIA
+  const state = closed ? "CLOSED" : active.length === 0 ? "OPEN" : active.join("·");
   return (
-    <span className={`rounded px-1.5 py-px text-[9px] font-mono leading-none ${cls}`}>
-      {session}
+    <span className="rounded px-1.5 py-px text-[9px] font-mono font-medium leading-none bg-elevated text-muted">
+      FX · {state}
     </span>
   );
 }

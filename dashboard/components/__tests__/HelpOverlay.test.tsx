@@ -1,4 +1,5 @@
 import { describe, it, expect } from "vitest";
+import userEvent from "@testing-library/user-event";
 import { render, screen } from "@/test/render";
 import HelpOverlay from "@/components/HelpOverlay";
 
@@ -19,5 +20,14 @@ describe("HelpOverlay", () => {
 
     expect(screen.getByText("⌘K")).toBeInTheDocument();
     expect(screen.queryByText("g  /  ⌘K")).not.toBeInTheDocument();
+  });
+
+  it("shows the FX session legend so FX · <state> is discoverable without color-coding", async () => {
+    const user = userEvent.setup();
+    render(<HelpOverlay />);
+    await user.keyboard("?");
+    expect(screen.getByText("FX session legend")).toBeInTheDocument();
+    expect(screen.getByText(/ASIA/)).toBeInTheDocument();
+    expect(screen.getByText(/00:00.*09:00 UTC/)).toBeInTheDocument();
   });
 });

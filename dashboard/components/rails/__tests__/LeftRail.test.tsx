@@ -86,3 +86,18 @@ describe("LeftRail block separation (LR-06)", () => {
     expect(document.querySelectorAll(".border-line-strong").length).toBeGreaterThanOrEqual(2);
   });
 });
+
+describe("FxChip (LR-08)", () => {
+  it("renders a single FX · <state> label in one tone, not per-state colors", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-07-28T13:00:00Z")); // Mon 13:00 UTC — LDN+NY overlap
+    window.innerWidth = 1600;
+    render(<LeftRail />);
+    const chip = screen.getByText("FX · LDN·NY");
+    expect(chip.className).toContain("bg-elevated");
+    expect(chip.className).toContain("text-muted");
+    expect(chip.className).not.toContain("bg-teal/15");
+    expect(chip.className).not.toContain("text-teal");
+    vi.useRealTimers();
+  });
+});
