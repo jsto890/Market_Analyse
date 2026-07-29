@@ -25,3 +25,11 @@ export function relTime(ts: string): string {
   const h = m / 60; if (h < 24) return `${Math.round(h)}h`;
   return `${Math.round(h / 24)}d`;
 }
+
+/** Sort by ts; API payload order is not contractually guaranteed. Newest-first by default. */
+export function sortNewsByTs(items: NewsItem[], order: "asc" | "desc" = "desc"): NewsItem[] {
+  const sign = order === "asc" ? 1 : -1;
+  return [...items].sort(
+    (a, b) => sign * (new Date(a.ts.replace(" ", "T")).getTime() - new Date(b.ts.replace(" ", "T")).getTime())
+  );
+}

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { AlertTriangle } from "lucide-react";
 import { useEffect, useState } from "react";
-import { useNewsFeed, relTime, type NewsItem } from "@/lib/news";
+import { useNewsFeed, relTime, sortNewsByTs, type NewsItem } from "@/lib/news";
 
 const LS_KEY = "rail-right-collapsed";
 
@@ -161,7 +161,7 @@ function NewsFeedBody() {
     );
   }
 
-  const items = [...data.items].reverse();
+  const items = sortNewsByTs(data.items);
 
   return (
     <div>

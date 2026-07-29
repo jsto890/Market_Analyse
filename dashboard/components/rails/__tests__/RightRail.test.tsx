@@ -76,3 +76,21 @@ describe("RightRail visual order (G-11)", () => {
     expect(screen.getByLabelText("Collapse news rail").closest("aside")).toHaveClass("order-3");
   });
 });
+
+describe("RightRail feed order (RR-02)", () => {
+  it("orders rows by timestamp, not by reversing whatever order the API sent", () => {
+    vi.mocked(newsLib.useNewsFeed).mockReturnValue({
+      data: {
+        items: [
+          { id: 1, ts: "2026-07-28 09:00:00", source: "yf", ticker: null, headline: "oldest", body: null, url: null, is_breaking: 0 },
+          { id: 2, ts: "2026-07-28 11:00:00", source: "yf", ticker: null, headline: "newest", body: null, url: null, is_breaking: 0 },
+          { id: 3, ts: "2026-07-28 10:00:00", source: "yf", ticker: null, headline: "middle", body: null, url: null, is_breaking: 0 },
+        ],
+      },
+      error: undefined,
+    } as any);
+    render(<RightRail />);
+    const headlines = screen.getAllByText(/oldest|newest|middle/).map((el) => el.textContent);
+    expect(headlines).toEqual(["newest", "middle", "oldest"]);
+  });
+});
