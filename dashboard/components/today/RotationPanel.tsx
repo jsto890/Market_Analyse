@@ -2,6 +2,7 @@
 
 import * as Tooltip from "@radix-ui/react-tooltip";
 import Panel from "@/components/ui/Panel";
+import { rotationSummary } from "@/lib/rotation";
 
 export interface RotationRow {
   industry: string;
@@ -142,16 +143,7 @@ function Ret({ v }: { v: number | null }) {
 
 export default function RotationPanel({ rows, defaultOpen = false, collapsible = true }: RotationPanelProps) {
   const sorted = [...rows].sort((a, b) => a.rank - b.rank);
-  const fading = rows.filter(
-    (r) => r.quadrant === "weakening" || r.quadrant === "lagging"
-  ).length;
-  const leading = sorted
-    .filter((r) => r.quadrant === "leading")
-    .slice(0, 2)
-    .map((r) => r.industry);
-  const leadingText =
-    leading.length > 0 ? `Leading: ${leading.join(", ")}` : "Leading: none";
-  const summary = `${leadingText} · ${fading}/${rows.length} fading`;
+  const summary = rotationSummary(rows);
 
   return (
     <Panel

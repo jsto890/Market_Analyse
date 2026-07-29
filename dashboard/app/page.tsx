@@ -8,6 +8,7 @@ import DiffStrip from "@/components/today/DiffStrip";
 import SignalGroups from "@/components/today/SignalGroups";
 import Link from "next/link";
 import { type RotationRow } from "@/components/today/RotationPanel";
+import { rotationSummary } from "@/lib/rotation";
 import { MorningReport } from "@/components/today/MorningReport";
 
 export const dynamic = "force-dynamic";
@@ -129,12 +130,12 @@ export default async function Home() {
 
       <SignalGroups groups={groups} newTickers={diffData.newTickers} sectors={sectors} />
 
-      {rotation && (
+      {rotation && rotation.length > 0 && (
         <Link
           href="/rotation"
           className="block rounded-md border border-line bg-elevated px-4 py-2.5 text-[13px] text-muted hover:text-foreground transition-colors"
         >
-          Sector rotation → {rotation.length} sectors tracked
+          {rotationSummary(rotation)}
         </Link>
       )}
     </main>
