@@ -18,6 +18,7 @@
   --red: #f85149;
   --amber: #d29922;
   --teal: #2dd4bf;
+  --muted-2: #737b8c;
   --nav-h: 46px;
   /* Aliases so Tailwind's background/foreground tokens resolve. */
   --background: var(--bg);
@@ -116,5 +117,15 @@ select {
   /* Card surface used across panels/boxes. */
   .card {
     @apply rounded-md border border-line bg-elevated;
+  }
+  /* Semantic source-state tones (OL-09) — LIVE/FROZEN/EOD provenance badges. */
+  .tone-live {
+    @apply border border-teal/40 bg-teal/10 text-teal;
+  }
+  .tone-frozen {
+    @apply border border-warn/40 bg-warn/10 text-warn;
+  }
+  .tone-eod {
+    @apply border border-line bg-elevated text-muted;
   }
 }

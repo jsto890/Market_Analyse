@@ -18,6 +18,7 @@ const config: Config = {
         line: "var(--line)",
         "line-strong": "var(--line-strong)",
         muted: "var(--muted)",
+        "muted-2": "var(--muted-2)",
         accent: "var(--accent)",
         "accent-dim": "var(--accent-dim)",
         pos: "var(--green)",
