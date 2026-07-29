@@ -170,7 +170,7 @@ const SOURCE_SHORT: Record<string, string> = {
   benzinga: "benz",
   twitter: "twit",
   x: "x",
-  whale: "🐋",
+  whale: "whl",
 };
 
 function shortSource(s: string): string {

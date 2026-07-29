@@ -159,3 +159,18 @@ describe("RightRail new-items pill (RR-03)", () => {
     expect(aside.scrollTop).toBe(0);
   });
 });
+
+describe("NewsRow whale source (RR-04)", () => {
+  it("renders the WHL text code instead of the whale emoji", () => {
+    vi.mocked(watchlistLib.useWatchlistTickers).mockReturnValue(new Set());
+    vi.mocked(newsLib.useNewsFeed).mockReturnValue({
+      data: {
+        items: [{ id: 1, ts: "2026-07-28 09:00:00", source: "whale", ticker: null, headline: "big print", body: null, url: null, is_breaking: 0 }],
+      },
+      error: undefined,
+    } as any);
+    render(<RightRail />);
+    expect(screen.getByText("whl")).toBeInTheDocument();
+    expect(screen.queryByText("🐋")).toBeNull();
+  });
+});
