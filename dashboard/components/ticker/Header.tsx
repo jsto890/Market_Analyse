@@ -1,10 +1,10 @@
 "use client";
 
-import { useRef } from "react";
 import useSWR from "swr";
 import * as Tooltip from "@radix-ui/react-tooltip";
 import Badge from "@/components/ui/Badge";
 import ConvictionDot from "@/components/ui/ConvictionDot";
+import PinToggle from "@/components/ui/PinToggle";
 import type { BridgeRow, Conviction } from "@/types/bridge";
 import { calledSince } from "@/lib/called-since";
 
@@ -37,86 +37,6 @@ const fetcher = (url: string) =>
     if (!r.ok) throw new Error(`${r.status}`);
     return r.json();
   });
-
-function InfoTooltip({ text }: { text: string }) {
-  return (
-    <Tooltip.Root>
-      <Tooltip.Trigger asChild>
-        <button
-          type="button"
-          className="text-muted text-[11px] font-mono leading-none cursor-default select-none"
-          aria-label="info"
-        >
-          i
-        </button>
-      </Tooltip.Trigger>
-      <Tooltip.Portal>
-        <Tooltip.Content
-          className="rounded bg-elevated px-2 py-1 text-[12px] text-muted shadow-lg border border-line z-50 max-w-[240px]"
-          sideOffset={4}
-        >
-          {text}
-          <Tooltip.Arrow className="fill-elevated" />
-        </Tooltip.Content>
-      </Tooltip.Portal>
-    </Tooltip.Root>
-  );
-}
-
-function PinButton({ ticker }: { ticker: string }) {
-  const { data, mutate } = useSWR<{ watchlist: { ticker: string }[] }>(
-    "/api/watchlist",
-    fetcher,
-    { revalidateOnFocus: false }
-  );
-  const pending = useRef(false);
-
-  const pinned = data?.watchlist?.some((w) => w.ticker === ticker) ?? false;
-
-  async function toggle() {
-    if (pending.current) return;
-    pending.current = true;
-    const optimistic = !pinned;
-    // Optimistic update
-    mutate(
-      (prev) => {
-        if (!prev) return prev;
-        const wl = optimistic
-          ? [...prev.watchlist, { ticker }]
-          : prev.watchlist.filter((w) => w.ticker !== ticker);
-        return { watchlist: wl };
-      },
-      false
-    );
-    try {
-      await fetch("/api/watchlist", {
-        method: optimistic ? "POST" : "DELETE",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ticker }),
-      });
-    } catch {
-      // revert on error
-      mutate();
-    } finally {
-      pending.current = false;
-    }
-  }
-
-  return (
-    <button
-      type="button"
-      onClick={toggle}
-      className={[
-        "px-2 py-0.5 rounded border text-[11px] font-mono transition-colors",
-        pinned
-          ? "border-accent text-accent bg-accent/10"
-          : "border-line text-muted hover:border-accent hover:text-accent",
-      ].join(" ")}
-    >
-      {pinned ? "Pinned" : "Pin"}
-    </button>
-  );
-}
 
 export default function Header({
   ticker,
@@ -267,7 +187,7 @@ export default function Header({
         )}
 
         <div className="ml-auto flex items-center gap-2">
-          <PinButton ticker={ticker} />
+          <PinToggle symbol={ticker} />
         </div>
       </div>
 
