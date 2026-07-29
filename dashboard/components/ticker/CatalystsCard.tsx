@@ -1,17 +1,10 @@
 "use client";
 
-import useSWR from "swr";
 import { Zap } from "lucide-react";
 import Panel from "@/components/ui/Panel";
 import Skeleton from "@/components/ui/Skeleton";
 import type { BridgeRow } from "@/types/bridge";
-import type { FundamentalsData } from "@/types/argus";
-
-const fetcher = (url: string) =>
-  fetch(url).then((r) => {
-    if (!r.ok) throw new Error(`${r.status}`);
-    return r.json() as Promise<FundamentalsData>;
-  });
+import { useTickerData } from "@/lib/useTickerData";
 
 const NEG_TOKENS = ["downgrade", "miss", "dilution", "cut", "warn", "lawsuit", "fraud"];
 
@@ -107,11 +100,9 @@ function BridgeCatalysts({ bridgeRow }: { bridgeRow: BridgeRow }) {
 }
 
 function OffBridgeCatalysts({ ticker }: { ticker: string }) {
-  const { data, error, isLoading } = useSWR<FundamentalsData>(
-    `/api/argus/fundamentals/${ticker}`,
-    fetcher,
-    { revalidateOnFocus: false, shouldRetryOnError: false }
-  );
+  const {
+    fundamentals: { data, error, isLoading },
+  } = useTickerData(ticker);
 
   if (isLoading) {
     return (

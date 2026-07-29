@@ -1,29 +1,9 @@
 "use client";
 
-import useSWR from "swr";
 import * as Tooltip from "@radix-ui/react-tooltip";
 import { useLocalStorage } from "@/lib/useLocalStorage";
+import { useTickerData } from "@/lib/useTickerData";
 import type { BridgeRow } from "@/types/bridge";
-
-interface QuoteData {
-  price: number;
-}
-
-interface ActionCard {
-  entry?: number | null;
-  stop?: number | null;
-  target?: number | null;
-  risk_reward?: number | null;
-  stop_anchor?: string | null;
-  verdict?: string | null;
-  high_conviction?: boolean | null;
-}
-
-const fetcher = (url: string) =>
-  fetch(url).then((r) => {
-    if (!r.ok) throw new Error(`${r.status}`);
-    return r.json();
-  });
 
 interface LevelsCardProps {
   ticker: string;
@@ -120,16 +100,11 @@ function PriceRail({
 export default function LevelsCard({ ticker, bridgeRow }: LevelsCardProps) {
   const [riskUsd, setRiskUsd] = useLocalStorage("dash:riskUsd", 500);
 
-  const { data: quote } = useSWR<QuoteData>(`/api/argus/quote/${ticker}`, fetcher, {
-    refreshInterval: 10000,
-    shouldRetryOnError: false,
-  });
+  const { quote: quoteRes, actionCard: cardRes } = useTickerData(ticker);
+  const quote = quoteRes.data;
   // Prefer the live-computed action_card levels; the nightly bridge row often
   // carries degenerate (entry==stop) placeholders. Shares SWR cache w/ WhyPanel.
-  const { data: card } = useSWR<ActionCard>(`/api/argus/action_card/${ticker}`, fetcher, {
-    shouldRetryOnError: false,
-    revalidateOnFocus: false,
-  });
+  const card = cardRes.data;
 
   const cardOk =
     card != null &&

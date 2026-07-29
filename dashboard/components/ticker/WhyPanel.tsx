@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useId } from "react";
-import useSWR from "swr";
 import { ChevronDown, AlertTriangle } from "lucide-react";
 import * as Tooltip from "@radix-ui/react-tooltip";
 import Panel from "@/components/ui/Panel";
@@ -9,7 +8,7 @@ import Skeleton from "@/components/ui/Skeleton";
 import StatChip from "@/components/ui/StatChip";
 import CenterBar from "@/components/ui/CenterBar";
 import InfoTip from "@/components/ui/InfoTip";
-import type { ActionCardData } from "@/types/argus";
+import { useTickerData } from "@/lib/useTickerData";
 
 const COMBO_NOTE: Record<string, string> = {
   LSNS: "dip-buy profile — trend up, oscillators cooled (best backtested class)",
@@ -18,12 +17,6 @@ const COMBO_NOTE: Record<string, string> = {
   LNNL: "chasing risk — oscillators confirm into extension (backtested negative)",
   LLNL: "chasing risk — everything confirming late (backtested ~flat)",
 };
-
-const fetcher = (url: string) =>
-  fetch(url).then((r) => {
-    if (!r.ok) throw new Error(`${r.status}`);
-    return r.json() as Promise<ActionCardData>;
-  });
 
 function InfoTooltip({ text }: { text: string }) {
   return (
@@ -129,21 +122,8 @@ export default function WhyPanel({ ticker }: { ticker: string }) {
   const [votesOpen, setVotesOpen] = useState(false);
   const votesId = useId();
 
-  const { data, error, isLoading, isValidating, mutate } = useSWR<ActionCardData>(
-    `/api/argus/action_card/${ticker}`,
-    fetcher,
-    {
-      revalidateOnFocus: false,
-      // Auto-retry once, but only on a scoring timeout (504) — not a true
-      // outage. Keeps last-good data on screen while it retries (see below).
-      shouldRetryOnError: true,
-      errorRetryCount: 1,
-      onErrorRetry: (err, _key, _config, revalidate, { retryCount }) => {
-        if ((err as Error)?.message !== "504" || retryCount > 1) return;
-        setTimeout(() => revalidate({ retryCount }), 1500);
-      },
-    }
-  );
+  const { actionCard } = useTickerData(ticker);
+  const { data, error, isLoading, isValidating, mutate } = actionCard;
 
   const timedOut = (error as Error | undefined)?.message === "504";
 

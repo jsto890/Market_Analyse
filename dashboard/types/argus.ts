@@ -79,6 +79,14 @@ export interface ActionCardData {
   meta_coherence?: number;
   meta_adjustment?: number;
   meta_note?: string;
+  stop_anchor?: string | null;
+}
+
+export interface QuoteData {
+  symbol: string;
+  price: number;
+  change: number;
+  change_pct: number;
 }
 
 export interface OptionsFlowData {
@@ -105,6 +113,7 @@ export interface OptionsFlowData {
 
 export interface FundamentalsData {
   symbol: string;
+  name?: string | null;
   pe_ratio?: number | null;
   eps_ttm?: number | null;
   revenue_ttm?: number | null;

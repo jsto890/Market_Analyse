@@ -1,12 +1,12 @@
 "use client";
 
-import useSWR from "swr";
 import * as Tooltip from "@radix-ui/react-tooltip";
 import Badge from "@/components/ui/Badge";
 import ConvictionDot from "@/components/ui/ConvictionDot";
 import PinToggle from "@/components/ui/PinToggle";
 import type { BridgeRow, Conviction } from "@/types/bridge";
 import { calledSince } from "@/lib/called-since";
+import { useTickerData } from "@/lib/useTickerData";
 
 interface SignalRow {
   date: string;
@@ -25,19 +25,6 @@ interface HeaderProps {
   medianDaysToPeak?: number;
 }
 
-interface QuoteData {
-  symbol: string;
-  price: number;
-  change: number;
-  change_pct: number;
-}
-
-const fetcher = (url: string) =>
-  fetch(url).then((r) => {
-    if (!r.ok) throw new Error(`${r.status}`);
-    return r.json();
-  });
-
 export default function Header({
   ticker,
   bridgeRow,
@@ -46,17 +33,9 @@ export default function Header({
   medianPeakPct = 23,
   medianDaysToPeak = 7,
 }: HeaderProps) {
-  const { data: quote } = useSWR<QuoteData>(
-    `/api/argus/quote/${ticker}`,
-    fetcher,
-    { refreshInterval: 10000, revalidateOnFocus: true, shouldRetryOnError: false }
-  );
-  // Shares SWR cache with CatalystsCard (same key) — no extra request.
-  const { data: fundamentals } = useSWR<{ name?: string | null }>(
-    `/api/argus/fundamentals/${ticker}`,
-    fetcher,
-    { shouldRetryOnError: false, revalidateOnFocus: false }
-  );
+  const { quote: quoteRes, fundamentals: fundamentalsRes } = useTickerData(ticker);
+  const quote = quoteRes.data;
+  const fundamentals = fundamentalsRes.data;
   const companyName = fundamentals?.name ?? null;
 
   const price = quote?.price ?? null;
