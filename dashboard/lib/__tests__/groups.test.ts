@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { groupSignals, tierSort, comboClass } from "@/lib/groups";
+import { groupSignals, tierSort, comboClass, deriveGroup, GROUP_LABEL } from "@/lib/groups";
 
 describe("groupSignals", () => {
   it("groups by report_group with fallback derivation", () => {
@@ -35,5 +35,27 @@ describe("comboClass", () => {
     expect(comboClass("LSNLL")).toBe("strong"); // prefix LSNL
     expect(comboClass("LLNLL")).toBe("weak");   // prefix LLNL
     expect(comboClass("LLLLL")).toBe("neutral");
+  });
+});
+
+describe("deriveGroup", () => {
+  it("is exported and classifies a row the same way groupSignals does internally", () => {
+    expect(deriveGroup({ group1: true } as any)).toBe("aligned");
+    expect(
+      deriveGroup({ group1: false, group2: true, conviction: "high", sentiment_score: 0.1 } as any)
+    ).toBe("pullback");
+    expect(deriveGroup({ group1: false, group2: true, conviction: "low", sentiment_score: 0.5 } as any)).toBe(
+      "tech_fund"
+    );
+    expect(deriveGroup({ group1: false, group2: false } as any)).toBe("other");
+  });
+});
+
+describe("GROUP_LABEL", () => {
+  it("has a short-form label for every ReportGroup value", () => {
+    expect(GROUP_LABEL.aligned).toBe("aligned");
+    expect(GROUP_LABEL.pullback).toBe("pullback");
+    expect(GROUP_LABEL.tech_fund).toBe("tech+fund");
+    expect(GROUP_LABEL.other).toBe("other");
   });
 });

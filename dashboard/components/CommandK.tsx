@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Badge from "@/components/ui/Badge";
+import { deriveGroup, GROUP_LABEL } from "@/lib/groups";
 import type { BridgeRow } from "@/types/bridge";
 
 interface WatchlistEntry {
@@ -55,13 +56,7 @@ function buildResults(
   for (const row of bridgeRows) {
     if (matchQuery(q, row.ticker)) {
       seen.add(row.ticker);
-      const group = row.group1
-        ? "aligned"
-        : row.group2 && row.conviction === "high" && row.sentiment_score < 0.2
-        ? "pullback"
-        : row.group2
-        ? "tech_fund"
-        : "other";
+      const group = deriveGroup(row);
       results.push({
         ticker: row.ticker,
         group,
@@ -219,7 +214,7 @@ export default function CommandK() {
                 <span className="font-mono font-medium">{item.ticker}</span>
                 <span className="flex items-center gap-1.5 text-[11px]">
                   {item.source === "bridge" && item.group && (
-                    <span className="text-muted uppercase tracking-wide">{item.group}</span>
+                    <span className="text-muted uppercase tracking-wide">{GROUP_LABEL[item.group as keyof typeof GROUP_LABEL]}</span>
                   )}
                   {item.source === "bridge" && item.tier && (
                     <Badge variant="tier" value={item.tier} />

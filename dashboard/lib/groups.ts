@@ -41,7 +41,7 @@ export function tierSort(a: BridgeRow, b: BridgeRow): number {
   return b.combined_score - a.combined_score;
 }
 
-function deriveGroup(row: BridgeRow): ReportGroup {
+export function deriveGroup(row: BridgeRow): ReportGroup {
   if (row.group1) return "aligned";
   if (row.group2 && row.conviction === "high" && row.sentiment_score < 0.2) return "pullback";
   if (row.group2) return "tech_fund";
@@ -67,3 +67,10 @@ export function groupSignals(rows: BridgeRow[]): Record<ReportGroup, BridgeRow[]
 
   return groups;
 }
+
+export const GROUP_LABEL: Record<ReportGroup, string> = {
+  aligned: "aligned",
+  pullback: "pullback",
+  tech_fund: "tech+fund",
+  other: "other",
+};
