@@ -515,19 +515,21 @@ export default function SignalGroups({
           placeholder="Search ticker…"
           className="w-52"
         />
-        <button
-          type="button"
-          onClick={() => update({ hcOnly: !active.hcOnly })}
-          aria-pressed={active.hcOnly}
-          className={`inline-flex h-8 items-center gap-1 rounded border px-2.5 text-[12px] font-medium transition-colors ${
-            active.hcOnly
-              ? "border-accent bg-accent-dim text-accent"
-              : "border-line bg-raised text-muted hover:text-foreground"
-          }`}
-        >
-          HC only
+        <span className="inline-flex items-center gap-1">
+          <button
+            type="button"
+            onClick={() => update({ hcOnly: !active.hcOnly })}
+            aria-pressed={active.hcOnly}
+            className={`inline-flex h-8 items-center gap-1 rounded border px-2.5 text-[12px] font-medium transition-colors ${
+              active.hcOnly
+                ? "border-accent bg-accent-dim text-accent"
+                : "border-line bg-raised text-muted hover:text-foreground"
+            }`}
+          >
+            HC only
+          </button>
           <InfoTip content="High-conviction — ≥75% indicator agreement. Consensus, not edge." label="Conviction filter info" />
-        </button>
+        </span>
         <Select
           aria-label="Filter by conviction"
           value={active.conviction}

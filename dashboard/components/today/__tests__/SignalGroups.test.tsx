@@ -91,6 +91,27 @@ describe("SignalGroups filter feedback (TD-02)", () => {
     expect(screen.queryByText("NVDA")).not.toBeInTheDocument();
   });
 
+  it("does not toggle hcOnly when clicking the InfoTip trigger next to HC only", async () => {
+    resetLocalStorage();
+    const user = userEvent.setup();
+    const groups = {
+      aligned: [row({ ticker: "NVDA", high_conviction: false })],
+      pullback: [],
+      tech_fund: [],
+      other: [],
+    };
+    render(<SignalGroups groups={groups} newTickers={[]} sectors={["Semiconductors"]} />);
+
+    await screen.findByText("NVDA");
+    await user.click(screen.getByRole("button", { name: "Conviction filter info" }));
+
+    expect(screen.getByRole("button", { name: "HC only" })).toHaveAttribute(
+      "aria-pressed",
+      "false",
+    );
+    expect(screen.getByText("NVDA")).toBeInTheDocument();
+  });
+
   it("renders a plain count when no filter is active", async () => {
     resetLocalStorage();
     const groups = {
