@@ -2,7 +2,8 @@
 
 import useSWR from "swr";
 import * as Tooltip from "@radix-ui/react-tooltip";
-import { usMarketState, futuresMarketState, type UsMarketState } from "@/lib/market-clock";
+import { type UsMarketState } from "@/lib/market-clock";
+import { useMarketClock } from "@/lib/useMarketClock";
 import type { StatusPayload, DotState } from "@/lib/status";
 
 const fetcher = (url: string) =>
@@ -32,13 +33,13 @@ const PILL_CLASS: Record<DotState, string> = {
   idle: "border-muted text-muted",
 };
 
-function sessionChip(): string {
-  const us = usMarketState();
-  if (us === "closed" && futuresMarketState() === "open") return "OVN";
-  return SESSION_CHIP[us];
+function sessionChip(clock: { us: UsMarketState; futures: "open" | "closed" }): string {
+  if (clock.us === "closed" && clock.futures === "open") return "OVN";
+  return SESSION_CHIP[clock.us];
 }
 
 export default function ContextStrip() {
+  const clock = useMarketClock();
   const { data } = useSWR<StatusPayload>("/api/status", fetcher, {
     refreshInterval: 60_000,
     shouldRetryOnError: true,
@@ -50,7 +51,7 @@ export default function ContextStrip() {
     <div className="flex items-center gap-3 text-[13px] leading-none">
       {/* Session chip (e.g. OVN / RTH / PRE) */}
       <span className="text-muted font-mono text-[11px] border border-line rounded px-1 py-px select-none">
-        {sessionChip()}
+        {sessionChip(clock)}
       </span>
 
       {/* SYS health pill; tooltip lists per-service status */}

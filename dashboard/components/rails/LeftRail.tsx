@@ -3,7 +3,8 @@
 import { useEffect, useState } from "react";
 import { useRailQuotes, RAIL_LABEL, type RailQuote } from "@/lib/rail-quotes";
 import { pickChangeBasis } from "@/lib/change-basis";
-import { usMarketState, STATE_LABEL } from "@/lib/market-clock";
+import { STATE_LABEL } from "@/lib/market-clock";
+import { useMarketClock } from "@/lib/useMarketClock";
 import { forexSessions, type FxSession } from "@/lib/forex-session";
 import { QuoteRow } from "./QuoteRow";
 import { MacroGauges } from "./MacroGauges";
@@ -13,7 +14,7 @@ import { EconCalendar } from "./EconCalendar";
 
 /** Equity session badge per spec §3.2 */
 function EquityBadge() {
-  const state = usMarketState();
+  const { us: state } = useMarketClock();
   const label = STATE_LABEL[state];
   const cls =
     state === "pre"
