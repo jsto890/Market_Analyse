@@ -10,6 +10,7 @@
     "test": "vitest run",
     "test:unit": "vitest run --project=lib",
     "test:component": "vitest run --project=component",
+    "test:e2e": "playwright test",
     "ingest": "tsx scripts/ingest.ts",
     "build:standalone": "next build && rm -rf dist-app && cp -r .next/standalone dist-app && cp -r .next/static dist-app/.next/static",
     "app:build": "npm run build:standalone && tauri build",
@@ -29,6 +30,7 @@
     "swr": "^2.4.1"
   },
   "devDependencies": {
+    "@playwright/test": "^1.60.0",
     "@tauri-apps/cli": "^2.11.4",
     "@testing-library/jest-dom": "^7.0.0",
     "@testing-library/react": "^16.3.2",
