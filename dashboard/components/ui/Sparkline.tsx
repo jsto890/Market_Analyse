@@ -23,12 +23,21 @@ export default function Sparkline({ values, w = 120, h = 32 }: SparklineProps) {
     })
     .join(" ");
 
+  const first = clean[0];
+  const last = clean[clean.length - 1];
+  const pctChange = first !== 0 ? ((last - first) / Math.abs(first)) * 100 : 0;
+  const trendLabel =
+    Math.abs(pctChange) < 0.05
+      ? "Trend: flat"
+      : `Trend: ${pctChange > 0 ? "up" : "down"} ${Math.abs(pctChange).toFixed(1)}%`;
+
   return (
     <svg
       width={w}
       height={h}
       viewBox={`0 0 ${w} ${h}`}
-      aria-hidden="true"
+      role="img"
+      aria-label={trendLabel}
       style={{ display: "block" }}
     >
       <polyline
