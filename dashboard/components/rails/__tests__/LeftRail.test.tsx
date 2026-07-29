@@ -77,3 +77,12 @@ describe("LeftRail sticky footer (LR-05)", () => {
     expect(collapseBtn.closest(".overflow-y-auto")).toBeNull();
   });
 });
+
+describe("LeftRail block separation (LR-06)", () => {
+  it("uses the stronger line-strong border between quote-group blocks, not the standard 1px line", () => {
+    window.innerWidth = 1600;
+    render(<LeftRail />);
+    // Two Block instances use separator: "US Equity" and "Forex".
+    expect(document.querySelectorAll(".border-line-strong").length).toBeGreaterThanOrEqual(2);
+  });
+});

@@ -92,7 +92,7 @@ interface BlockProps {
 
 function Block({ label, badge, children, separator }: BlockProps) {
   return (
-    <div className={separator ? "border-t border-line" : undefined}>
+    <div className={separator ? "border-t border-line-strong pt-0.5" : undefined}>
       {/* Block header §4.3 / §8.2 */}
       <div className="h-[24px] flex items-center justify-between px-3">
         <span className="text-[10px] font-medium uppercase tracking-[0.08em] text-muted font-mono leading-none">
