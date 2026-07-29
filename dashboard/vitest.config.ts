@@ -25,6 +25,7 @@ export default defineConfig({
             "app/**/*.test.{ts,tsx}",
             "test/**/*.test.{ts,tsx}",
           ],
+          setupFiles: ["./test/setup.ts"],
         },
       },
     ],
