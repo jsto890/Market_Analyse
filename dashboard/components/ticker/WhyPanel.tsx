@@ -7,7 +7,8 @@ import * as Tooltip from "@radix-ui/react-tooltip";
 import Panel from "@/components/ui/Panel";
 import Skeleton from "@/components/ui/Skeleton";
 import StatChip from "@/components/ui/StatChip";
-import ScoreBar from "@/components/ui/ScoreBar";
+import CenterBar from "@/components/ui/CenterBar";
+import InfoTip from "@/components/ui/InfoTip";
 import type { ActionCardData } from "@/types/argus";
 
 const COMBO_NOTE: Record<string, string> = {
@@ -49,30 +50,6 @@ function InfoTooltip({ text }: { text: string }) {
   );
 }
 
-function NetBar({ net }: { net: number }) {
-  // net is already in -1..1 range
-  const clamped = Math.max(-1, Math.min(1, net));
-  const isPos = clamped > 0;
-  const pct = Math.abs(clamped) * 50;
-
-  return (
-    <span className="relative inline-block h-2 w-[80px] rounded-sm bg-elevated overflow-hidden shrink-0">
-      <span
-        className="absolute top-0 h-full"
-        style={{
-          left: isPos ? "50%" : `${50 - pct}%`,
-          width: `${pct}%`,
-          background: isPos ? "var(--green)" : "var(--red)",
-        }}
-      />
-      <span
-        className="absolute top-0 h-full w-px bg-muted/50"
-        style={{ left: "50%" }}
-      />
-    </span>
-  );
-}
-
 interface FamilyRowProps {
   family: string;
   longV: number;
@@ -92,7 +69,7 @@ function FamilyRow({ family, longV, shortV, waitV, attribution }: FamilyRowProps
       <span className="w-[90px] shrink-0 font-mono text-[11px] text-muted truncate">
         {family}
       </span>
-      <NetBar net={net} />
+      <CenterBar value={net} width={80} />
       <span className="font-mono text-[11px] text-foreground tabular-nums w-[28px] shrink-0">
         {netStr}
       </span>
@@ -381,7 +358,7 @@ export default function WhyPanel({ ticker }: { ticker: string }) {
               <span className="font-mono text-[13px] tabular-nums text-foreground">
                 {n_eff.toFixed(1)}
               </span>
-              <InfoTooltip text="Higher is not better — high n_eff backtested worse" />
+              <InfoTip content="Higher is not better — high n_eff backtested worse" label="n_eff info" />
             </span>
           )}
           {ticker_regime && (
