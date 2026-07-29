@@ -28,6 +28,8 @@ export function dayLabel(date: string, today: string): string {
   return d.toLocaleDateString(undefined, { weekday: "short" });
 }
 
-export function importanceColor(importance: string): string {
-  return importance === "high" ? "bg-warn" : importance === "medium" ? "bg-accent" : "bg-muted";
+export function importanceMeta(importance: string): { cls: string; label: string } {
+  if (importance === "high") return { cls: "w-1.5 h-1.5 rounded-sm bg-warn", label: "High importance" };
+  if (importance === "medium") return { cls: "w-1 h-1 rounded-full bg-accent", label: "Medium importance" };
+  return { cls: "w-1 h-1 rounded-full border border-muted bg-transparent", label: "Low importance" };
 }
