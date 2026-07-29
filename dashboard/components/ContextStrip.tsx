@@ -6,6 +6,8 @@ import { type UsMarketState } from "@/lib/market-clock";
 import { useMarketClock } from "@/lib/useMarketClock";
 import type { StatusPayload, DotState } from "@/lib/status";
 import { visibilityAwareInterval } from "@/lib/swr-visibility";
+import { dualClock } from "@/lib/tz-display";
+import { useRailQuotes } from "@/lib/rail-quotes";
 
 const fetcher = (url: string) =>
   fetch(url).then((r) => {
@@ -39,6 +41,21 @@ function sessionChip(clock: { us: UsMarketState; futures: "open" | "closed" }): 
   return SESSION_CHIP[clock.us];
 }
 
+function freshnessLabel(bridgeTime: string | null, quotesUpdatedAt: number | null): string {
+  const parts: string[] = [];
+  if (bridgeTime) {
+    const d = new Date(bridgeTime);
+    if (!Number.isNaN(d.getTime())) {
+      parts.push(`bridge ${dualClock(d).primary}`);
+    }
+  }
+  if (quotesUpdatedAt !== null) {
+    const secs = Math.max(0, Math.round((Date.now() - quotesUpdatedAt) / 1000));
+    parts.push(`quotes ${secs}s ago`);
+  }
+  return parts.join(" · ");
+}
+
 export default function ContextStrip() {
   const clock = useMarketClock();
   const { data } = useSWR<StatusPayload>("/api/status", fetcher, {
@@ -46,6 +63,9 @@ export default function ContextStrip() {
     revalidateOnFocus: true,
     shouldRetryOnError: true,
   });
+
+  const { updatedAt: quotesUpdatedAt } = useRailQuotes();
+  const freshness = freshnessLabel(data?.bridgeTime ?? null, quotesUpdatedAt);
 
   const aggregate: DotState = data?.aggregate ?? "idle";
 
@@ -84,6 +104,10 @@ export default function ContextStrip() {
           </Popover.Content>
         </Popover.Portal>
       </Popover.Root>
+
+      {freshness && (
+        <span className="text-muted text-[10px] font-mono select-none">{freshness}</span>
+      )}
     </div>
   );
 }

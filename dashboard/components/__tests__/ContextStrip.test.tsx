@@ -24,4 +24,24 @@ describe("ContextStrip SYS pill", () => {
     expect(trigger).toHaveAttribute("aria-expanded", "true");
     expect(await screen.findByText("bridge")).toBeInTheDocument();
   });
+
+  it("shows bridge time and quotes age so staleness is visible at a glance (G-07)", async () => {
+    mockFetchJson({
+      "/api/status": {
+        aggregate: "ok",
+        services: [],
+        bridgeTime: new Date(Date.now() - 5 * 60_000).toISOString(),
+      },
+      "/api/argus/rail/quotes": {
+        quotes: [],
+        groups: { futures: [], indices: [], forex: [] },
+        error: null,
+      },
+    });
+
+    render(<ContextStrip />);
+
+    expect(await screen.findByText(/bridge \d{1,2}:\d{2}/)).toBeInTheDocument();
+    expect(await screen.findByText(/quotes \d+s ago/)).toBeInTheDocument();
+  });
 });
