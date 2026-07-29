@@ -3,12 +3,14 @@ import path from "path";
 import { loadBridgeSignals } from "@/lib/bridge";
 import { groupSignals } from "@/lib/groups";
 import { diffReports, loadYesterdayRows, type DiffRow } from "@/lib/diff";
+import { byDate, reportDates } from "@/lib/signals";
+import { rotationSummary } from "@/lib/rotation";
 import type { BridgeRow, ReportGroup } from "@/types/bridge";
 import DiffStrip from "@/components/today/DiffStrip";
 import SignalGroups from "@/components/today/SignalGroups";
+import DateStepper from "@/components/today/DateStepper";
 import Link from "next/link";
 import { type RotationRow } from "@/components/today/RotationPanel";
-import { rotationSummary } from "@/lib/rotation";
 import { MorningReport } from "@/components/today/MorningReport";
 
 export const dynamic = "force-dynamic";
@@ -65,12 +67,36 @@ function toDiffRow(row: BridgeRow, group: ReportGroup): DiffRow {
   };
 }
 
-export default async function Home() {
-  let rows: BridgeRow[] = [];
+export default async function Home({
+  searchParams,
+}: {
+  searchParams: { date?: string };
+}) {
+  const requestedDate = searchParams?.date ?? null;
+
+  let dates: string[] = [];
   try {
-    rows = loadBridgeSignals();
+    // reportDates() returns rows { date: string } DESC (newest first); DateStepper wants ascending (oldest first).
+    const rawDates = reportDates() as { date: string }[];
+    dates = rawDates.map((r) => r.date).reverse();
   } catch {
-    rows = [];
+    dates = [];
+  }
+  const viewingHistory = requestedDate !== null && dates.includes(requestedDate);
+
+  let rows: BridgeRow[] = [];
+  if (viewingHistory) {
+    try {
+      rows = byDate(requestedDate) as unknown as BridgeRow[];
+    } catch {
+      rows = [];
+    }
+  } else {
+    try {
+      rows = loadBridgeSignals();
+    } catch {
+      rows = [];
+    }
   }
   const groups = groupSignals(rows);
 
@@ -88,7 +114,7 @@ export default async function Home() {
   };
   let hasYesterday = false;
   try {
-    const yesterday = await loadYesterdayRows();
+    const yesterday = await loadYesterdayRows(viewingHistory ? requestedDate! : undefined);
     if (yesterday.length > 0) {
       hasYesterday = true;
       const d = diffReports(todayDiffRows, yesterday);
@@ -104,8 +130,8 @@ export default async function Home() {
   }
 
   const meta = loadMeta();
-  const stale = isStale(meta.generated_at);
-  const rotation = loadRotation();
+  const stale = !viewingHistory && isStale(meta.generated_at);
+  const rotation = viewingHistory ? null : loadRotation();
 
   const sectors = Array.from(
     new Set(rows.map((r) => r.industry).filter((s): s is string => !!s))
@@ -113,8 +139,11 @@ export default async function Home() {
 
   return (
     <main className="mx-auto max-w-6xl space-y-4 px-4 py-6">
-      <MorningReport />
-      {rows.length === 0 && (
+      <div className="flex items-center justify-between">
+        <MorningReport />
+      </div>
+      <DateStepper dates={dates} current={viewingHistory ? requestedDate : null} />
+      {rows.length === 0 && !viewingHistory && (
         <div className="rounded-md border border-warn/50 bg-warn/10 px-4 py-2.5 text-[13px] text-warn">
           No bridge data — run_daily may have failed
         </div>
