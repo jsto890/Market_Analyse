@@ -48,7 +48,7 @@ describe("RightRail error vs empty states (RR-01)", () => {
   it("renders the error state with an amber icon, distinct from the muted empty state", () => {
     vi.mocked(newsLib.useNewsFeed).mockReturnValue({
       data: undefined, error: new Error("500"),
-    } as ReturnType<typeof newsLib.useNewsFeed>);
+    } as any);
     render(<RightRail />);
     const offline = screen.getByText("news feed offline");
     expect(offline.className).toContain("text-warn");
@@ -59,7 +59,7 @@ describe("RightRail error vs empty states (RR-01)", () => {
   it("renders the empty state without an icon and without the warn tone", () => {
     vi.mocked(newsLib.useNewsFeed).mockReturnValue({
       data: { items: [] }, error: undefined,
-    } as ReturnType<typeof newsLib.useNewsFeed>);
+    } as any);
     render(<RightRail />);
     const empty = screen.getByText(/no news yet/);
     expect(empty.className).not.toContain("text-warn");
@@ -71,7 +71,7 @@ describe("RightRail visual order (G-11)", () => {
   it("places the rail last visually via order-3 on the aside root", () => {
     vi.mocked(newsLib.useNewsFeed).mockReturnValue({
       data: { items: [] }, error: undefined,
-    } as ReturnType<typeof newsLib.useNewsFeed>);
+    } as any);
     render(<RightRail />);
     expect(screen.getByLabelText("Collapse news rail").closest("aside")).toHaveClass("order-3");
   });
