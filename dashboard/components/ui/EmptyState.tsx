@@ -1,7 +1,7 @@
 import { ReactNode } from "react";
 import { SearchX } from "lucide-react";
 
-interface EmptyStateProps {
+export interface EmptyStateProps {
   message?: string;
   icon?: ReactNode;
   action?: ReactNode;
