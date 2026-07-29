@@ -23,6 +23,10 @@ if (typeof window !== "undefined" && !("ResizeObserver" in window)) {
   window.ResizeObserver = ResizeObserverStub as unknown as typeof ResizeObserver;
 }
 
+if (typeof window !== "undefined" && !window.HTMLElement.prototype.scrollIntoView) {
+  window.HTMLElement.prototype.scrollIntoView = () => {};
+}
+
 import { afterEach, vi } from "vitest";
 
 afterEach(() => {

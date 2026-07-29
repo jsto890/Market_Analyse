@@ -21,6 +21,8 @@ export interface DataTableProps<T> {
   expandedRender?: (row: T) => React.ReactNode;
   persistKey?: string;
   onOpen?: (row: T) => void;
+  /** Visually-hidden <caption> giving the table an accessible name. Optional for backward compat; new/touched tables should always pass one. */
+  caption?: string;
 }
 
 interface SortState {
@@ -44,6 +46,7 @@ export default function DataTable<T>({
   expandedRender,
   persistKey,
   onOpen,
+  caption,
 }: DataTableProps<T>) {
   const storageKey = persistKey ? `dash:table:${persistKey}:sort` : null;
 
@@ -52,6 +55,8 @@ export default function DataTable<T>({
   const [expandedKeys, setExpandedKeys] = useState<Set<string>>(new Set());
   const [everExpandedKeys, setEverExpandedKeys] = useState<Set<string>>(new Set());
   const [focusedKey, setFocusedKey] = useState<string | null>(null);
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const rowRefs = useRef<Map<string, HTMLTableRowElement>>(new Map());
 
@@ -89,6 +94,26 @@ export default function DataTable<T>({
       el.scrollIntoView({ block: "nearest" });
     }
   }, [focusedKey]);
+
+  const updateScrollFade = useCallback(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    setCanScrollLeft(el.scrollLeft > 0);
+    setCanScrollRight(el.scrollLeft + el.clientWidth < el.scrollWidth - 1);
+  }, []);
+
+  useEffect(() => {
+    updateScrollFade();
+    const el = containerRef.current;
+    if (!el) return;
+    const onScroll = () => updateScrollFade();
+    el.addEventListener("scroll", onScroll);
+    window.addEventListener("resize", onScroll);
+    return () => {
+      el.removeEventListener("scroll", onScroll);
+      window.removeEventListener("resize", onScroll);
+    };
+  }, [updateScrollFade, sortedRows.length]);
 
   function handleHeaderClick(col: Column<T>) {
     if (!col.sortable) return;
@@ -169,111 +194,120 @@ export default function DataTable<T>({
   };
 
   return (
-    <div
-      ref={containerRef}
-      tabIndex={0}
-      onKeyDown={handleContainerKeyDown}
-      className="overflow-x-auto outline-none"
-    >
-      <table className="w-full border-collapse text-[13px]">
-        <thead className="sticky top-0 z-30 bg-surface">
-          <tr>
-            {columns.map((col, ci) => (
-              <th
-                key={col.key}
-                style={{ width: col.width }}
-                className={[
-                  "px-3 py-2 font-medium text-muted border-b border-line whitespace-nowrap",
-                  alignClass(col.align),
-                  ci === 0
-                    ? "sticky left-0 z-10 bg-surface border-r border-line"
-                    : "",
-                  col.sortable ? "cursor-pointer select-none hover:text-[var(--text)]" : "",
-                ].join(" ")}
-                onClick={() => handleHeaderClick(col)}
-              >
-                <span className="inline-flex items-center gap-1">
-                  {col.header}
-                  {col.sortable && activeSort?.key === col.key ? (
-                    activeSort.dir === "asc" ? (
-                      <ChevronUp size={12} className="text-accent shrink-0" />
-                    ) : (
-                      <ChevronDown size={12} className="text-accent shrink-0" />
-                    )
-                  ) : null}
-                </span>
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {sortedRows.map((row, ri) => {
-            const key = rowKey(row);
-            const isExpanded = expandedKeys.has(key);
-            const isFocused = focusedKey === key;
-            const isEven = ri % 2 === 0;
-
-            return (
-              <Fragment key={key}>
-                <tr
-                  ref={(el) => {
-                    if (el) rowRefs.current.set(key, el);
-                    else rowRefs.current.delete(key);
-                  }}
-                  onClick={() => {
-                    setFocusedKey(key);
-                    if (expandedRender) toggleExpand(key);
-                    else onOpen?.(row);
-                  }}
-                  aria-expanded={expandedRender ? isExpanded : undefined}
+    <div className="relative">
+      <div
+        ref={containerRef}
+        tabIndex={0}
+        onKeyDown={handleContainerKeyDown}
+        className="overflow-x-auto focus:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-accent"
+      >
+        <table className="w-full border-collapse text-[13px]">
+          {caption && <caption className="sr-only">{caption}</caption>}
+          <thead className="sticky top-0 z-30 bg-surface">
+            <tr>
+              {columns.map((col, ci) => (
+                <th
+                  key={col.key}
+                  scope="col"
+                  style={{ width: col.width }}
                   className={[
-                    "cursor-pointer transition-colors hover:bg-raised scroll-mt-[var(--nav-h)]",
-                    onOpen ? "hover:shadow-[inset_2px_0_0_0_var(--accent)]" : "",
-                    isEven ? "bg-surface" : "bg-bg",
-                    isFocused ? "bg-elevated ring-1 ring-inset ring-accent" : "",
+                    "px-3 py-2 font-medium text-muted border-b border-line whitespace-nowrap",
+                    alignClass(col.align),
+                    ci === 0
+                      ? "sticky left-0 z-10 bg-surface border-r border-line"
+                      : "",
+                    col.sortable ? "cursor-pointer select-none hover:text-[var(--text)]" : "",
                   ].join(" ")}
+                  onClick={() => handleHeaderClick(col)}
                 >
-                  {columns.map((col, ci) => (
-                    <td
-                      key={col.key}
-                      className={[
-                        "px-3 py-2 border-b border-line",
-                        alignClass(col.align),
-                        col.align === "right" ? "tabular-nums" : "",
-                        ci === 0
-                          ? "sticky left-0 bg-inherit border-r border-line"
-                          : "",
-                      ].join(" ")}
-                    >
-                      {col.render(row)}
-                    </td>
-                  ))}
-                </tr>
-                {expandedRender && everExpandedKeys.has(key) && (
-                  <tr>
-                    <td
-                      colSpan={columns.length}
-                      className={isExpanded ? "border-b border-line bg-elevated" : ""}
-                      style={{ padding: isExpanded ? undefined : "0" }}
-                    >
-                      <div
-                        style={{
-                          maxHeight: isExpanded ? "600px" : "0px",
-                          overflow: "hidden",
-                          transition: "max-height 150ms ease-out",
-                        }}
-                        className={isExpanded ? "px-3" : ""}
+                  <span className="inline-flex items-center gap-1">
+                    {col.header}
+                    {col.sortable && activeSort?.key === col.key ? (
+                      activeSort.dir === "asc" ? (
+                        <ChevronUp size={12} className="text-accent shrink-0" />
+                      ) : (
+                        <ChevronDown size={12} className="text-accent shrink-0" />
+                      )
+                    ) : null}
+                  </span>
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {sortedRows.map((row, ri) => {
+              const key = rowKey(row);
+              const isExpanded = expandedKeys.has(key);
+              const isFocused = focusedKey === key;
+              const isEven = ri % 2 === 0;
+              const stickyBg = isEven ? "bg-surface" : "bg-bg";
+
+              return (
+                <Fragment key={key}>
+                  <tr
+                    ref={(el) => {
+                      if (el) rowRefs.current.set(key, el);
+                      else rowRefs.current.delete(key);
+                    }}
+                    onClick={() => {
+                      setFocusedKey(key);
+                      if (expandedRender) toggleExpand(key);
+                      else onOpen?.(row);
+                    }}
+                    aria-expanded={expandedRender ? isExpanded : undefined}
+                    className={[
+                      "cursor-pointer transition-colors hover:bg-raised scroll-mt-[var(--nav-h)]",
+                      onOpen ? "hover:shadow-[inset_2px_0_0_0_var(--accent)]" : "",
+                      isEven ? "bg-surface" : "bg-bg",
+                      isFocused ? "bg-elevated ring-1 ring-inset ring-accent" : "",
+                    ].join(" ")}
+                  >
+                    {columns.map((col, ci) => (
+                      <td
+                        key={col.key}
+                        className={[
+                          "px-3 py-2 border-b border-line",
+                          alignClass(col.align),
+                          col.align === "right" ? "tabular-nums" : "",
+                          ci === 0
+                            ? `sticky left-0 ${stickyBg} border-r border-line`
+                            : "",
+                        ].join(" ")}
                       >
-                        {expandedRender(row)}
-                      </div>
-                    </td>
+                        {col.render(row)}
+                      </td>
+                    ))}
                   </tr>
-                )}
-              </Fragment>
-            );
-          })}
-        </tbody>
-      </table>
+                  {expandedRender && everExpandedKeys.has(key) && (
+                    <tr>
+                      <td
+                        colSpan={columns.length}
+                        className={isExpanded ? "border-b border-line bg-elevated" : ""}
+                        style={{ padding: isExpanded ? undefined : "0" }}
+                      >
+                        <div
+                          className="grid transition-[grid-template-rows] duration-200 ease-out"
+                          style={{ gridTemplateRows: isExpanded ? "1fr" : "0fr" }}
+                        >
+                          <div className={["overflow-hidden", isExpanded ? "px-3" : ""].join(" ")}>
+                            {expandedRender(row)}
+                          </div>
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+                </Fragment>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+      {canScrollLeft && (
+        <div className="pointer-events-none absolute left-0 top-0 bottom-0 w-6 bg-gradient-to-r from-surface to-transparent" />
+      )}
+      {canScrollRight && (
+        <div className="pointer-events-none absolute right-0 top-0 bottom-0 w-6 bg-gradient-to-l from-surface to-transparent" />
+      )}
     </div>
   );
 }
