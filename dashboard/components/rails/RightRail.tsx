@@ -282,12 +282,13 @@ function NewsRow({ item }: { item: NewsItem }) {
           href={item.url}
           target="_blank"
           rel="noreferrer"
+          title={item.headline}
           className="text-[12px] text-foreground leading-snug line-clamp-3 block"
         >
           {item.headline}
         </a>
       ) : (
-        <p className="text-[12px] text-foreground leading-snug line-clamp-3">
+        <p title={item.headline} className="text-[12px] text-foreground leading-snug line-clamp-3">
           {item.headline}
         </p>
       )}

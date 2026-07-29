@@ -174,3 +174,22 @@ describe("NewsRow whale source (RR-04)", () => {
     expect(screen.queryByText("🐋")).toBeNull();
   });
 });
+
+describe("NewsRow headline title attribute (RR-05)", () => {
+  it("gives the clamped headline a title attribute with the full text, url or not", () => {
+    vi.mocked(watchlistLib.useWatchlistTickers).mockReturnValue(new Set());
+    const longHeadline = "A very long headline that would be clamped at three lines in the 260px rail";
+    vi.mocked(newsLib.useNewsFeed).mockReturnValue({
+      data: {
+        items: [
+          { id: 1, ts: "2026-07-28 09:00:00", source: "yf", ticker: null, headline: longHeadline, body: null, url: null, is_breaking: 0 },
+          { id: 2, ts: "2026-07-28 10:00:00", source: "yf", ticker: null, headline: "linked " + longHeadline, body: null, url: "https://example.com", is_breaking: 0 },
+        ],
+      },
+      error: undefined,
+    } as any);
+    render(<RightRail />);
+    expect(screen.getByText(longHeadline)).toHaveAttribute("title", longHeadline);
+    expect(screen.getByText("linked " + longHeadline)).toHaveAttribute("title", "linked " + longHeadline);
+  });
+});
