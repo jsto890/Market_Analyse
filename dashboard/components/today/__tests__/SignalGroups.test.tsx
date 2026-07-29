@@ -1,6 +1,7 @@
 import { describe, it, expect, vi } from "vitest";
 import { render, screen, userEvent } from "@/test/render";
 import { resetLocalStorage } from "@/test/localStorage";
+import { mockFetchJson } from "@/test/fetchMock";
 import SignalGroups from "@/components/today/SignalGroups";
 import type { BridgeRow } from "@/types/bridge";
 
@@ -123,5 +124,84 @@ describe("SignalGroups filter feedback (TD-02)", () => {
     render(<SignalGroups groups={groups} newTickers={[]} sectors={["Semiconductors"]} />);
     expect(await screen.findByText(/ALIGNED\s+\(2\)/)).toBeInTheDocument();
     expect(screen.queryByText(/hidden by filters/)).not.toBeInTheDocument();
+  });
+});
+
+describe("SignalGroups — row-encoding diet (TD-03/04/05/06)", () => {
+  it("shows exactly six main columns with no bare cryptic headers", async () => {
+    resetLocalStorage();
+    mockFetchJson({});
+    const groups = {
+      aligned: [row({ ticker: "NVDA" })],
+      pullback: [],
+      tech_fund: [],
+      other: [],
+    };
+    render(<SignalGroups groups={groups} newTickers={[]} sectors={["Semiconductors"]} />);
+    await screen.findByText("NVDA");
+    const headers = screen.getAllByRole("columnheader").map((h) => h.textContent);
+    expect(headers).toHaveLength(6);
+    expect(screen.queryByRole("columnheader", { name: /^C$/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("columnheader", { name: "⚑" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("columnheader", { name: "Cat" })).not.toBeInTheDocument();
+  });
+
+  it("gives the Sent · Tech · Fund header a keyboard-reachable tooltip", async () => {
+    resetLocalStorage();
+    mockFetchJson({});
+    const groups = {
+      aligned: [row({ ticker: "NVDA" })],
+      pullback: [],
+      tech_fund: [],
+      other: [],
+    };
+    const user = userEvent.setup();
+    render(<SignalGroups groups={groups} newTickers={[]} sectors={["Semiconductors"]} />);
+    await screen.findByText("NVDA");
+    // Radix Tooltip.Trigger closes/suppresses on pointerdown (click) by design —
+    // it only opens on hover or keyboard focus (see components/ui/__tests__/InfoTip.test.tsx,
+    // which tests the same two triggers). Use hover here to actually open it.
+    await user.hover(screen.getByRole("button", { name: /Sent · Tech · Fund/i }));
+    // Radix renders tooltip content twice (visible + an accessibility copy),
+    // same reason components/ui/__tests__/InfoTip.test.tsx uses findAllByText.
+    expect((await screen.findAllByText(/all three lit = aligned/)).length).toBeGreaterThan(0);
+  });
+
+  it("moves conviction, catalyst count and flags into the expanded row, and renders 1W/6M/1Y as Ret chips", async () => {
+    resetLocalStorage();
+    mockFetchJson({});
+    const groups = {
+      aligned: [
+        row({
+          ticker: "NVDA",
+          is_extended: true,
+          earnings_in_days: 4,
+          catalysts: "Guidance raise; Buyback",
+          ret_5d: 2.5,
+          ret_126d: -1.1,
+          ret_252d: 40.2,
+        }),
+      ],
+      pullback: [],
+      tech_fund: [],
+      other: [],
+    };
+    const user = userEvent.setup();
+    render(<SignalGroups groups={groups} newTickers={[]} sectors={["Semiconductors"]} />);
+    await screen.findByText("NVDA");
+    // Click the sector cell, not the ticker link — the ticker's <Link> calls
+    // stopPropagation() so it navigates instead of toggling the row.
+    // Scoped to role "cell" (not screen.getByText) because the sector filter's
+    // <select> also renders an <option>Semiconductors</option> with the same
+    // text — getByText matches both and throws a multiple-elements error.
+    await user.click(screen.getByRole("cell", { name: "Semiconductors" }));
+    // conviction, catalyst count and flags are gone from the main row's header set (checked above)
+    // and now live under the expanded row's own labels:
+    expect(await screen.findByText("Conviction")).toBeInTheDocument();
+    expect(screen.getByText("Catalysts")).toBeInTheDocument();
+    expect(screen.getByText("Flags")).toBeInTheDocument();
+    expect(screen.getByText("+2.5")).toBeInTheDocument();
+    expect(screen.getByText("-1.1")).toBeInTheDocument();
+    expect(screen.getByText("+40.2")).toBeInTheDocument();
   });
 });

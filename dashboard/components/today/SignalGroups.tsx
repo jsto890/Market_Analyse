@@ -3,8 +3,7 @@
 import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import * as Tooltip from "@radix-ui/react-tooltip";
-import { Info, Search, X } from "lucide-react";
+import { Search, X } from "lucide-react";
 import type { BridgeRow } from "@/types/bridge";
 import { tierSort } from "@/lib/groups";
 import DataTable, { Column } from "@/components/ui/DataTable";
@@ -98,41 +97,23 @@ function Ret({ v }: { v: number | null }) {
   );
 }
 
-function ChipTooltip({ label, tone, tooltip }: { label: string; tone: string; tooltip: string }) {
-  return (
-    <Tooltip.Root>
-      <Tooltip.Trigger asChild>
-        <span
-          className={`inline-flex cursor-default items-center rounded border px-1 py-px text-[10px] font-medium leading-tight ${tone}`}
-        >
-          {label}
-        </span>
-      </Tooltip.Trigger>
-      <Tooltip.Portal>
-        <Tooltip.Content
-          className="max-w-xs rounded bg-elevated px-2 py-1 text-[12px] text-muted shadow-lg border border-line z-50"
-          sideOffset={4}
-        >
-          {tooltip}
-          <Tooltip.Arrow className="fill-elevated" />
-        </Tooltip.Content>
-      </Tooltip.Portal>
-    </Tooltip.Root>
-  );
-}
-
 function RowFlags({ ext, earnDays }: { ext: boolean; earnDays: number | null }) {
   const showEarn = earnDays !== null && Number.isFinite(earnDays) && earnDays <= 10;
   if (!ext && !showEarn) return <span className="text-muted">—</span>;
   return (
     <span className="inline-flex items-center gap-1">
-      {ext && <span className="rounded border border-line px-1 py-px text-[10px] text-muted">ext</span>}
+      {ext && (
+        <span className="rounded border border-line px-1 py-px text-[11px] text-muted">ext</span>
+      )}
       {showEarn && (
-        <ChipTooltip
-          label={`E${earnDays}d`}
-          tone="border-warn/50 text-warn bg-warn/10"
-          tooltip={`earnings in ${earnDays}d — inside typical hold window`}
-        />
+        <InfoTip
+          content={`earnings in ${earnDays}d — inside typical hold window`}
+          label={`Earnings in ${earnDays} days`}
+        >
+          <span className="rounded border border-warn/50 bg-warn/10 px-1 py-px text-[11px] font-medium text-warn">
+            E{earnDays}d
+          </span>
+        </InfoTip>
       )}
     </span>
   );
@@ -150,71 +131,20 @@ function CatalystCount({ value }: { value: string | null }) {
   const list = splitCatalysts(value);
   if (list.length === 0) return <span className="text-muted">—</span>;
   return (
-    <Tooltip.Root>
-      <Tooltip.Trigger asChild>
-        <span className="inline-flex cursor-default items-center rounded border border-line px-1.5 py-px font-mono text-[11px] tabular-nums text-muted">
-          {list.length}
-        </span>
-      </Tooltip.Trigger>
-      <Tooltip.Portal>
-        <Tooltip.Content
-          className="max-w-xs rounded bg-elevated px-2 py-1.5 text-[12px] text-muted shadow-lg border border-line z-50"
-          sideOffset={4}
-        >
-          <ul className="space-y-0.5">
-            {list.map((c) => (
-              <li key={c}>{c}</li>
-            ))}
-          </ul>
-          <Tooltip.Arrow className="fill-elevated" />
-        </Tooltip.Content>
-      </Tooltip.Portal>
-    </Tooltip.Root>
-  );
-}
-
-function LegacyInfoTip({ text }: { text: string }) {
-  return (
-    <Tooltip.Root>
-      <Tooltip.Trigger asChild>
-        <span className="inline-flex cursor-default text-muted">
-          <Info size={12} />
-        </span>
-      </Tooltip.Trigger>
-      <Tooltip.Portal>
-        <Tooltip.Content
-          className="max-w-xs rounded bg-elevated px-2 py-1 text-[12px] text-muted shadow-lg border border-line z-50"
-          sideOffset={4}
-        >
-          {text}
-          <Tooltip.Arrow className="fill-elevated" />
-        </Tooltip.Content>
-      </Tooltip.Portal>
-    </Tooltip.Root>
-  );
-}
-
-function HeaderTip({ label, tip }: { label: string; tip: string }) {
-  return (
-    <span className="inline-flex items-center gap-1">
-      {label}
-      <Tooltip.Root>
-        <Tooltip.Trigger asChild>
-          <span className="cursor-default text-muted/70">
-            <Info size={11} />
-          </span>
-        </Tooltip.Trigger>
-        <Tooltip.Portal>
-          <Tooltip.Content
-            className="z-50 max-w-[260px] rounded border border-line bg-elevated px-2 py-1.5 text-[12px] font-normal normal-case tracking-normal text-muted shadow-lg"
-            sideOffset={4}
-          >
-            {tip}
-            <Tooltip.Arrow className="fill-elevated" />
-          </Tooltip.Content>
-        </Tooltip.Portal>
-      </Tooltip.Root>
-    </span>
+    <InfoTip
+      content={
+        <ul className="space-y-0.5">
+          {list.map((c) => (
+            <li key={c}>{c}</li>
+          ))}
+        </ul>
+      }
+      label={`${list.length} catalysts`}
+    >
+      <span className="inline-flex cursor-default items-center rounded border border-line px-1.5 py-px font-mono text-[11px] tabular-nums text-muted">
+        {list.length}
+      </span>
+    </InfoTip>
   );
 }
 
@@ -229,12 +159,6 @@ function fmtScore(v: number | null | undefined): string {
 function fmtNum(v: number | null | undefined, dp = 2): string {
   if (v === null || v === undefined || !Number.isFinite(v)) return "—";
   return v.toFixed(dp);
-}
-
-function fmtRet(v: number | null | undefined): string {
-  if (v === null || v === undefined || !Number.isFinite(v)) return "—";
-  const sign = v >= 0 ? "+" : "";
-  return `${sign}${v.toFixed(1)}`;
 }
 
 function ExpandedRow({ row }: { row: BridgeRow }) {
@@ -268,8 +192,31 @@ function ExpandedRow({ row }: { row: BridgeRow }) {
     .filter(Boolean)
     .slice(0, 3);
 
+  const showEarn =
+    row.earnings_in_days !== null &&
+    row.earnings_in_days !== undefined &&
+    Number.isFinite(row.earnings_in_days) &&
+    row.earnings_in_days <= 10;
+
   return (
     <div className="space-y-1.5 py-3 font-mono text-[13px] text-muted">
+      <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+        <span className="inline-flex items-center gap-1">
+          Conviction <ConvictionDot value={row.conviction} />
+        </span>
+        <span className="text-muted">·</span>
+        <span className="inline-flex items-center gap-1">
+          Catalysts <CatalystCount value={row.catalysts} />
+        </span>
+        {(row.is_extended || showEarn) && (
+          <>
+            <span className="text-muted">·</span>
+            <span className="inline-flex items-center gap-1">
+              Flags <RowFlags ext={row.is_extended} earnDays={row.earnings_in_days} />
+            </span>
+          </>
+        )}
+      </div>
       <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
         <span>
           E {fmtNum(row.entry)} <span className="text-muted">S</span> {fmtNum(row.stop)}{" "}
@@ -288,7 +235,8 @@ function ExpandedRow({ row }: { row: BridgeRow }) {
       </div>
       <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
         <span className="inline-flex items-center gap-1">
-          comb {fmtScore(row.combined_score)} <LegacyInfoTip text="magnitude does not predict returns (r≈0)" />
+          comb {fmtScore(row.combined_score)}{" "}
+          <InfoTip content="magnitude does not predict returns (r≈0)" label="What does comb mean?" />
         </span>
         <span className="text-muted">·</span>
         <span>quality {fmtNum(row.quality_score, 1)}</span>
@@ -296,10 +244,14 @@ function ExpandedRow({ row }: { row: BridgeRow }) {
         <span>n_eff {fmtNum(row.n_eff, 1)}</span>
         <span className="text-muted">·</span>
         <span>regime {row.ticker_regime || "—"}</span>
-        <span className="text-muted">·</span>
-        <span>
-          1W/6M/1Y {fmtRet(row.ret_5d)}/{fmtRet(row.ret_126d)}/{fmtRet(row.ret_252d)}
-        </span>
+      </div>
+      <div className="flex flex-wrap items-center gap-x-1.5 gap-y-1">
+        <span className="text-muted">1W</span>
+        <Ret v={row.ret_5d} />
+        <span className="text-muted">6M</span>
+        <Ret v={row.ret_126d} />
+        <span className="text-muted">1Y</span>
+        <Ret v={row.ret_252d} />
       </div>
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
         <span className="text-foreground">
@@ -376,18 +328,15 @@ function columnsFor(newSet: Set<string>): Column<BridgeRow>[] {
       render: (r) => <Badge variant="tier" value={r.action_label} />,
     },
     {
-      key: "conv",
-      header: <HeaderTip label="C" tip="Conviction — model confidence in the call. More filled dots = higher conviction." />,
-      align: "center",
-      render: (r) => <ConvictionDot value={r.conviction} />,
-    },
-    {
       key: "legs",
       header: (
-        <HeaderTip
-          label="Sent · Tech · Fund"
-          tip="The three legs of the signal — Sentiment (X chatter), Technical (indicator ensemble), Fundamental (catalyst/valuation). Fuller green bars are stronger; all three lit = aligned."
-        />
+        <span className="inline-flex items-center gap-1">
+          Sent · Tech · Fund
+          <InfoTip
+            content="The three legs of the signal — Sentiment (X chatter), Technical (indicator ensemble), Fundamental (catalyst/valuation). Fuller green bars are stronger; all three lit = aligned."
+            label="What is Sent · Tech · Fund?"
+          />
+        </span>
       ),
       render: (r) => <LegBars s={r.sentiment_score} t={r.tech_score} f={r.catalyst_score} />,
     },
@@ -398,7 +347,12 @@ function columnsFor(newSet: Set<string>): Column<BridgeRow>[] {
     },
     {
       key: "r1d",
-      header: "1D",
+      header: (
+        <span className="inline-flex items-center gap-1">
+          1D
+          <InfoTip content="1-day % price change." label="What is 1D?" />
+        </span>
+      ),
       align: "right",
       sortable: true,
       sortFn: (a, b) => (a.ret_1d ?? -Infinity) - (b.ret_1d ?? -Infinity),
@@ -406,21 +360,16 @@ function columnsFor(newSet: Set<string>): Column<BridgeRow>[] {
     },
     {
       key: "r1m",
-      header: "1M",
+      header: (
+        <span className="inline-flex items-center gap-1">
+          1M
+          <InfoTip content="~20 trading-day (~1 month) % price change." label="What is 1M?" />
+        </span>
+      ),
       align: "right",
       sortable: true,
       sortFn: (a, b) => (a.ret_20d ?? -Infinity) - (b.ret_20d ?? -Infinity),
       render: (r) => <Ret v={r.ret_20d} />,
-    },
-    {
-      key: "flags",
-      header: "⚑",
-      render: (r) => <RowFlags ext={r.is_extended} earnDays={r.earnings_in_days} />,
-    },
-    {
-      key: "cat",
-      header: "Cat",
-      render: (r) => <CatalystCount value={r.catalysts} />,
     },
   ];
 }
@@ -436,17 +385,7 @@ function GroupTable({
   onOpen: (r: BridgeRow) => void;
   persistKey: string;
 }) {
-  const columns = useMemo(() => {
-    const cols = columnsFor(newSet);
-    const anyFlag = rows.some(
-      (r) =>
-        r.is_extended ||
-        (r.earnings_in_days != null &&
-          Number.isFinite(r.earnings_in_days) &&
-          r.earnings_in_days <= 10)
-    );
-    return anyFlag ? cols : cols.filter((c) => c.key !== "flags");
-  }, [newSet, rows]);
+  const columns = useMemo(() => columnsFor(newSet), [newSet]);
   if (rows.length === 0) {
     return <p className="px-1 py-2 text-[13px] text-muted">none today</p>;
   }
