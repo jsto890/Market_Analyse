@@ -14,6 +14,9 @@ import GexChart from "@/components/GexChart";
 import SymbolSwitcher from "@/components/odte/SymbolSwitcher";
 import InfoTip from "@/components/ui/InfoTip";
 import Collapsible from "@/components/ui/Collapsible";
+import Toggle from "@/components/ui/Toggle";
+import { useLocalStorage } from "@/lib/useLocalStorage";
+import { STATIC_KEYS } from "@/lib/storageKeys";
 import { GREEK_LABEL } from "@/lib/labels";
 import type { GreekKind } from "@/lib/format";
 
@@ -132,7 +135,7 @@ export default function OdteStrikesPage() {
     window.setTimeout(() => setCopiedStrike((s) => (s === row.strike ? null : s)), 1500);
   }
 
-  const [showLive, setShowLive] = useState(false);
+  const [showLive, setShowLive] = useLocalStorage(STATIC_KEYS.odteLiveMode, false);
   const { ladder: liveLadder, error: liveError, consecutiveFailures } = useOptionsLivePoller(
     activeSymbol,
     "0DTE",
@@ -184,14 +187,7 @@ export default function OdteStrikesPage() {
           </h1>
         </div>
         <div className="flex items-center gap-2">
-          <button
-            onClick={() => setShowLive(!showLive)}
-            className={`px-2 py-1 text-xs rounded ${
-              showLive ? "tone-live" : "border border-line text-muted"
-            }`}
-          >
-            {showLive ? "LIVE" : "live"}
-          </button>
+          <Toggle checked={showLive} onChange={setShowLive} label="Show live options ladder" />
         </div>
         <div className="overflow-x-auto">
           <SymbolSwitcher active={activeSymbol} onChange={switchSymbol} />

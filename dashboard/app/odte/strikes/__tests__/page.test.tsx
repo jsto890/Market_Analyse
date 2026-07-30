@@ -68,7 +68,7 @@ describe("OdteStrikesPage — single ladder mode (OL-02)", () => {
     const user = userEvent.setup();
     render(<OdteStrikesPage />);
     await screen.findByText(/call IV/i);
-    await user.click(screen.getByRole("button", { name: /live/i }));
+    await user.click(screen.getByRole("switch", { name: /live/i }));
     await screen.findByText("C Bid");
     expect(screen.queryByText("call IV")).not.toBeInTheDocument();
   });
@@ -77,7 +77,7 @@ describe("OdteStrikesPage — single ladder mode (OL-02)", () => {
     const user = userEvent.setup();
     render(<OdteStrikesPage />);
     await screen.findByText(/call IV/i);
-    await user.click(screen.getByRole("button", { name: /live/i }));
+    await user.click(screen.getByRole("switch", { name: /live/i }));
     const rows = await screen.findAllByRole("row");
     const strikeRow = rows.find((r) => r.textContent?.includes("565"));
     expect(strikeRow).toBeDefined();
@@ -90,7 +90,7 @@ describe("OdteStrikesPage — single ladder mode (OL-02)", () => {
     const user = userEvent.setup();
     render(<OdteStrikesPage />);
     await screen.findByText(/call IV/i);
-    const toggle = screen.getByRole("button", { name: /live/i });
+    const toggle = screen.getByRole("switch", { name: /live/i });
     expect(toggle.className).not.toMatch(/blue-|gray-/);
     await user.click(toggle);
     const badges = await screen.findAllByText("LIVE");
@@ -104,7 +104,7 @@ describe("OdteStrikesPage — single ladder mode (OL-02)", () => {
     const user = userEvent.setup();
     render(<OdteStrikesPage />);
     await screen.findByText(/call IV/i);
-    await user.click(screen.getByRole("button", { name: /live/i }));
+    await user.click(screen.getByRole("switch", { name: /live/i }));
     await screen.findByText("C Bid");
     // The mocked ladder (Task 2) has stale_ms: 0 — no warning should render at all.
     expect(screen.queryByText(/stale/i)).not.toBeInTheDocument();
@@ -117,7 +117,7 @@ describe("OdteStrikesPage — single ladder mode (OL-02)", () => {
     const user = userEvent.setup();
     render(<OdteStrikesPage />);
     await screen.findByText(/call IV/i);
-    await user.click(screen.getByRole("button", { name: /live/i }));
+    await user.click(screen.getByRole("switch", { name: /live/i }));
     const stripHeading = await screen.findByText("ATM");
     const strip = stripHeading.closest("div")!.parentElement!;
     expect(strip.className).toMatch(/flex-wrap/);
@@ -226,7 +226,7 @@ describe("OdteStrikesPage — single ladder mode (OL-02)", () => {
     const user = userEvent.setup();
     render(<OdteStrikesPage />);
     await screen.findByText(/call IV/i);
-    await user.click(screen.getByRole("button", { name: /live/i }));
+    await user.click(screen.getByRole("switch", { name: /live/i }));
     await screen.findByText("C Bid");
     expect(screen.queryByText("ν")).not.toBeInTheDocument();
     expect(screen.queryByText("ρ")).not.toBeInTheDocument();
@@ -234,5 +234,22 @@ describe("OdteStrikesPage — single ladder mode (OL-02)", () => {
     expect(screen.getAllByText("Liq").length).toBe(2);
     const msiLabel = screen.getByText("MSI Call/Put");
     expect(msiLabel.closest("div")?.querySelector("[title], button")).toBeTruthy();
+  });
+
+  it("uses an accessible, persisted switch for the live/classic toggle (OL-10)", async () => {
+    resetLocalStorage();
+    const user = userEvent.setup();
+    const { unmount } = render(<OdteStrikesPage />);
+    const toggle = screen.getByRole("switch", { name: /show live options ladder/i });
+    expect(toggle).toHaveAttribute("aria-checked", "false");
+    await user.click(toggle);
+    expect(toggle).toHaveAttribute("aria-checked", "true");
+    unmount();
+
+    render(<OdteStrikesPage />);
+    expect(screen.getByRole("switch", { name: /show live options ladder/i })).toHaveAttribute(
+      "aria-checked",
+      "true"
+    );
   });
 });

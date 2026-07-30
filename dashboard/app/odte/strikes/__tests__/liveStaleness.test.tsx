@@ -32,7 +32,7 @@ describe("OdteStrikesPage — stale-ladder invalidation (OL-06)", () => {
     mockedPoller.mockReturnValue({ ladder, error: null, consecutiveFailures: 0 });
     const user = userEvent.setup();
     render(<OdteStrikesPage />);
-    await user.click(screen.getByRole("button", { name: /live/i }));
+    await user.click(screen.getByRole("switch", { name: /live/i }));
     const badges = await screen.findAllByText("LIVE");
     const badge = badges.find((el) => el.tagName === "SPAN");
     expect(badge).toBeDefined();
@@ -46,7 +46,7 @@ describe("OdteStrikesPage — stale-ladder invalidation (OL-06)", () => {
     });
     const user = userEvent.setup();
     render(<OdteStrikesPage />);
-    await user.click(screen.getByRole("button", { name: /live/i }));
+    await user.click(screen.getByRole("switch", { name: /live/i }));
 
     expect(await screen.findByText("STALE")).toBeInTheDocument();
     // The toggle button itself still reads "LIVE" (that reflects showLive, not

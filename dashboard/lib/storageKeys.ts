@@ -14,6 +14,7 @@ export const STATIC_KEYS = {
   riskPct: "dash:risk:pct",
   watchlistMigrationResult: "dash:watchlist:migration-result",
   screenerLastResult: "dash:screener:last-result",
+  odteLiveMode: "dash:odte:live-mode",
 } as const;
 
 /**
