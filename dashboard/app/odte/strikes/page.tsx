@@ -11,6 +11,7 @@ import {
 } from "@/lib/odte";
 import { fmtGex } from "@/lib/odteCompanion";
 import { fetchOptionsLive, LadderSnapshot } from "@/lib/optionsLive";
+import GexChart from "@/components/GexChart";
 
 function fmtIv(iv: number | null | undefined): string {
   return iv != null ? `${(iv * 100).toFixed(1)}%` : "—";
@@ -510,7 +511,13 @@ export default function OdteStrikesPage() {
               </table>
             </div>
 
-            {/* GEX Profile Chart — implementation deferred to Task 12 */}
+            <div className="mt-3">
+              <GexChart
+                data={rows.map((r) => ({ strike: r.strike, gex: r.gex }))}
+                spotStrike={data.spot}
+                zeroGammaStrike={data.levels?.zero_gamma ?? null}
+              />
+            </div>
 
             {/* Educational footer */}
             <section className="mt-4 rounded-md border border-line bg-elevated">
