@@ -29,7 +29,7 @@ describe("OdteStrikesPage — stale-ladder invalidation (OL-06)", () => {
   });
 
   it("shows LIVE, undimmed, with no consecutive failures", async () => {
-    mockedPoller.mockReturnValue({ ladder, error: null, consecutiveFailures: 0 });
+    mockedPoller.mockReturnValue({ ladder, error: null, consecutiveFailures: 0, status: "live" });
     const user = userEvent.setup();
     render(<OdteStrikesPage />);
     await user.click(screen.getByRole("switch", { name: /live/i }));
@@ -43,6 +43,7 @@ describe("OdteStrikesPage — stale-ladder invalidation (OL-06)", () => {
       ladder,
       error: "Live data unavailable",
       consecutiveFailures: STALE_AFTER_FAILURES,
+      status: "live",
     });
     const user = userEvent.setup();
     render(<OdteStrikesPage />);

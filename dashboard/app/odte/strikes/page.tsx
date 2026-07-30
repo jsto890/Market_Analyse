@@ -152,7 +152,12 @@ export default function OdteStrikesPage() {
   }
 
   const [showLive, setShowLive] = useLocalStorage(STATIC_KEYS.odteLiveMode, false);
-  const { ladder: liveLadder, error: liveError, consecutiveFailures } = useOptionsLivePoller(
+  const {
+    ladder: liveLadder,
+    error: liveError,
+    consecutiveFailures,
+    status: liveStatus,
+  } = useOptionsLivePoller(
     activeSymbol,
     "0DTE",
     showLive
@@ -213,6 +218,11 @@ export default function OdteStrikesPage() {
       {/* Live Ladder Section */}
       {showLive && (
         <>
+          {liveStatus === "connecting" && (
+            <div className="px-4 py-6 text-center text-[11px] text-muted">
+              Connecting to live session…
+            </div>
+          )}
           {liveError && (
             <div className="px-4 py-2 border-b border-line">
               <p className="text-[11px] text-neg">{liveError}</p>

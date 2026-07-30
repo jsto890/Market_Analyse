@@ -273,6 +273,26 @@ describe("OdteStrikesPage — single ladder mode (OL-02)", () => {
     expect(atmChip.closest("tr")?.className).not.toMatch(/bg-blue-500/);
   });
 
+  it("shows a connecting state before the first live response (OL-17)", async () => {
+    // Classic ladder fetch resolves normally (fixture already mocked by
+    // beforeEach); the live options endpoint hangs so the connecting state
+    // is observable before any resolution.
+    const classicFetch = global.fetch;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((input: RequestInfo | URL) => {
+        const url = typeof input === "string" ? input : input.toString();
+        if (url.includes("/api/argus/options/live/")) return new Promise(() => {});
+        return classicFetch(input);
+      })
+    );
+    const user = userEvent.setup();
+    render(<OdteStrikesPage />);
+    await screen.findByText(/call IV/i);
+    await user.click(screen.getByRole("switch", { name: /live/i }));
+    expect(await screen.findByText(/connecting to live session/i)).toBeInTheDocument();
+  });
+
   it("uses an accessible, persisted switch for the live/classic toggle (OL-10)", async () => {
     resetLocalStorage();
     const user = userEvent.setup();

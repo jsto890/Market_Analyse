@@ -9,14 +9,24 @@ export interface LiveLadderState {
   error: string | null;
   /** Consecutive failed polls since the last success — drives OL-06's staleness UI. */
   consecutiveFailures: number;
+  status: "idle" | "connecting" | "live" | "error";
 }
 
-const INITIAL_STATE: LiveLadderState = { ladder: null, error: null, consecutiveFailures: 0 };
+type PollState = Omit<LiveLadderState, "status">;
+
+const INITIAL_STATE: PollState = { ladder: null, error: null, consecutiveFailures: 0 };
+
+function deriveStatus(enabled: boolean, state: PollState): LiveLadderState["status"] {
+  if (!enabled) return "idle";
+  if (state.ladder !== null) return "live";
+  if (state.error !== null) return "error";
+  return "connecting";
+}
 
 /** Self-scheduling live ladder poll, active only while `enabled`. Aborts and
  * stops on symbol/expiry change or unmount; pauses while the tab is hidden. */
 export function useOptionsLivePoller(symbol: string, expiry: string, enabled: boolean): LiveLadderState {
-  const [state, setState] = useState<LiveLadderState>(INITIAL_STATE);
+  const [state, setState] = useState<PollState>(INITIAL_STATE);
 
   useEffect(() => {
     if (!enabled) {
@@ -50,5 +60,5 @@ export function useOptionsLivePoller(symbol: string, expiry: string, enabled: bo
     };
   }, [symbol, expiry, enabled]);
 
-  return state;
+  return { ...state, status: deriveStatus(enabled, state) };
 }
