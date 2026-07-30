@@ -65,3 +65,29 @@ describe("PortfolioPage account summary + P&L columns (PF-01)", () => {
     expect(screen.getByText("+$105.00")).toBeInTheDocument();
   });
 });
+
+describe("PortfolioPage offline messaging (PF-06, PF-07)", () => {
+  it("states why the pinned-watchlist fallback is shown when IBKR is fully offline", async () => {
+    mockFetchJson({
+      "/api/argus/portfolio": { error: "IBKR not connected", ibkr_offline: true },
+      "/api/watchlist": { watchlist: [{ ticker: "NVDA", pinned_at: "2026-07-01" }] },
+    });
+    render(<PortfolioPage />);
+    expect(
+      await screen.findByText(/TWS is offline — showing your pinned watchlist instead of live positions/)
+    ).toBeInTheDocument();
+  });
+
+  it("states the source when rows are individually yfinance-backed (liveOffline)", async () => {
+    mockFetchJson({
+      "/api/argus/portfolio": [
+        { symbol: "NVDA", position: null, avg_cost: null, edge: "HOLD/ADD", ibkr_offline: true },
+      ],
+      "/api/watchlist": { watchlist: [] },
+    });
+    render(<PortfolioPage />);
+    expect(
+      await screen.findByText(/Price-only preview from your pinned watchlist — TWS positions unavailable/)
+    ).toBeInTheDocument();
+  });
+});

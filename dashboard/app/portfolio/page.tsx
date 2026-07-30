@@ -150,7 +150,7 @@ export default function PortfolioPage() {
             {pinned.length > 0 ? (
               <div className="space-y-2">
                 <p className="text-[11px] font-mono text-warn/80">
-                  Showing your pinned watchlist ({pinned.length}) while the gateway is offline
+                  TWS is offline — showing your pinned watchlist instead of live positions ({pinned.length}).
                 </p>
                 <div className="bg-surface border border-line rounded p-2 overflow-x-auto">
                   <table className="w-full text-sm border-collapse">
@@ -198,7 +198,7 @@ export default function PortfolioPage() {
               </p>
               {liveOffline && (
                 <span className="text-[10px] font-mono text-warn/80">
-                  watchlist fallback (IBKR offline)
+                  Price-only preview from your pinned watchlist — TWS positions unavailable
                 </span>
               )}
             </div>
