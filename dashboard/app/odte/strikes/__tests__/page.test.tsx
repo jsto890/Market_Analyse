@@ -293,6 +293,15 @@ describe("OdteStrikesPage — single ladder mode (OL-02)", () => {
     expect(await screen.findByText(/connecting to live session/i)).toBeInTheDocument();
   });
 
+  it("mounts the GEX profile chart in live mode using summed call+put GEX per strike (OL-18)", async () => {
+    const user = userEvent.setup();
+    render(<OdteStrikesPage />);
+    await screen.findByText(/call IV/i);
+    await user.click(screen.getByRole("switch", { name: /live/i }));
+    await screen.findByText("C Bid");
+    expect(document.querySelector(".recharts-responsive-container")).toBeInTheDocument();
+  });
+
   it("uses an accessible, persisted switch for the live/classic toggle (OL-10)", async () => {
     resetLocalStorage();
     const user = userEvent.setup();

@@ -360,7 +360,16 @@ export default function OdteStrikesPage() {
                 </table>
               </div>
 
-              {/* GEX Profile Chart — implementation deferred to Task 12 */}
+              <div className="mt-3 px-3">
+                <GexChart
+                  data={liveLadder.levels.map((l) => ({
+                    strike: l.strike,
+                    gex: (l.call_gex_by_strike ?? 0) + (l.put_gex_by_strike ?? 0),
+                  }))}
+                  spotStrike={liveLadder.spot}
+                  zeroGammaStrike={liveLadder.zero_gamma_strike}
+                />
+              </div>
             </>
           )}
         </>
