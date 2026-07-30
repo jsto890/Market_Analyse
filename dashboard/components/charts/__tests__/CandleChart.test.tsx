@@ -19,6 +19,7 @@ const fakeChart = {
   addLineSeries: vi.fn(() => fakeSubSeries()),
   priceScale: vi.fn(() => fakeScale()),
   timeScale: vi.fn(() => fakeScale()),
+  subscribeCrosshairMove: vi.fn(),
   applyOptions: vi.fn(),
   resize: vi.fn(),
   remove: vi.fn(),
@@ -69,5 +70,24 @@ describe("CandleChart price lines (TK-02)", () => {
     rerender(<CandleChart ticker="NVDA" initialBars={bars} levels={[{ price: 12, kind: "stop" }]} />);
     await waitFor(() => expect(removePriceLine).toHaveBeenCalledTimes(1));
     expect(createPriceLine).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe("CandleChart controls + OHLC legend (TK-12, TK-13)", () => {
+  it("exposes range pills as a radiogroup and EMA chips as pressed toggles", async () => {
+    render(<CandleChart ticker="NVDA" initialBars={bars} />);
+    await waitFor(() => expect(screen.getByRole("radiogroup", { name: "Chart range" })).toBeInTheDocument());
+    expect(screen.getByRole("radio", { name: "6M" })).toHaveAttribute("aria-checked", "true");
+    expect(screen.getByRole("button", { name: "20" })).toHaveAttribute("aria-pressed", "true");
+  });
+
+  it("seeds the OHLC legend from the last bar on mount", async () => {
+    render(<CandleChart ticker="NVDA" initialBars={bars} />);
+    await waitFor(() => expect(screen.getByText("102.00")).toBeInTheDocument());
+  });
+
+  it("shows a Vol label on the volume pane", async () => {
+    render(<CandleChart ticker="NVDA" initialBars={bars} />);
+    await waitFor(() => expect(screen.getByText("Vol")).toBeInTheDocument());
   });
 });

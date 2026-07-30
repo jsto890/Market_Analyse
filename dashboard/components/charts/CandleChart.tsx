@@ -109,6 +109,9 @@ export default function CandleChart({
   );
   const [emas, setEmas] = useState<EmaToggles>(DEFAULT_PERSIST.emas);
   const [logScale, setLogScale] = useState(DEFAULT_PERSIST.log);
+  const [ohlc, setOhlc] = useState<
+    { date: string; open: number; high: number; low: number; close: number; volume: number } | null
+  >(null);
   const periodRef = useRef<Period>(initialPeriod ?? DEFAULT_PERSIST.period);
   const chartReady = useRef(false);
 
@@ -350,6 +353,52 @@ export default function CandleChart({
 
         // Push data — covers the "chart created after data arrived" path
         applyData(barsRef.current);
+
+        // Seed the OHLC legend from the last bar on mount
+        const seedLast = barsRef.current[barsRef.current.length - 1];
+        if (seedLast) {
+          setOhlc({
+            date: seedLast.ts.slice(0, 10),
+            open: seedLast.open,
+            high: seedLast.high,
+            low: seedLast.low,
+            close: seedLast.close,
+            volume: seedLast.volume,
+          });
+        }
+
+        chart.subscribeCrosshairMove((param) => {
+          if (!param.time || !param.seriesData.get(candleSeries)) {
+            const last = barsRef.current[barsRef.current.length - 1];
+            if (last) {
+              setOhlc({
+                date: last.ts.slice(0, 10),
+                open: last.open,
+                high: last.high,
+                low: last.low,
+                close: last.close,
+                volume: last.volume,
+              });
+            }
+            return;
+          }
+          const bar = param.seriesData.get(candleSeries) as {
+            open: number;
+            high: number;
+            low: number;
+            close: number;
+          };
+          const vol = param.seriesData.get(volSeries) as { value: number } | undefined;
+          const t = typeof param.time === "number" ? param.time : Number(param.time);
+          setOhlc({
+            date: new Date(t * 1000).toISOString().slice(0, 10),
+            open: bar.open,
+            high: bar.high,
+            low: bar.low,
+            close: bar.close,
+            volume: vol?.value ?? 0,
+          });
+        });
       }
     );
 
@@ -395,10 +444,13 @@ export default function CandleChart({
       {/* Controls */}
       <div className="flex flex-wrap items-center gap-2 mb-2 px-0.5">
         {/* Range pills */}
-        <div className="flex gap-1">
+        <div role="radiogroup" aria-label="Chart range" className="flex gap-1">
           {(["3M", "6M", "1Y", "2Y"] as Period[]).map((p) => (
             <button
               key={p}
+              type="button"
+              role="radio"
+              aria-checked={activePeriod === p}
               onClick={() => applyPeriod(p)}
               className={[
                 "px-2 py-0.5 rounded text-[11px] font-medium transition-colors",
@@ -418,17 +470,20 @@ export default function CandleChart({
         {(["e20", "e50", "e200"] as const).map((key) => (
           <button
             key={key}
+            type="button"
+            aria-pressed={emas[key]}
             onClick={() =>
               setEmas((prev) => ({ ...prev, [key]: !prev[key] }))
             }
             className={[
-              "px-2 py-0.5 rounded text-[11px] font-medium transition-colors border",
-              emas[key]
-                ? "border-transparent text-foreground"
-                : "bg-elevated text-muted border-line hover:text-foreground",
+              "flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px] font-medium border border-line bg-elevated transition-colors",
+              emas[key] ? "text-foreground" : "text-muted hover:text-foreground",
             ].join(" ")}
-            style={emas[key] ? { backgroundColor: EMA_STYLE[key].color } : {}}
           >
+            <span
+              className="h-2 w-2 rounded-full"
+              style={{ backgroundColor: EMA_STYLE[key].color, opacity: emas[key] ? 1 : 0.35 }}
+            />
             {key === "e20" ? "20" : key === "e50" ? "50" : "200"}
           </button>
         ))}
@@ -442,8 +497,30 @@ export default function CandleChart({
         </div>
       </div>
 
+      {/* OHLC legend */}
+      {ohlc && (
+        <div className="mb-1 flex flex-wrap gap-3 px-0.5 font-mono text-[11px] tabular-nums text-muted">
+          <span>{ohlc.date}</span>
+          <span>O <span className="text-foreground">{ohlc.open.toFixed(2)}</span></span>
+          <span>H <span className="text-foreground">{ohlc.high.toFixed(2)}</span></span>
+          <span>L <span className="text-foreground">{ohlc.low.toFixed(2)}</span></span>
+          <span>
+            C{" "}
+            <span className={ohlc.close >= ohlc.open ? "text-pos" : "text-neg"}>
+              {ohlc.close.toFixed(2)}
+            </span>
+          </span>
+          <span>Vol <span className="text-foreground">{ohlc.volume.toLocaleString()}</span></span>
+        </div>
+      )}
+
       {/* Chart canvas */}
-      <div ref={containerRef} className="w-full" />
+      <div className="relative w-full">
+        <div ref={containerRef} className="w-full" />
+        <span className="pointer-events-none absolute bottom-1 left-2 font-mono text-[10px] text-muted">
+          Vol
+        </span>
+      </div>
     </div>
   );
 }
