@@ -381,11 +381,9 @@ export default function OdteStrikesPage() {
           {error && !data && (
             <p className="text-[11px] text-muted font-mono p-4">no data — source unavailable</p>
           )}
-        </>
-      )}
 
-      {data && (
-        <>
+          {data && (
+            <>
           <div className="flex items-center gap-2 px-4 py-2 border-b border-line overflow-x-auto">
             {expiries.map((e, i) => (
               <button
@@ -583,6 +581,8 @@ export default function OdteStrikesPage() {
               </div>
             </section>
           </div>
+            </>
+          )}
         </>
       )}
     </main>
