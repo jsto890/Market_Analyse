@@ -27,7 +27,6 @@ import PcrCard from "@/components/odte/PcrCard";
 import SpotCard from "@/components/odte/SpotCard";
 import StrikeGuidance from "@/components/odte/StrikeGuidance";
 import VerdictCard from "@/components/odte/VerdictCard";
-import Panel from "@/components/ui/Panel";
 
 const fetcher = (u: string) => fetch(u, { cache: "no-store" }).then((r) => r.json());
 const toneClass: Record<string, string> = {
@@ -175,22 +174,7 @@ export default function OdtePage() {
           verdict={spotVerdict}
           loading={!spot && ladderLoading}
           whyItMatters="Spot relative to zero-gamma sets the dealer-hedging regime for the session."
-          detail={
-            <div className="space-y-1 font-mono text-[11px] tabular-nums">
-              <div className="flex justify-between">
-                <span className="text-muted">spot</span>
-                <span className="text-foreground">{spot?.toFixed(2) ?? "—"}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted">zero-gamma</span>
-                <span className="text-foreground">{zeroGamma ?? "—"}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted">IBKR</span>
-                <span className="text-foreground">{health?.ibkr_connected ? "connected" : "disconnected"}</span>
-              </div>
-            </div>
-          }
+          detail={<SpotCard symbol={activeSymbol} spot={spot} zeroGamma={zeroGamma} />}
         />
         <VerdictCard
           title="Levels"
@@ -201,18 +185,7 @@ export default function OdtePage() {
             { label: "put wall", value: putWall != null ? String(putWall) : "—" },
           ]}
           whyItMatters="Zero-gamma and dealer walls mark where hedging flow accelerates or dampens moves."
-          detail={
-            <div className="space-y-1 font-mono text-[11px] tabular-nums">
-              <div className="flex justify-between">
-                <span className="text-muted">zero-gamma</span>
-                <span className="text-foreground">{zeroGamma ?? "—"}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted">total GEX</span>
-                <span className={(totalGex ?? 0) >= 0 ? "text-pos" : "text-neg"}>{fmtGex(totalGex)}</span>
-              </div>
-            </div>
-          }
+          detail={<GexCard symbol={activeSymbol} />}
         />
         <VerdictCard
           title="Shape / Skew"
@@ -249,16 +222,9 @@ export default function OdtePage() {
           ]}
           whyItMatters="Put/call ratio plus unusual prints flag where today's option flow is leaning."
           detail={
-            <div className="space-y-1 font-mono text-[11px] tabular-nums">
-              {(unusualData?.rows ?? []).slice(0, 3).map((row, i) => (
-                <div key={`${row.contract}-${i}`} className="flex justify-between gap-2">
-                  <span className="truncate text-foreground">{row.contract}</span>
-                  <span className="text-muted">{row.score.toFixed(1)}</span>
-                </div>
-              ))}
-              {(unusualData?.rows.length ?? 0) === 0 && (
-                <p className="text-muted">no unusual prints</p>
-              )}
+            <div className="space-y-2">
+              <PcrCard symbol={activeSymbol} />
+              <UnusualCard symbol={activeSymbol} />
             </div>
           }
         />
@@ -293,17 +259,6 @@ export default function OdtePage() {
           atm={atmRow?.strike ?? null}
           emPct={firstExpiry?.expected_move_pct ?? null}
         />
-      </div>
-
-      <div className="px-3 pb-3">
-        <Panel title="Companion grid">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-            <GexCard symbol={activeSymbol} />
-            <UnusualCard symbol={activeSymbol} />
-            <PcrCard symbol={activeSymbol} />
-            <SpotCard symbol={activeSymbol} spot={spot} zeroGamma={zeroGamma} />
-          </div>
-        </Panel>
       </div>
     </main>
   );
