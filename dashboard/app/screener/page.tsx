@@ -334,18 +334,12 @@ export default function ScreenerPage() {
         )}
 
         {!loading && !error && results === null && (
-          <div className="space-y-3">
-            <div className="rounded-md border border-dashed border-line bg-elevated/40 px-6 py-8 text-center">
-              <p className="text-sm text-foreground">Rank long candidates with the agent ensemble</p>
-              <p className="mx-auto mt-1.5 max-w-md text-xs text-muted">
-                Enter tickers to score a shortlist, or run the full universe. Sort any column, click
-                a row to open the ticker, and pin candidates to your watchlist.
-              </p>
-            </div>
-            <SkeletonTable
-              headers={["Ticker", "Verdict", "Score", "Agree%", "R:R", "1d%", "5d%"]}
-              rows={6}
-            />
+          <div className="rounded-md border border-dashed border-line bg-elevated/40 px-6 py-8 text-center">
+            <p className="text-sm text-foreground">Rank long candidates with the agent ensemble</p>
+            <p className="mx-auto mt-1.5 max-w-md text-xs text-muted">
+              Enter tickers to score a shortlist, or run the full universe. Sort any column, click
+              a row to open the ticker, and pin candidates to your watchlist.
+            </p>
           </div>
         )}
 

@@ -40,3 +40,12 @@ describe("ScreenerPage full-universe GET path (SC-01)", () => {
     expect(url).toContain("min_conviction=0.55");
   });
 });
+
+describe("ScreenerPage idle state (SC-02)", () => {
+  it("does not render a shimmering skeleton before any run has happened", async () => {
+    mockFetchJson({ "/api/watchlist": { watchlist: [] } });
+    render(<ScreenerPage />);
+    await screen.findByText("Rank long candidates with the agent ensemble");
+    expect(document.querySelectorAll(".animate-pulse").length).toBe(0);
+  });
+});
