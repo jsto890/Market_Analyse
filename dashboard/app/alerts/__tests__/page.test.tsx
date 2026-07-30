@@ -153,3 +153,17 @@ describe("AlertsPage log grouping + timezone label (AL-07)", () => {
     expect(screen.getByText("2026-07-28")).toBeInTheDocument();
   });
 });
+
+describe("AlertsPage form primitives (AL-08)", () => {
+  it("uses shared Input/Select for the new-alert form, no hardcoded inputCls fields", async () => {
+    mockFetchJson(baseMocks());
+    render(
+      <UndoToastProvider>
+        <AlertsPage />
+      </UndoToastProvider>
+    );
+    const symbolInput = await screen.findByPlaceholderText("NVDA");
+    expect(symbolInput.className).toContain("h-8");
+    expect(symbolInput.className).not.toContain("h-9");
+  });
+});

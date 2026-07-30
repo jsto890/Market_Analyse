@@ -5,6 +5,9 @@ import useSWR from "swr";
 import { Bell, Trash2, Play } from "lucide-react";
 import PageHeader from "@/components/ui/PageHeader";
 import Toggle from "@/components/ui/Toggle";
+import Input from "@/components/ui/Input";
+import Select from "@/components/ui/Select";
+import Button from "@/components/ui/Button";
 import { useUndoAction } from "@/components/ui/UndoToastProvider";
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
@@ -174,9 +177,6 @@ export default function AlertsPage() {
     }
   }
 
-  const inputCls =
-    "h-9 rounded border border-line bg-raised px-2.5 text-sm text-foreground focus:border-accent focus:outline-none";
-
   return (
     <div className="min-h-screen bg-bg text-foreground">
       <div className="mx-auto max-w-5xl space-y-4 px-4 py-6">
@@ -184,13 +184,9 @@ export default function AlertsPage() {
           title="Alerts"
           subtitle="Watch conditions the app already computes — fires via your alert channels"
           actions={
-            <button
-              onClick={evaluateNow}
-              disabled={busy}
-              className="inline-flex h-9 items-center gap-1.5 rounded-md border border-line bg-raised px-3 text-sm text-foreground transition-colors hover:border-line-strong disabled:opacity-50"
-            >
-              <Play size={14} /> Evaluate now
-            </button>
+            <Button variant="secondary" onClick={evaluateNow} disabled={busy} icon={<Play size={14} />}>
+              Evaluate now
+            </Button>
           }
         />
 
@@ -216,63 +212,53 @@ export default function AlertsPage() {
             <span className="tick text-[13px] font-semibold text-foreground">New alert</span>
           </div>
           <div className="flex flex-wrap items-end gap-2 px-4 py-3">
-            <label className="flex flex-col gap-1 text-[11px] text-muted">
+            <label className="flex flex-col gap-1 text-[12px] text-muted">
               Condition
-              <select value={kind} onChange={(e) => setKind(e.target.value)} className={`${inputCls} cursor-pointer`}>
-                {Object.entries(KIND_LABEL).map(([k, l]) => (
-                  <option key={k} value={k}>
-                    {l}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="flex flex-col gap-1 text-[11px] text-muted">
-              Symbol
-              <input
-                value={symbol}
-                onChange={(e) => setSymbol(e.target.value)}
-                placeholder="NVDA"
-                className={`${inputCls} w-24`}
+              <Select
+                value={kind}
+                onChange={(e) => setKind(e.target.value)}
+                options={Object.entries(KIND_LABEL).map(([k, l]) => ({ value: k, label: l }))}
               />
             </label>
+            <label className="flex flex-col gap-1 text-[12px] text-muted">
+              Symbol
+              <Input value={symbol} onChange={(e) => setSymbol(e.target.value)} placeholder="NVDA" className="w-24" />
+            </label>
             {kind === "verdict" && (
-              <label className="flex flex-col gap-1 text-[11px] text-muted">
+              <label className="flex flex-col gap-1 text-[12px] text-muted">
                 Verdict
-                <select value={target} onChange={(e) => setTarget(e.target.value)} className={`${inputCls} cursor-pointer`}>
-                  <option>LONG</option>
-                  <option>SHORT</option>
-                  <option>WAIT</option>
-                </select>
+                <Select
+                  value={target}
+                  onChange={(e) => setTarget(e.target.value)}
+                  options={[{ value: "LONG", label: "LONG" }, { value: "SHORT", label: "SHORT" }, { value: "WAIT", label: "WAIT" }]}
+                />
               </label>
             )}
             {kind === "earnings" && (
-              <label className="flex flex-col gap-1 text-[11px] text-muted">
+              <label className="flex flex-col gap-1 text-[12px] text-muted">
                 Days
-                <input value={days} onChange={(e) => setDays(e.target.value)} type="number" min={1} className={`${inputCls} w-20`} />
+                <Input value={days} onChange={(e) => setDays(e.target.value)} type="number" min={1} className="w-20" />
               </label>
             )}
             {kind === "price" && (
               <>
-                <label className="flex flex-col gap-1 text-[11px] text-muted">
+                <label className="flex flex-col gap-1 text-[12px] text-muted">
                   Direction
-                  <select value={direction} onChange={(e) => setDirection(e.target.value)} className={`${inputCls} cursor-pointer`}>
-                    <option value="above">above</option>
-                    <option value="below">below</option>
-                  </select>
+                  <Select
+                    value={direction}
+                    onChange={(e) => setDirection(e.target.value)}
+                    options={[{ value: "above", label: "above" }, { value: "below", label: "below" }]}
+                  />
                 </label>
-                <label className="flex flex-col gap-1 text-[11px] text-muted">
+                <label className="flex flex-col gap-1 text-[12px] text-muted">
                   Level
-                  <input value={level} onChange={(e) => setLevel(e.target.value)} type="number" placeholder="200" className={`${inputCls} w-24`} />
+                  <Input value={level} onChange={(e) => setLevel(e.target.value)} type="number" placeholder="200" className="w-24" />
                 </label>
               </>
             )}
-            <button
-              onClick={addRule}
-              disabled={busy || isIncomplete}
-              className="inline-flex h-9 items-center gap-1.5 rounded-md bg-accent px-4 text-sm font-semibold text-white shadow-sm transition-opacity hover:opacity-90 disabled:opacity-50"
-            >
-              <Bell size={14} /> Add
-            </button>
+            <Button variant="primary" onClick={addRule} disabled={busy || isIncomplete} icon={<Bell size={14} />}>
+              Add
+            </Button>
           </div>
           {addError && (
             <p className="px-4 pb-3 text-[12px] text-neg">{addError}</p>
