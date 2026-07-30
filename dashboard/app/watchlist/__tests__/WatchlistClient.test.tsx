@@ -125,3 +125,47 @@ describe("WatchlistClient Context column removal (WL-03)", () => {
     expect(screen.queryByRole("columnheader", { name: "Context" })).not.toBeInTheDocument();
   });
 });
+
+describe("WatchlistClient add-ticker feedback (WL-04)", () => {
+  it("shows an inline confirmation with the pinned price on success", async () => {
+    mockFetchJson({
+      ...baseMocks(),
+      "/api/watchlist": { watchlist: [], price_at_pin: 123.45 },
+    });
+    const user = userEvent.setup();
+    render(<WatchlistClient medianDaysToPeak={12} />);
+    await screen.findByPlaceholderText("Add ticker…");
+
+    await user.type(screen.getByPlaceholderText("Add ticker…"), "ZZZZ");
+    await user.click(screen.getByRole("button", { name: "Pin" }));
+
+    expect(await screen.findByText(/pinned @/)).toBeInTheDocument();
+  });
+
+  it("keeps a failed-add error visible across a keystroke, until dismissed", async () => {
+    mockFetchJson({
+      ...baseMocks(),
+      "/api/watchlist": { watchlist: [] },
+    });
+    const user = userEvent.setup();
+    render(<WatchlistClient medianDaysToPeak={12} />);
+    const input = await screen.findByPlaceholderText("Add ticker…");
+
+    vi.mocked(fetch).mockImplementationOnce(async () =>
+      new Response(JSON.stringify({ error: "Ticker not found" }), {
+        status: 400,
+        headers: { "Content-Type": "application/json" },
+      })
+    );
+
+    await user.type(input, "ZZZZ");
+    await user.click(screen.getByRole("button", { name: "Pin" }));
+    expect(await screen.findByText("Ticker not found")).toBeInTheDocument();
+
+    await user.type(input, "X");
+    expect(screen.getByText("Ticker not found")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Dismiss error" }));
+    expect(screen.queryByText("Ticker not found")).not.toBeInTheDocument();
+  });
+});

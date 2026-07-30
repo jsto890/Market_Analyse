@@ -10,6 +10,8 @@ import Badge from "@/components/ui/Badge";
 import EmptyState from "@/components/ui/EmptyState";
 import PageHeader from "@/components/ui/PageHeader";
 import PinToggle from "@/components/ui/PinToggle";
+import Input from "@/components/ui/Input";
+import Button from "@/components/ui/Button";
 import { heatBg } from "@/lib/heat";
 import { price, pct, relativeAge } from "@/lib/format";
 
@@ -149,6 +151,7 @@ function PinnedSection({
   const [addInput, setAddInput] = useState("");
   const [addError, setAddError] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
+  const [confirmMsg, setConfirmMsg] = useState<string | null>(null);
 
   const tickers = entries.map((e) => e.ticker);
   const tickersKey = tickers.join(",");
@@ -235,6 +238,7 @@ function PinnedSection({
     const ticker = addInput.trim().toUpperCase();
     if (!ticker) return;
     setAddError(null);
+    setConfirmMsg(null);
     setAdding(true);
     try {
       const res = await fetch("/api/watchlist", {
@@ -244,13 +248,17 @@ function PinnedSection({
       });
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
-        setAddError(body?.error ?? "Failed to add ticker");
+        setAddError(body?.error ?? `Failed to add ${ticker}`);
       } else {
+        const body = await res.json().catch(() => ({}));
+        const price = typeof body?.price_at_pin === "number" ? ` @ ${body.price_at_pin.toFixed(2)}` : "";
+        setConfirmMsg(`${ticker} pinned${price}`);
         setAddInput("");
         onAdded();
+        setTimeout(() => setConfirmMsg((m) => (m === `${ticker} pinned${price}` ? null : m)), 4000);
       }
     } catch {
-      setAddError("Network error");
+      setAddError("Network error — could not reach the watchlist API");
     } finally {
       setAdding(false);
     }
@@ -335,23 +343,29 @@ function PinnedSection({
     <Panel title="Pinned" persistKey="watchlist-pinned">
       {/* Add bar */}
       <div className="flex items-center gap-2 mb-3">
-        <input
-          type="text"
+        <Input
           value={addInput}
-          onChange={(e) => { setAddInput(e.target.value); setAddError(null); }}
+          onChange={(e) => setAddInput(e.target.value)}
           onKeyDown={(e) => { if (e.key === "Enter") handleAdd(); }}
           placeholder="Add ticker…"
-          className="rounded border border-line bg-elevated px-3 py-1.5 text-[13px] text-foreground placeholder-muted focus:outline-none focus:ring-1 focus:ring-accent w-36"
+          className="w-36"
         />
-        <button
-          onClick={handleAdd}
-          disabled={adding || !addInput.trim()}
-          className="rounded border border-line bg-elevated px-3 py-1.5 text-[12px] text-foreground hover:bg-surface disabled:opacity-40 disabled:cursor-not-allowed"
-        >
-          {adding ? "Adding…" : "Pin"}
-        </button>
+        <Button onClick={handleAdd} disabled={adding || !addInput.trim()} loading={adding}>
+          Pin
+        </Button>
+        {confirmMsg && <span className="text-[12px] text-pos">{confirmMsg}</span>}
         {addError && (
-          <span className="text-[12px] text-neg">{addError}</span>
+          <span className="flex items-center gap-1.5 text-[12px] text-neg">
+            {addError}
+            <button
+              type="button"
+              onClick={() => setAddError(null)}
+              className="text-muted hover:text-foreground"
+              aria-label="Dismiss error"
+            >
+              ×
+            </button>
+          </span>
         )}
       </div>
 
