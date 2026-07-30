@@ -91,3 +91,19 @@ describe("PortfolioPage offline messaging (PF-06, PF-07)", () => {
     ).toBeInTheDocument();
   });
 });
+
+describe("PortfolioPage edge badge + tooltip (PF-08)", () => {
+  it("renders edge through Badge with an explanatory tooltip", async () => {
+    mockFetchJson({
+      "/api/argus/portfolio": [
+        { symbol: "AAPL", position: 10, avg_cost: 180.5, verdict: "LONG", score: 0.6, edge: "HOLD/ADD" },
+      ],
+      "/api/watchlist": { watchlist: [] },
+    });
+    render(<PortfolioPage />);
+    await screen.findByText("AAPL");
+    const edgeBadge = screen.getByText("HOLD/ADD", { selector: "span.font-mono" });
+    expect(edgeBadge.className).toContain("bg-pos");
+    expect(screen.getByRole("button", { name: /edge explanation/i })).toBeInTheDocument();
+  });
+});

@@ -36,3 +36,16 @@ describe("Badge", () => {
     expect(screen.getByText("UNKNOWN_TIER")).toHaveClass("bg-muted/15", "text-muted");
   });
 });
+
+describe("Badge edge variant (PF-08)", () => {
+  it("colors HOLD/ADD positively and CONSIDER SELLING as a warning", () => {
+    render(
+      <>
+        <Badge variant="edge" value="HOLD/ADD" />
+        <Badge variant="edge" value="CONSIDER SELLING" />
+      </>
+    );
+    expect(screen.getByText("HOLD/ADD").className).toContain("bg-pos");
+    expect(screen.getByText("CONSIDER SELLING").className).toContain("bg-warn");
+  });
+});

@@ -3,7 +3,9 @@ import PageHeader from "@/components/ui/PageHeader";
 import DataTable, { Column } from "@/components/ui/DataTable";
 import Badge from "@/components/ui/Badge";
 import StatChip from "@/components/ui/StatChip";
+import InfoTip from "@/components/ui/InfoTip";
 import { signedCurrency, price as fmtPrice } from "@/lib/format";
+import { PORTFOLIO_EDGE_LABEL } from "@/lib/labels";
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -97,7 +99,18 @@ export default function PortfolioPage() {
     {
       key: "edge",
       header: "Edge",
-      render: (r) => <span className="font-mono text-xs text-muted">{r.edge ?? "—"}</span>,
+      render: (r) =>
+        r.edge ? (
+          <span className="inline-flex items-center gap-1">
+            <Badge variant="edge" value={r.edge} />
+            <InfoTip
+              content={PORTFOLIO_EDGE_LABEL[r.edge] ?? "No explanation available for this edge value."}
+              label="Edge explanation"
+            />
+          </span>
+        ) : (
+          <span className="text-muted">—</span>
+        ),
     },
     {
       key: "market_value",
