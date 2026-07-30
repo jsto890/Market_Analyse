@@ -3,8 +3,9 @@
 import * as Tooltip from "@radix-ui/react-tooltip";
 import Panel from "@/components/ui/Panel";
 import DataTable, { type Column } from "@/components/ui/DataTable";
+import InfoTip from "@/components/ui/InfoTip";
 import { QUADRANT_COLOR } from "@/lib/rotation";
-import { QUADRANT_LABEL } from "@/lib/labels";
+import { QUADRANT_LABEL, HEADER_GLOSS } from "@/lib/labels";
 
 export interface RotationRow {
   industry: string;
@@ -26,7 +27,6 @@ interface RotationPanelProps {
   collapsible?: boolean;
 }
 
-const DRANK_TOOLTIP = "~72% of ±1 moves are noise";
 const THIN_TOOLTIP =
   "thin basket — displayed RS values are noisier than the (shrinkage-adjusted) rank suggests";
 const BREADTH_TOOLTIP =
@@ -56,22 +56,16 @@ function QuadrantDot({ quadrant }: { quadrant: string }) {
 }
 
 function DRank({ drank }: { drank: number | null }) {
-  if (drank === null || Math.abs(drank) < 2) {
+  if (drank === null) return <span className="text-muted">—</span>;
+  if (Math.abs(drank) < 2) {
+    const sign = drank > 0 ? "+" : "";
     return (
-      <Tooltip.Root>
-        <Tooltip.Trigger asChild>
-          <span className="cursor-default text-muted">•</span>
-        </Tooltip.Trigger>
-        <Tooltip.Portal>
-          <Tooltip.Content
-            className="rounded bg-elevated px-2 py-1 text-[12px] text-muted shadow-lg border border-line z-50"
-            sideOffset={4}
-          >
-            {DRANK_TOOLTIP}
-            <Tooltip.Arrow className="fill-elevated" />
-          </Tooltip.Content>
-        </Tooltip.Portal>
-      </Tooltip.Root>
+      <InfoTip content={HEADER_GLOSS["Δrank"]}>
+        <span className="tabular-nums text-muted">
+          {sign}
+          {drank}
+        </span>
+      </InfoTip>
     );
   }
   const sign = drank > 0 ? "+" : "";
@@ -139,7 +133,7 @@ const columns: Column<RotationRow>[] = [
   },
   {
     key: "drank",
-    header: <GlossedHeader label="Δrank" tooltip={DRANK_TOOLTIP} />,
+    header: <GlossedHeader label="Δrank" tooltip={HEADER_GLOSS["Δrank"]} />,
     align: "center",
     render: (r) => <DRank drank={r.drank} />,
   },

@@ -18,6 +18,8 @@ export const HEADER_GLOSS: Record<string, string> = {
   HC: "High conviction — this call passes the ensemble's tightened agreement/R:R/catalyst gates.",
   "Agree%": "Agreement — share of voting agents aligned with the ensemble's final verdict direction.",
   "R:R": "Risk:reward — modeled target distance divided by modeled stop distance from entry.",
+  "◉": "Quadrant — Leading / Improving / Weakening / Lagging (JdK RRG rotation quadrant). Hover/focus the dot for the current quadrant.",
+  Δrank: "Change in rank since the prior session. ~72% of ±1-place moves are noise — treat single-step changes with caution.",
 };
 
 /** RRG quadrant labels (RotationPanel `QuadrantDot`). */

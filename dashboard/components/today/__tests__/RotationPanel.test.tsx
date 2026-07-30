@@ -32,3 +32,20 @@ describe("RotationPanel table", () => {
     });
   });
 });
+
+describe("DRank (RO-02)", () => {
+  it("shows the signed value, muted, instead of hiding it behind a bare dot when below the noise threshold", () => {
+    const belowThreshold: RotationRow[] = [
+      { ...rows[0], industry: "Materials", drank: 1 },
+    ];
+    render(<RotationPanel rows={belowThreshold} />);
+    expect(screen.getByText("+1")).toBeInTheDocument();
+    expect(screen.queryByText("•")).not.toBeInTheDocument();
+  });
+
+  it("still shows an em dash when drank is null", () => {
+    const noDrank: RotationRow[] = [{ ...rows[0], industry: "Materials", drank: null }];
+    render(<RotationPanel rows={noDrank} />);
+    expect(screen.getByText("—")).toBeInTheDocument();
+  });
+});
