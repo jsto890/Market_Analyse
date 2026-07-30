@@ -8,6 +8,7 @@ import DataTable, { Column } from "@/components/ui/DataTable";
 import StatChip from "@/components/ui/StatChip";
 import Badge from "@/components/ui/Badge";
 import EmptyState from "@/components/ui/EmptyState";
+import SkeletonTable from "@/components/ui/SkeletonTable";
 import PageHeader from "@/components/ui/PageHeader";
 import PinToggle from "@/components/ui/PinToggle";
 import Input from "@/components/ui/Input";
@@ -532,7 +533,10 @@ function RecentPicksSection({ medianDaysToPeak }: { medianDaysToPeak: number }) 
       persistKey="watchlist-recent"
     >
       {!recentData ? (
-        <p className="text-[13px] text-muted">Loading…</p>
+        <SkeletonTable
+          headers={["Ticker", "Flagged", "Group", "Flag price", "Now", "Since flag", "Age (d)", "In today's report"]}
+          rows={4}
+        />
       ) : rows.length === 0 ? (
         <EmptyState message="No tickers first-flagged in the last 14 days" />
       ) : (

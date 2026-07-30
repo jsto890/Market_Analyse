@@ -211,3 +211,15 @@ describe("WatchlistClient legacy migration (WL-07)", () => {
     expect(await screen.findByText(/Migrated 1 of 1 ticker/)).toBeInTheDocument();
   });
 });
+
+describe("WatchlistClient loading vocabulary (WL-08)", () => {
+  it("renders SkeletonTable, not plain Loading text, while recent picks are in flight", async () => {
+    mockFetchJson({
+      ...baseMocks(),
+      "/api/signals/recent?days=14": () => new Promise(() => {}), // never resolves
+    });
+    render(<WatchlistClient medianDaysToPeak={12} />);
+    expect(screen.queryByText("Loading…")).not.toBeInTheDocument();
+    expect(document.querySelectorAll(".animate-pulse").length).toBeGreaterThan(0);
+  });
+});
