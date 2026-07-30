@@ -92,6 +92,10 @@ export default function StrikeGuidance({ spot, zeroGamma, callWall, putWall, atm
         </span>
       </div>
 
+      <p className="border-t border-line px-4 py-1.5 text-[11px] text-muted-2">
+        Advisory only, not financial advice — context for your own decision, not a signal to execute.
+      </p>
+
       <div className="space-y-3 border-t border-line px-4 py-3 text-[12px] leading-relaxed">
         <p className="text-muted">
           <span className="text-foreground">Regime:</span> spot{" "}
