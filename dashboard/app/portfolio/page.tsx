@@ -76,7 +76,7 @@ export default function PortfolioPage() {
   return (
     <div className="min-h-screen bg-bg text-foreground">
       <div className="max-w-5xl mx-auto px-4 py-6 space-y-4">
-        <PageHeader title="Portfolio" subtitle="Paper account · IBKR Gateway 4002" />
+        <PageHeader title="Portfolio" subtitle="TWS · port 7496 · live" />
 
         {isLoading && <p className="text-xs font-mono text-muted">Loading…</p>}
 
@@ -85,7 +85,7 @@ export default function PortfolioPage() {
             <div className="flex flex-wrap items-center gap-3 rounded border border-line bg-surface px-4 py-2.5">
               <p className="text-sm font-semibold text-foreground">IBKR Gateway Offline</p>
               <p className="text-xs text-muted">
-                Connect IBKR Gateway on port 4002 (paper) to see live positions.
+                Connect TWS on port 7496 (live) to see positions.
               </p>
               <button
                 onClick={() => void mutate()}
