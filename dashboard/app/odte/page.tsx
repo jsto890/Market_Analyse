@@ -9,6 +9,7 @@ import {
   type OdteHealth,
 } from "@/lib/odte";
 import SymbolSwitcher from "@/components/odte/SymbolSwitcher";
+import InfoTip from "@/components/ui/InfoTip";
 import {
   companionSymbol,
   isProxied,
@@ -134,6 +135,9 @@ export default function OdtePage() {
         <div className="flex items-center gap-3">
           <SymbolSwitcher active={activeSymbol} onChange={switchSymbol} />
           <span className={`px-2 py-0.5 text-xs rounded ${toneClass[badge.tone]}`}>{badge.label}</span>
+          <InfoTip content="Connection status polls the backend every 5s and won't retry automatically on failure — if IBKR drops mid-session this badge can sit stale until the next scheduled poll succeeds.">
+            <span className="sr-only">What does this status mean?</span>
+          </InfoTip>
         </div>
       </div>
 

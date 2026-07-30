@@ -50,4 +50,17 @@ describe("OdtePage — verdict cards vs. companion grid (OD-01)", () => {
     const table = document.querySelector("table");
     if (table) expect(table.className).toMatch(/font-mono/);
   });
+
+  it("explains the health badge's 5s poll and no-retry-on-error behavior (OD-11)", async () => {
+    const user = userEvent.setup();
+    render(<OdtePage />);
+    await screen.findByText(/spot \/ regime/i);
+    // Radix Tooltip opens on hover/focus, not click.
+    const tip = screen.getByText("What does this status mean?").closest("button")!;
+    await user.hover(tip);
+    // Radix renders both a visible and an sr-only copy of the tooltip content.
+    expect(
+      (await screen.findAllByText(/every 5s.*won't retry automatically on failure/i)).length
+    ).toBeGreaterThan(0);
+  });
 });
