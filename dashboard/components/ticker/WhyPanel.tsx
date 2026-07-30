@@ -9,6 +9,8 @@ import StatChip from "@/components/ui/StatChip";
 import CenterBar from "@/components/ui/CenterBar";
 import InfoTip from "@/components/ui/InfoTip";
 import { useTickerData } from "@/lib/useTickerData";
+import { COMBO_POSITION_LABEL, COMBO_LETTER_LABEL } from "@/lib/labels";
+import type { AgentVote } from "@/types/argus";
 
 const COMBO_NOTE: Record<string, string> = {
   LSNS: "dip-buy profile — trend up, oscillators cooled (best backtested class)",
@@ -110,10 +112,58 @@ function VoteRow({ agent, direction, confidence, note }: VoteRowProps) {
         {(confidence * 100).toFixed(0)}%
       </span>
       {note && (
-        <span className="font-mono text-[11px] text-muted truncate max-w-[120px] shrink-0">
+        <span className="font-mono text-[11px] text-muted truncate max-w-[240px] shrink-0">
           {note}
         </span>
       )}
+    </div>
+  );
+}
+
+function groupVotesByFamily(
+  votes: AgentVote[],
+  familyOrder: string[]
+): [string, AgentVote[]][] {
+  const byFamily = new Map<string, AgentVote[]>();
+  for (const v of votes) {
+    if (!byFamily.has(v.family)) byFamily.set(v.family, []);
+    byFamily.get(v.family)!.push(v);
+  }
+  const known = familyOrder
+    .filter((f) => byFamily.has(f))
+    .map((f): [string, AgentVote[]] => [f, byFamily.get(f)!]);
+  const rest = Array.from(byFamily.entries()).filter(([f]) => !familyOrder.includes(f));
+  return [...known, ...rest];
+}
+
+function VoteSection({
+  title,
+  tone,
+  groups,
+}: {
+  title: string;
+  tone: string;
+  groups: [string, AgentVote[]][];
+}) {
+  if (groups.length === 0) return null;
+
+  return (
+    <div>
+      <p className={`font-mono text-[11px] tracking-wide mb-1 ${tone}`}>{title}</p>
+      {groups.map(([family, rows]) => (
+        <div key={family} className="mb-1.5">
+          <p className="font-mono text-[10px] text-muted">{family}</p>
+          {rows.map((v) => (
+            <VoteRow
+              key={v.agent}
+              agent={v.agent}
+              direction={v.verdict}
+              confidence={v.confidence}
+              note={v.note}
+            />
+          ))}
+        </div>
+      ))}
     </div>
   );
 }
@@ -258,6 +308,7 @@ export default function WhyPanel({ ticker }: { ticker: string }) {
   const dissentedVotes = allVotes.filter((v) => !agreedSet.has(v.agent));
   const agreedCount = agreed?.length ?? agreedVotes.length;
   const dissentedCount = dissented?.length ?? dissentedVotes.length;
+  const familyOrder = familyRowData.map((r) => r.family);
 
   const titleActions = (
     <div className="flex items-center gap-1.5 flex-wrap">
@@ -301,14 +352,17 @@ export default function WhyPanel({ ticker }: { ticker: string }) {
       <div className="space-y-3">
         {/* Inflation warning */}
         {inflationAbove && (
-          <div className="flex items-center gap-1">
-            <InfoTooltip text="correlated consensus — discount" />
+          <div className="flex items-start gap-1.5 rounded border border-warn/40 bg-warn/5 px-3 py-2">
+            <AlertTriangle size={12} className="text-warn mt-px shrink-0" />
+            <span className="font-mono text-[11px] text-warn leading-snug">
+              High inflation gap — correlated consensus, discount this score.
+            </span>
           </div>
         )}
 
         {/* Combo headline */}
         {combo && (
-          <div className="space-y-0.5">
+          <div className="space-y-1">
             <span className="font-mono text-[12px] text-foreground">
               combo{" "}
               <span className="font-medium">{combo}</span>
@@ -318,6 +372,21 @@ export default function WhyPanel({ ticker }: { ticker: string }) {
                 — {comboNote}
               </p>
             )}
+            <div className="flex flex-wrap gap-1.5">
+              {COMBO_POSITION_LABEL.map(([family, gloss], i) => {
+                const letter = combo[i] as "L" | "S" | "N";
+                return (
+                  <InfoTip key={family} content={`${gloss} ${COMBO_LETTER_LABEL[letter]}.`}>
+                    <span className="inline-flex items-center gap-1 rounded border border-line bg-surface px-1.5 py-0.5 font-mono text-[11px] text-muted">
+                      {family}
+                      <span className={letter === "L" ? "text-pos" : letter === "S" ? "text-neg" : "text-muted"}>
+                        {letter}
+                      </span>
+                    </span>
+                  </InfoTip>
+                );
+              })}
+            </div>
           </div>
         )}
 
@@ -388,16 +457,9 @@ export default function WhyPanel({ ticker }: { ticker: string }) {
             </span>
           </button>
 
-          <div id={votesId} hidden={!votesOpen} className="mt-2 space-y-0">
-            {allVotes.map((v) => (
-              <VoteRow
-                key={v.agent}
-                agent={v.agent}
-                direction={v.verdict}
-                confidence={v.confidence}
-                note={v.note}
-              />
-            ))}
+          <div id={votesId} hidden={!votesOpen} className="mt-2 space-y-3">
+            <VoteSection title="Dissented" tone="text-neg" groups={groupVotesByFamily(dissentedVotes, familyOrder)} />
+            <VoteSection title="Agreed" tone="text-pos" groups={groupVotesByFamily(agreedVotes, familyOrder)} />
           </div>
         </div>
       </div>
