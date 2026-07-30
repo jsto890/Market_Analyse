@@ -90,6 +90,14 @@ function fmtPrice(v: number | null): React.ReactNode {
   return <span className="tabular-nums">{price(v)}</span>;
 }
 
+function fmtDate(v: string): React.ReactNode {
+  return v.slice(0, 10);
+}
+
+function fmtLoading(): React.ReactNode {
+  return <span className="text-muted text-[12px]">Loading…</span>;
+}
+
 const CONCURRENCY = 5;
 
 async function fetchHistoriesWithConcurrency(
@@ -115,8 +123,8 @@ async function fetchHistoriesWithConcurrency(
 // ── Pinned section ───────────────────────────────────────────────────────────
 
 interface PinnedRowEnriched extends WatchlistEntry {
-  now: number | null;
-  sincePin: number | null;
+  now: number | null | undefined;
+  sincePin: number | null | undefined;
   ret1w: number | null;
   ret1m: number | null;
   todayBadge: string | null;
@@ -195,30 +203,31 @@ function PinnedSection({
 
   const rows: PinnedRowEnriched[] = entries.map((e) => {
     const hist = histMap.get(e.ticker);
-    const now = hist?.lastClose ?? null;
+    const now = hist ? hist.lastClose : undefined;
+    const sincePin = hist ? sincePercent(e.price_at_pin, hist.lastClose) : undefined;
     return {
       ...e,
       now,
-      sincePin: sincePercent(e.price_at_pin, now),
-      ret1w: sincePercent(hist?.close5Back ?? null, now),
-      ret1m: sincePercent(hist?.close21Back ?? null, now),
+      sincePin,
+      ret1w: hist ? sincePercent(hist.close5Back, hist.lastClose) : null,
+      ret1m: hist ? sincePercent(hist.close21Back, hist.lastClose) : null,
       todayBadge: bridgeMap.get(e.ticker) ?? null,
       lastSignal: lastSigMap.get(e.ticker) ?? null,
     };
   });
 
   // Summary strip
-  const withSince = rows.filter((r) => r.sincePin !== null).map((r) => r.sincePin!);
+  const withSince = rows.filter((r) => r.sincePin != null).map((r) => r.sincePin!);
   const medianSince =
     withSince.length > 0
       ? [...withSince].sort((a, b) => a - b)[Math.floor(withSince.length / 2)]
       : null;
   const best = rows.reduce<PinnedRowEnriched | null>(
-    (m, r) => (r.sincePin !== null && (m === null || r.sincePin > m.sincePin!)) ? r : m,
+    (m, r) => (r.sincePin != null && (m === null || r.sincePin > m.sincePin!)) ? r : m,
     null
   );
   const worst = rows.reduce<PinnedRowEnriched | null>(
-    (m, r) => (r.sincePin !== null && (m === null || r.sincePin < m.sincePin!)) ? r : m,
+    (m, r) => (r.sincePin != null && (m === null || r.sincePin < m.sincePin!)) ? r : m,
     null
   );
 
@@ -257,27 +266,31 @@ function PinnedSection({
     {
       key: "pinned_at",
       header: "Pinned",
-      render: (r) => <span className="text-muted text-[12px]">{r.pinned_at.slice(0, 10)}</span>,
+      width: "84px",
+      render: (r) => <span className="text-muted text-[12px]">{fmtDate(r.pinned_at)}</span>,
     },
     {
       key: "price_at_pin",
       header: "@pin",
+      width: "76px",
       align: "right",
       render: (r) => fmtPrice(r.price_at_pin),
     },
     {
       key: "now",
       header: "Now",
+      width: "76px",
       align: "right",
-      render: (r) => fmtPrice(r.now),
+      render: (r) => (r.now === undefined ? fmtLoading() : fmtPrice(r.now)),
     },
     {
       key: "sincePin",
       header: "Since pin",
+      width: "88px",
       align: "right",
       sortable: true,
       sortFn: (a, b) => (a.sincePin ?? -Infinity) - (b.sincePin ?? -Infinity),
-      render: (r) => fmtPct(r.sincePin),
+      render: (r) => (r.sincePin === undefined ? fmtLoading() : fmtPct(r.sincePin)),
     },
     {
       key: "todayBadge",
@@ -353,14 +366,14 @@ function PinnedSection({
               tone={medianSince >= 0 ? "pos" : "neg"}
             />
           )}
-          {best && best.sincePin !== null && (
+          {best && best.sincePin != null && (
             <StatChip
               label={`best (${best.ticker})`}
               value={pct(best.sincePin, "percent")}
               tone="pos"
             />
           )}
-          {worst && worst.sincePin !== null && worst.ticker !== best?.ticker && (
+          {worst && worst.sincePin != null && worst.ticker !== best?.ticker && (
             <StatChip
               label={`worst (${worst.ticker})`}
               value={pct(worst.sincePin, "percent")}
@@ -389,8 +402,8 @@ function PinnedSection({
 // ── Recent picks section ─────────────────────────────────────────────────────
 
 interface RecentFlagEnriched extends RecentFlag {
-  now: number | null;
-  sinceFlag: number | null;
+  now: number | null | undefined;
+  sinceFlag: number | null | undefined;
   ageSeconds: number;
   stillIn: boolean | null;
 }
@@ -421,11 +434,11 @@ function RecentPicksSection({ medianDaysToPeak }: { medianDaysToPeak: number }) 
   }, [tickersKey]);
 
   const rows: RecentFlagEnriched[] = (recentData ?? []).map((r) => {
-    const now = nowMap.get(r.ticker) ?? null;
+    const now = nowMap.get(r.ticker);
     return {
       ...r,
       now,
-      sinceFlag: sincePercent(r.entry_at_flag, now),
+      sinceFlag: now === undefined ? undefined : sincePercent(r.entry_at_flag, now),
       ageSeconds: Math.floor(
         (Date.now() - new Date(r.first_date + "T00:00:00Z").getTime()) / 1000
       ),
@@ -463,16 +476,18 @@ function RecentPicksSection({ medianDaysToPeak }: { medianDaysToPeak: number }) 
     {
       key: "now",
       header: "Now",
+      width: "76px",
       align: "right",
-      render: (r) => fmtPrice(r.now),
+      render: (r) => (r.now === undefined ? fmtLoading() : fmtPrice(r.now)),
     },
     {
       key: "sinceFlag",
       header: "Since flag",
+      width: "88px",
       align: "right",
       sortable: true,
       sortFn: (a, b) => (a.sinceFlag ?? -Infinity) - (b.sinceFlag ?? -Infinity),
-      render: (r) => fmtPct(r.sinceFlag),
+      render: (r) => (r.sinceFlag === undefined ? fmtLoading() : fmtPct(r.sinceFlag)),
     },
     {
       key: "ageSeconds",

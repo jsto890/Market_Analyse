@@ -9,6 +9,15 @@ vi.mock("next/navigation", () => ({
   useRouter: () => ({ push }),
 }));
 
+function baseMocks() {
+  return {
+    "/api/watchlist": { watchlist: [{ ticker: "NVDA", pinned_at: "2026-07-01", price_at_pin: 120 }] },
+    "/api/bridge": { signals: [] },
+    "/api/signals/recent?days=14": [],
+    "/api/signals/dates": [],
+  };
+}
+
 describe("WatchlistClient row navigation (WL-06)", () => {
   it("pinned row has no anchor tag; clicking calls router.push", async () => {
     mockFetchJson({
@@ -79,5 +88,21 @@ describe("WatchlistClient unpin undo (WL-01)", () => {
     expect(await screen.findByText("Removed NVDA from watchlist")).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Undo" }));
     expect(await screen.findByText("NVDA")).toBeInTheDocument();
+  });
+});
+
+describe("WatchlistClient reserved column widths (WL-02)", () => {
+  it("Now/Since pin header cells fixed width so late-arriving data can't reflow columns", async () => {
+    mockFetchJson(baseMocks());
+    render(
+      <UndoToastProvider>
+        <WatchlistClient medianDaysToPeak={12} />
+      </UndoToastProvider>
+    );
+    await screen.findByText("NVDA");
+    const nowHeader = screen.getByRole("columnheader", { name: "Now" });
+    const sinceHeader = screen.getByRole("columnheader", { name: "Since pin" });
+    expect(nowHeader).toHaveStyle({ width: "76px" });
+    expect(sinceHeader).toHaveStyle({ width: "88px" });
   });
 });
