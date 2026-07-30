@@ -14,7 +14,7 @@ import {
 } from "recharts";
 import Panel from "@/components/ui/Panel";
 import type { RotationRow } from "@/components/today/RotationPanel";
-import { QUADRANT_COLOR, deriveQuadrant, abbreviate } from "@/lib/rotation";
+import { QUADRANT_COLOR, deriveQuadrant, abbreviate, splitDegenerate } from "@/lib/rotation";
 import { CHART_HEIGHT, CHART_AXIS_STYLE } from "@/lib/chartConventions";
 import { QUADRANT_LABEL } from "@/lib/labels";
 
@@ -53,18 +53,10 @@ function RRGTooltip({ active, payload }: { active?: boolean; payload?: TooltipPa
   );
 }
 
-// Sectors whose relative-strength line is flat (constituent closes failed to
-// load) come out exactly at 100/100 — meaningless points that pile up on the
-// origin and collide. Drop them from the plot.
-function isDegenerate(r: RotationRow): boolean {
-  return Math.abs(r.rs_ratio - 100) < 0.05 && Math.abs(r.rs_mom - 100) < 0.05;
-}
-
 export default function RRGChart({ rows }: { rows: RotationRow[] }) {
   if (!rows.length) return null;
 
-  const plotted = rows.filter((r) => !isDegenerate(r));
-  const hidden = rows.length - plotted.length;
+  const { plotted, hidden } = splitDegenerate(rows);
   if (!plotted.length) {
     return (
       <Panel title="Relative Rotation Graph" subtitle="RS-Ratio vs RS-Momentum">
@@ -94,7 +86,7 @@ export default function RRGChart({ rows }: { rows: RotationRow[] }) {
     <Panel
       title="Relative Rotation Graph"
       subtitle={`RS-Ratio vs RS-Momentum · ${plotted.length} sectors${
-        hidden > 0 ? ` · ${hidden} hidden (no data)` : ""
+        hidden.length > 0 ? ` · ${hidden.length} hidden (no data)` : ""
       }`}
     >
       <div
@@ -208,6 +200,11 @@ export default function RRGChart({ rows }: { rows: RotationRow[] }) {
           </ScatterChart>
         </ResponsiveContainer>
       </div>
+      {hidden.length > 0 && (
+        <p className="mt-2 px-1 text-[11px] text-muted">
+          Hidden (flat/no data): {hidden.map((r) => r.industry).join(", ")}
+        </p>
+      )}
     </Panel>
   );
 }

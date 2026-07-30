@@ -20,3 +20,20 @@ describe("RRGChart chart conventions", () => {
     expect(screen.getByRole("img")).toHaveStyle({ height: CHART_HEIGHT });
   });
 });
+
+describe("RRGChart hidden sectors (RO-06)", () => {
+  it("names the hidden (flat/no-data) sectors instead of only counting them", () => {
+    const withHidden: RotationRow[] = [
+      rows[0],
+      { industry: "Discretionary", quadrant: "lagging", rs_ratio: 100.01, rs_mom: 99.98, breadth: null, n: null, r1w: null, r1m: null, r3m: null, rank: 2, drank: 0 },
+    ];
+    render(<RRGChart rows={withHidden} />);
+    expect(screen.getByText(/Hidden \(flat\/no data\): Discretionary/)).toBeInTheDocument();
+    expect(screen.getByRole("img", { name: "Relative Rotation Graph scatter plot, 1 sectors" })).toBeInTheDocument();
+  });
+
+  it("shows no hidden-sectors line when every row plots", () => {
+    render(<RRGChart rows={[rows[0]]} />);
+    expect(screen.queryByText(/Hidden \(flat\/no data\)/)).not.toBeInTheDocument();
+  });
+});
