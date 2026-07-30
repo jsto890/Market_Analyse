@@ -79,6 +79,15 @@ def delete_rule(conn: sqlite3.Connection, rule_id: int) -> bool:
     return cur.rowcount > 0
 
 
+def set_rule_enabled(conn: sqlite3.Connection, rule_id: int, enabled: bool) -> bool:
+    ensure_rules_schema(conn)
+    cur = conn.execute(
+        "UPDATE alert_rules SET enabled=? WHERE id=?", (1 if enabled else 0, rule_id)
+    )
+    conn.commit()
+    return cur.rowcount > 0
+
+
 def _set_state(conn: sqlite3.Connection, rule_id: int, state: str | None,
                fired: bool) -> None:
     if fired:

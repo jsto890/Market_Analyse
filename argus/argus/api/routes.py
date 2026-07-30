@@ -108,6 +108,9 @@ class AlertRuleReq(BaseModel):
     params: dict = {}
     note: Optional[str] = None
 
+class AlertRuleUpdateReq(BaseModel):
+    enabled: bool
+
 
 def build_app() -> FastAPI:
     app = FastAPI(title="Argus", version="0.1.0")
@@ -566,6 +569,17 @@ def build_app() -> FastAPI:
             if not delete_rule(conn, rule_id):
                 raise HTTPException(404, "no such rule")
             return {"deleted": rule_id}
+        finally:
+            conn.close()
+
+    @app.patch("/api/alerts/rules/{rule_id}")
+    def alert_rules_update(rule_id: int, req: AlertRuleUpdateReq):
+        from ..alerts.rules import set_rule_enabled
+        conn = get_conn()
+        try:
+            if not set_rule_enabled(conn, rule_id, req.enabled):
+                raise HTTPException(404, "no such rule")
+            return {"id": rule_id, "enabled": req.enabled}
         finally:
             conn.close()
 
