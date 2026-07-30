@@ -102,3 +102,21 @@ describe("AlertsPage delete undo (AL-04)", () => {
     expect(await screen.findByText("NVDA → verdict becomes LONG")).toBeInTheDocument();
   });
 });
+
+describe("AlertsPage evaluate-now result (AL-05)", () => {
+  it("shows a result summary after evaluating, even if nothing fired", async () => {
+    mockFetchJson({
+      ...baseMocks(),
+      "/api/argus/alerts/evaluate": { fired: [] },
+    });
+    const user = userEvent.setup();
+    render(
+      <UndoToastProvider>
+        <AlertsPage />
+      </UndoToastProvider>
+    );
+    await screen.findByText("NVDA → verdict becomes LONG");
+    await user.click(screen.getByRole("button", { name: "Evaluate now" }));
+    expect(await screen.findByText(/Evaluated 1 rule · 0 fired/)).toBeInTheDocument();
+  });
+});

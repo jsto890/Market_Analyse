@@ -63,6 +63,7 @@ export default function AlertsPage() {
   const [busy, setBusy] = useState(false);
   const [sendTestResult, setSendTestResult] = useState<string | null>(null);
   const [addError, setAddError] = useState<string | null>(null);
+  const [evalResult, setEvalResult] = useState<string | null>(null);
 
   const rules = rulesData?.rules ?? [];
   const log = logData?.items ?? [];
@@ -149,7 +150,13 @@ export default function AlertsPage() {
   async function evaluateNow() {
     setBusy(true);
     try {
-      await fetch("/api/argus/alerts/evaluate", { method: "POST" });
+      const res = await fetch("/api/argus/alerts/evaluate", { method: "POST" });
+      const body = (await res.json().catch(() => ({ fired: [] }))) as { fired: unknown[] };
+      const fired = body.fired?.length ?? 0;
+      const total = rules.length;
+      setEvalResult(
+        `Evaluated ${total} rule${total === 1 ? "" : "s"} · ${fired} fired · ${new Date().toLocaleTimeString()}`
+      );
       await mutateLog();
     } finally {
       setBusy(false);
@@ -175,6 +182,8 @@ export default function AlertsPage() {
             </button>
           }
         />
+
+        {evalResult && <p className="text-[12px] text-muted">{evalResult}</p>}
 
         <div className="flex flex-wrap items-center gap-3 rounded-md border border-line bg-elevated px-3 py-2 text-[12px]">
           <span className={channels?.email ? "text-pos" : "text-muted"}>Email {channels?.email ? "✓" : "—"}</span>
