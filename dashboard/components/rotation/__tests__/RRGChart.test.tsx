@@ -37,3 +37,15 @@ describe("RRGChart hidden sectors (RO-06)", () => {
     expect(screen.queryByText(/Hidden \(flat\/no data\)/)).not.toBeInTheDocument();
   });
 });
+
+describe("RRGChart label decluttering (RO-07)", () => {
+  it("mounts cleanly when several sectors cluster at nearly the same RS-Ratio/RS-Mom", () => {
+    const clustered: RotationRow[] = [
+      { industry: "Energy", quadrant: "leading", rs_ratio: 101, rs_mom: 101, breadth: 60, n: 30, r1w: 1, r1m: 2, r3m: 3, rank: 1, drank: 0 },
+      { industry: "Materials", quadrant: "leading", rs_ratio: 101.2, rs_mom: 101.3, breadth: 55, n: 28, r1w: 1, r1m: 2, r3m: 3, rank: 2, drank: 0 },
+      { industry: "Industrials", quadrant: "leading", rs_ratio: 101.4, rs_mom: 100.9, breadth: 58, n: 27, r1w: 1, r1m: 2, r3m: 3, rank: 3, drank: 0 },
+    ];
+    render(<RRGChart rows={clustered} />);
+    expect(screen.getByRole("img", { name: "Relative Rotation Graph scatter plot, 3 sectors" })).toBeInTheDocument();
+  });
+});

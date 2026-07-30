@@ -14,7 +14,7 @@ import {
 } from "recharts";
 import Panel from "@/components/ui/Panel";
 import type { RotationRow } from "@/components/today/RotationPanel";
-import { QUADRANT_COLOR, deriveQuadrant, abbreviate, splitDegenerate } from "@/lib/rotation";
+import { QUADRANT_COLOR, deriveQuadrant, abbreviate, splitDegenerate, computeLabelCollisions } from "@/lib/rotation";
 import { CHART_HEIGHT, CHART_AXIS_STYLE } from "@/lib/chartConventions";
 import { QUADRANT_LABEL } from "@/lib/labels";
 
@@ -80,7 +80,8 @@ export default function RRGChart({ rows }: { rows: RotationRow[] }) {
   const xDomain: [number, number] = [minR - padR, maxR + padR];
   const yDomain: [number, number] = [minM - padM, maxM + padM];
 
-  const data = plotted.map((r) => ({ ...r, quadrantKey: deriveQuadrant(r) }));
+  const collisions = computeLabelCollisions(plotted);
+  const data = plotted.map((r, i) => ({ ...r, quadrantKey: deriveQuadrant(r), labelCollision: collisions[i] }));
 
   return (
     <Panel
@@ -177,21 +178,23 @@ export default function RRGChart({ rows }: { rows: RotationRow[] }) {
                 return (
                   <g>
                     <circle cx={p.cx} cy={p.cy} r={4} fill={color} stroke="var(--bg)" strokeWidth={1} />
-                    <text
-                      x={p.cx + (right ? 7 : -7)}
-                      y={p.cy + (up ? -3 : 9)}
-                      fontSize={10}
-                      fill={CHART_AXIS_STYLE.pointLabel}
-                      textAnchor={right ? "start" : "end"}
-                      style={{
-                        paintOrder: "stroke",
-                        stroke: "var(--bg)",
-                        strokeWidth: 3,
-                        strokeLinejoin: "round",
-                      }}
-                    >
-                      {abbreviate(p.payload.industry)}
-                    </text>
+                    {!p.payload.labelCollision && (
+                      <text
+                        x={p.cx + (right ? 7 : -7)}
+                        y={p.cy + (up ? -3 : 9)}
+                        fontSize={10}
+                        fill={CHART_AXIS_STYLE.pointLabel}
+                        textAnchor={right ? "start" : "end"}
+                        style={{
+                          paintOrder: "stroke",
+                          stroke: "var(--bg)",
+                          strokeWidth: 3,
+                          strokeLinejoin: "round",
+                        }}
+                      >
+                        {abbreviate(p.payload.industry)}
+                      </text>
+                    )}
                   </g>
                 );
               }}
