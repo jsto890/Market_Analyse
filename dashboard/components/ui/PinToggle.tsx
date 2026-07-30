@@ -21,13 +21,15 @@ export default function PinToggle({ symbol, variant = "chip", className }: PinTo
 
   function toggle() {
     const wasPinned = pinned;
+    let removedEntry: { ticker: string } | undefined;
     mutate(
       (prev) => {
         if (!prev) return prev;
-        const wl = wasPinned
-          ? prev.watchlist.filter((w) => w.ticker !== symbol)
-          : [...prev.watchlist, { ticker: symbol }];
-        return { watchlist: wl };
+        if (wasPinned) {
+          removedEntry = prev.watchlist.find((w) => w.ticker === symbol);
+          return { watchlist: prev.watchlist.filter((w) => w.ticker !== symbol) };
+        }
+        return { watchlist: [...prev.watchlist, { ticker: symbol }] };
       },
       false
     );
@@ -45,7 +47,7 @@ export default function PinToggle({ symbol, variant = "chip", className }: PinTo
           (prev) => {
             if (!prev) return prev;
             const wl = wasPinned
-              ? [...prev.watchlist, { ticker: symbol }]
+              ? [...prev.watchlist, removedEntry ?? { ticker: symbol }]
               : prev.watchlist.filter((w) => w.ticker !== symbol);
             return { watchlist: wl };
           },
