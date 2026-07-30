@@ -2,6 +2,7 @@ import { describe, it, expect, vi } from "vitest";
 import { render, screen, userEvent } from "@/test/render";
 import { mockFetchJson } from "@/test/fetchMock";
 import WatchlistClient from "@/app/watchlist/WatchlistClient";
+import UndoToastProvider from "@/components/ui/UndoToastProvider";
 
 const push = vi.fn();
 vi.mock("next/navigation", () => ({
@@ -16,7 +17,11 @@ describe("WatchlistClient row navigation (WL-06)", () => {
       "/api/signals/recent?days=14": [],
       "/api/signals/dates": [],
     });
-    render(<WatchlistClient medianDaysToPeak={12} />);
+    render(
+      <UndoToastProvider>
+        <WatchlistClient medianDaysToPeak={12} />
+      </UndoToastProvider>
+    );
     const cell = await screen.findByText("NVDA");
     expect(cell.closest("a")).toBeNull();
 
@@ -52,5 +57,27 @@ describe("WatchlistClient recent picks age formatting", () => {
     render(<WatchlistClient medianDaysToPeak={12} />);
 
     expect(await screen.findByText(/^\d+d$/)).toBeInTheDocument();
+  });
+});
+
+describe("WatchlistClient unpin undo (WL-01)", () => {
+  it("shows an undo toast after unpinning, and Undo restores the row", async () => {
+    mockFetchJson({
+      "/api/watchlist": { watchlist: [{ ticker: "NVDA", pinned_at: "2026-07-01", price_at_pin: 120 }] },
+      "/api/bridge": { signals: [] },
+      "/api/signals/recent?days=14": [],
+      "/api/signals/dates": [],
+    });
+    render(
+      <UndoToastProvider>
+        <WatchlistClient medianDaysToPeak={12} />
+      </UndoToastProvider>
+    );
+    await screen.findByText("NVDA");
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("button", { name: "Unpin" }));
+    expect(await screen.findByText("Removed NVDA from watchlist")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Undo" }));
+    expect(await screen.findByText("NVDA")).toBeInTheDocument();
   });
 });

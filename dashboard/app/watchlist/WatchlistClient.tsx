@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import useSWR from "swr";
 import Panel from "@/components/ui/Panel";
@@ -9,6 +9,7 @@ import StatChip from "@/components/ui/StatChip";
 import Badge from "@/components/ui/Badge";
 import EmptyState from "@/components/ui/EmptyState";
 import PageHeader from "@/components/ui/PageHeader";
+import PinToggle from "@/components/ui/PinToggle";
 import { heatBg } from "@/lib/heat";
 import { price, pct, relativeAge } from "@/lib/format";
 
@@ -124,11 +125,9 @@ interface PinnedRowEnriched extends WatchlistEntry {
 
 function PinnedSection({
   entries,
-  onUnpin,
   onAdded,
 }: {
   entries: WatchlistEntry[];
-  onUnpin: (ticker: string) => Promise<void>;
   onAdded: () => void;
 }) {
   const router = useRouter();
@@ -315,18 +314,7 @@ function PinnedSection({
     {
       key: "unpin",
       header: "",
-      render: (r) => (
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            onUnpin(r.ticker);
-          }}
-          className="text-[11px] text-muted hover:text-neg px-1"
-          aria-label={`Unpin ${r.ticker}`}
-        >
-          unpin
-        </button>
-      ),
+      render: (r) => <PinToggle symbol={r.ticker} variant="text" />,
     },
   ];
 
@@ -582,22 +570,10 @@ export default function WatchlistClient({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const handleUnpin = useCallback(
-    async (ticker: string) => {
-      await fetch("/api/watchlist", {
-        method: "DELETE",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ticker }),
-      });
-      mutate();
-    },
-    [mutate]
-  );
-
   return (
     <main className="max-w-5xl mx-auto px-4 py-6 space-y-4">
       <PageHeader title="Watchlist" subtitle="Pinned names + auto-flagged recent picks" />
-      <PinnedSection entries={entries} onUnpin={handleUnpin} onAdded={mutate} />
+      <PinnedSection entries={entries} onAdded={mutate} />
       <RecentPicksSection medianDaysToPeak={medianDaysToPeak} />
     </main>
   );
