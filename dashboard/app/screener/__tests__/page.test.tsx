@@ -2,6 +2,7 @@ import { describe, it, expect, vi } from "vitest";
 import { render, screen, userEvent } from "@/test/render";
 import { mockFetchJson } from "@/test/fetchMock";
 import ScreenerPage from "@/app/screener/page";
+import UndoToastProvider from "@/components/ui/UndoToastProvider";
 
 const push = vi.fn();
 vi.mock("next/navigation", () => ({
@@ -75,11 +76,42 @@ describe("ScreenerPage verdict badge (SC-04)", () => {
         cached: true,
       },
     });
-    render(<ScreenerPage />);
+    render(
+      <UndoToastProvider>
+        <ScreenerPage />
+      </UndoToastProvider>
+    );
     const user = userEvent.setup();
     await user.click(screen.getByRole("button", { name: "Full universe" }));
     await screen.findByText("NVDA");
     const badge = screen.getByText("LONG");
     expect(badge.className).toContain("bg-pos/15");
+  });
+});
+
+describe("ScreenerPage pin toggle (SC-08)", () => {
+  it("pinning a row shows the shared undo toast", async () => {
+    mockFetchJson({
+      "/api/watchlist": { watchlist: [] },
+      "/api/argus/screener?min_conviction=0.3": {
+        results: [
+          { symbol: "NVDA", verdict: "LONG", score: 0.812, high_conviction: true, entry: 1, stop: 1, target: 1,
+            risk_reward: 2.1, long_votes: 40, short_votes: 5, wait_votes: 2, agreement_pct: 85.1,
+            ret_1d: 0.024, ret_5d: 0.081, ret_20d: null, is_extended: false, entry_quality: "good" },
+        ],
+        as_of: "2026-07-28T00:00:00Z",
+        cached: true,
+      },
+    });
+    const user = userEvent.setup();
+    render(
+      <UndoToastProvider>
+        <ScreenerPage />
+      </UndoToastProvider>
+    );
+    await user.click(screen.getByRole("button", { name: "Full universe" }));
+    await screen.findByText("NVDA");
+    await user.click(screen.getByRole("button", { name: "Pin NVDA" }));
+    expect(await screen.findByText("Added NVDA to watchlist")).toBeInTheDocument();
   });
 });

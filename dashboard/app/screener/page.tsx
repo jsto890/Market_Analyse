@@ -2,17 +2,15 @@
 import PageHeader from "@/components/ui/PageHeader";
 import SkeletonTable from "@/components/ui/SkeletonTable";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { Search, ArrowRight, Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import useSWR from "swr";
 import type { ScreenerResult } from "@/types/argus";
 import DataTable, { Column } from "@/components/ui/DataTable";
 import Input from "@/components/ui/Input";
 import Button from "@/components/ui/Button";
 import Badge from "@/components/ui/Badge";
-
-const fetcher = (url: string) => fetch(url).then((r) => r.json());
+import PinToggle from "@/components/ui/PinToggle";
 
 function scoreColor(s: number): string {
   if (s >= 0.7) return "text-pos";
@@ -32,35 +30,6 @@ function RetCell({ v }: { v: number | null }) {
   return <span className={cls}>{fmtPct(v)}</span>;
 }
 
-function PinCell({
-  symbol,
-  pinned,
-  onToggle,
-}: {
-  symbol: string;
-  pinned: boolean;
-  onToggle: (symbol: string, pinned: boolean) => void;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={(e) => {
-        e.stopPropagation();
-        onToggle(symbol, pinned);
-      }}
-      className={[
-        "px-1.5 py-0.5 rounded border text-[11px] font-mono transition-colors",
-        pinned
-          ? "border-warn text-warn bg-warn/10"
-          : "border-line text-muted hover:border-line-strong hover:text-foreground",
-      ].join(" ")}
-      aria-label={pinned ? `Unpin ${symbol}` : `Pin ${symbol}`}
-    >
-      {pinned ? "Pinned" : "Pin"}
-    </button>
-  );
-}
-
 type ApiResponse =
   | { results: ScreenerResult[]; as_of?: string; cached?: boolean }
   | { error: string };
@@ -78,37 +47,6 @@ export default function ScreenerPage() {
   const [error, setError] = useState<string | null>(null);
   const [asOf, setAsOf] = useState<string | null>(null);
   const [cached, setCached] = useState(false);
-
-  const { data: watchlistData, mutate: mutateWatchlist } = useSWR<{
-    watchlist: { ticker: string }[];
-  }>("/api/watchlist", fetcher, { revalidateOnFocus: false });
-
-  const pinnedSet = useMemo(
-    () => new Set((watchlistData?.watchlist ?? []).map((w) => w.ticker)),
-    [watchlistData]
-  );
-
-  async function togglePin(symbol: string, pinned: boolean) {
-    mutateWatchlist(
-      (prev) => {
-        if (!prev) return prev;
-        const wl = pinned
-          ? prev.watchlist.filter((w) => w.ticker !== symbol)
-          : [...prev.watchlist, { ticker: symbol }];
-        return { watchlist: wl };
-      },
-      false
-    );
-    try {
-      await fetch("/api/watchlist", {
-        method: pinned ? "DELETE" : "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ticker: symbol }),
-      });
-    } catch {
-      mutateWatchlist();
-    }
-  }
 
   const columns: Column<ScreenerResult>[] = [
     {
@@ -197,9 +135,7 @@ export default function ScreenerPage() {
     {
       key: "pin",
       header: "",
-      render: (r) => (
-        <PinCell symbol={r.symbol} pinned={pinnedSet.has(r.symbol)} onToggle={togglePin} />
-      ),
+      render: (r) => <PinToggle symbol={r.symbol} variant="chip" />,
     },
   ];
 
