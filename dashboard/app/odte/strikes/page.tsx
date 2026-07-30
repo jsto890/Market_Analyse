@@ -75,6 +75,14 @@ export default function OdteStrikesPage() {
   const [expiryIdx, setExpiryIdx] = useState(0);
   const { data, error, isLoading } = useLadder(activeSymbol, 4, 0.06);
 
+  const [copiedStrike, setCopiedStrike] = useState<number | null>(null);
+  function copyStrike(row: (typeof rows)[number]) {
+    const text = `${row.strike} · call IV ${fmtIv(row.call?.iv)} / put IV ${fmtIv(row.put?.iv)} · GEX ${fmtGex(row.gex)}`;
+    navigator.clipboard?.writeText(text);
+    setCopiedStrike(row.strike);
+    window.setTimeout(() => setCopiedStrike((s) => (s === row.strike ? null : s)), 1500);
+  }
+
   const [showLive, setShowLive] = useState(false);
   const { ladder: liveLadder, error: liveError, consecutiveFailures } = useOptionsLivePoller(
     activeSymbol,
@@ -512,7 +520,8 @@ export default function OdteStrikesPage() {
                       <tr
                         key={row.strike}
                         ref={isSpot ? spotRowRef : undefined}
-                        className={`border-t border-line/50 ${
+                        onClick={() => copyStrike(row)}
+                        className={`cursor-pointer border-t border-line/50 hover:bg-elevated/60 ${
                           highlight ? "bg-elevated" : ""
                         } ${leftBorder}`}
                       >
@@ -521,6 +530,9 @@ export default function OdteStrikesPage() {
                         <td className="text-right px-2 py-1 text-muted">{fmtIv(row.put?.iv)}</td>
                         <td className="text-center px-3 py-1 border-x border-line text-foreground">
                           <span>{row.strike}</span>
+                          {copiedStrike === row.strike && (
+                            <span className="ml-1 text-[11px] text-teal align-middle">Copied</span>
+                          )}
                           {isSpot && (
                             <span className="ml-1 text-[9px] text-warn align-middle">SPOT</span>
                           )}

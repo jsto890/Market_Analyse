@@ -1,5 +1,5 @@
 import { vi } from "vitest";
-import { render, screen, waitFor } from "@/test/render";
+import { render, screen, waitFor, fireEvent } from "@/test/render";
 import { mockFetchJson } from "@/test/fetchMock";
 import { resetLocalStorage } from "@/test/localStorage";
 import userEvent from "@testing-library/user-event";
@@ -180,5 +180,20 @@ describe("OdteStrikesPage — single ladder mode (OL-02)", () => {
     expect(
       await screen.findByRole("button", { name: /how to read this ladder/i, expanded: false })
     ).toBeInTheDocument();
+  });
+
+  it("copies strike + IV + GEX to the clipboard on row click and shows a transient confirmation (OD-09)", async () => {
+    const writeText = vi.fn();
+    // navigator.clipboard is getter-only in this jsdom version — Object.assign throws.
+    Object.defineProperty(navigator, "clipboard", { value: { writeText }, configurable: true });
+    render(<OdteStrikesPage />);
+    await screen.findByText(/call IV/i);
+    const firstDataRow = screen.getAllByRole("row")[1]; // index 0 is the header row
+    // userEvent.click misses on <tr> targets here — jsdom gives every element a
+    // zero-size bounding rect, which its pointer-position simulation relies on.
+    // fireEvent.click dispatches the click directly without that step.
+    fireEvent.click(firstDataRow);
+    expect(writeText).toHaveBeenCalledWith(expect.stringMatching(/call IV.*put IV.*GEX/));
+    expect(await screen.findByText("Copied")).toBeInTheDocument();
   });
 });
