@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import useSWR from "swr";
 import { useMacro, useMacroSeries, scopeLabel, toneClass } from "@/lib/macro";
 import { MacroChart, type SpxBar } from "@/components/macro/MacroChart";
+import EmptyState from "@/components/ui/EmptyState";
 
 const fetcher = (u: string) => fetch(u).then((r) => { if (!r.ok) throw new Error(`${r.status}`); return r.json(); });
 const WINDOWS = ["1h", "1d", "1w"];
@@ -54,11 +55,16 @@ export default function MacroPage() {
         ))}
       </div>
 
-      <div className="mb-2 text-xs text-muted">
-        {scopeLabel(scope)} · {window} vs SPY
-      </div>
-      <MacroChart points={series?.points ?? []} spx={hist?.bars ?? []} />
-      {!anyData && <p className="text-xs text-muted mt-4">No macro data yet — the aggregator runs every 20 min.</p>}
+      {anyData ? (
+        <>
+          <div className="mb-2 text-xs text-muted">
+            {scopeLabel(scope)} · {window} vs SPY
+          </div>
+          <MacroChart points={series?.points ?? []} spx={hist?.bars ?? []} />
+        </>
+      ) : (
+        <EmptyState message="No macro data yet — the aggregator runs every 20 min." />
+      )}
     </main>
   );
 }

@@ -18,6 +18,24 @@ function mockMacroFetch() {
   });
 }
 
+describe("MacroPage empty state (MC-03)", () => {
+  it("shows empty state in place of the chart when there is no macro data", async () => {
+    mockFetchJson({
+      "/api/argus/macro": { gauges: [] },
+      "/api/argus/history/SPY?period=1mo&interval=1d": { bars: [] },
+    });
+    render(<MacroPage />);
+    expect(await screen.findByText("No macro data yet — the aggregator runs every 20 min.")).toBeInTheDocument();
+  });
+
+  it("shows the chart caption, not the empty state, once gauge data exists", async () => {
+    mockMacroFetch();
+    render(<MacroPage />);
+    await screen.findByText("AI / Compute");
+    expect(screen.queryByText("No macro data yet — the aggregator runs every 20 min.")).not.toBeInTheDocument();
+  });
+});
+
 describe("MacroPage scope reconciliation (MC-02)", () => {
   it("resets scope to global when the selected scope has no data in the newly-picked window", async () => {
     mockMacroFetch();
