@@ -122,7 +122,7 @@ export default function OdtePage() {
       : null;
 
   return (
-    <main className="flex flex-col font-mono h-full">
+    <main className="flex flex-col h-full">
       <div className="flex items-center justify-between px-4 py-2 border-b border-line">
         <h1 className="text-sm font-semibold">
           Options · {activeSymbol}

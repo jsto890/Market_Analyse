@@ -107,7 +107,7 @@ export default function OdteStrikesPage() {
   }, [activeSymbol, idx, spotIdx, data?.spot]);
 
   return (
-    <main className="flex flex-col font-mono h-full">
+    <main className="flex flex-col h-full">
       <div className="flex items-center justify-between px-4 py-2 border-b border-line">
         <div className="flex items-center gap-3">
           <Link href="/odte" className="text-teal hover:underline text-xs">

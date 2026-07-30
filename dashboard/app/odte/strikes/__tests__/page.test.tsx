@@ -122,4 +122,13 @@ describe("OdteStrikesPage — single ladder mode (OL-02)", () => {
     expect(strip.className).toMatch(/flex-wrap/);
     expect(strip.className).not.toMatch(/grid-cols-6/);
   });
+
+  it("keeps <main> free of font-mono so prose renders in the body sans font, while tabular data stays monospace (OD-03)", async () => {
+    render(<OdteStrikesPage />);
+    await screen.findByText(/call IV/i);
+    const main = document.querySelector("main")!;
+    expect(main.className).not.toMatch(/font-mono/);
+    const table = document.querySelector("table");
+    if (table) expect(table.className).toMatch(/font-mono/);
+  });
 });

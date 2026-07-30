@@ -37,4 +37,13 @@ describe("OdtePage — verdict cards vs. companion grid (OD-01)", () => {
     await user.click(levelsCard);
     expect(await screen.findByText("Gamma exposure")).toBeInTheDocument();
   });
+
+  it("keeps <main> free of font-mono so prose renders in the body sans font, while tabular data stays monospace (OD-03)", async () => {
+    render(<OdtePage />);
+    await screen.findByText("call wall");
+    const main = document.querySelector("main")!;
+    expect(main.className).not.toMatch(/font-mono/);
+    const table = document.querySelector("table");
+    if (table) expect(table.className).toMatch(/font-mono/);
+  });
 });
