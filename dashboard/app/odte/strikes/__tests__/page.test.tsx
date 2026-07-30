@@ -302,6 +302,19 @@ describe("OdteStrikesPage — single ladder mode (OL-02)", () => {
     expect(document.querySelector(".recharts-responsive-container")).toBeInTheDocument();
   });
 
+  it("marks the live table aria-live=off and provides a separate polite summary region (OL-19)", async () => {
+    const user = userEvent.setup();
+    render(<OdteStrikesPage />);
+    await screen.findByText(/call IV/i);
+    await user.click(screen.getByRole("switch", { name: /live/i }));
+    await screen.findByText("C Bid");
+    const table = document.querySelector("table")!;
+    expect(table.closest("[aria-live]")?.getAttribute("aria-live")).toBe("off");
+    const status = screen.getByRole("status");
+    expect(status).toHaveAttribute("aria-live", "polite");
+    expect(status.textContent).toMatch(/SPY.*live/i);
+  });
+
   it("uses an accessible, persisted switch for the live/classic toggle (OL-10)", async () => {
     resetLocalStorage();
     const user = userEvent.setup();

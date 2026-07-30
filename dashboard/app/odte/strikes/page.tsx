@@ -311,10 +311,15 @@ export default function OdteStrikesPage() {
               </div>
 
               {/* 23-Column Live Ladder Table */}
-              <div
-                className="flex-1 overflow-auto [mask-image:linear-gradient(to_right,black_calc(100%-16px),transparent)]"
-                style={isStale(consecutiveFailures) ? { filter: "grayscale(0.6)" } : undefined}
-              >
+              <p role="status" aria-live="polite" className="sr-only">
+                {liveLadder.symbol} live ladder updated, source{" "}
+                {isStale(consecutiveFailures) ? "STALE" : liveLadder.source}.
+              </p>
+              <div aria-live="off">
+                <div
+                  className="flex-1 overflow-auto [mask-image:linear-gradient(to_right,black_calc(100%-16px),transparent)]"
+                  style={isStale(consecutiveFailures) ? { filter: "grayscale(0.6)" } : undefined}
+                >
                 <table className="w-full text-[11px] tabular-nums border-collapse">
                   <thead className="sticky top-0 bg-elevated">
                     <tr className="border-b border-line">
@@ -358,6 +363,7 @@ export default function OdteStrikesPage() {
                     ))}
                   </tbody>
                 </table>
+                </div>
               </div>
 
               <div className="mt-3 px-3">
