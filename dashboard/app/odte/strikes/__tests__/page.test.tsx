@@ -98,4 +98,28 @@ describe("OdteStrikesPage — single ladder mode (OL-02)", () => {
     expect(badge.className).not.toMatch(/green-|yellow-|gray-/);
     expect(badge.className).toMatch(/tone-live/);
   });
+
+  it("only shows a staleness warning above 1500ms, and explains fresh_contract_ratio (OL-07, OL-15)", async () => {
+    const user = userEvent.setup();
+    render(<OdteStrikesPage />);
+    await screen.findByText(/call IV/i);
+    await user.click(screen.getByRole("button", { name: /live/i }));
+    await screen.findByText("C Bid");
+    // The mocked ladder (Task 2) has stale_ms: 0 — no warning should render at all.
+    expect(screen.queryByText(/stale/i)).not.toBeInTheDocument();
+    // fresh_contract_ratio now has an accessible explanation, not a bare "Fresh 87%".
+    const freshLabel = screen.getByText("What does fresh mean?");
+    expect(freshLabel.closest("button, [role='button']")).toBeTruthy();
+  });
+
+  it("wraps the levels strip instead of a rigid 6-column grid (OL-16)", async () => {
+    const user = userEvent.setup();
+    render(<OdteStrikesPage />);
+    await screen.findByText(/call IV/i);
+    await user.click(screen.getByRole("button", { name: /live/i }));
+    const stripHeading = await screen.findByText("ATM");
+    const strip = stripHeading.closest("div")!.parentElement!;
+    expect(strip.className).toMatch(/flex-wrap/);
+    expect(strip.className).not.toMatch(/grid-cols-6/);
+  });
 });

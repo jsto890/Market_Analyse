@@ -13,6 +13,7 @@ import { fmtGex } from "@/lib/odteCompanion";
 import { useOptionsLivePoller } from "@/lib/useOptionsLivePoller";
 import { isStale } from "@/lib/optionsLive";
 import GexChart from "@/components/GexChart";
+import InfoTip from "@/components/ui/InfoTip";
 
 function fmtIv(iv: number | null | undefined): string {
   return iv != null ? `${(iv * 100).toFixed(1)}%` : "—";
@@ -196,17 +197,16 @@ export default function OdteStrikesPage() {
                   <span className="text-[11px] text-muted">
                     {new Date(liveLadder.as_of).toLocaleTimeString()}
                   </span>
-                  {liveLadder.stale_ms > 0 && (
-                    <span className="text-[11px] text-warn">{liveLadder.stale_ms}ms stale</span>
+                  {liveLadder.stale_ms > 1500 && (
+                    <span className="text-[11px] text-warn">
+                      {(liveLadder.stale_ms / 1000).toFixed(1)}s stale
+                    </span>
                   )}
                 </div>
-                <span className="text-[11px] text-muted">
-                  Fresh {(liveLadder.fresh_contract_ratio * 100).toFixed(0)}% · GEX {liveLadder.net_gex_band}
-                </span>
               </div>
 
               {/* Levels Summary Strip */}
-              <div className="grid grid-cols-6 gap-2 border-b border-line px-4 py-2 text-[11px]">
+              <div className="flex flex-wrap items-center gap-x-5 gap-y-1.5 border-b border-line px-4 py-2 text-[11px]">
                 <div>
                   <span className="text-muted">ATM</span>
                   <span className="ml-2 font-semibold">{liveLadder.atm_strike.toFixed(0)}</span>
@@ -237,6 +237,15 @@ export default function OdteStrikesPage() {
                 <div>
                   <span className="text-muted">Net GEX</span>
                   <span className="ml-2 font-semibold">{liveLadder.net_gex_band}</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <span className="text-muted">Fresh</span>
+                  <span className="ml-1 font-semibold">
+                    {(liveLadder.fresh_contract_ratio * 100).toFixed(0)}%
+                  </span>
+                  <InfoTip content="Share of contracts in this ladder with a non-null bid/ask/greeks quote as of the last poll — the basis for trusting the numbers above. Below ~70% the ladder is thin; treat it as directional, not precise.">
+                    <span className="sr-only">What does fresh mean?</span>
+                  </InfoTip>
                 </div>
               </div>
 
