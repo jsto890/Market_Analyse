@@ -49,3 +49,19 @@ describe("DRank (RO-02)", () => {
     expect(screen.getByText("—")).toBeInTheDocument();
   });
 });
+
+describe("Header glosses (RO-04)", () => {
+  it("wraps RS-Ratio, RS-Mom, n, and the quadrant header in a keyboard-focusable InfoTip", () => {
+    render(<RotationPanel rows={rows} />);
+    ["RS-Ratio", "RS-Mom", "n", "◉"].forEach((label) => {
+      const trigger = screen.getByRole("button", { name: new RegExp(`^${label}$`) });
+      expect(trigger).toBeInTheDocument();
+    });
+  });
+
+  it("Δrank and Breadth headers use InfoTip's real button trigger, not a non-focusable span", () => {
+    render(<RotationPanel rows={rows} />);
+    expect(screen.getByRole("button", { name: /Δrank/ })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Breadth/ })).toBeInTheDocument();
+  });
+});
