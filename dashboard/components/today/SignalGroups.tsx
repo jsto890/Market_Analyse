@@ -105,7 +105,7 @@ function TickerCell({ row, isNew }: { row: BridgeRow; isNew: boolean }) {
       className="font-mono font-medium text-accent hover:underline"
     >
       {row.ticker}
-      {isNew && <sup className="ml-0.5 text-[9px] font-semibold text-warn">NEW</sup>}
+      {isNew && <sup className="ml-0.5 text-[11px] font-semibold text-warn">NEW</sup>}
     </Link>
   );
 }

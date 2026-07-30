@@ -35,10 +35,19 @@ const KIND_LABEL: Record<string, string> = {
   price: "Price crosses",
 };
 
+/** Local calendar date (not UTC) — matches the local timestamp shown per-row below. */
+function localDayKey(ts: string): string {
+  const d = new Date(ts);
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
 function groupByDay(items: LogItem[]): Array<[string, LogItem[]]> {
   const groups = new Map<string, LogItem[]>();
   for (const it of items) {
-    const day = it.ts.slice(0, 10);
+    const day = localDayKey(it.ts);
     const bucket = groups.get(day) ?? [];
     bucket.push(it);
     groups.set(day, bucket);
@@ -281,7 +290,7 @@ export default function AlertsPage() {
             <ul className="divide-y divide-line/60">
               {rules.map((r) => (
                 <li key={r.id} className="flex items-center gap-3 px-4 py-2.5 text-[13px]">
-                  <span className="rounded bg-accent-dim px-1.5 py-px font-mono text-[10px] text-accent">
+                  <span className="rounded bg-accent-dim px-1.5 py-px font-mono text-[11px] text-accent">
                     {KIND_LABEL[r.kind] ?? r.kind}
                   </span>
                   <span className="font-mono text-foreground">{ruleSummary(r)}</span>

@@ -34,7 +34,7 @@ export default function VerdictCard({
 
   const trigger = (
     <div className="min-w-0 flex-1">
-      <span className="text-[10px] uppercase tracking-[0.08em] text-muted font-mono">{title}</span>
+      <span className="text-[11px] uppercase tracking-[0.08em] text-muted font-mono">{title}</span>
       {loading ? (
         <Skeleton height={12} className="w-2/3 mt-1.5" />
       ) : verdict ? (
@@ -57,7 +57,7 @@ export default function VerdictCard({
 
   const body = (
     <div className="mt-3 pt-3 border-t border-line space-y-2">
-      {whyItMatters && <p className="text-[10px] text-muted italic">{whyItMatters}</p>}
+      {whyItMatters && <p className="text-[11px] text-muted italic">{whyItMatters}</p>}
       {detail}
     </div>
   );

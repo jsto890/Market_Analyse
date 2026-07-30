@@ -2,11 +2,14 @@ import { ReactElement, ReactNode } from "react";
 import { render as rtlRender, type RenderOptions } from "@testing-library/react";
 import { SWRConfig } from "swr";
 import TooltipProvider from "@/components/ui/TooltipProvider";
+import UndoToastProvider from "@/components/ui/UndoToastProvider";
 
 function Providers({ children }: { children: ReactNode }) {
   return (
     <SWRConfig value={{ provider: () => new Map(), dedupingInterval: 0 }}>
-      <TooltipProvider>{children}</TooltipProvider>
+      <TooltipProvider>
+        <UndoToastProvider>{children}</UndoToastProvider>
+      </TooltipProvider>
     </SWRConfig>
   );
 }

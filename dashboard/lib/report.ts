@@ -40,6 +40,7 @@ export function useMorningReport() {
 }
 
 /** Strip the markdown bold used in the Obsidian render for plain dashboard text. */
-export function plain(tone: string): string {
+export function plain(tone: string | null | undefined): string {
+  if (!tone) return "";
   return tone.replace(/\*\*/g, "");
 }

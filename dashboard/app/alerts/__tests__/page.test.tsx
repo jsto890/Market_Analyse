@@ -136,10 +136,11 @@ describe("AlertsPage condition phrasing (AL-06)", () => {
 
 describe("AlertsPage log grouping + timezone label (AL-07)", () => {
   it("groups log items under a day header and labels timestamps as local time", async () => {
+    const ts = "2026-07-28T14:00:00Z";
     mockFetchJson({
       ...baseMocks(),
       "/api/argus/alerts/log?limit=30": {
-        items: [{ id: 1, ts: "2026-07-28T14:00:00Z", title: "NVDA verdict → LONG", body: "score 0.8" }],
+        items: [{ id: 1, ts, title: "NVDA verdict → LONG", body: "score 0.8" }],
       },
     });
     render(
@@ -150,7 +151,10 @@ describe("AlertsPage log grouping + timezone label (AL-07)", () => {
     await screen.findByText("NVDA verdict → LONG");
     expect(screen.getByText("Showing latest 30")).toBeInTheDocument();
     expect(screen.getByText(/\(local time\)/)).toBeInTheDocument();
-    expect(screen.getByText("2026-07-28")).toBeInTheDocument();
+    // Day header must match the runner's local calendar date for `ts`, not
+    // its UTC date — timezone-explicit so this holds regardless of TZ.
+    const expectedDay = new Date(ts).toLocaleDateString("en-CA");
+    expect(screen.getByText(expectedDay)).toBeInTheDocument();
   });
 });
 

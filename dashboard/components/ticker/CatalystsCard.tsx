@@ -91,7 +91,7 @@ function BridgeCatalysts({ bridgeRow }: { bridgeRow: BridgeRow }) {
             title={label}
           >
             <VoteTick value={Number(bridgeRow[key])} />
-            <span className="text-[10px] text-muted">{label}</span>
+            <span className="text-[11px] text-muted">{label}</span>
           </span>
         ))}
       </div>

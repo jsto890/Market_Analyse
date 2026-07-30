@@ -186,7 +186,7 @@ export default function OptionsPanel({ ticker }: { ticker: string }) {
             {data.flags.map((flag) => (
               <span
                 key={flag}
-                className="inline-flex items-center rounded border border-warn/50 bg-warn/10 px-1.5 py-px font-mono text-[10px] text-warn"
+                className="inline-flex items-center rounded border border-warn/50 bg-warn/10 px-1.5 py-px font-mono text-[11px] text-warn"
               >
                 {flag}
               </span>

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { statusMessage } from "@/app/page";
+import { statusMessage } from "@/lib/todayStatus";
 
 describe("statusMessage — single severity-ranked status region (TD-12)", () => {
   it("ranks 'no data' above 'stale' when both are true", () => {

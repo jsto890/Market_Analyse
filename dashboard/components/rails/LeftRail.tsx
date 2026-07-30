@@ -27,7 +27,7 @@ function EquityBadge() {
       ? "bg-accent/10 text-accent/70"
       : "bg-warn/10 text-warn"; // closed
   return (
-    <span className={`rounded px-1.5 py-px text-[10px] font-medium font-mono leading-none ${cls}`}>
+    <span className={`rounded px-1.5 py-px text-[11px] font-medium font-mono leading-none ${cls}`}>
       {label}
     </span>
   );
@@ -38,7 +38,7 @@ function FxChip() {
   const { active, closed } = forexSessions();
   const state = closed ? "CLOSED" : active.length === 0 ? "OPEN" : active.join("·");
   return (
-    <span className="rounded px-1.5 py-px text-[9px] font-mono font-medium leading-none bg-elevated text-muted">
+    <span className="rounded px-1.5 py-px text-[11px] font-mono font-medium leading-none bg-elevated text-muted">
       FX · {state}
     </span>
   );
@@ -59,7 +59,7 @@ function Block({ label, badge, children, separator }: BlockProps) {
     <div className={separator ? "border-t border-line-strong pt-0.5" : undefined}>
       {/* Block header §4.3 / §8.2 */}
       <div className="h-[24px] flex items-center justify-between px-3">
-        <span className="text-[10px] font-medium uppercase tracking-[0.08em] text-muted font-mono leading-none">
+        <span className="text-[11px] font-medium uppercase tracking-[0.08em] text-muted font-mono leading-none">
           {label}
         </span>
         {badge}
@@ -100,7 +100,7 @@ function MiniItem({ symbol, changePct }: MiniItemProps) {
 
   return (
     <div className="w-full flex flex-col items-center py-1.5 gap-0.5 hover:bg-elevated cursor-default">
-      <span className="text-[9px] font-mono text-muted leading-none uppercase">{label}</span>
+      <span className="text-[11px] font-mono text-muted leading-none uppercase">{label}</span>
       <span className={`text-[11px] font-mono font-medium tabular-nums leading-none ${pctCls}`}>
         {pctStr}
       </span>
@@ -258,7 +258,7 @@ export function LeftRail() {
     >
       <div className="pt-1 flex-1 min-h-0 overflow-y-auto">
         {error && (
-          <div className="mx-3 mt-1 mb-0.5 px-2 py-1.5 rounded border border-warn/30 bg-warn/10 text-warn text-[10px] font-mono leading-snug">
+          <div className="mx-3 mt-1 mb-0.5 px-2 py-1.5 rounded border border-warn/30 bg-warn/10 text-warn text-[11px] font-mono leading-snug">
             QUOTE FEED OFFLINE
           </div>
         )}

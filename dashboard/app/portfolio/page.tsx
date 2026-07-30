@@ -210,7 +210,7 @@ export default function PortfolioPage() {
                 {positions.length} position{positions.length !== 1 ? "s" : ""}
               </p>
               {liveOffline && (
-                <span className="text-[10px] font-mono text-warn/80">
+                <span className="text-[11px] font-mono text-warn/80">
                   Price-only preview from your pinned watchlist — TWS positions unavailable
                 </span>
               )}

@@ -82,7 +82,7 @@ export default function ContextStrip() {
           <button
             type="button"
             aria-label="System status"
-            className={`inline-flex items-center gap-1 rounded-sm border border-line border-l-2 bg-elevated px-1.5 py-px font-mono text-[10px] font-semibold tracking-wide select-none ${PILL_CLASS[aggregate]}`}
+            className={`inline-flex items-center gap-1 rounded-sm border border-line border-l-2 bg-elevated px-1.5 py-px font-mono text-[11px] font-semibold tracking-wide select-none ${PILL_CLASS[aggregate]}`}
           >
             SYS
           </button>
@@ -106,7 +106,7 @@ export default function ContextStrip() {
       </Popover.Root>
 
       {freshness && (
-        <span className="text-muted text-[10px] font-mono select-none">{freshness}</span>
+        <span className="text-muted text-[11px] font-mono select-none">{freshness}</span>
       )}
     </div>
   );

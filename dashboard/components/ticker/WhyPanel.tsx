@@ -157,7 +157,7 @@ function VoteSection({
       <p className={`font-mono text-[11px] tracking-wide mb-1 ${tone}`}>{title}</p>
       {groups.map(([family, rows]) => (
         <div key={family} className="mb-1.5">
-          <p className="font-mono text-[10px] text-muted">{family}</p>
+          <p className="font-mono text-[11px] text-muted">{family}</p>
           {rows.map((v) => (
             <VoteRow
               key={v.agent}
@@ -337,13 +337,13 @@ export default function WhyPanel({ ticker }: { ticker: string }) {
         <span className="text-foreground tabular-nums">{agrPct}%</span>
       </span>
       {ciWide && (
-        <span className="inline-flex items-center rounded border border-warn/50 bg-warn/10 px-1.5 py-px font-mono text-[10px] text-warn">
+        <span className="inline-flex items-center rounded border border-warn/50 bg-warn/10 px-1.5 py-px font-mono text-[11px] text-warn">
           wide
         </span>
       )}
       {error && (
         <span
-          className="inline-flex items-center rounded border border-muted/40 bg-muted/10 px-1.5 py-px font-mono text-[10px] text-muted"
+          className="inline-flex items-center rounded border border-muted/40 bg-muted/10 px-1.5 py-px font-mono text-[11px] text-muted"
           title={timedOut ? "scoring timed out — showing last result" : "refresh failed — showing last result"}
         >
           stale
@@ -446,7 +446,7 @@ export default function WhyPanel({ ticker }: { ticker: string }) {
             <span className="font-mono text-[11px] text-warn leading-snug">
               Meta-analyst: {meta_note}
             </span>
-            <span className="ml-1 font-mono text-[10px] text-muted shrink-0">
+            <span className="ml-1 font-mono text-[11px] text-muted shrink-0">
               advisory only
             </span>
           </div>

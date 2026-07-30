@@ -517,7 +517,7 @@ export default function CandleChart({
       {/* Chart canvas */}
       <div className="relative w-full">
         <div ref={containerRef} className="w-full" />
-        <span className="pointer-events-none absolute bottom-1 left-2 font-mono text-[10px] text-muted">
+        <span className="pointer-events-none absolute bottom-1 left-2 font-mono text-[11px] text-muted">
           Vol
         </span>
       </div>

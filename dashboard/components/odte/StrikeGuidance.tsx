@@ -83,7 +83,7 @@ export default function StrikeGuidance({ spot, zeroGamma, callWall, putWall, atm
         <span className="tick text-[13px] font-semibold text-foreground">Strike guidance</span>
         <span className="text-[11px] text-muted">levels → what to actually trade</span>
         <span
-          className={`ml-auto inline-flex items-center gap-1 rounded border px-1.5 py-px font-mono text-[10px] ${
+          className={`ml-auto inline-flex items-center gap-1 rounded border px-1.5 py-px font-mono text-[11px] ${
             live ? "border-teal/50 bg-teal/10 text-teal" : "border-line text-muted"
           }`}
         >
@@ -170,7 +170,7 @@ export default function StrikeGuidance({ spot, zeroGamma, callWall, putWall, atm
           </div>
         </div>
 
-        <p className="text-[11px] text-muted/80">
+        <p className="text-[11px] text-muted-2">
           <span className="text-foreground">{PHASE_LABEL[phase]}:</span> {PHASE_NOTE[phase]}
         </p>
       </div>

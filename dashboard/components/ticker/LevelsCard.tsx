@@ -104,7 +104,7 @@ function PriceRail({
           </>
         )}
       </div>
-      <div className="mt-1 flex items-center justify-between font-mono text-[10px] tabular-nums text-muted">
+      <div className="mt-1 flex items-center justify-between font-mono text-[11px] tabular-nums text-muted">
         <span>{lo.toFixed(2)}</span>
         <span>{hi.toFixed(2)}</span>
       </div>
@@ -195,9 +195,9 @@ export default function LevelsCard({ ticker, bridgeRow }: LevelsCardProps) {
                   {dir === "long" ? "Long" : "Short"} {committed ? "plan" : "bias"}
                 </span>
                 {!committed && (
-                  <span className="ml-1.5 text-[10px] font-medium uppercase text-muted">watch</span>
+                  <span className="ml-1.5 text-[11px] font-medium uppercase text-muted">watch</span>
                 )}
-                {hc && <span className="ml-1.5 text-[10px] font-semibold text-warn">HIGH CONV</span>}
+                {hc && <span className="ml-1.5 text-[11px] font-semibold text-warn">HIGH CONV</span>}
                 <span className="text-muted">
                   {" — "}
                   {dir === "long" ? "enter near" : "sell near"}{" "}
@@ -221,21 +221,21 @@ export default function LevelsCard({ ticker, bridgeRow }: LevelsCardProps) {
 
           <div className="grid grid-cols-4 gap-2 text-center">
             <div>
-              <p className="mb-0.5 text-[10px] uppercase tracking-wide text-muted">Entry</p>
+              <p className="mb-0.5 text-[11px] uppercase tracking-wide text-muted">Entry</p>
               <p className="font-mono text-[14px] tabular-nums text-foreground">
                 {entry!.toFixed(2)}
               </p>
             </div>
             <div>
-              <p className="mb-0.5 text-[10px] uppercase tracking-wide text-muted">Stop</p>
+              <p className="mb-0.5 text-[11px] uppercase tracking-wide text-muted">Stop</p>
               <p className="font-mono text-[14px] tabular-nums text-neg">{stop!.toFixed(2)}</p>
             </div>
             <div>
-              <p className="mb-0.5 text-[10px] uppercase tracking-wide text-muted">Target</p>
+              <p className="mb-0.5 text-[11px] uppercase tracking-wide text-muted">Target</p>
               <p className="font-mono text-[14px] tabular-nums text-pos">{target!.toFixed(2)}</p>
             </div>
             <div>
-              <p className="mb-0.5 text-[10px] uppercase tracking-wide text-muted">R:R</p>
+              <p className="mb-0.5 text-[11px] uppercase tracking-wide text-muted">R:R</p>
               <p
                 className={`font-mono text-[14px] tabular-nums ${
                   risk_reward != null && risk_reward >= 2

@@ -6,6 +6,7 @@ import { diffReports, loadYesterdayRows, type DiffRow } from "@/lib/diff";
 import { byDate, reportDates } from "@/lib/signals";
 import { rotationSummary } from "@/lib/rotation";
 import type { BridgeRow, ReportGroup } from "@/types/bridge";
+import { statusMessage } from "@/lib/todayStatus";
 import DiffStrip from "@/components/today/DiffStrip";
 import SignalGroups from "@/components/today/SignalGroups";
 import DateStepper from "@/components/today/DateStepper";
@@ -45,43 +46,6 @@ function isStale(generatedAt: string | null): boolean {
   const t = new Date(generatedAt).getTime();
   if (!Number.isFinite(t)) return true;
   return (Date.now() - t) / 3_600_000 > 24;
-}
-
-function formatTime(generatedAt: string | null): string {
-  if (!generatedAt) return "unknown";
-  const d = new Date(generatedAt);
-  return d.toLocaleString("en-NZ", {
-    day: "2-digit",
-    month: "short",
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false,
-  });
-}
-
-export type StatusMessage = { level: "error" | "warn"; text: string };
-
-export function statusMessage({
-  rows,
-  viewingHistory,
-  stale,
-  generatedAt,
-}: {
-  rows: BridgeRow[];
-  viewingHistory: boolean;
-  stale: boolean;
-  generatedAt: string | null;
-}): StatusMessage | null {
-  if (rows.length === 0 && !viewingHistory) {
-    return { level: "error", text: "No bridge data — run_daily may have failed" };
-  }
-  if (stale) {
-    return {
-      level: "warn",
-      text: `Bridge data is stale (generated ${formatTime(generatedAt)}) — run_daily may have failed`,
-    };
-  }
-  return null;
 }
 
 function toDiffRow(row: BridgeRow, group: ReportGroup): DiffRow {

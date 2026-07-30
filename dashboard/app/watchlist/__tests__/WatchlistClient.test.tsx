@@ -3,7 +3,6 @@ import { render, screen, userEvent } from "@/test/render";
 import { mockFetchJson } from "@/test/fetchMock";
 import { seedLocalStorage, resetLocalStorage } from "@/test/localStorage";
 import WatchlistClient from "@/app/watchlist/WatchlistClient";
-import UndoToastProvider from "@/components/ui/UndoToastProvider";
 
 const push = vi.fn();
 vi.mock("next/navigation", () => ({
@@ -27,11 +26,7 @@ describe("WatchlistClient row navigation (WL-06)", () => {
       "/api/signals/recent?days=14": [],
       "/api/signals/dates": [],
     });
-    render(
-      <UndoToastProvider>
-        <WatchlistClient medianDaysToPeak={12} />
-      </UndoToastProvider>
-    );
+    render(<WatchlistClient medianDaysToPeak={12} />);
     const cell = await screen.findByText("NVDA");
     expect(cell.closest("a")).toBeNull();
 
@@ -78,11 +73,7 @@ describe("WatchlistClient unpin undo (WL-01)", () => {
       "/api/signals/recent?days=14": [],
       "/api/signals/dates": [],
     });
-    render(
-      <UndoToastProvider>
-        <WatchlistClient medianDaysToPeak={12} />
-      </UndoToastProvider>
-    );
+    render(<WatchlistClient medianDaysToPeak={12} />);
     await screen.findByText("NVDA");
     const user = userEvent.setup();
     await user.click(screen.getByRole("button", { name: "Unpin" }));
@@ -95,11 +86,7 @@ describe("WatchlistClient unpin undo (WL-01)", () => {
 describe("WatchlistClient reserved column widths (WL-02)", () => {
   it("Now/Since pin header cells fixed width so late-arriving data can't reflow columns", async () => {
     mockFetchJson(baseMocks());
-    render(
-      <UndoToastProvider>
-        <WatchlistClient medianDaysToPeak={12} />
-      </UndoToastProvider>
-    );
+    render(<WatchlistClient medianDaysToPeak={12} />);
     await screen.findByText("NVDA");
     const nowHeader = screen.getByRole("columnheader", { name: "Now" });
     const sinceHeader = screen.getByRole("columnheader", { name: "Since pin" });
@@ -116,11 +103,7 @@ describe("WatchlistClient Context column removal (WL-03)", () => {
         { ticker: "AMD", first_date: "2026-07-15", first_group: "prime", entry_at_flag: 140, last_date: "2026-07-20" },
       ],
     });
-    render(
-      <UndoToastProvider>
-        <WatchlistClient medianDaysToPeak={12} />
-      </UndoToastProvider>
-    );
+    render(<WatchlistClient medianDaysToPeak={12} />);
     await screen.findByText("AMD");
     expect(screen.getByText(/typical peak ~12d/)).toBeInTheDocument();
     expect(screen.queryByRole("columnheader", { name: "Context" })).not.toBeInTheDocument();
@@ -179,11 +162,7 @@ describe("WatchlistClient declarative headers (WL-05)", () => {
         { ticker: "AMD", first_date: "2026-07-15", first_group: "prime", entry_at_flag: 140, last_date: "2026-07-20" },
       ],
     });
-    render(
-      <UndoToastProvider>
-        <WatchlistClient medianDaysToPeak={12} />
-      </UndoToastProvider>
-    );
+    render(<WatchlistClient medianDaysToPeak={12} />);
     await screen.findByText("AMD");
     expect(screen.getByRole("columnheader", { name: "In today's report" })).toBeInTheDocument();
     expect(screen.queryByRole("columnheader", { name: "Still in?" })).not.toBeInTheDocument();
@@ -214,10 +193,19 @@ describe("WatchlistClient legacy migration (WL-07)", () => {
 
 describe("WatchlistClient loading vocabulary (WL-08)", () => {
   it("renders SkeletonTable, not plain Loading text, while recent picks are in flight", async () => {
-    mockFetchJson({
-      ...baseMocks(),
-      "/api/signals/recent?days=14": () => new Promise(() => {}), // never resolves
-    });
+    // mockFetchJson's object form JSON.stringifies each value, so a function
+    // value here would not actually hang — stub fetch directly, delegating
+    // every other URL to the classic mock, so only recent-picks stays pending.
+    mockFetchJson(baseMocks());
+    const classicFetch = global.fetch;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((input: RequestInfo | URL) => {
+        const url = typeof input === "string" ? input : input.toString();
+        if (url.includes("/api/signals/recent")) return new Promise(() => {});
+        return classicFetch(input);
+      })
+    );
     render(<WatchlistClient medianDaysToPeak={12} />);
     expect(screen.queryByText("Loading…")).not.toBeInTheDocument();
     expect(document.querySelectorAll(".animate-pulse").length).toBeGreaterThan(0);

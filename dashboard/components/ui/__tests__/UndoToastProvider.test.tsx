@@ -1,4 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
+import { render as rtlRender } from "@testing-library/react";
 import { render, screen, userEvent } from "@/test/render";
 import UndoToastProvider, { useUndoAction } from "@/components/ui/UndoToastProvider";
 
@@ -27,7 +28,7 @@ describe("UndoToastProvider", () => {
       useUndoAction();
       return null;
     }
-    expect(() => render(<Bare />)).toThrow("useUndoAction must be used within UndoToastProvider");
+    expect(() => rtlRender(<Bare />)).toThrow("useUndoAction must be used within UndoToastProvider");
   });
 
   it("shows the toast label after run() and calls commit immediately", async () => {

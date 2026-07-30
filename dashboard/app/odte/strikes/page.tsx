@@ -215,6 +215,33 @@ export default function OdteStrikesPage() {
         </div>
       </div>
 
+      {/* Expiry selector — shared by classic and live ladders (I4); must stay
+         reachable in both modes since it drives useOptionsLivePoller too. */}
+      {data && (
+        <div className="flex items-center gap-2 px-4 py-2 border-b border-line overflow-x-auto">
+          {expiries.map((e, i) => (
+            <button
+              key={e.expiry}
+              onClick={() => setExpiry(e.expiry)}
+              className={`px-2 py-1 text-[11px] rounded whitespace-nowrap ${
+                i === idx ? "bg-elevated text-foreground" : "text-muted hover:text-foreground"
+              }`}
+            >
+              {e.expiry} · EM {e.expected_move_pct.toFixed(2)}%
+            </button>
+          ))}
+          {!showLive && (
+            <button
+              type="button"
+              onClick={centerOnSpot}
+              className="ml-auto shrink-0 px-2 py-1 text-[11px] text-teal hover:underline"
+            >
+              Center on spot
+            </button>
+          )}
+        </div>
+      )}
+
       {/* Live Ladder Section */}
       {showLive && (
         <>
@@ -316,10 +343,7 @@ export default function OdteStrikesPage() {
                 {isStale(consecutiveFailures) ? "STALE" : liveLadder.source}.
               </p>
               <div aria-live="off">
-                <div
-                  className="flex-1 overflow-auto [mask-image:linear-gradient(to_right,black_calc(100%-16px),transparent)]"
-                  style={isStale(consecutiveFailures) ? { filter: "grayscale(0.6)" } : undefined}
-                >
+                <div className="flex-1 overflow-auto [mask-image:linear-gradient(to_right,black_calc(100%-16px),transparent)]">
                 <table className="w-full text-[11px] tabular-nums border-collapse">
                   <thead className="sticky top-0 bg-elevated">
                     <tr className="border-b border-line">
@@ -392,27 +416,6 @@ export default function OdteStrikesPage() {
 
           {data && (
             <>
-          <div className="flex items-center gap-2 px-4 py-2 border-b border-line overflow-x-auto">
-            {expiries.map((e, i) => (
-              <button
-                key={e.expiry}
-                onClick={() => setExpiry(e.expiry)}
-                className={`px-2 py-1 text-[11px] rounded whitespace-nowrap ${
-                  i === idx ? "bg-elevated text-foreground" : "text-muted hover:text-foreground"
-                }`}
-              >
-                {e.expiry} · EM {e.expected_move_pct.toFixed(2)}%
-              </button>
-            ))}
-            <button
-              type="button"
-              onClick={centerOnSpot}
-              className="ml-auto shrink-0 px-2 py-1 text-[11px] text-teal hover:underline"
-            >
-              Center on spot
-            </button>
-          </div>
-
           {/* Legend + critical levels */}
           <div className="flex flex-wrap items-center gap-x-5 gap-y-1.5 border-b border-line px-4 py-2 text-[11px]">
             <span className="eyebrow">Levels</span>
@@ -521,7 +524,7 @@ export default function OdteStrikesPage() {
             <div className="bg-surface border border-line rounded overflow-x-auto max-h-[70vh] overflow-y-auto">
               <table className="w-full font-mono text-[11px] tabular-nums border-collapse">
                 <thead className="sticky top-0 bg-surface">
-                  <tr className="text-muted text-[10px] uppercase tracking-[0.06em]">
+                  <tr className="text-muted text-[11px] uppercase tracking-[0.06em]">
                     <th className="text-right px-2 py-1.5 font-normal">put OI</th>
                     <th className="text-right px-2 py-1.5 font-normal">put vol</th>
                     <th className="text-right px-2 py-1.5 font-normal">put IV</th>

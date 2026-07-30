@@ -94,7 +94,7 @@ export function RightRail() {
         </button>
         {/* Rotated "NEWS" label per spec §6.2 */}
         <span
-          className="text-[9px] font-mono font-medium uppercase tracking-[0.12em] text-muted mt-4"
+          className="text-[11px] font-mono font-medium uppercase tracking-[0.12em] text-muted mt-4"
           style={{ writingMode: "vertical-rl", transform: "rotate(180deg)" }}
         >
           NEWS
@@ -112,7 +112,7 @@ export function RightRail() {
     >
       {/* Header row per spec §7.1 — NEWS label + live item count */}
       <div className="h-[24px] flex items-center justify-between px-3 border-b border-line">
-        <span className="text-[10px] font-medium uppercase tracking-[0.08em] text-muted font-mono leading-none">
+        <span className="text-[11px] font-medium uppercase tracking-[0.08em] text-muted font-mono leading-none">
           NEWS
         </span>
         <NewsFeedHeader />
@@ -180,10 +180,10 @@ function shortSource(s: string): string {
 // ── Header right-side: item count indicator ───────────────────────────────────
 function NewsFeedHeader() {
   const { data, error } = useNewsFeed();
-  if (error) return <span className="text-[9px] text-warn leading-none">offline</span>;
-  if (!data) return <span className="text-[9px] text-muted opacity-40 leading-none">…</span>;
+  if (error) return <span className="text-[11px] text-warn leading-none">offline</span>;
+  if (!data) return <span className="text-[11px] text-muted opacity-40 leading-none">…</span>;
   return (
-    <span className="text-[9px] text-muted leading-none">
+    <span className="text-[11px] text-muted leading-none">
       {data.items.length}
     </span>
   );
@@ -256,20 +256,20 @@ function NewsRow({ item }: { item: NewsItem }) {
       {/* Top meta line */}
       <div className="flex items-center gap-1.5 mb-0.5">
         {isBreaking && (
-          <span className="text-[9px] font-medium text-neg mr-1 leading-none">
+          <span className="text-[11px] font-medium text-neg mr-1 leading-none">
             BREAKING
           </span>
         )}
-        <span className="text-[9px] text-muted leading-none">
+        <span className="text-[11px] text-muted leading-none">
           {relTime(item.ts)}
         </span>
-        <span className="text-[9px] text-muted uppercase leading-none">
+        <span className="text-[11px] text-muted uppercase leading-none">
           {shortSource(item.source)}
         </span>
         {item.ticker && (
           <Link
             href={`/t/${item.ticker}`}
-            className="text-[10px] text-accent leading-none ml-auto -my-1.5 py-1.5 px-1"
+            className="text-[11px] text-accent leading-none ml-auto -my-1.5 py-1.5 px-1"
           >
             {item.ticker}
           </Link>
