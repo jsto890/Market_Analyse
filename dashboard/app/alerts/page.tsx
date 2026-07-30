@@ -33,10 +33,10 @@ const KIND_LABEL: Record<string, string> = {
 };
 
 function ruleSummary(r: Rule): string {
-  if (r.kind === "verdict") return `${r.symbol} → verdict becomes ${r.params.target ?? "LONG"}`;
-  if (r.kind === "earnings") return `${r.symbol} → earnings within ${r.params.days ?? 3}d`;
+  if (r.kind === "verdict") return `${r.symbol} → ${KIND_LABEL.verdict} ${r.params.target ?? "LONG"}`;
+  if (r.kind === "earnings") return `${r.symbol} → ${KIND_LABEL.earnings} ${r.params.days ?? 3}d`;
   if (r.kind === "price")
-    return `${r.symbol} → price ${r.params.direction ?? "above"} ${r.params.level}`;
+    return `${r.symbol} → ${KIND_LABEL.price} ${r.params.direction ?? "above"} ${r.params.level}`;
   return `${r.symbol} · ${r.kind}`;
 }
 
@@ -284,8 +284,8 @@ export default function AlertsPage() {
             <ul className="divide-y divide-line/60">
               {rules.map((r) => (
                 <li key={r.id} className="flex items-center gap-3 px-4 py-2.5 text-[13px]">
-                  <span className="rounded bg-accent-dim px-1.5 py-px font-mono text-[10px] uppercase text-accent">
-                    {r.kind}
+                  <span className="rounded bg-accent-dim px-1.5 py-px font-mono text-[10px] text-accent">
+                    {KIND_LABEL[r.kind] ?? r.kind}
                   </span>
                   <span className="font-mono text-foreground">{ruleSummary(r)}</span>
                   {r.last_fired_ts && (

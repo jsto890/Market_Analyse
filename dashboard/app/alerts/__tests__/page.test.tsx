@@ -95,11 +95,11 @@ describe("AlertsPage delete undo (AL-04)", () => {
         <AlertsPage />
       </UndoToastProvider>
     );
-    await screen.findByText("NVDA → verdict becomes LONG");
+    await screen.findByText("NVDA → Verdict flips to LONG");
     await user.click(screen.getByRole("button", { name: "Delete rule" }));
     expect(await screen.findByText("Removed NVDA verdict alert")).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Undo" }));
-    expect(await screen.findByText("NVDA → verdict becomes LONG")).toBeInTheDocument();
+    expect(await screen.findByText("NVDA → Verdict flips to LONG")).toBeInTheDocument();
   });
 });
 
@@ -115,8 +115,21 @@ describe("AlertsPage evaluate-now result (AL-05)", () => {
         <AlertsPage />
       </UndoToastProvider>
     );
-    await screen.findByText("NVDA → verdict becomes LONG");
+    await screen.findByText("NVDA → Verdict flips to LONG");
     await user.click(screen.getByRole("button", { name: "Evaluate now" }));
     expect(await screen.findByText(/Evaluated 1 rule · 0 fired/)).toBeInTheDocument();
+  });
+});
+
+describe("AlertsPage condition phrasing (AL-06)", () => {
+  it("uses the same condition phrase in the chip and the row summary", async () => {
+    mockFetchJson(baseMocks());
+    render(
+      <UndoToastProvider>
+        <AlertsPage />
+      </UndoToastProvider>
+    );
+    expect(await screen.findByText("Verdict flips to")).toBeInTheDocument();
+    expect(screen.getByText("NVDA → Verdict flips to LONG")).toBeInTheDocument();
   });
 });
