@@ -8,7 +8,8 @@ test("opening a ticker from a Today group table enables prev/next scoped to that
   await firstGroupPanel.locator("tbody tr").first().click();
   await expect(page).toHaveURL(new RegExp(`/t/${firstRowTicker.trim()}$`, "i"));
 
-  await expect(page.getByText("Today")).toBeVisible();
+  const breadcrumb = page.getByRole("navigation", { name: "Ticker breadcrumb" });
+  await expect(breadcrumb.getByText("Today")).toBeVisible();
   const nextLink = page.getByLabel(/^Next:/);
   if (await nextLink.count()) {
     await expect(nextLink).toBeVisible();
@@ -17,7 +18,7 @@ test("opening a ticker from a Today group table enables prev/next scoped to that
 
 test("visiting a ticker page directly (no Today session state) shows a breadcrumb only", async ({ page }) => {
   await page.goto("/t/AAPL");
-  await expect(page.getByText("Today")).toBeVisible();
+  await expect(page.getByRole("navigation", { name: "Ticker breadcrumb" }).getByText("Today")).toBeVisible();
   await expect(page.getByLabel(/^Previous:/)).toHaveCount(0);
   await expect(page.getByLabel(/^Next:/)).toHaveCount(0);
 });

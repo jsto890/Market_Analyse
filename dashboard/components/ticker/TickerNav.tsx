@@ -15,12 +15,14 @@ export default function TickerNav({ ticker }: { ticker: string }) {
 
   if (!nav || !nav.tickers.includes(upper)) {
     return (
-      <Link
-        href="/"
-        className="inline-flex items-center gap-1 font-mono text-[12px] text-muted hover:text-foreground transition-colors"
-      >
-        <ChevronLeft size={12} /> Today
-      </Link>
+      <nav aria-label="Ticker breadcrumb">
+        <Link
+          href="/"
+          className="inline-flex items-center gap-1 font-mono text-[12px] text-muted hover:text-foreground transition-colors"
+        >
+          <ChevronLeft size={12} /> Today
+        </Link>
+      </nav>
     );
   }
 
@@ -29,7 +31,7 @@ export default function TickerNav({ ticker }: { ticker: string }) {
   const next = idx < nav.tickers.length - 1 ? nav.tickers[idx + 1] : null;
 
   return (
-    <div className="flex items-center gap-2 font-mono text-[12px] text-muted">
+    <nav aria-label="Ticker breadcrumb" className="flex items-center gap-2 font-mono text-[12px] text-muted">
       <Link href="/" className="hover:text-foreground transition-colors">
         Today
       </Link>
@@ -63,6 +65,6 @@ export default function TickerNav({ ticker }: { ticker: string }) {
           <ChevronRight size={12} />
         </span>
       )}
-    </div>
+    </nav>
   );
 }
