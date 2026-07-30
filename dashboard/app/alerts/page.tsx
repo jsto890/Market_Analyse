@@ -4,6 +4,7 @@ import { useState } from "react";
 import useSWR from "swr";
 import { Bell, Trash2, Play } from "lucide-react";
 import PageHeader from "@/components/ui/PageHeader";
+import Toggle from "@/components/ui/Toggle";
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
@@ -89,6 +90,22 @@ export default function AlertsPage() {
   async function removeRule(id: number) {
     await fetch(`/api/argus/alerts/rules/${id}`, { method: "DELETE" });
     mutateRules();
+  }
+
+  async function updateRuleEnabled(id: number, enabled: boolean) {
+    mutateRules(
+      (prev) => (prev ? { rules: prev.rules.map((r) => (r.id === id ? { ...r, enabled } : r)) } : prev),
+      false
+    );
+    try {
+      await fetch(`/api/argus/alerts/rules/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ enabled }),
+      });
+    } finally {
+      mutateRules();
+    }
   }
 
   async function evaluateNow() {
@@ -212,9 +229,15 @@ export default function AlertsPage() {
                       last fired {new Date(r.last_fired_ts).toLocaleDateString()}
                     </span>
                   )}
+                  <Toggle
+                    checked={r.enabled}
+                    onChange={(v) => updateRuleEnabled(r.id, v)}
+                    label={`Enable ${r.kind} alert for ${r.symbol}`}
+                    className="ml-auto"
+                  />
                   <button
                     onClick={() => removeRule(r.id)}
-                    className="ml-auto text-muted transition-colors hover:text-neg"
+                    className="text-muted transition-colors hover:text-neg"
                     aria-label="Delete rule"
                   >
                     <Trash2 size={14} />

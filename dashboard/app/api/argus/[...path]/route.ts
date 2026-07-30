@@ -64,3 +64,27 @@ export async function POST(
     return Response.json({ error: "Argus API offline" }, { status: 503 });
   }
 }
+
+export async function PATCH(
+  request: Request,
+  { params }: { params: { path: string[] } }
+) {
+  const argusPath = params.path.join("/");
+  const body = await request.json();
+  try {
+    const res = await fetch(`${ARGUS_BASE}/${argusPath}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+      next: { revalidate: 0 },
+      signal: AbortSignal.timeout(15000),
+    });
+    const data = await res.json();
+    return Response.json(data, { status: res.status });
+  } catch (err) {
+    if (err instanceof Error && err.name === "TimeoutError") {
+      return Response.json({ error: "argus timeout" }, { status: 504 });
+    }
+    return Response.json({ error: "Argus API offline" }, { status: 503 });
+  }
+}
