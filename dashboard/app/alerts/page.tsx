@@ -50,6 +50,7 @@ export default function AlertsPage() {
     fetcher,
     { refreshInterval: 30000 }
   );
+  const { data: channels } = useSWR<Record<string, boolean>>("/api/argus/alerts/channels", fetcher);
 
   const [kind, setKind] = useState("verdict");
   const [symbol, setSymbol] = useState("");
@@ -58,6 +59,7 @@ export default function AlertsPage() {
   const [level, setLevel] = useState("");
   const [direction, setDirection] = useState("above");
   const [busy, setBusy] = useState(false);
+  const [sendTestResult, setSendTestResult] = useState<string | null>(null);
 
   const rules = rulesData?.rules ?? [];
   const log = logData?.items ?? [];
@@ -108,6 +110,21 @@ export default function AlertsPage() {
     }
   }
 
+  async function sendTest() {
+    setBusy(true);
+    try {
+      await fetch("/api/argus/alert", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title: "Argus test alert", body: "Sent from the Alerts page." }),
+      });
+      setSendTestResult("Test alert sent.");
+      setTimeout(() => setSendTestResult(null), 4000);
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function evaluateNow() {
     setBusy(true);
     try {
@@ -137,6 +154,20 @@ export default function AlertsPage() {
             </button>
           }
         />
+
+        <div className="flex flex-wrap items-center gap-3 rounded-md border border-line bg-elevated px-3 py-2 text-[12px]">
+          <span className={channels?.email ? "text-pos" : "text-muted"}>Email {channels?.email ? "✓" : "—"}</span>
+          <span className={channels?.telegram ? "text-pos" : "text-muted"}>Telegram {channels?.telegram ? "✓" : "—"}</span>
+          <span className={channels?.webhook ? "text-pos" : "text-muted"}>Webhook {channels?.webhook ? "✓" : "—"}</span>
+          <button
+            onClick={sendTest}
+            disabled={busy}
+            className="ml-auto text-accent hover:underline disabled:opacity-50"
+          >
+            Send test
+          </button>
+          {sendTestResult && <span className="text-muted">{sendTestResult}</span>}
+        </div>
 
         {/* New rule */}
         <section className="rounded-md border border-line bg-elevated">
