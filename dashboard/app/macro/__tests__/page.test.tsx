@@ -36,6 +36,24 @@ describe("MacroPage empty state (MC-03)", () => {
   });
 });
 
+describe("MacroPage header + legend (MC-04)", () => {
+  it("shows a page heading, subtitle, and a Macro/SPY legend", async () => {
+    mockMacroFetch();
+    render(<MacroPage />);
+    expect(screen.getByText("Macro Sentiment")).toBeInTheDocument();
+    expect(screen.getByText(/FinBERT-scored news/)).toBeInTheDocument();
+    expect(await screen.findByText("Macro")).toBeInTheDocument();
+    expect(screen.getByText("SPY")).toBeInTheDocument();
+  });
+
+  it("keeps score and n values monospaced after the blanket font-mono is removed", async () => {
+    mockMacroFetch();
+    render(<MacroPage />);
+    const score = await screen.findByText("+0.10");
+    expect(score.className).toMatch(/font-mono/);
+  });
+});
+
 describe("MacroPage scope reconciliation (MC-02)", () => {
   it("resets scope to global when the selected scope has no data in the newly-picked window", async () => {
     mockMacroFetch();
@@ -43,11 +61,11 @@ describe("MacroPage scope reconciliation (MC-02)", () => {
 
     const sectorCard = await screen.findByText("AI / Compute");
     await userEvent.click(sectorCard);
-    expect(await screen.findByText(/AI \/ Compute · 1d vs SPY/)).toBeInTheDocument();
+    expect(await screen.findByText(/AI \/ Compute · 1d/)).toBeInTheDocument();
 
     const hourButton = screen.getByRole("button", { name: "1h" });
     await userEvent.click(hourButton);
 
-    expect(await screen.findByText(/GLOBAL · 1h vs SPY/)).toBeInTheDocument();
+    expect(await screen.findByText(/GLOBAL · 1h/)).toBeInTheDocument();
   });
 });

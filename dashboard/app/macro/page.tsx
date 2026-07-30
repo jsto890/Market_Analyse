@@ -5,6 +5,7 @@ import useSWR from "swr";
 import { useMacro, useMacroSeries, scopeLabel, toneClass } from "@/lib/macro";
 import { MacroChart, type SpxBar } from "@/components/macro/MacroChart";
 import EmptyState from "@/components/ui/EmptyState";
+import PageHeader from "@/components/ui/PageHeader";
 
 const fetcher = (u: string) => fetch(u).then((r) => { if (!r.ok) throw new Error(`${r.status}`); return r.json(); });
 const WINDOWS = ["1h", "1d", "1w"];
@@ -27,11 +28,11 @@ export default function MacroPage() {
   }, [window, data, scope]);
 
   return (
-    <main className="max-w-5xl mx-auto px-6 py-6 font-mono">
-      <h1 className="text-lg font-semibold mb-1">Macro Sentiment</h1>
-      <p className="text-xs text-muted mb-4">
-        FinBERT-scored news, recency-weighted by scope. −1 bearish · +1 bullish.
-      </p>
+    <main className="max-w-5xl mx-auto px-6 py-6">
+      <PageHeader
+        title="Macro Sentiment"
+        subtitle="FinBERT-scored news, recency-weighted by scope. −1 bearish · +1 bullish."
+      />
 
       <div className="flex gap-2 mb-4">
         {WINDOWS.map((w) => (
@@ -47,18 +48,26 @@ export default function MacroPage() {
           <button key={g.scope} onClick={() => setScope(g.scope)}
             className={`text-left p-2 rounded border ${g.scope === scope ? "border-accent" : "border-line"} bg-surface`}>
             <div className="text-[11px] text-muted truncate">{scopeLabel(g.scope)}</div>
-            <div className={`text-sm tabular-nums ${toneClass(g.score)}`}>
+            <div className={`font-mono text-sm tabular-nums ${toneClass(g.score)}`}>
               {g.score >= 0 ? "+" : ""}{g.score.toFixed(2)}
             </div>
-            <div className="text-[10px] text-muted opacity-60">n={g.n}</div>
+            <div className="font-mono text-[10px] text-muted opacity-60">n={g.n}</div>
           </button>
         ))}
       </div>
 
       {anyData ? (
         <>
-          <div className="mb-2 text-xs text-muted">
-            {scopeLabel(scope)} · {window} vs SPY
+          <div className="mb-2 flex items-center gap-4 text-xs text-muted">
+            <span>{scopeLabel(scope)} · {window}</span>
+            <span className="inline-flex items-center gap-1.5">
+              <span className="h-0.5 w-3 rounded-full bg-accent" />
+              Macro
+            </span>
+            <span className="inline-flex items-center gap-1.5">
+              <span className="h-0.5 w-3 rounded-full bg-muted" />
+              SPY
+            </span>
           </div>
           <MacroChart points={series?.points ?? []} spx={hist?.bars ?? []} />
         </>
