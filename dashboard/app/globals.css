@@ -120,10 +120,14 @@ select {
   }
   /* Semantic source-state tones (OL-09) — LIVE/FROZEN/EOD provenance badges. */
   .tone-live {
-    @apply border border-teal/40 bg-teal/10 text-teal;
+    border: 1px solid color-mix(in srgb, var(--teal) 40%, transparent);
+    background-color: color-mix(in srgb, var(--teal) 10%, transparent);
+    color: var(--teal);
   }
   .tone-frozen {
-    @apply border border-warn/40 bg-warn/10 text-warn;
+    border: 1px solid color-mix(in srgb, var(--amber) 40%, transparent);
+    background-color: color-mix(in srgb, var(--amber) 10%, transparent);
+    color: var(--amber);
   }
   .tone-eod {
     @apply border border-line bg-elevated text-muted;
