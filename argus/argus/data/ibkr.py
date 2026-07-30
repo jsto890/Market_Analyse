@@ -78,6 +78,24 @@ class IBKRClient:
             })
         return out
 
+    def portfolio_items(self) -> list[dict]:
+        self.connect()
+        out = []
+        for p in self.ib.portfolio():
+            out.append({
+                "account": p.account,
+                "symbol": p.contract.symbol,
+                "sec_type": p.contract.secType,
+                "exchange": p.contract.exchange,
+                "currency": p.contract.currency,
+                "position": float(p.position),
+                "avg_cost": float(p.averageCost),
+                "market_price": float(p.marketPrice),
+                "market_value": float(p.marketValue),
+                "unrealized_pnl": float(p.unrealizedPNL),
+            })
+        return out
+
     def account_summary(self) -> dict:
         self.connect()
         rows = self.ib.accountSummary()

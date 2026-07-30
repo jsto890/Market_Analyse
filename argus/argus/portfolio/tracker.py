@@ -40,7 +40,7 @@ class PortfolioTracker:
     def positions_with_edge(self) -> List[dict]:
         rows = []
         try:
-            positions = self.ib.positions()
+            positions = self.ib.portfolio_items()
         except Exception as e:
             fallback = self._yf_watchlist_rows()
             if fallback:
