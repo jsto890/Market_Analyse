@@ -26,6 +26,15 @@ class AlertChannels:
     results: List[dict] = field(default_factory=list)
 
 
+def channel_status() -> dict:
+    """Config-presence check per channel — does not send anything."""
+    return {
+        "email": bool(settings.smtp_host and settings.smtp_user and settings.alert_email_to),
+        "telegram": bool(settings.telegram_bot_token and settings.telegram_chat_id),
+        "webhook": bool(settings.webhook_url),
+    }
+
+
 def _send_email(subject: str, body: str) -> dict:
     if not (settings.smtp_host and settings.smtp_user and settings.alert_email_to):
         return {"channel": "email", "ok": False, "reason": "not configured"}

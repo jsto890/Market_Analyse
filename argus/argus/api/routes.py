@@ -599,4 +599,9 @@ def build_app() -> FastAPI:
         finally:
             conn.close()
 
+    @app.get("/api/alerts/channels")
+    def alert_channels_status():
+        from ..alerts.dispatcher import channel_status
+        return channel_status()
+
     return app
