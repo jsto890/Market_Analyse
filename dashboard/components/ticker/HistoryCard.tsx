@@ -1,3 +1,6 @@
+"use client";
+
+import { useState } from "react";
 import Panel from "@/components/ui/Panel";
 
 interface SignalRow {
@@ -25,6 +28,8 @@ function pctSince(entry: number | null, now: number | null): {
 }
 
 export default function HistoryCard({ rows, lastClose }: HistoryCardProps) {
+  const [expanded, setExpanded] = useState(false);
+
   if (rows.length === 0) {
     return (
       <Panel title="Signal History">
@@ -35,8 +40,8 @@ export default function HistoryCard({ rows, lastClose }: HistoryCardProps) {
 
   // Most recent first
   const ordered = [...rows].reverse();
-  const shown = ordered.slice(0, 10);
-  const older = ordered.length - shown.length;
+  const shown = expanded ? ordered : ordered.slice(0, 10);
+  const older = ordered.length - Math.min(10, ordered.length);
 
   return (
     <Panel title="Signal History">
@@ -75,7 +80,13 @@ export default function HistoryCard({ rows, lastClose }: HistoryCardProps) {
           </tbody>
         </table>
         {older > 0 && (
-          <p className="text-[11px] text-muted">+{older} older</p>
+          <button
+            type="button"
+            onClick={() => setExpanded((v) => !v)}
+            className="font-mono text-[11px] text-accent hover:text-foreground transition-colors"
+          >
+            {expanded ? "Show fewer" : `+${older} older — show all`}
+          </button>
         )}
       </div>
     </Panel>
