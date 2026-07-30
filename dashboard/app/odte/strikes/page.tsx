@@ -554,7 +554,15 @@ export default function OdteStrikesPage() {
                         key={row.strike}
                         ref={isSpot ? spotRowRef : undefined}
                         onClick={() => copyStrike(row)}
-                        className={`cursor-pointer border-t border-line/50 hover:bg-elevated/60 ${
+                        tabIndex={0}
+                        aria-label={`Copy strike ${row.strike}`}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" || e.key === " ") {
+                            e.preventDefault();
+                            copyStrike(row);
+                          }
+                        }}
+                        className={`cursor-pointer border-t border-line/50 hover:bg-elevated/60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-teal focus-visible:-outline-offset-2 ${
                           highlight ? "bg-elevated" : ""
                         } ${leftBorder}`}
                       >
