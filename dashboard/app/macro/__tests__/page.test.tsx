@@ -54,6 +54,25 @@ describe("MacroPage header + legend (MC-04)", () => {
   });
 });
 
+describe("MacroPage gauge card semantics (MC-05)", () => {
+  it("marks the selected scope card aria-pressed and leaves the rest unpressed", async () => {
+    mockMacroFetch();
+    render(<MacroPage />);
+    const globalCard = await screen.findByRole("button", { name: /GLOBAL/ });
+    expect(globalCard).toHaveAttribute("aria-pressed", "true");
+    const sectorCard = screen.getByRole("button", { name: /AI \/ Compute/ });
+    expect(sectorCard).toHaveAttribute("aria-pressed", "false");
+  });
+
+  it("renders the n= count at the data-floor size with no opacity utility", async () => {
+    mockMacroFetch();
+    render(<MacroPage />);
+    const nEl = await screen.findByText("n=50");
+    expect(nEl.className).toMatch(/text-\[11px\]/);
+    expect(nEl.className).not.toMatch(/opacity-/);
+  });
+});
+
 describe("MacroPage scope reconciliation (MC-02)", () => {
   it("resets scope to global when the selected scope has no data in the newly-picked window", async () => {
     mockMacroFetch();

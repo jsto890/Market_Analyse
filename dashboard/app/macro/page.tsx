@@ -46,12 +46,13 @@ export default function MacroPage() {
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-6">
         {gauges.map((g) => (
           <button key={g.scope} onClick={() => setScope(g.scope)}
+            aria-pressed={g.scope === scope}
             className={`text-left p-2 rounded border ${g.scope === scope ? "border-accent" : "border-line"} bg-surface`}>
             <div className="text-[11px] text-muted truncate">{scopeLabel(g.scope)}</div>
             <div className={`font-mono text-sm tabular-nums ${toneClass(g.score)}`}>
               {g.score >= 0 ? "+" : ""}{g.score.toFixed(2)}
             </div>
-            <div className="font-mono text-[10px] text-muted opacity-60">n={g.n}</div>
+            <div className="font-mono text-[11px] text-muted">n={g.n}</div>
           </button>
         ))}
       </div>
