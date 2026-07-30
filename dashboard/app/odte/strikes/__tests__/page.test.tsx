@@ -236,6 +236,19 @@ describe("OdteStrikesPage — single ladder mode (OL-02)", () => {
     expect(msiLabel.closest("div")?.querySelector("[title], button")).toBeTruthy();
   });
 
+  it("keeps strike column sticky, right-aligns numeric cells, tabular-nums (OL-11)", async () => {
+    const user = userEvent.setup();
+    render(<OdteStrikesPage />);
+    await screen.findByText(/call IV/i);
+    await user.click(screen.getByRole("switch", { name: /live/i }));
+    await screen.findByText("C Bid");
+    const table = document.querySelector("table")!;
+    const strikeCell = table.querySelector("tbody td")!;
+    expect(strikeCell.className).toMatch(/sticky/);
+    expect(strikeCell.className).toMatch(/left-0/);
+    expect(table.className).toMatch(/tabular-nums/);
+  });
+
   it("uses an accessible, persisted switch for the live/classic toggle (OL-10)", async () => {
     resetLocalStorage();
     const user = userEvent.setup();
