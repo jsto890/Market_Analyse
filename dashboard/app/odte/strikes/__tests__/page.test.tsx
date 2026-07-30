@@ -118,7 +118,9 @@ describe("OdteStrikesPage — single ladder mode (OL-02)", () => {
     render(<OdteStrikesPage />);
     await screen.findByText(/call IV/i);
     await user.click(screen.getByRole("switch", { name: /live/i }));
-    const stripHeading = await screen.findByText("ATM");
+    await screen.findByText("C Bid");
+    // "ATM" also appears as a row chip in the live table (Task 24) — scope to the strip's stat label.
+    const stripHeading = screen.getAllByText("ATM").find((el) => !el.closest("tr"))!;
     const strip = stripHeading.closest("div")!.parentElement!;
     expect(strip.className).toMatch(/flex-wrap/);
     expect(strip.className).not.toMatch(/grid-cols-6/);
@@ -257,6 +259,18 @@ describe("OdteStrikesPage — single ladder mode (OL-02)", () => {
     expect(screen.getByText("Pin Risk (0–100)")).toBeInTheDocument();
     const deltaCells = screen.getAllByText(/^-?0\.\d{3}$/);
     expect(deltaCells.length).toBeGreaterThan(0);
+  });
+
+  it("marks ATM/ZG/CW/PW rows with left-border + code chips, matching the classic ladder (OL-14)", async () => {
+    const user = userEvent.setup();
+    render(<OdteStrikesPage />);
+    await screen.findByText(/call IV/i);
+    await user.click(screen.getByRole("switch", { name: /live/i }));
+    await screen.findByText("C Bid");
+    // "ATM" also appears as the levels strip's static stat label — scope to the row chip.
+    const atmChip = screen.getAllByText("ATM").find((el) => el.closest("tr"))!;
+    expect(atmChip.closest("tr")?.className).toMatch(/border-l-2/);
+    expect(atmChip.closest("tr")?.className).not.toMatch(/bg-blue-500/);
   });
 
   it("uses an accessible, persisted switch for the live/classic toggle (OL-10)", async () => {

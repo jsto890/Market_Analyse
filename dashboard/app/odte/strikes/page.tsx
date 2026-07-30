@@ -62,18 +62,33 @@ function LiveLadderRow({
   level,
   zeroGammaStrike,
   atmStrike,
+  callWallStrike,
+  putWallStrike,
 }: {
   level: StrikeLevel;
   zeroGammaStrike: number | null;
-  atmStrike: number;
+  atmStrike: number | null;
+  callWallStrike: number | null;
+  putWallStrike: number | null;
 }) {
+  const isZg = level.strike === zeroGammaStrike;
+  const isAtm = level.strike === atmStrike;
+  const isCallWall = level.strike === callWallStrike;
+  const isPutWall = level.strike === putWallStrike;
+  const leftBorder = isAtm
+    ? "border-l-2 border-l-warn"
+    : isZg
+      ? "border-l-2 border-l-teal"
+      : "";
   return (
-    <tr
-      className={`border-b border-line/50 ${
-        level.strike === zeroGammaStrike ? "bg-teal/10" : ""
-      } ${level.strike === atmStrike ? "bg-warn/10" : ""}`}
-    >
-      <td className="sticky left-0 z-10 bg-elevated px-2 py-1 font-bold">{level.strike.toFixed(0)}</td>
+    <tr className={`border-b border-line/50 ${leftBorder}`}>
+      <td className="sticky left-0 z-10 bg-elevated px-2 py-1 font-bold">
+        {level.strike.toFixed(0)}
+        {isAtm && <span className="ml-1 text-[11px] text-warn align-middle">ATM</span>}
+        {isZg && <span className="ml-1 text-[11px] text-teal align-middle">ZG</span>}
+        {isCallWall && <span className="ml-1 text-[11px] text-pos align-middle">CW</span>}
+        {isPutWall && <span className="ml-1 text-[11px] text-neg align-middle">PW</span>}
+      </td>
       {/* Call Greeks */}
       <td className="px-1 py-1 text-right">{level.call.bid != null ? price(level.call.bid) : "—"}</td>
       <td className="px-1 py-1 text-right">{level.call.ask != null ? price(level.call.ask) : "—"}</td>
@@ -327,6 +342,8 @@ export default function OdteStrikesPage() {
                         level={level}
                         zeroGammaStrike={liveLadder.zero_gamma_strike}
                         atmStrike={liveLadder.atm_strike}
+                        callWallStrike={liveLadder.call_wall_strike}
+                        putWallStrike={liveLadder.put_wall_strike}
                       />
                     ))}
                   </tbody>
