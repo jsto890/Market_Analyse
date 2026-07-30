@@ -167,3 +167,15 @@ describe("optionsLive types", () => {
     expect(level.call_gex_by_strike).not.toBe(level.put_gex_by_strike);
   });
 });
+
+describe("fetchOptionsLive expiry param (OL-20)", () => {
+  test("fetchOptionsLive requests the given expiry, not a hardcoded 0DTE", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => null });
+    vi.stubGlobal("fetch", fetchMock);
+    await fetchOptionsLive("SPY", "2026-08-15");
+    expect(fetchMock).toHaveBeenCalledWith(
+      expect.stringContaining("expiry=2026-08-15"),
+      expect.anything()
+    );
+  });
+});

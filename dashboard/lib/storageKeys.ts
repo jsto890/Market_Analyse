@@ -15,6 +15,7 @@ export const STATIC_KEYS = {
   watchlistMigrationResult: "dash:watchlist:migration-result",
   screenerLastResult: "dash:screener:last-result",
   odteLiveMode: "dash:odte:live-mode",
+  odteExpiry: "dash:odte:expiry",
 } as const;
 
 /**

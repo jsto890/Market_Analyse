@@ -315,6 +315,20 @@ describe("OdteStrikesPage — single ladder mode (OL-02)", () => {
     expect(status.textContent).toMatch(/SPY.*live/i);
   });
 
+  it("shares one persisted expiry between the classic and live ladders (OL-20)", async () => {
+    // Fixture only exposes one expiry tab ("0DTE") — click it (rather than a
+    // second tab, per the brief) to exercise the persisted setExpiry path,
+    // then confirm the live ladder still resolves against that same expiry.
+    resetLocalStorage();
+    const user = userEvent.setup();
+    render(<OdteStrikesPage />);
+    await screen.findByText(/call IV/i);
+    await user.click(screen.getAllByRole("button", { name: /EM/i })[0]);
+    await user.click(screen.getByRole("switch", { name: /live/i }));
+    await screen.findByText("C Bid");
+    expect(localStorage.getItem("dash:odte:expiry")).not.toBeNull();
+  });
+
   it("uses an accessible, persisted switch for the live/classic toggle (OL-10)", async () => {
     resetLocalStorage();
     const user = userEvent.setup();

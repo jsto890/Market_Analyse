@@ -140,7 +140,7 @@ function Lvl({ label, value }: { label: string; value: string }) {
 
 export default function OdteStrikesPage() {
   const [activeSymbol, switchSymbol] = useOdteSymbol();
-  const [expiryIdx, setExpiryIdx] = useState(0);
+  const [expiry, setExpiry] = useLocalStorage(STATIC_KEYS.odteExpiry, "0DTE");
   const { data, error, isLoading } = useLadder(activeSymbol, 4, 0.06);
 
   const [copiedStrike, setCopiedStrike] = useState<number | null>(null);
@@ -159,12 +159,12 @@ export default function OdteStrikesPage() {
     status: liveStatus,
   } = useOptionsLivePoller(
     activeSymbol,
-    "0DTE",
+    expiry || "0DTE",
     showLive
   );
 
   const expiries = data?.expiries ?? [];
-  const idx = Math.min(expiryIdx, Math.max(expiries.length - 1, 0));
+  const idx = Math.max(0, expiries.findIndex((e) => e.expiry === expiry));
   const active = expiries[idx];
   const rows = active?.rows ?? [];
 
@@ -396,7 +396,7 @@ export default function OdteStrikesPage() {
             {expiries.map((e, i) => (
               <button
                 key={e.expiry}
-                onClick={() => setExpiryIdx(i)}
+                onClick={() => setExpiry(e.expiry)}
                 className={`px-2 py-1 text-[11px] rounded whitespace-nowrap ${
                   i === idx ? "bg-elevated text-foreground" : "text-muted hover:text-foreground"
                 }`}
