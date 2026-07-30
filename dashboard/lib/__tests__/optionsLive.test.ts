@@ -113,4 +113,19 @@ describe("optionsLive types", () => {
   test("fetchOptionsLive function is exported", () => {
     expect(typeof fetchOptionsLive).toBe("function");
   });
+
+  test("fetchOptionsLive calls the Argus proxy, not the nonexistent /api/options/live route", async () => {
+    const calls: string[] = [];
+    global.fetch = ((url: string) => {
+      calls.push(url);
+      return Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve({ symbol: "SPY" }),
+      }) as unknown as Promise<Response>;
+    }) as typeof fetch;
+
+    await fetchOptionsLive("SPY", "0DTE");
+
+    expect(calls[0]).toBe("/api/argus/options/live/SPY?expiry=0DTE");
+  });
 });

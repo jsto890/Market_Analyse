@@ -62,7 +62,7 @@ export async function fetchOptionsLive(
   expiry: string = "0DTE"
 ): Promise<LadderSnapshot | null> {
   try {
-    const res = await fetch(`/api/options/live/${symbol}?expiry=${expiry}`);
+    const res = await fetch(`/api/argus/options/live/${symbol}?expiry=${expiry}`);
     if (!res.ok) {
       console.warn(`Failed to fetch live ladder for ${symbol}: ${res.status}`);
       return null;
