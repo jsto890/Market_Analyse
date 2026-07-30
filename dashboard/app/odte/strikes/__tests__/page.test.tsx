@@ -249,6 +249,16 @@ describe("OdteStrikesPage — single ladder mode (OL-02)", () => {
     expect(table.className).toMatch(/tabular-nums/);
   });
 
+  it("labels pin_risk's 0-100 scale and formats greeks via the shared precision policy (OL-13)", async () => {
+    const user = userEvent.setup();
+    render(<OdteStrikesPage />);
+    await screen.findByText(/call IV/i);
+    await user.click(screen.getByRole("switch", { name: /live/i }));
+    expect(screen.getByText("Pin Risk (0–100)")).toBeInTheDocument();
+    const deltaCells = screen.getAllByText(/^-?0\.\d{3}$/);
+    expect(deltaCells.length).toBeGreaterThan(0);
+  });
+
   it("uses an accessible, persisted switch for the live/classic toggle (OL-10)", async () => {
     resetLocalStorage();
     const user = userEvent.setup();

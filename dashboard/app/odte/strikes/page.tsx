@@ -18,6 +18,7 @@ import Toggle from "@/components/ui/Toggle";
 import { useLocalStorage } from "@/lib/useLocalStorage";
 import { STATIC_KEYS } from "@/lib/storageKeys";
 import { GREEK_LABEL } from "@/lib/labels";
+import { price, greek } from "@/lib/format";
 import type { GreekKind } from "@/lib/format";
 
 function fmtIv(iv: number | null | undefined): string {
@@ -74,12 +75,12 @@ function LiveLadderRow({
     >
       <td className="sticky left-0 z-10 bg-elevated px-2 py-1 font-bold">{level.strike.toFixed(0)}</td>
       {/* Call Greeks */}
-      <td className="px-1 py-1 text-right">{level.call.bid != null ? level.call.bid.toFixed(2) : "—"}</td>
-      <td className="px-1 py-1 text-right">{level.call.ask != null ? level.call.ask.toFixed(2) : "—"}</td>
+      <td className="px-1 py-1 text-right">{level.call.bid != null ? price(level.call.bid) : "—"}</td>
+      <td className="px-1 py-1 text-right">{level.call.ask != null ? price(level.call.ask) : "—"}</td>
       <td className="px-1 py-1 text-right">{level.call.iv != null ? (level.call.iv * 100).toFixed(1) : "—"}</td>
-      <td className="px-1 py-1 text-right">{level.call.delta != null ? level.call.delta.toFixed(3) : "—"}</td>
-      <td className="px-1 py-1 text-right">{level.call.gamma != null ? level.call.gamma.toFixed(5) : "—"}</td>
-      <td className="px-1 py-1 text-right">{level.call.theta != null ? level.call.theta.toFixed(3) : "—"}</td>
+      <td className="px-1 py-1 text-right">{level.call.delta != null ? greek(level.call.delta, "delta") : "—"}</td>
+      <td className="px-1 py-1 text-right">{level.call.gamma != null ? greek(level.call.gamma, "gamma") : "—"}</td>
+      <td className="px-1 py-1 text-right">{level.call.theta != null ? greek(level.call.theta, "theta") : "—"}</td>
       <td className="px-1 py-1 text-right">
         {level.call.spread_pct != null ? level.call.spread_pct.toFixed(1) : "—"}
       </td>
@@ -92,12 +93,12 @@ function LiveLadderRow({
         {level.call_gex_by_strike != null ? (level.call_gex_by_strike / 1000).toFixed(0) : "—"}
       </td>
       {/* Put Greeks */}
-      <td className="px-1 py-1 text-right">{level.put.bid != null ? level.put.bid.toFixed(2) : "—"}</td>
-      <td className="px-1 py-1 text-right">{level.put.ask != null ? level.put.ask.toFixed(2) : "—"}</td>
+      <td className="px-1 py-1 text-right">{level.put.bid != null ? price(level.put.bid) : "—"}</td>
+      <td className="px-1 py-1 text-right">{level.put.ask != null ? price(level.put.ask) : "—"}</td>
       <td className="px-1 py-1 text-right">{level.put.iv != null ? (level.put.iv * 100).toFixed(1) : "—"}</td>
-      <td className="px-1 py-1 text-right">{level.put.delta != null ? level.put.delta.toFixed(3) : "—"}</td>
-      <td className="px-1 py-1 text-right">{level.put.gamma != null ? level.put.gamma.toFixed(5) : "—"}</td>
-      <td className="px-1 py-1 text-right">{level.put.theta != null ? level.put.theta.toFixed(3) : "—"}</td>
+      <td className="px-1 py-1 text-right">{level.put.delta != null ? greek(level.put.delta, "delta") : "—"}</td>
+      <td className="px-1 py-1 text-right">{level.put.gamma != null ? greek(level.put.gamma, "gamma") : "—"}</td>
+      <td className="px-1 py-1 text-right">{level.put.theta != null ? greek(level.put.theta, "theta") : "—"}</td>
       <td className="px-1 py-1 text-right">
         {level.put.spread_pct != null ? level.put.spread_pct.toFixed(1) : "—"}
       </td>
@@ -245,7 +246,7 @@ export default function OdteStrikesPage() {
                   </span>
                 </div>
                 <div>
-                  <span className="text-muted">Pin Risk</span>
+                  <span className="text-muted">Pin Risk (0–100)</span>
                   <span className="ml-2 font-semibold">{liveLadder.pin_risk.toFixed(0)}</span>
                 </div>
                 <div>
