@@ -278,13 +278,15 @@ export default function ScreenerPage() {
                   · {cached ? "cached" : "fresh"} {new Date(asOf).toLocaleString()}
                 </span>
               )}
-              {cached && (
-                <button
+              {asOf && (
+                <Button
+                  variant="ghost"
+                  size="sm"
                   onClick={() => void runScreener(null, true)}
-                  className="ml-auto inline-flex items-center gap-1 rounded border border-line px-2 py-0.5 text-muted transition-colors hover:border-line-strong hover:text-foreground"
+                  className="ml-auto"
                 >
                   Re-run (~30s)
-                </button>
+                </Button>
               )}
             </div>
             {results.length === 0 ? (

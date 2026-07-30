@@ -169,3 +169,20 @@ describe("ScreenerPage return formatting (SC-06)", () => {
     expect(screen.getByText("-8.1%")).toBeInTheDocument();
   });
 });
+
+describe("ScreenerPage always-visible refresh (SC-07)", () => {
+  it("shows a refresh button even when the result was not cached", async () => {
+    mockFetchJson({
+      "/api/watchlist": { watchlist: [] },
+      "/api/argus/screener?min_conviction=0.3": {
+        results: [],
+        as_of: "2026-07-28T00:00:00Z",
+        cached: false,
+      },
+    });
+    render(<ScreenerPage />);
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("button", { name: "Full universe" }));
+    expect(await screen.findByRole("button", { name: /re-run/i })).toBeInTheDocument();
+  });
+});
