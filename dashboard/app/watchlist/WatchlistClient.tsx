@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import useSWR from "swr";
 import Panel from "@/components/ui/Panel";
 import DataTable, { Column } from "@/components/ui/DataTable";
@@ -130,6 +131,7 @@ function PinnedSection({
   onUnpin: (ticker: string) => Promise<void>;
   onAdded: () => void;
 }) {
+  const router = useRouter();
   const { data: bridgeData } = useSWR<{ signals: Array<{ ticker: string; action_label: string }> }>(
     "/api/bridge",
     fetcher
@@ -251,11 +253,7 @@ function PinnedSection({
       key: "ticker",
       header: "Ticker",
       width: "80px",
-      render: (r) => (
-        <a href={`/t/${r.ticker}`} className="font-mono font-medium hover:text-accent">
-          {r.ticker}
-        </a>
-      ),
+      render: (r) => <span className="font-mono font-medium">{r.ticker}</span>,
     },
     {
       key: "pinned_at",
@@ -393,6 +391,7 @@ function PinnedSection({
           rowKey={(r) => r.ticker}
           defaultSort={{ key: "sincePin", dir: "desc" }}
           persistKey="watchlist-pinned-table"
+          onOpen={(r) => router.push(`/t/${r.ticker}`)}
         />
       )}
     </Panel>
@@ -409,6 +408,7 @@ interface RecentFlagEnriched extends RecentFlag {
 }
 
 function RecentPicksSection({ medianDaysToPeak }: { medianDaysToPeak: number }) {
+  const router = useRouter();
   const { data: recentData } = useSWR<RecentFlag[]>("/api/signals/recent?days=14", fetcher);
   const { data: datesData } = useSWR<Array<{ date: string }>>("/api/signals/dates", fetcher);
 
@@ -451,12 +451,9 @@ function RecentPicksSection({ medianDaysToPeak }: { medianDaysToPeak: number }) 
       header: "Ticker",
       width: "80px",
       render: (r) => (
-        <a
-          href={`/t/${r.ticker}`}
-          className={`font-mono font-medium hover:text-accent ${r.stillIn === false ? "text-muted" : ""}`}
-        >
+        <span className={`font-mono font-medium ${r.stillIn === false ? "text-muted" : ""}`}>
           {r.ticker}
-        </a>
+        </span>
       ),
     },
     {
@@ -535,6 +532,7 @@ function RecentPicksSection({ medianDaysToPeak }: { medianDaysToPeak: number }) 
           rowKey={(r) => r.ticker}
           defaultSort={{ key: "sinceFlag", dir: "desc" }}
           persistKey="watchlist-recent-table"
+          onOpen={(r) => router.push(`/t/${r.ticker}`)}
         />
       )}
     </Panel>

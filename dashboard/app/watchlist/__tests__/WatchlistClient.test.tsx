@@ -1,7 +1,31 @@
-import { describe, it, expect } from "vitest";
-import { render, screen } from "@/test/render";
+import { describe, it, expect, vi } from "vitest";
+import { render, screen, userEvent } from "@/test/render";
 import { mockFetchJson } from "@/test/fetchMock";
 import WatchlistClient from "@/app/watchlist/WatchlistClient";
+
+const push = vi.fn();
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ push }),
+}));
+
+describe("WatchlistClient row navigation (WL-06)", () => {
+  it("pinned row has no anchor tag; clicking calls router.push", async () => {
+    mockFetchJson({
+      "/api/watchlist": { watchlist: [{ ticker: "NVDA", pinned_at: "2026-07-01", price_at_pin: 120 }] },
+      "/api/bridge": { signals: [] },
+      "/api/signals/recent?days=14": [],
+      "/api/signals/dates": [],
+    });
+    render(<WatchlistClient medianDaysToPeak={12} />);
+    const cell = await screen.findByText("NVDA");
+    expect(cell.closest("a")).toBeNull();
+
+    const user = userEvent.setup();
+    await user.click(cell.closest("tr")!);
+
+    expect(push).toHaveBeenCalledWith("/t/NVDA");
+  });
+});
 
 describe("WatchlistClient recent picks age formatting", () => {
   it("renders the Age column through format.relativeAge with a unit suffix", async () => {
