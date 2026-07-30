@@ -129,6 +129,8 @@ def run_analytics(
             zero_gamma_side=zero_gamma_side,
             wall_type=level_wall_type,
             gex_by_strike=call_gex.get(strike, 0) + put_gex.get(strike, 0),
+            call_gex_by_strike=call_gex.get(strike, 0),
+            put_gex_by_strike=put_gex.get(strike, 0),
             max_pain_delta=1.0 if strike == max_pain else 0.0,
         ))
 

@@ -177,6 +177,31 @@ class TestSerializeLadder:
         assert level["gex_by_strike"] == 5000.0
         assert level["max_pain_delta"] == 1.0
 
+    def test_serialize_ladder_level_has_split_gex(self):
+        """Each serialized level carries call_gex_by_strike and put_gex_by_strike
+        as distinct fields, not the same combined value twice."""
+        ladder = LadderSnapshot(
+            symbol="SPY", spot=450.0, as_of=datetime.now(timezone.utc),
+            source="LIVE", stale_ms=0, fresh_contract_ratio=1.0, expiry="0DTE",
+            levels=[
+                StrikeLevelSnapshot(
+                    strike=450.0,
+                    call=OptionQuote(bid=2.5, ask=2.6, mid=2.55),
+                    put=OptionQuote(bid=1.8, ask=1.9, mid=1.85),
+                    gex_by_strike=5000.0,
+                    call_gex_by_strike=3200.0,
+                    put_gex_by_strike=1800.0,
+                )
+            ],
+        )
+
+        result = serialize_ladder(ladder)
+        level = result["levels"][0]
+
+        assert level["call_gex_by_strike"] == 3200.0
+        assert level["put_gex_by_strike"] == 1800.0
+        assert level["call_gex_by_strike"] != level["put_gex_by_strike"]
+
     def test_serialize_ladder_with_none_values(self):
         """Serialized ladder handles None values gracefully."""
         ladder = LadderSnapshot(

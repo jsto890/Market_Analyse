@@ -77,6 +77,8 @@ def serialize_ladder(ladder: LadderSnapshot) -> dict:
                 "zero_gamma_side": level.zero_gamma_side,
                 "wall_type": level.wall_type,
                 "gex_by_strike": level.gex_by_strike,
+                "call_gex_by_strike": level.call_gex_by_strike,
+                "put_gex_by_strike": level.put_gex_by_strike,
                 "max_pain_delta": level.max_pain_delta,
             }
             for level in ladder.levels

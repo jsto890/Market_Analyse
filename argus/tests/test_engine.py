@@ -127,6 +127,33 @@ def test_engine_with_9_strikes():
     assert age_ms < 5000  # Should be very recent
 
 
+def test_engine_splits_gex_by_side():
+    """Each level exposes call_gex_by_strike and put_gex_by_strike separately,
+    and their sum equals the existing combined gex_by_strike."""
+    spot = 420.0
+    strikes = [415.0, 420.0, 425.0]
+    quotes = {
+        s: (create_option_quote(gamma=0.02), create_option_quote(gamma=0.015))
+        for s in strikes
+    }
+    config = LiveConfig()
+
+    ladder = run_analytics(
+        quotes=quotes, spot=spot, expiry="0DTE", config=config,
+        symbol="SPY", source="LIVE",
+    )
+
+    for level in ladder.levels:
+        assert level.call_gex_by_strike is not None
+        assert level.put_gex_by_strike is not None
+        assert level.call_gex_by_strike == pytest.approx(
+            level.gex_by_strike - level.put_gex_by_strike
+        )
+        assert level.gex_by_strike == pytest.approx(
+            level.call_gex_by_strike + level.put_gex_by_strike
+        )
+
+
 def test_engine_handles_sparse_greeks():
     """Engine handles partial greeks correctly."""
     spot = 100.0

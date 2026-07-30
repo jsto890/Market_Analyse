@@ -45,7 +45,9 @@ class StrikeLevelSnapshot:
     put: OptionQuote
     zero_gamma_side: Optional[str] = None  # "C", "P", "both", or None
     wall_type: Optional[str] = None  # "none", "call", "put", "both"
-    gex_by_strike: Optional[float] = None  # $ GEX exposure at this strike
+    gex_by_strike: Optional[float] = None  # $ GEX exposure at this strike (call + put)
+    call_gex_by_strike: Optional[float] = None  # $ GEX exposure from calls only
+    put_gex_by_strike: Optional[float] = None  # $ GEX exposure from puts only
     max_pain_delta: Optional[float] = None  # Contribution to max pain calculation
 
 
