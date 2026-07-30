@@ -1,4 +1,4 @@
-import { render, screen } from "@/test/render";
+import { render, screen, waitFor } from "@/test/render";
 import { mockFetchJson } from "@/test/fetchMock";
 import { resetLocalStorage } from "@/test/localStorage";
 import userEvent from "@testing-library/user-event";
@@ -32,7 +32,9 @@ describe("OdtePage — verdict cards vs. companion grid (OD-01)", () => {
     const user = userEvent.setup();
     render(<OdtePage />);
     // Wait for the Levels card's stats to load so its drill-down toggle is enabled.
-    await screen.findByText("call wall");
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: /levels/i })).not.toBeDisabled()
+    );
     const levelsCard = (await screen.findByText("Levels")).closest("button")!;
     await user.click(levelsCard);
     expect(await screen.findByText("Gamma exposure")).toBeInTheDocument();
@@ -40,7 +42,9 @@ describe("OdtePage — verdict cards vs. companion grid (OD-01)", () => {
 
   it("keeps <main> free of font-mono so prose renders in the body sans font, while tabular data stays monospace (OD-03)", async () => {
     render(<OdtePage />);
-    await screen.findByText("call wall");
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: /levels/i })).not.toBeDisabled()
+    );
     const main = document.querySelector("main")!;
     expect(main.className).not.toMatch(/font-mono/);
     const table = document.querySelector("table");
