@@ -221,4 +221,18 @@ describe("OdteStrikesPage — single ladder mode (OL-02)", () => {
     await screen.findByText(/call IV/i);
     expect(screen.getByText("Θ")).toBeInTheDocument();
   });
+
+  it("replaces vega/rho columns with spread% and a liquidity marker, and explains msi_rationale on hover (OL-08)", async () => {
+    const user = userEvent.setup();
+    render(<OdteStrikesPage />);
+    await screen.findByText(/call IV/i);
+    await user.click(screen.getByRole("button", { name: /live/i }));
+    await screen.findByText("C Bid");
+    expect(screen.queryByText("ν")).not.toBeInTheDocument();
+    expect(screen.queryByText("ρ")).not.toBeInTheDocument();
+    expect(screen.getAllByText("Spread%").length).toBe(2); // call + put
+    expect(screen.getAllByText("Liq").length).toBe(2);
+    const msiLabel = screen.getByText("MSI Call/Put");
+    expect(msiLabel.closest("div")?.querySelector("[title], button")).toBeTruthy();
+  });
 });

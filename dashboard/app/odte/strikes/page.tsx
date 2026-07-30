@@ -9,7 +9,7 @@ import {
 } from "@/lib/odte";
 import { fmtGex } from "@/lib/odteCompanion";
 import { useOptionsLivePoller } from "@/lib/useOptionsLivePoller";
-import { isStale } from "@/lib/optionsLive";
+import { isStale, type StrikeLevel } from "@/lib/optionsLive";
 import GexChart from "@/components/GexChart";
 import SymbolSwitcher from "@/components/odte/SymbolSwitcher";
 import InfoTip from "@/components/ui/InfoTip";
@@ -51,6 +51,62 @@ function BarCell({
       />
       <span className="relative">{fmtNum(value)}</span>
     </td>
+  );
+}
+
+function LiveLadderRow({
+  level,
+  zeroGammaStrike,
+  atmStrike,
+}: {
+  level: StrikeLevel;
+  zeroGammaStrike: number | null;
+  atmStrike: number;
+}) {
+  return (
+    <tr
+      className={`border-b border-line/50 ${
+        level.strike === zeroGammaStrike ? "bg-teal/10" : ""
+      } ${level.strike === atmStrike ? "bg-warn/10" : ""}`}
+    >
+      <td className="px-2 py-1 font-bold">{level.strike.toFixed(0)}</td>
+      {/* Call Greeks */}
+      <td className="px-1 py-1 text-center">{level.call.bid != null ? level.call.bid.toFixed(2) : "—"}</td>
+      <td className="px-1 py-1 text-center">{level.call.ask != null ? level.call.ask.toFixed(2) : "—"}</td>
+      <td className="px-1 py-1 text-center">{level.call.iv != null ? (level.call.iv * 100).toFixed(1) : "—"}</td>
+      <td className="px-1 py-1 text-center">{level.call.delta != null ? level.call.delta.toFixed(3) : "—"}</td>
+      <td className="px-1 py-1 text-center">{level.call.gamma != null ? level.call.gamma.toFixed(5) : "—"}</td>
+      <td className="px-1 py-1 text-center">{level.call.theta != null ? level.call.theta.toFixed(3) : "—"}</td>
+      <td className="px-1 py-1 text-center">
+        {level.call.spread_pct != null ? level.call.spread_pct.toFixed(1) : "—"}
+      </td>
+      <td className="px-1 py-1 text-center">
+        <span className={level.call.liquid ? "text-teal" : "text-muted"}>●</span>
+      </td>
+      <td className="px-1 py-1 text-center">{level.call.volume != null ? level.call.volume.toFixed(0) : "—"}</td>
+      <td className="px-1 py-1 text-center">{level.call.oi != null ? level.call.oi.toFixed(0) : "—"}</td>
+      <td className="px-1 py-1 text-center">
+        {level.call_gex_by_strike != null ? (level.call_gex_by_strike / 1000).toFixed(0) : "—"}
+      </td>
+      {/* Put Greeks */}
+      <td className="px-1 py-1 text-center">{level.put.bid != null ? level.put.bid.toFixed(2) : "—"}</td>
+      <td className="px-1 py-1 text-center">{level.put.ask != null ? level.put.ask.toFixed(2) : "—"}</td>
+      <td className="px-1 py-1 text-center">{level.put.iv != null ? (level.put.iv * 100).toFixed(1) : "—"}</td>
+      <td className="px-1 py-1 text-center">{level.put.delta != null ? level.put.delta.toFixed(3) : "—"}</td>
+      <td className="px-1 py-1 text-center">{level.put.gamma != null ? level.put.gamma.toFixed(5) : "—"}</td>
+      <td className="px-1 py-1 text-center">{level.put.theta != null ? level.put.theta.toFixed(3) : "—"}</td>
+      <td className="px-1 py-1 text-center">
+        {level.put.spread_pct != null ? level.put.spread_pct.toFixed(1) : "—"}
+      </td>
+      <td className="px-1 py-1 text-center">
+        <span className={level.put.liquid ? "text-teal" : "text-muted"}>●</span>
+      </td>
+      <td className="px-1 py-1 text-center">{level.put.volume != null ? level.put.volume.toFixed(0) : "—"}</td>
+      <td className="px-1 py-1 text-center">{level.put.oi != null ? level.put.oi.toFixed(0) : "—"}</td>
+      <td className="px-1 py-1 text-center">
+        {level.put_gex_by_strike != null ? (level.put_gex_by_strike / 1000).toFixed(0) : "—"}
+      </td>
+    </tr>
   );
 }
 
@@ -202,9 +258,17 @@ export default function OdteStrikesPage() {
                     {liveLadder.zero_gamma_strike != null ? liveLadder.zero_gamma_strike.toFixed(0) : "—"}
                   </span>
                 </div>
-                <div>
+                <div className="flex items-center gap-1">
                   <span className="text-muted">MSI Call/Put</span>
-                  <span className="ml-2 font-semibold">
+                  <InfoTip
+                    content={
+                      liveLadder.msi_rationale ??
+                      "Max-strike-interest — the strike with the heaviest combined call/put concentration."
+                    }
+                  >
+                    <span className="sr-only">Why these strikes?</span>
+                  </InfoTip>
+                  <span className="ml-1 font-semibold">
                     {liveLadder.msi_call_strike != null ? liveLadder.msi_call_strike.toFixed(0) : "—"} /
                     {liveLadder.msi_put_strike != null ? " " + liveLadder.msi_put_strike.toFixed(0) : " —"}
                   </span>
@@ -240,8 +304,8 @@ export default function OdteStrikesPage() {
                       <th className="px-1 py-1 text-center text-teal">Δ</th>
                       <th className="px-1 py-1 text-center text-teal">Γ</th>
                       <th className="px-1 py-1 text-center text-teal">Θ</th>
-                      <th className="px-1 py-1 text-center text-teal">ν</th>
-                      <th className="px-1 py-1 text-center text-teal">ρ</th>
+                      <th className="px-1 py-1 text-center text-teal">Spread%</th>
+                      <th className="px-1 py-1 text-center text-teal">Liq</th>
                       <th className="px-1 py-1 text-center text-teal">Vol</th>
                       <th className="px-1 py-1 text-center text-teal">OI</th>
                       <th className="px-1 py-1 text-center text-teal">GEX</th>
@@ -252,8 +316,8 @@ export default function OdteStrikesPage() {
                       <th className="px-1 py-1 text-center text-neg">Δ</th>
                       <th className="px-1 py-1 text-center text-neg">Γ</th>
                       <th className="px-1 py-1 text-center text-neg">Θ</th>
-                      <th className="px-1 py-1 text-center text-neg">ν</th>
-                      <th className="px-1 py-1 text-center text-neg">ρ</th>
+                      <th className="px-1 py-1 text-center text-neg">Spread%</th>
+                      <th className="px-1 py-1 text-center text-neg">Liq</th>
                       <th className="px-1 py-1 text-center text-neg">Vol</th>
                       <th className="px-1 py-1 text-center text-neg">OI</th>
                       <th className="px-1 py-1 text-center text-neg">GEX</th>
@@ -261,82 +325,12 @@ export default function OdteStrikesPage() {
                   </thead>
                   <tbody>
                     {liveLadder.levels.map((level) => (
-                      <tr
+                      <LiveLadderRow
                         key={level.strike}
-                        className={`border-b border-line/50 ${
-                          level.strike === liveLadder.zero_gamma_strike ? "bg-teal/10" : ""
-                        } ${level.strike === liveLadder.atm_strike ? "bg-warn/10" : ""}`}
-                      >
-                        <td className="px-2 py-1 font-bold">{level.strike.toFixed(0)}</td>
-                        {/* Call Greeks */}
-                        <td className="px-1 py-1 text-center">
-                          {level.call.bid != null ? level.call.bid.toFixed(2) : "—"}
-                        </td>
-                        <td className="px-1 py-1 text-center">
-                          {level.call.ask != null ? level.call.ask.toFixed(2) : "—"}
-                        </td>
-                        <td className="px-1 py-1 text-center">
-                          {level.call.iv != null ? (level.call.iv * 100).toFixed(1) : "—"}
-                        </td>
-                        <td className="px-1 py-1 text-center">
-                          {level.call.delta != null ? level.call.delta.toFixed(3) : "—"}
-                        </td>
-                        <td className="px-1 py-1 text-center">
-                          {level.call.gamma != null ? level.call.gamma.toFixed(5) : "—"}
-                        </td>
-                        <td className="px-1 py-1 text-center">
-                          {level.call.theta != null ? level.call.theta.toFixed(3) : "—"}
-                        </td>
-                        <td className="px-1 py-1 text-center">
-                          {level.call.vega != null ? level.call.vega.toFixed(3) : "—"}
-                        </td>
-                        <td className="px-1 py-1 text-center">
-                          {level.call.rho != null ? level.call.rho.toFixed(3) : "—"}
-                        </td>
-                        <td className="px-1 py-1 text-center">
-                          {level.call.volume != null ? level.call.volume.toFixed(0) : "—"}
-                        </td>
-                        <td className="px-1 py-1 text-center">
-                          {level.call.oi != null ? level.call.oi.toFixed(0) : "—"}
-                        </td>
-                        <td className="px-1 py-1 text-center">
-                          {level.call_gex_by_strike != null ? (level.call_gex_by_strike / 1000).toFixed(0) : "—"}
-                        </td>
-                        {/* Put Greeks */}
-                        <td className="px-1 py-1 text-center">
-                          {level.put.bid != null ? level.put.bid.toFixed(2) : "—"}
-                        </td>
-                        <td className="px-1 py-1 text-center">
-                          {level.put.ask != null ? level.put.ask.toFixed(2) : "—"}
-                        </td>
-                        <td className="px-1 py-1 text-center">
-                          {level.put.iv != null ? (level.put.iv * 100).toFixed(1) : "—"}
-                        </td>
-                        <td className="px-1 py-1 text-center">
-                          {level.put.delta != null ? level.put.delta.toFixed(3) : "—"}
-                        </td>
-                        <td className="px-1 py-1 text-center">
-                          {level.put.gamma != null ? level.put.gamma.toFixed(5) : "—"}
-                        </td>
-                        <td className="px-1 py-1 text-center">
-                          {level.put.theta != null ? level.put.theta.toFixed(3) : "—"}
-                        </td>
-                        <td className="px-1 py-1 text-center">
-                          {level.put.vega != null ? level.put.vega.toFixed(3) : "—"}
-                        </td>
-                        <td className="px-1 py-1 text-center">
-                          {level.put.rho != null ? level.put.rho.toFixed(3) : "—"}
-                        </td>
-                        <td className="px-1 py-1 text-center">
-                          {level.put.volume != null ? level.put.volume.toFixed(0) : "—"}
-                        </td>
-                        <td className="px-1 py-1 text-center">
-                          {level.put.oi != null ? level.put.oi.toFixed(0) : "—"}
-                        </td>
-                        <td className="px-1 py-1 text-center">
-                          {level.put_gex_by_strike != null ? (level.put_gex_by_strike / 1000).toFixed(0) : "—"}
-                        </td>
-                      </tr>
+                        level={level}
+                        zeroGammaStrike={liveLadder.zero_gamma_strike}
+                        atmStrike={liveLadder.atm_strike}
+                      />
                     ))}
                   </tbody>
                 </table>
