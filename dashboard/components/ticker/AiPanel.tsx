@@ -11,11 +11,20 @@ type State =
   | { status: "done"; report: string }
   | { status: "error"; message: string };
 
+function reportParagraphs(report: string): string[] {
+  return report
+    .split(/\n{2,}/)
+    .flatMap((block) => (block.includes("\n") ? block.split(/\n/) : [block]))
+    .map((p) => p.trim())
+    .filter(Boolean);
+}
+
 export default function AiPanel({ ticker }: { ticker: string }) {
   const [state, setState] = useState<State>({ status: "idle" });
+  const [copied, setCopied] = useState(false);
 
   async function generate() {
-    if (state.status === "loading" || state.status === "done") return;
+    if (state.status === "loading") return;
     setState({ status: "loading" });
     try {
       const res = await fetch(`/api/argus/analysis/${ticker}`, { cache: "no-store" });
@@ -71,9 +80,33 @@ export default function AiPanel({ ticker }: { ticker: string }) {
         )}
 
         {state.status === "done" && (
-          <pre className="font-mono text-[12px] text-foreground leading-relaxed whitespace-pre-wrap break-words">
-            {state.report}
-          </pre>
+          <div className="space-y-3">
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={generate}
+                className="font-mono text-[11px] text-accent border border-accent/40 rounded px-2 py-0.5 hover:bg-accent/10 transition-colors"
+              >
+                Regenerate
+              </button>
+              <button
+                type="button"
+                onClick={async () => {
+                  await navigator.clipboard.writeText(state.report);
+                  setCopied(true);
+                  setTimeout(() => setCopied(false), 1500);
+                }}
+                className="font-mono text-[11px] text-muted border border-line rounded px-2 py-0.5 hover:text-foreground hover:border-accent/40 transition-colors"
+              >
+                {copied ? "Copied" : "Copy"}
+              </button>
+            </div>
+            <div className="space-y-2 font-mono text-[12px] text-foreground leading-relaxed">
+              {reportParagraphs(state.report).map((p, i) => (
+                <p key={i}>{p}</p>
+              ))}
+            </div>
+          </div>
         )}
       </div>
     </Panel>
