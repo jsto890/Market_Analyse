@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import useSWR from "swr";
 import { useMacro, useMacroSeries, scopeLabel, toneClass } from "@/lib/macro";
 import { MacroChart, type SpxBar } from "@/components/macro/MacroChart";
@@ -19,6 +19,11 @@ export default function MacroPage() {
 
   const gauges = (data?.gauges ?? []).filter((g) => g.window === window);
   const anyData = (data?.gauges ?? []).length > 0;
+
+  useEffect(() => {
+    const stillValid = (data?.gauges ?? []).some((g) => g.window === window && g.scope === scope);
+    if (!stillValid) setScope("global");
+  }, [window, data, scope]);
 
   return (
     <main className="max-w-5xl mx-auto px-6 py-6 font-mono">
