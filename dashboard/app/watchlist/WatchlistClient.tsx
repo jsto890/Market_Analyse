@@ -14,6 +14,7 @@ import Input from "@/components/ui/Input";
 import Button from "@/components/ui/Button";
 import { heatBg } from "@/lib/heat";
 import { price, pct, relativeAge } from "@/lib/format";
+import { WATCHLIST_STATUS_LABEL } from "@/lib/labels";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -279,7 +280,7 @@ function PinnedSection({
     },
     {
       key: "price_at_pin",
-      header: "@pin",
+      header: "Pin price",
       width: "76px",
       align: "right",
       render: (r) => fmtPrice(r.price_at_pin),
@@ -483,7 +484,7 @@ function RecentPicksSection({ medianDaysToPeak }: { medianDaysToPeak: number }) 
     },
     {
       key: "entry_at_flag",
-      header: "@flag",
+      header: "Flag price",
       align: "right",
       render: (r) => fmtPrice(r.entry_at_flag),
     },
@@ -511,13 +512,13 @@ function RecentPicksSection({ medianDaysToPeak }: { medianDaysToPeak: number }) 
     },
     {
       key: "stillIn",
-      header: "Still in?",
+      header: "In today's report",
       render: (r) => {
         if (r.stillIn === null) return <span className="text-muted">—</span>;
         return r.stillIn ? (
-          <span className="text-pos text-[12px]">yes</span>
+          <span className="text-pos text-[12px]">{WATCHLIST_STATUS_LABEL.in}</span>
         ) : (
-          <span className="text-muted text-[12px]">dropped</span>
+          <span className="text-muted text-[12px]">{WATCHLIST_STATUS_LABEL.out}</span>
         );
       },
     },

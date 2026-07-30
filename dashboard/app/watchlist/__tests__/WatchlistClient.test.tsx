@@ -169,3 +169,24 @@ describe("WatchlistClient add-ticker feedback (WL-04)", () => {
     expect(screen.queryByText("Ticker not found")).not.toBeInTheDocument();
   });
 });
+
+describe("WatchlistClient declarative headers (WL-05)", () => {
+  it("uses declarative header text and status labels, not a question with yes/dropped", async () => {
+    mockFetchJson({
+      ...baseMocks(),
+      "/api/signals/recent?days=14": [
+        { ticker: "AMD", first_date: "2026-07-15", first_group: "prime", entry_at_flag: 140, last_date: "2026-07-20" },
+      ],
+    });
+    render(
+      <UndoToastProvider>
+        <WatchlistClient medianDaysToPeak={12} />
+      </UndoToastProvider>
+    );
+    await screen.findByText("AMD");
+    expect(screen.getByRole("columnheader", { name: "In today's report" })).toBeInTheDocument();
+    expect(screen.queryByRole("columnheader", { name: "Still in?" })).not.toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: "Pin price" })).toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: "Flag price" })).toBeInTheDocument();
+  });
+});
