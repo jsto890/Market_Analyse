@@ -13,6 +13,7 @@ import GexCard from "@/components/ticker/GexCard";
 import AiPanel from "@/components/ticker/AiPanel";
 import CatalystStrip from "@/components/ticker/CatalystStrip";
 import NewsCard from "@/components/ticker/NewsCard";
+import TickerSubNav from "@/components/ticker/TickerSubNav";
 import { loadBridgeSignals } from "@/lib/bridge";
 import { signalHistory } from "@/lib/signals";
 import { MEDIAN_PEAK_PCT, MEDIAN_DAYS_TO_PEAK } from "@/lib/perf-constants";
@@ -92,10 +93,12 @@ export default async function TickerPage({
         <CatalystStrip ticker={ticker} />
       </section>
 
+      <TickerSubNav />
+
       {/* Two-column layout */}
       <div className="grid grid-cols-[62fr_38fr] gap-4 max-[1100px]:grid-cols-1">
         {/* Left: chart + options */}
-        <div className="space-y-4">
+        <div className="space-y-4 max-[1100px]:order-2">
           <div className="min-h-[420px] 2xl:min-h-[560px]">
             <Panel title="Chart">
               <TickerChartSection
@@ -116,14 +119,28 @@ export default async function TickerPage({
         </div>
 
         {/* Right: Levels → Why → Catalysts → Sentiment → History → AI */}
-        <div className="space-y-4">
-          {bridgeRow && <LevelsCard ticker={ticker} bridgeRow={bridgeRow} />}
-          <WhyPanel ticker={ticker} />
-          <CatalystsCard ticker={ticker} bridgeRow={bridgeRow} />
-          <NewsCard ticker={ticker} />
-          <SentimentCard bridgeRow={bridgeRow} lastSeen={lastSeen} />
-          <HistoryCard rows={history} lastClose={lastClose} />
-          <AiPanel ticker={ticker} />
+        <div className="space-y-4 max-[1100px]:order-1">
+          <div id="levels" className="scroll-mt-[calc(var(--nav-h)+44px)]">
+            {bridgeRow && <LevelsCard ticker={ticker} bridgeRow={bridgeRow} />}
+          </div>
+          <div id="why" className="scroll-mt-[calc(var(--nav-h)+44px)]">
+            <WhyPanel ticker={ticker} />
+          </div>
+          <div id="catalysts" className="scroll-mt-[calc(var(--nav-h)+44px)]">
+            <CatalystsCard ticker={ticker} bridgeRow={bridgeRow} />
+          </div>
+          <div id="news" className="scroll-mt-[calc(var(--nav-h)+44px)]">
+            <NewsCard ticker={ticker} />
+          </div>
+          <div id="sentiment" className="scroll-mt-[calc(var(--nav-h)+44px)]">
+            <SentimentCard bridgeRow={bridgeRow} lastSeen={lastSeen} />
+          </div>
+          <div id="history" className="scroll-mt-[calc(var(--nav-h)+44px)]">
+            <HistoryCard rows={history} lastClose={lastClose} />
+          </div>
+          <div id="ai" className="scroll-mt-[calc(var(--nav-h)+44px)]">
+            <AiPanel ticker={ticker} />
+          </div>
         </div>
       </div>
     </main>
