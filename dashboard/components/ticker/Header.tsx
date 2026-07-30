@@ -1,6 +1,5 @@
 "use client";
 
-import * as Tooltip from "@radix-ui/react-tooltip";
 import Badge from "@/components/ui/Badge";
 import ConvictionDot from "@/components/ui/ConvictionDot";
 import PinToggle from "@/components/ui/PinToggle";
@@ -83,22 +82,9 @@ export default function Header({
   if (earningsInDays !== null) {
     if (earningsInDays <= 10) {
       earningsNode = (
-        <Tooltip.Root>
-          <Tooltip.Trigger asChild>
-            <span className="inline-flex items-center rounded border border-warn/50 bg-warn/10 px-1.5 py-px text-[11px] font-mono text-warn tabular-nums cursor-default">
-              earnings in {earningsInDays}d
-            </span>
-          </Tooltip.Trigger>
-          <Tooltip.Portal>
-            <Tooltip.Content
-              className="rounded bg-elevated px-2 py-1 text-[12px] text-muted shadow-lg border border-line z-50"
-              sideOffset={4}
-            >
-              earnings in {earningsInDays}d — inside typical hold window
-              <Tooltip.Arrow className="fill-elevated" />
-            </Tooltip.Content>
-          </Tooltip.Portal>
-        </Tooltip.Root>
+        <span className="inline-flex items-center rounded border border-warn/50 bg-warn/10 px-1.5 py-px text-[11px] font-mono text-warn tabular-nums">
+          earnings in {earningsInDays}d
+        </span>
       );
     } else {
       earningsNode = (
@@ -140,27 +126,16 @@ export default function Header({
 
         {bridgeRow && (
           <div className="flex flex-wrap items-center gap-1.5">
-            <Badge variant="tier" value={bridgeRow.action_label} />
-            <Badge variant="verdict" value={bridgeRow.argus_verdict} />
-            <Badge variant="style" value={bridgeRow.trade_style} />
+            {bridgeRow.argus_verdict === "SHORT" ? (
+              <Badge variant="verdict" value={bridgeRow.argus_verdict} />
+            ) : (
+              <Badge variant="tier" value={bridgeRow.action_label} />
+            )}
             <ConvictionDot value={bridgeRow.conviction as Conviction} />
             {bridgeRow.high_conviction && (
-              <Tooltip.Root>
-                <Tooltip.Trigger asChild>
-                  <span className="inline-flex items-center rounded border border-accent/50 bg-accent/10 px-1.5 py-px text-[11px] font-mono text-accent cursor-default">
-                    HC
-                  </span>
-                </Tooltip.Trigger>
-                <Tooltip.Portal>
-                  <Tooltip.Content
-                    className="rounded bg-elevated px-2 py-1 text-[12px] text-muted shadow-lg border border-line z-50 max-w-[220px]"
-                    sideOffset={4}
-                  >
-                    {"≥"}75% indicator agreement — consensus, not edge
-                    <Tooltip.Arrow className="fill-elevated" />
-                  </Tooltip.Content>
-                </Tooltip.Portal>
-              </Tooltip.Root>
+              <span className="inline-flex items-center rounded border border-accent/50 bg-accent/10 px-1.5 py-px text-[11px] font-mono text-accent">
+                HC
+              </span>
             )}
           </div>
         )}
@@ -169,6 +144,13 @@ export default function Header({
           <PinToggle symbol={ticker} />
         </div>
       </div>
+
+      {bridgeRow && (
+        <p className="text-[11px] text-muted">
+          HC = ≥75% indicator agreement (consensus, not edge) · conviction dots are display-only, not
+          blended into the score.
+        </p>
+      )}
 
       {/* Row 2: flag-age line */}
       {flagAgeLine}
