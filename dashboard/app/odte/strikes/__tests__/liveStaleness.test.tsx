@@ -28,7 +28,7 @@ describe("OdteStrikesPage — stale-ladder invalidation (OL-06)", () => {
     mockFetchJson({});
   });
 
-  it("shows LIVE, undimmed, with no consecutive failures", async () => {
+  it("shows LIVE with no consecutive failures", async () => {
     mockedPoller.mockReturnValue({ ladder, error: null, consecutiveFailures: 0, status: "live" });
     const user = userEvent.setup();
     render(<OdteStrikesPage />);
@@ -38,7 +38,7 @@ describe("OdteStrikesPage — stale-ladder invalidation (OL-06)", () => {
     expect(badge).toBeDefined();
   });
 
-  it("flips the badge to STALE and dims the table after 3 consecutive failures, but keeps the last good data on screen", async () => {
+  it("flips the badge to STALE after 3 consecutive failures, but keeps the last good data on screen", async () => {
     mockedPoller.mockReturnValue({
       ladder,
       error: "Live data unavailable",
@@ -54,7 +54,8 @@ describe("OdteStrikesPage — stale-ladder invalidation (OL-06)", () => {
     // staleness) — only the provenance badge <span> must not say LIVE.
     const liveTexts = screen.queryAllByText("LIVE");
     expect(liveTexts.every((el) => el.tagName !== "SPAN")).toBe(true);
-    // The last-known ATM strike is still rendered — the table is dimmed, not blanked.
+    // The last-known ATM strike is still rendered — the STALE badge conveys
+    // the state, the table itself is neither dimmed nor blanked.
     expect(screen.getByText("565")).toBeInTheDocument();
   });
 });

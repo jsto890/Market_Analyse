@@ -106,7 +106,7 @@ select {
 @layer components {
   /* Section eyebrow: uppercase, tracked, muted micro-label. */
   .eyebrow {
-    @apply text-[10px] font-medium uppercase tracking-[0.1em] text-muted;
+    @apply text-[11px] font-medium uppercase tracking-[0.1em] text-muted;
   }
   /* Accent tick preceding a section title. */
   .tick::before {

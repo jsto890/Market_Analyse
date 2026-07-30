@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { render, screen } from "@/test/render";
 import { mockFetchJson } from "@/test/fetchMock";
 import { MorningReport } from "@/components/today/MorningReport";
@@ -23,7 +23,10 @@ const baseReport = {
 
 describe("MorningReport — loading/error/collapse (TD-09)", () => {
   it("shows a skeleton while the report is loading, not nothing", () => {
-    mockFetchJson(() => new Promise(() => {})); // never resolves
+    // mockFetchJson JSON.stringifies whatever the resolver returns, so a
+    // pending Promise value serializes to "{}" instead of actually hanging —
+    // stub fetch directly so the request genuinely never resolves.
+    vi.stubGlobal("fetch", vi.fn(() => new Promise(() => {})));
     render(<MorningReport />);
     expect(screen.getByLabelText(/loading morning brief/i)).toBeInTheDocument();
   });

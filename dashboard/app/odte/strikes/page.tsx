@@ -215,6 +215,13 @@ export default function OdteStrikesPage() {
         </div>
       </div>
 
+      {isLoading && !data && (
+        <p className="text-[11px] text-muted font-mono p-4">loading ladder…</p>
+      )}
+      {error && !data && (
+        <p className="text-[11px] text-muted font-mono p-4">no data — source unavailable</p>
+      )}
+
       {/* Expiry selector — shared by classic and live ladders (I4); must stay
          reachable in both modes since it drives useOptionsLivePoller too. */}
       {data && (
@@ -407,13 +414,6 @@ export default function OdteStrikesPage() {
 
       {!showLive && (
         <>
-          {isLoading && !data && (
-            <p className="text-[11px] text-muted font-mono p-4">loading ladder…</p>
-          )}
-          {error && !data && (
-            <p className="text-[11px] text-muted font-mono p-4">no data — source unavailable</p>
-          )}
-
           {data && (
             <>
           {/* Legend + critical levels */}
