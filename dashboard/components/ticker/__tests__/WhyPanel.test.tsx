@@ -82,4 +82,14 @@ describe("WhyPanel (TK-05/06/07)", () => {
     expect(screen.getByText("squeeze")).toBeInTheDocument();
     expect(screen.getByText("momentum_osc")).toBeInTheDocument();
   });
+
+  it("links the combo-decode info-tip into the glossary", async () => {
+    const user = userEvent.setup();
+    mockFetchJson({ [`/api/argus/action_card/AAPL`]: card({ combo: "LSNL" }) });
+    render(<WhyPanel ticker="AAPL" />);
+    const trigger = (await screen.findByText("ma_trend")).closest("button");
+    await user.hover(trigger as HTMLElement);
+    const links = await screen.findAllByText("Glossary ↗");
+    expect(links[0]).toHaveAttribute("href", "/glossary#ma-trend");
+  });
 });

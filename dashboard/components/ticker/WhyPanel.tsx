@@ -3,6 +3,7 @@
 import { useState, useId } from "react";
 import { ChevronDown, AlertTriangle } from "lucide-react";
 import * as Tooltip from "@radix-ui/react-tooltip";
+import Link from "next/link";
 import Panel from "@/components/ui/Panel";
 import Skeleton from "@/components/ui/Skeleton";
 import StatChip from "@/components/ui/StatChip";
@@ -10,6 +11,7 @@ import CenterBar from "@/components/ui/CenterBar";
 import InfoTip from "@/components/ui/InfoTip";
 import { useTickerData } from "@/lib/useTickerData";
 import { COMBO_POSITION_LABEL, COMBO_LETTER_LABEL } from "@/lib/labels";
+import { glossarySlug } from "@/lib/glossarySlug";
 import type { AgentVote } from "@/types/argus";
 
 const COMBO_NOTE: Record<string, string> = {
@@ -379,7 +381,20 @@ export default function WhyPanel({ ticker }: { ticker: string }) {
               {COMBO_POSITION_LABEL.map(([family, gloss], i) => {
                 const letter = combo[i] as "L" | "S" | "N";
                 return (
-                  <InfoTip key={family} content={`${gloss} ${COMBO_LETTER_LABEL[letter]}.`}>
+                  <InfoTip
+                    key={family}
+                    content={
+                      <>
+                        {gloss} {COMBO_LETTER_LABEL[letter]}.{" "}
+                        <Link
+                          href={`/glossary#${glossarySlug(family)}`}
+                          className="underline decoration-dotted text-accent"
+                        >
+                          Glossary ↗
+                        </Link>
+                      </>
+                    }
+                  >
                     <span className="inline-flex items-center gap-1 rounded border border-line bg-surface px-1.5 py-0.5 font-mono text-[11px] text-muted">
                       {family}
                       <span className={letter === "L" ? "text-pos" : letter === "S" ? "text-neg" : "text-muted"}>
