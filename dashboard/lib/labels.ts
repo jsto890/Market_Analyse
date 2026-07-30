@@ -12,6 +12,12 @@ export const HEADER_GLOSS: Record<string, string> = {
   "RS-Mom": "Relative Strength Momentum (JdK RRG) — the rate of change of RS-Ratio. >100 = the strength trend is accelerating.",
   Breadth: "% of names in the industry basket trading above their 50-day moving average. Improving quadrant + low breadth = one name carrying the move, unconfirmed.",
   n: "Basket size — number of names sampled for the industry's RS/breadth. <20 is shrinkage-adjusted and shown muted.",
+  L: "Long votes — number of agents in the ensemble voting long on this ticker.",
+  S: "Short votes — number of agents voting short.",
+  W: "Wait votes — number of agents voting no direction (wait).",
+  HC: "High conviction — this call passes the ensemble's tightened agreement/R:R/catalyst gates.",
+  "Agree%": "Agreement — share of voting agents aligned with the ensemble's final verdict direction.",
+  "R:R": "Risk:reward — modeled target distance divided by modeled stop distance from entry.",
 };
 
 /** RRG quadrant labels (RotationPanel `QuadrantDot`). */

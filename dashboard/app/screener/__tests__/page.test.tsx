@@ -115,3 +115,31 @@ describe("ScreenerPage pin toggle (SC-08)", () => {
     expect(await screen.findByText("Added NVDA to watchlist")).toBeInTheDocument();
   });
 });
+
+describe("ScreenerPage header tooltips (SC-05)", () => {
+  it("L/S/W/HC/Agree%/R:R headers expose an info tooltip trigger", async () => {
+    mockFetchJson({
+      "/api/watchlist": { watchlist: [] },
+      "/api/argus/screener?min_conviction=0.3": {
+        results: [
+          { symbol: "NVDA", verdict: "LONG", score: 0.812, high_conviction: true, entry: 1, stop: 1, target: 1,
+            risk_reward: 2.1, long_votes: 40, short_votes: 5, wait_votes: 2, agreement_pct: 85.1,
+            ret_1d: 0.024, ret_5d: 0.081, ret_20d: null, is_extended: false, entry_quality: "good" },
+        ],
+        as_of: "2026-07-28T00:00:00Z",
+        cached: true,
+      },
+    });
+    render(
+      <UndoToastProvider>
+        <ScreenerPage />
+      </UndoToastProvider>
+    );
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("button", { name: "Full universe" }));
+    await screen.findByText("NVDA");
+    for (const label of ["Long votes info", "Short votes info", "Wait votes info", "High conviction info", "Agreement info", "Risk:reward info"]) {
+      expect(screen.getByRole("button", { name: label })).toBeInTheDocument();
+    }
+  });
+});

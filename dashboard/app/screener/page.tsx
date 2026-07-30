@@ -11,6 +11,9 @@ import Input from "@/components/ui/Input";
 import Button from "@/components/ui/Button";
 import Badge from "@/components/ui/Badge";
 import PinToggle from "@/components/ui/PinToggle";
+import InfoTip from "@/components/ui/InfoTip";
+import { HEADER_GLOSS } from "@/lib/labels";
+import { pctWhole } from "@/lib/format";
 
 function scoreColor(s: number): string {
   if (s >= 0.7) return "text-pos";
@@ -73,33 +76,33 @@ export default function ScreenerPage() {
     },
     {
       key: "long_votes",
-      header: "L",
+      header: <InfoTip content={HEADER_GLOSS.L} label="Long votes info">L</InfoTip>,
       align: "right",
       render: (r) => <span className="text-pos">{r.long_votes}</span>,
     },
     {
       key: "short_votes",
-      header: "S",
+      header: <InfoTip content={HEADER_GLOSS.S} label="Short votes info">S</InfoTip>,
       align: "right",
       render: (r) => <span className="text-neg">{r.short_votes}</span>,
     },
     {
       key: "wait_votes",
-      header: "W",
+      header: <InfoTip content={HEADER_GLOSS.W} label="Wait votes info">W</InfoTip>,
       align: "right",
       render: (r) => <span className="text-warn">{r.wait_votes}</span>,
     },
     {
       key: "agreement_pct",
-      header: "Agree%",
+      header: <InfoTip content={HEADER_GLOSS["Agree%"]} label="Agreement info">Agree%</InfoTip>,
       align: "right",
       sortable: true,
       sortFn: (a, b) => a.agreement_pct - b.agreement_pct,
-      render: (r) => <span className="text-foreground">{r.agreement_pct.toFixed(0)}%</span>,
+      render: (r) => <span className="text-foreground">{pctWhole(r.agreement_pct, "percent")}</span>,
     },
     {
       key: "high_conviction",
-      header: "HC",
+      header: <InfoTip content={HEADER_GLOSS.HC} label="High conviction info">HC</InfoTip>,
       align: "center",
       render: (r) =>
         r.high_conviction ? (
@@ -110,7 +113,7 @@ export default function ScreenerPage() {
     },
     {
       key: "risk_reward",
-      header: "R:R",
+      header: <InfoTip content={HEADER_GLOSS["R:R"]} label="Risk:reward info">R:R</InfoTip>,
       align: "right",
       sortable: true,
       sortFn: (a, b) => a.risk_reward - b.risk_reward,
