@@ -49,3 +49,14 @@ describe("ScreenerPage idle state (SC-02)", () => {
     expect(document.querySelectorAll(".animate-pulse").length).toBe(0);
   });
 });
+
+describe("ScreenerPage control styling (SC-09)", () => {
+  it("Run button has no solid accent fill and inputs have no focus:outline-none", async () => {
+    mockFetchJson({ "/api/watchlist": { watchlist: [] } });
+    render(<ScreenerPage />);
+    const runBtn = await screen.findByRole("button", { name: "Run" });
+    expect(runBtn.className).not.toContain("bg-accent text-white");
+    const tickerInput = screen.getByPlaceholderText("Filter tickers — AAPL, TSLA, NVDA…");
+    expect(tickerInput.className).not.toContain("outline-none");
+  });
+});

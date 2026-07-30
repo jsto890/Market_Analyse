@@ -8,6 +8,8 @@ import { useRouter } from "next/navigation";
 import useSWR from "swr";
 import type { ScreenerResult } from "@/types/argus";
 import DataTable, { Column } from "@/components/ui/DataTable";
+import Input from "@/components/ui/Input";
+import Button from "@/components/ui/Button";
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
@@ -265,58 +267,47 @@ export default function ScreenerPage() {
 
         {/* Controls */}
         <div className="flex flex-wrap items-center gap-2 rounded-md border border-line bg-elevated px-3 py-2.5">
-          <div className="relative">
-            <Search
-              size={14}
-              className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-muted"
-            />
-            <input
-              type="text"
-              value={tickerInput}
-              onChange={(e) => setTickerInput(e.target.value)}
-              onKeyDown={handleKeyDown}
-              placeholder="Filter tickers — AAPL, TSLA, NVDA…"
-              className="h-9 w-64 rounded border border-line bg-raised pl-8 pr-3 text-sm text-foreground placeholder-muted focus:border-accent focus:outline-none"
-            />
-          </div>
+          <Input
+            type="text"
+            icon={<Search size={14} />}
+            value={tickerInput}
+            onChange={(e) => setTickerInput(e.target.value)}
+            onKeyDown={handleKeyDown}
+            placeholder="Filter tickers — AAPL, TSLA, NVDA…"
+            className="w-64"
+          />
           <label className="flex items-center gap-1.5 text-xs text-muted">
             Min score
-            <input
+            <Input
               type="number"
               value={minScore}
               onChange={(e) => setMinScore(e.target.value)}
               step="0.05"
               min="0"
               max="1"
-              className="h-9 w-16 rounded border border-line bg-raised px-2 text-sm text-foreground focus:border-accent focus:outline-none"
+              className="w-16"
             />
           </label>
           <div className="ml-auto flex items-center gap-2">
-            <button
+            <Button
+              variant="primary"
               onClick={handleRun}
               disabled={loading}
-              className="inline-flex h-9 items-center gap-1.5 rounded-md bg-accent px-4 text-sm font-semibold text-white shadow-sm transition-opacity hover:opacity-90 disabled:opacity-50"
+              loading={loading}
+              icon={<ArrowRight size={14} />}
             >
-              {loading ? (
-                <>
-                  <Loader2 size={14} className="animate-spin" /> Running…
-                </>
-              ) : (
-                <>
-                  Run <ArrowRight size={14} />
-                </>
-              )}
-            </button>
-            <button
+              Run
+            </Button>
+            <Button
+              variant="secondary"
               onClick={() => {
                 setTickerInput("");
                 void runScreener(null);
               }}
               disabled={loading}
-              className="inline-flex h-9 items-center rounded-md border border-line bg-raised px-4 text-sm font-medium text-foreground transition-colors hover:border-line-strong disabled:opacity-50"
             >
               Full universe
-            </button>
+            </Button>
           </div>
         </div>
 
