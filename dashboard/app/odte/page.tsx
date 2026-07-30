@@ -4,12 +4,11 @@ import Link from "next/link";
 import useSWR from "swr";
 import {
   odteBadge,
-  odteEtfSymbols,
-  odteIndexSymbols,
   useLadder,
   useOdteSymbol,
   type OdteHealth,
 } from "@/lib/odte";
+import SymbolSwitcher from "@/components/odte/SymbolSwitcher";
 import {
   companionSymbol,
   isProxied,
@@ -133,37 +132,7 @@ export default function OdtePage() {
           )}
         </h1>
         <div className="flex items-center gap-3">
-          <div className="flex rounded border border-line overflow-hidden">
-            <div className="flex items-center gap-2 px-2">
-              <span className="text-xs text-muted">ETF</span>
-              {odteEtfSymbols.map((symbol) => (
-                <button
-                  key={symbol}
-                  onClick={() => switchSymbol(symbol)}
-                  className={`px-2 py-0.5 text-xs ${
-                    symbol === activeSymbol ? "bg-accent-dim text-accent" : "text-muted hover:text-foreground"
-                  }`}
-                >
-                  {symbol}
-                </button>
-              ))}
-            </div>
-            <span className="w-px h-4 bg-line mx-1" />
-            <div className="flex items-center gap-2 px-2">
-              <span className="text-xs text-muted">INDEX</span>
-              {odteIndexSymbols.map((symbol) => (
-                <button
-                  key={symbol}
-                  onClick={() => switchSymbol(symbol)}
-                  className={`px-2 py-0.5 text-xs ${
-                    symbol === activeSymbol ? "bg-accent-dim text-accent" : "text-muted hover:text-foreground"
-                  }`}
-                >
-                  {symbol}
-                </button>
-              ))}
-            </div>
-          </div>
+          <SymbolSwitcher active={activeSymbol} onChange={switchSymbol} />
           <span className={`px-2 py-0.5 text-xs rounded ${toneClass[badge.tone]}`}>{badge.label}</span>
         </div>
       </div>

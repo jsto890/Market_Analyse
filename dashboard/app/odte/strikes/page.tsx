@@ -4,8 +4,6 @@ import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import {
   nearestStrikeIndex,
-  odteEtfSymbols,
-  odteIndexSymbols,
   useLadder,
   useOdteSymbol,
 } from "@/lib/odte";
@@ -13,6 +11,7 @@ import { fmtGex } from "@/lib/odteCompanion";
 import { useOptionsLivePoller } from "@/lib/useOptionsLivePoller";
 import { isStale } from "@/lib/optionsLive";
 import GexChart from "@/components/GexChart";
+import SymbolSwitcher from "@/components/odte/SymbolSwitcher";
 import InfoTip from "@/components/ui/InfoTip";
 
 function fmtIv(iv: number | null | undefined): string {
@@ -133,37 +132,7 @@ export default function OdteStrikesPage() {
           </button>
         </div>
         <div className="overflow-x-auto">
-          <div className="flex rounded border border-line overflow-hidden">
-            <div className="flex items-center gap-2 px-2">
-              <span className="text-xs text-muted">ETF</span>
-              {odteEtfSymbols.map((symbol) => (
-                <button
-                  key={symbol}
-                  onClick={() => switchSymbol(symbol)}
-                  className={`px-2 py-0.5 text-xs ${
-                    symbol === activeSymbol ? "bg-green-500/20 text-green-400" : "text-muted"
-                  }`}
-                >
-                  {symbol}
-                </button>
-              ))}
-            </div>
-            <span className="w-px h-4 bg-line mx-1" />
-            <div className="flex items-center gap-2 px-2">
-              <span className="text-xs text-muted">INDEX</span>
-              {odteIndexSymbols.map((symbol) => (
-                <button
-                  key={symbol}
-                  onClick={() => switchSymbol(symbol)}
-                  className={`px-2 py-0.5 text-xs ${
-                    symbol === activeSymbol ? "bg-green-500/20 text-green-400" : "text-muted"
-                  }`}
-                >
-                  {symbol}
-                </button>
-              ))}
-            </div>
-          </div>
+          <SymbolSwitcher active={activeSymbol} onChange={switchSymbol} />
         </div>
       </div>
 
