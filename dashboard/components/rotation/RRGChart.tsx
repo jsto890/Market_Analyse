@@ -14,32 +14,9 @@ import {
 } from "recharts";
 import Panel from "@/components/ui/Panel";
 import type { RotationRow } from "@/components/today/RotationPanel";
-
-const QUADRANT_COLOR: Record<string, string> = {
-  leading: "var(--green)",
-  improving: "var(--teal)",
-  weakening: "var(--amber)",
-  lagging: "var(--red)",
-};
-
-const QUADRANT_LABEL: Record<string, string> = {
-  leading: "Leading",
-  improving: "Improving",
-  weakening: "Weakening",
-  lagging: "Lagging",
-};
-
-function deriveQuadrant(row: RotationRow): string {
-  if (row.quadrant in QUADRANT_COLOR) return row.quadrant;
-  if (row.rs_ratio >= 100 && row.rs_mom >= 100) return "leading";
-  if (row.rs_ratio < 100 && row.rs_mom >= 100) return "improving";
-  if (row.rs_ratio >= 100 && row.rs_mom < 100) return "weakening";
-  return "lagging";
-}
-
-function abbreviate(name: string, max = 10): string {
-  return name.length > max ? `${name.slice(0, max - 1)}…` : name;
-}
+import { QUADRANT_COLOR, deriveQuadrant, abbreviate } from "@/lib/rotation";
+import { CHART_HEIGHT, CHART_AXIS_STYLE } from "@/lib/chartConventions";
+import { QUADRANT_LABEL } from "@/lib/labels";
 
 interface TooltipPayloadItem {
   payload: RotationRow & { quadrantKey: string };
@@ -51,7 +28,9 @@ function RRGTooltip({ active, payload }: { active?: boolean; payload?: TooltipPa
   return (
     <div className="rounded border border-line bg-elevated px-2.5 py-1.5 text-[12px] shadow-lg">
       <div className="font-medium text-text">{row.industry}</div>
-      <div className="text-muted">{QUADRANT_LABEL[row.quadrantKey] ?? row.quadrantKey}</div>
+      <div className="text-muted">
+        {QUADRANT_LABEL[row.quadrantKey as keyof typeof QUADRANT_LABEL] ?? row.quadrantKey}
+      </div>
       <div className="mt-1 grid grid-cols-2 gap-x-3 text-muted">
         <span>RS-Ratio</span>
         <span className="text-right text-text">{row.rs_ratio.toFixed(2)}</span>
@@ -118,7 +97,11 @@ export default function RRGChart({ rows }: { rows: RotationRow[] }) {
         hidden > 0 ? ` · ${hidden} hidden (no data)` : ""
       }`}
     >
-      <div style={{ width: "100%", height: 420 }}>
+      <div
+        role="img"
+        aria-label={`Relative Rotation Graph scatter plot, ${plotted.length} sectors`}
+        style={{ width: "100%", height: CHART_HEIGHT }}
+      >
         <ResponsiveContainer width="100%" height="100%">
           <ScatterChart margin={{ top: 16, right: 24, bottom: 8, left: 8 }}>
             <ReferenceArea
@@ -162,28 +145,28 @@ export default function RRGChart({ rows }: { rows: RotationRow[] }) {
               label={{ value: "Lagging", position: "insideBottomLeft", fill: "var(--red)", fontSize: 11 }}
             />
 
-            <CartesianGrid stroke="var(--border)" strokeDasharray="3 3" />
+            <CartesianGrid stroke={CHART_AXIS_STYLE.grid} strokeDasharray="3 3" />
             <XAxis
               type="number"
               dataKey="rs_ratio"
               domain={xDomain}
               tickFormatter={(v: number) => v.toFixed(1)}
-              tick={{ fill: "#8b93a3", fontSize: 11 }}
-              stroke="var(--border)"
-              label={{ value: "RS-Ratio", position: "insideBottom", offset: -4, fill: "#8b93a3", fontSize: 11 }}
+              tick={{ fill: CHART_AXIS_STYLE.tick, fontSize: 11 }}
+              stroke={CHART_AXIS_STYLE.axisLine}
+              label={{ value: "RS-Ratio", position: "insideBottom", offset: -4, fill: CHART_AXIS_STYLE.tick, fontSize: 11 }}
             />
             <YAxis
               type="number"
               dataKey="rs_mom"
               domain={yDomain}
               tickFormatter={(v: number) => v.toFixed(1)}
-              tick={{ fill: "#8b93a3", fontSize: 11 }}
-              stroke="var(--border)"
-              label={{ value: "RS-Momentum", angle: -90, position: "insideLeft", fill: "#8b93a3", fontSize: 11 }}
+              tick={{ fill: CHART_AXIS_STYLE.tick, fontSize: 11 }}
+              stroke={CHART_AXIS_STYLE.axisLine}
+              label={{ value: "RS-Momentum", angle: -90, position: "insideLeft", fill: CHART_AXIS_STYLE.tick, fontSize: 11 }}
             />
             <ZAxis range={[80, 80]} />
-            <ReferenceLine x={100} stroke="var(--border)" />
-            <ReferenceLine y={100} stroke="var(--border)" />
+            <ReferenceLine x={100} stroke={CHART_AXIS_STYLE.referenceLine} />
+            <ReferenceLine y={100} stroke={CHART_AXIS_STYLE.referenceLine} />
 
             <Tooltip content={<RRGTooltip />} cursor={{ strokeDasharray: "3 3" }} />
 
@@ -206,7 +189,7 @@ export default function RRGChart({ rows }: { rows: RotationRow[] }) {
                       x={p.cx + (right ? 7 : -7)}
                       y={p.cy + (up ? -3 : 9)}
                       fontSize={10}
-                      fill="#c3c9d4"
+                      fill={CHART_AXIS_STYLE.pointLabel}
                       textAnchor={right ? "start" : "end"}
                       style={{
                         paintOrder: "stroke",
