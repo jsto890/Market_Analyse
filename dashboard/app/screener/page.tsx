@@ -13,24 +13,12 @@ import Badge from "@/components/ui/Badge";
 import PinToggle from "@/components/ui/PinToggle";
 import InfoTip from "@/components/ui/InfoTip";
 import { HEADER_GLOSS } from "@/lib/labels";
-import { pctWhole } from "@/lib/format";
+import { pctWhole, pct } from "@/lib/format";
 
 function scoreColor(s: number): string {
   if (s >= 0.7) return "text-pos";
   if (s >= 0.5) return "text-warn";
   return "text-muted";
-}
-
-function fmtPct(v: number | null): string {
-  if (v === null) return "—";
-  const sign = v >= 0 ? "+" : "";
-  return `${sign}${(v * 100).toFixed(1)}%`;
-}
-
-function RetCell({ v }: { v: number | null }) {
-  if (v === null) return <span className="text-muted">—</span>;
-  const cls = v >= 0 ? "text-pos" : "text-neg";
-  return <span className={cls}>{fmtPct(v)}</span>;
 }
 
 type ApiResponse =
@@ -125,7 +113,11 @@ export default function ScreenerPage() {
       align: "right",
       sortable: true,
       sortFn: (a, b) => (a.ret_1d ?? -Infinity) - (b.ret_1d ?? -Infinity),
-      render: (r) => <RetCell v={r.ret_1d} />,
+      render: (r) => (
+        <span className={r.ret_1d === null ? "text-muted" : r.ret_1d >= 0 ? "text-pos" : "text-neg"}>
+          {pct(r.ret_1d, "fraction")}
+        </span>
+      ),
     },
     {
       key: "ret_5d",
@@ -133,7 +125,11 @@ export default function ScreenerPage() {
       align: "right",
       sortable: true,
       sortFn: (a, b) => (a.ret_5d ?? -Infinity) - (b.ret_5d ?? -Infinity),
-      render: (r) => <RetCell v={r.ret_5d} />,
+      render: (r) => (
+        <span className={r.ret_5d === null ? "text-muted" : r.ret_5d >= 0 ? "text-pos" : "text-neg"}>
+          {pct(r.ret_5d, "fraction")}
+        </span>
+      ),
     },
     {
       key: "pin",

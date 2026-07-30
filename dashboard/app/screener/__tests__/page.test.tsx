@@ -143,3 +143,29 @@ describe("ScreenerPage header tooltips (SC-05)", () => {
     }
   });
 });
+
+describe("ScreenerPage return formatting (SC-06)", () => {
+  it("renders ret_1d/ret_5d via the shared pct() formatter output", async () => {
+    mockFetchJson({
+      "/api/watchlist": { watchlist: [] },
+      "/api/argus/screener?min_conviction=0.3": {
+        results: [
+          { symbol: "NVDA", verdict: "LONG", score: 0.812, high_conviction: false, entry: 1, stop: 1, target: 1,
+            risk_reward: 2.1, long_votes: 1, short_votes: 0, wait_votes: 0, agreement_pct: 100,
+            ret_1d: 0.024, ret_5d: -0.081, ret_20d: null, is_extended: false, entry_quality: "good" },
+        ],
+        as_of: "2026-07-28T00:00:00Z",
+        cached: false,
+      },
+    });
+    render(
+      <UndoToastProvider>
+        <ScreenerPage />
+      </UndoToastProvider>
+    );
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("button", { name: "Full universe" }));
+    expect(await screen.findByText("+2.4%")).toBeInTheDocument();
+    expect(screen.getByText("-8.1%")).toBeInTheDocument();
+  });
+});
