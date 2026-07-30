@@ -1,5 +1,7 @@
 "use client";
 import PageHeader from "@/components/ui/PageHeader";
+import DataTable, { Column } from "@/components/ui/DataTable";
+import Badge from "@/components/ui/Badge";
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -31,28 +33,6 @@ function isErrorSentinel(rows: PositionRow[]): boolean {
   return rows.length === 1 && rows[0].error != null && rows[0].symbol == null;
 }
 
-function verdictChip(verdict: string | undefined): React.ReactNode {
-  if (!verdict) return <span className="text-muted">—</span>;
-  const cls =
-    verdict === "LONG"
-      ? "bg-pos/10 text-pos border border-pos/40"
-      : verdict === "SHORT"
-      ? "bg-neg/10 text-neg border border-neg/50"
-      : "bg-warn/10 text-warn border border-warn/40";
-  return (
-    <span className={`text-xs font-mono font-semibold px-1.5 py-0.5 rounded ${cls}`}>
-      {verdict}
-    </span>
-  );
-}
-
-function scoreClass(s: number | undefined): string {
-  if (s == null) return "text-muted";
-  if (s > 0) return "text-pos";
-  if (s < 0) return "text-neg";
-  return "text-muted";
-}
-
 export default function PortfolioPage() {
   const router = useRouter();
   const { data, isLoading, mutate } = useSWR<ApiResponse>(
@@ -71,6 +51,50 @@ export default function PortfolioPage() {
   const liveOffline = rows.some((r) => r.ibkr_offline);
   const positions = offline ? [] : rows;
   const isEmpty = !isLoading && isList(data) && !offline && positions.length === 0;
+
+  const columns: Column<PositionRow>[] = [
+    {
+      key: "symbol",
+      header: "Symbol",
+      render: (r) => <span className="font-mono font-semibold text-foreground">{r.symbol}</span>,
+    },
+    {
+      key: "position",
+      header: "Position",
+      align: "right",
+      render: (r) => {
+        if (r.position == null) return <span className="text-muted">—</span>;
+        const cls = r.position > 0 ? "text-pos" : r.position < 0 ? "text-neg" : "text-muted";
+        return <span className={cls}>{r.position}</span>;
+      },
+    },
+    {
+      key: "avg_cost",
+      header: "Avg Cost",
+      align: "right",
+      render: (r) => <span className="text-foreground">{r.avg_cost == null ? "—" : `$${r.avg_cost.toFixed(2)}`}</span>,
+    },
+    {
+      key: "verdict",
+      header: "Argus",
+      render: (r) => (r.verdict ? <Badge variant="verdict" value={r.verdict} /> : <span className="text-muted">—</span>),
+    },
+    {
+      key: "score",
+      header: "Score",
+      align: "right",
+      render: (r) => (
+        <span className={r.score == null ? "text-muted" : r.score > 0 ? "text-pos" : r.score < 0 ? "text-neg" : "text-muted"}>
+          {r.score == null ? "—" : r.score.toFixed(2)}
+        </span>
+      ),
+    },
+    {
+      key: "edge",
+      header: "Edge",
+      render: (r) => <span className="font-mono text-xs text-muted">{r.edge ?? "—"}</span>,
+    },
+  ];
 
   return (
     <div className="min-h-screen bg-bg text-foreground">
@@ -149,64 +173,14 @@ export default function PortfolioPage() {
                 </span>
               )}
             </div>
-            <div className="bg-surface border border-line rounded p-4 overflow-x-auto">
-              <table className="w-full text-sm border-collapse">
-                <thead>
-                  <tr className="text-left text-xs text-muted border-b border-line">
-                    <th className="pb-1.5 pr-4 font-medium">Symbol</th>
-                    <th className="pb-1.5 pr-4 font-medium text-right">Position</th>
-                    <th className="pb-1.5 pr-4 font-medium text-right">Avg Cost</th>
-                    <th className="pb-1.5 pr-4 font-medium">Argus</th>
-                    <th className="pb-1.5 pr-4 font-medium text-right">Score</th>
-                    <th className="pb-1.5 pr-4 font-medium">Edge</th>
-                    <th className="pb-1.5 font-medium"></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {positions.map((pos, i) => {
-                    const rowBg = i % 2 === 0 ? "" : "bg-white/[0.02]";
-                    const posClass =
-                      pos.position == null
-                        ? "text-muted"
-                        : pos.position > 0
-                        ? "text-pos"
-                        : pos.position < 0
-                        ? "text-neg"
-                        : "text-muted";
-                    return (
-                      <tr
-                        key={pos.symbol}
-                        className={`${rowBg} hover:bg-elevated/30 transition-colors`}
-                      >
-                        <td className="py-1.5 pr-4 font-mono font-semibold text-foreground">
-                          {pos.symbol}
-                        </td>
-                        <td className={`py-1.5 pr-4 text-right tabular-nums font-mono ${posClass}`}>
-                          {pos.position == null ? "—" : pos.position}
-                        </td>
-                        <td className="py-1.5 pr-4 text-right tabular-nums text-foreground font-mono">
-                          {pos.avg_cost == null ? "—" : `$${pos.avg_cost.toFixed(2)}`}
-                        </td>
-                        <td className="py-1.5 pr-4">{verdictChip(pos.verdict)}</td>
-                        <td className={`py-1.5 pr-4 text-right tabular-nums font-mono ${scoreClass(pos.score)}`}>
-                          {pos.score == null ? "—" : pos.score.toFixed(2)}
-                        </td>
-                        <td className="py-1.5 pr-4 font-mono text-xs text-muted">
-                          {pos.edge ?? "—"}
-                        </td>
-                        <td className="py-1.5">
-                          <button
-                            onClick={() => router.push(`/t/${pos.symbol}`)}
-                            className="text-xs text-accent hover:text-accent font-mono"
-                          >
-                            ›
-                          </button>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+            <div className="bg-surface border border-line rounded p-4">
+              <DataTable
+                columns={columns}
+                rows={positions}
+                rowKey={(r) => r.symbol}
+                persistKey="portfolio-table"
+                onOpen={(r) => router.push(`/t/${r.symbol}`)}
+              />
             </div>
           </>
         )}
