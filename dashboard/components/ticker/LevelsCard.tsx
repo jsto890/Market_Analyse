@@ -4,6 +4,7 @@ import * as Tooltip from "@radix-ui/react-tooltip";
 import { useLocalStorage } from "@/lib/useLocalStorage";
 import { useTickerData } from "@/lib/useTickerData";
 import { deriveLevels } from "@/lib/levels";
+import { STATIC_KEYS } from "@/lib/storageKeys";
 import type { BridgeRow } from "@/types/bridge";
 
 interface LevelsCardProps {
@@ -64,8 +65,9 @@ function PriceRail({
   const hi = Math.max(...vals);
   const span = hi - lo || 1;
   const pos = (v: number) => ((v - lo) / span) * 100;
+  const priceLeft = price != null ? Math.min(96, Math.max(4, pos(price))) : null;
   return (
-    <div className="pt-1">
+    <div className="pt-4" data-testid="price-rail">
       <div className="relative h-1.5 rounded-full bg-line">
         <div
           className="absolute h-full rounded-l-full bg-neg/40"
@@ -86,20 +88,34 @@ function PriceRail({
             style={{ left: `${pos(m.v)}%` }}
           />
         ))}
-        {price != null && (
-          <div
-            className="absolute top-1/2 h-3.5 w-3.5 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-accent bg-bg"
-            style={{ left: `${pos(price)}%` }}
-            title={`price ${price.toFixed(2)}`}
-          />
+        {price != null && priceLeft != null && (
+          <>
+            <span
+              className="absolute -top-4 -translate-x-1/2 whitespace-nowrap font-mono text-[11px] tabular-nums text-accent"
+              style={{ left: `${priceLeft}%` }}
+            >
+              {price.toFixed(2)}
+            </span>
+            <div
+              className="absolute top-1/2 h-3.5 w-3.5 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-accent bg-bg"
+              style={{ left: `${priceLeft}%` }}
+              title={`price ${price.toFixed(2)}`}
+            />
+          </>
         )}
+      </div>
+      <div className="mt-1 flex items-center justify-between font-mono text-[10px] tabular-nums text-muted">
+        <span>{lo.toFixed(2)}</span>
+        <span>{hi.toFixed(2)}</span>
       </div>
     </div>
   );
 }
 
 export default function LevelsCard({ ticker, bridgeRow }: LevelsCardProps) {
-  const [riskUsd, setRiskUsd] = useLocalStorage("dash:riskUsd", 500);
+  const [accountSize, setAccountSize] = useLocalStorage(STATIC_KEYS.riskAccountSize, 10000);
+  const [riskPct, setRiskPct] = useLocalStorage(STATIC_KEYS.riskPct, 1);
+  const riskUsd = accountSize > 0 && riskPct > 0 ? accountSize * (riskPct / 100) : 0;
 
   const { quote: quoteRes, actionCard: cardRes } = useTickerData(ticker);
   const quote = quoteRes.data;
@@ -251,36 +267,51 @@ export default function LevelsCard({ ticker, bridgeRow }: LevelsCardProps) {
 
           <div className="space-y-2 border-t border-line pt-3">
             <div className="flex flex-wrap items-center gap-2">
-              <label className="font-mono text-[11px] text-muted">Risk $</label>
+              <label className="font-mono text-muted" htmlFor="risk-account">
+                Account $
+              </label>
               <input
+                id="risk-account"
                 type="number"
                 min={0}
-                step={50}
-                value={riskUsd}
+                step={1000}
+                value={accountSize}
                 onChange={(e) => {
                   const v = Number(e.target.value);
-                  if (!isNaN(v) && v >= 0) setRiskUsd(v);
+                  if (!Number.isNaN(v) && v >= 0) setAccountSize(v);
                 }}
-                className="w-20 rounded border border-line bg-raised px-2 py-0.5 font-mono text-[12px] tabular-nums text-foreground focus:border-accent focus:outline-none"
+                className="w-24 rounded border border-line bg-raised px-2 py-0.5 font-mono text-[12px] tabular-nums text-foreground focus:border-accent focus:outline-none"
               />
-              {shares !== null ? (
-                <span className="font-mono text-[13px] tabular-nums text-foreground">
-                  = <span className="text-accent">{shares}</span> shares
-                  <span className="ml-2 text-muted">
-                    ${(shares * entry!).toLocaleString(undefined, { maximumFractionDigits: 0 })}{" "}
-                    notional
-                  </span>
-                </span>
-              ) : (
-                <span className="font-mono text-[13px] text-muted">—</span>
-              )}
+              <label className="font-mono text-muted" htmlFor="risk-pct">
+                Risk %
+              </label>
+              <input
+                id="risk-pct"
+                type="number"
+                min={0}
+                max={100}
+                step={0.25}
+                value={riskPct}
+                onChange={(e) => {
+                  const v = Number(e.target.value);
+                  if (!Number.isNaN(v) && v >= 0) setRiskPct(v);
+                }}
+                className="w-16 rounded border border-line bg-raised px-2 py-0.5 font-mono text-[12px] tabular-nums text-foreground focus:border-accent focus:outline-none"
+              />
             </div>
+            {shares !== null ? (
+              <p className="font-mono text-[13px] tabular-nums text-foreground">
+                = <span className="text-accent">{shares}</span> shares (risking{" "}
+                ${riskUsd.toLocaleString(undefined, { maximumFractionDigits: 0 })} = {riskPct}% $
+                {accountSize.toLocaleString(undefined, { maximumFractionDigits: 0 })} account)
+              </p>
+            ) : (
+              <span className="font-mono text-[13px] text-muted">—</span>
+            )}
+            <p className="text-[12px] leading-snug text-muted">
+              No fees or slippage modeled. Levels are context, not a mechanical exit system.
+            </p>
           </div>
-
-          <p className="pt-1 text-[10px] leading-snug text-muted">
-            Sizing from your risk budget ÷ (entry − stop). Levels are context, not a mechanical exit
-            system.
-          </p>
         </div>
       )}
     </section>

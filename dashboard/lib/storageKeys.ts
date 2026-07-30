@@ -10,6 +10,8 @@
 export const STATIC_KEYS = {
   todayFilters: "dash:today:filters",
   commandkRecent: "dash:commandk:recent",
+  riskAccountSize: "dash:risk:accountSize",
+  riskPct: "dash:risk:pct",
 } as const;
 
 /**
