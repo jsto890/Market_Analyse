@@ -216,7 +216,9 @@ export default function ScreenerPage() {
     try {
       let res: Response;
       if (tickers === null) {
-        res = await fetch(`/api/argus/screener${refresh ? "?refresh=1" : ""}`);
+        const params = new URLSearchParams({ min_conviction: minScore });
+        if (refresh) params.set("refresh", "1");
+        res = await fetch(`/api/argus/screener?${params.toString()}`);
       } else {
         res = await fetch("/api/argus/screener", {
           method: "POST",
