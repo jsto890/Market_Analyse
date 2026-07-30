@@ -32,6 +32,17 @@ const KIND_LABEL: Record<string, string> = {
   price: "Price crosses",
 };
 
+function groupByDay(items: LogItem[]): Array<[string, LogItem[]]> {
+  const groups = new Map<string, LogItem[]>();
+  for (const it of items) {
+    const day = it.ts.slice(0, 10);
+    const bucket = groups.get(day) ?? [];
+    bucket.push(it);
+    groups.set(day, bucket);
+  }
+  return Array.from(groups.entries());
+}
+
 function ruleSummary(r: Rule): string {
   if (r.kind === "verdict") return `${r.symbol} → ${KIND_LABEL.verdict} ${r.params.target ?? "LONG"}`;
   if (r.kind === "earnings") return `${r.symbol} → ${KIND_LABEL.earnings} ${r.params.days ?? 3}d`;
@@ -314,8 +325,9 @@ export default function AlertsPage() {
 
         {/* Recent fires */}
         <section className="rounded-md border border-line bg-elevated">
-          <div className="border-b border-line px-4 py-2.5">
+          <div className="border-b border-line px-4 py-2.5 flex items-center justify-between">
             <span className="tick text-[13px] font-semibold text-foreground">Recent fires</span>
+            <span className="text-[11px] text-muted">Showing latest 30</span>
           </div>
           {log.length === 0 ? (
             <p className="px-4 py-6 text-center text-[13px] text-muted">
@@ -323,19 +335,24 @@ export default function AlertsPage() {
               now&rdquo;).
             </p>
           ) : (
-            <ul className="divide-y divide-line/60">
-              {log.map((it) => (
-                <li key={it.id} className="px-4 py-2.5">
-                  <div className="flex items-baseline justify-between gap-2">
-                    <span className="text-[13px] font-medium text-foreground">{it.title}</span>
-                    <span className="text-[11px] text-muted">
-                      {new Date(it.ts).toLocaleString()}
-                    </span>
-                  </div>
-                  <p className="mt-0.5 font-mono text-[12px] text-muted">{it.body}</p>
-                </li>
-              ))}
-            </ul>
+            groupByDay(log).map(([day, items]) => (
+              <div key={day}>
+                <div className="bg-surface px-4 py-1 text-[11px] font-mono text-muted">{day}</div>
+                <ul className="divide-y divide-line/60">
+                  {items.map((it) => (
+                    <li key={it.id} className="px-4 py-2.5">
+                      <div className="flex items-baseline justify-between gap-2">
+                        <span className="text-[13px] font-medium text-foreground">{it.title}</span>
+                        <span className="text-[11px] text-muted">
+                          {new Date(it.ts).toLocaleString()} (local time)
+                        </span>
+                      </div>
+                      <p className="mt-0.5 font-mono text-[12px] text-muted">{it.body}</p>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))
           )}
         </section>
       </div>
