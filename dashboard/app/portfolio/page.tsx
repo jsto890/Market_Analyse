@@ -2,6 +2,8 @@
 import PageHeader from "@/components/ui/PageHeader";
 import DataTable, { Column } from "@/components/ui/DataTable";
 import Badge from "@/components/ui/Badge";
+import StatChip from "@/components/ui/StatChip";
+import { signedCurrency, price as fmtPrice } from "@/lib/format";
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -16,6 +18,8 @@ interface PositionRow {
   verdict?: string;
   score?: number;
   edge?: string;
+  market_value?: number | null;
+  unrealized_pnl?: number | null;
   high_conviction?: boolean;
   ibkr_offline?: boolean;
   error?: string;
@@ -44,6 +48,7 @@ export default function PortfolioPage() {
     "/api/watchlist",
     fetcher
   );
+  const { data: account } = useSWR<Record<string, string>>("/api/argus/account", fetcher);
   const pinned = wl?.watchlist ?? [];
 
   const rows = isList(data) ? data : [];
@@ -94,12 +99,36 @@ export default function PortfolioPage() {
       header: "Edge",
       render: (r) => <span className="font-mono text-xs text-muted">{r.edge ?? "—"}</span>,
     },
+    {
+      key: "market_value",
+      header: "Mkt Value",
+      align: "right",
+      render: (r) => <span className="text-foreground">{fmtPrice(r.market_value ?? null)}</span>,
+    },
+    {
+      key: "unrealized_pnl",
+      header: "Unrl. P&L",
+      align: "right",
+      render: (r) => {
+        if (r.unrealized_pnl == null) return <span className="text-muted">—</span>;
+        const cls = r.unrealized_pnl >= 0 ? "text-pos" : "text-neg";
+        return <span className={cls}>{signedCurrency(r.unrealized_pnl)}</span>;
+      },
+    },
   ];
 
   return (
     <div className="min-h-screen bg-bg text-foreground">
       <div className="max-w-5xl mx-auto px-4 py-6 space-y-4">
         <PageHeader title="Portfolio" subtitle="TWS · port 7496 · live" />
+
+        {account && (
+          <div className="flex flex-wrap gap-2">
+            <StatChip label="NLV" value={signedCurrency(Number(account.NetLiquidation))} />
+            <StatChip label="Cash" value={signedCurrency(Number(account.TotalCashValue))} />
+            <StatChip label="Buying power" value={signedCurrency(Number(account.BuyingPower))} />
+          </div>
+        )}
 
         {isLoading && <p className="text-xs font-mono text-muted">Loading…</p>}
 

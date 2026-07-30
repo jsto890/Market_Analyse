@@ -45,3 +45,23 @@ describe("PortfolioPage DataTable migration (PF-04, PF-05)", () => {
     expect(screen.getByRole("columnheader", { name: "Symbol" })).toBeInTheDocument();
   });
 });
+
+describe("PortfolioPage account summary + P&L columns (PF-01)", () => {
+  it("shows an account summary strip and market value / unrealized P&L columns", async () => {
+    mockFetchJson({
+      "/api/argus/portfolio": [
+        { symbol: "AAPL", position: 10, avg_cost: 180.5, verdict: "LONG", score: 0.6, edge: "HOLD/ADD",
+          market_value: 1905.0, unrealized_pnl: 105.0 },
+      ],
+      "/api/watchlist": { watchlist: [] },
+      "/api/argus/account": { NetLiquidation: "48210.55", TotalCashValue: "12000.00", BuyingPower: "96000.00" },
+    });
+    render(<PortfolioPage />);
+    await screen.findByText("AAPL");
+    expect(screen.getByText("NLV")).toBeInTheDocument();
+    expect(screen.getByText("+$48,210.55")).toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: "Mkt Value" })).toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: "Unrl. P&L" })).toBeInTheDocument();
+    expect(screen.getByText("+$105.00")).toBeInTheDocument();
+  });
+});
