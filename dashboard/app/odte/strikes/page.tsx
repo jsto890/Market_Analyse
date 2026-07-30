@@ -10,7 +10,7 @@ import {
   useOdteSymbol,
 } from "@/lib/odte";
 import { fmtGex } from "@/lib/odteCompanion";
-import { fetchOptionsLive, LadderSnapshot } from "@/lib/optionsLive";
+import { useOptionsLivePoller } from "@/lib/useOptionsLivePoller";
 import GexChart from "@/components/GexChart";
 
 function fmtIv(iv: number | null | undefined): string {
@@ -73,28 +73,12 @@ export default function OdteStrikesPage() {
   const [expiryIdx, setExpiryIdx] = useState(0);
   const { data, error, isLoading } = useLadder(activeSymbol, 4, 0.06);
 
-  // Live ladder state with 500ms polling
-  const [liveLadder, setLiveLadder] = useState<LadderSnapshot | null>(null);
-  const [liveError, setLiveError] = useState<string | null>(null);
   const [showLive, setShowLive] = useState(false);
-
-  useEffect(() => {
-    const fetchLive = async () => {
-      const ladder = await fetchOptionsLive(activeSymbol, "0DTE");
-      if (ladder) {
-        setLiveLadder(ladder);
-        setLiveError(null);
-      } else {
-        setLiveError("Live data unavailable");
-      }
-    };
-
-    if (showLive) {
-      fetchLive();
-      const interval = setInterval(fetchLive, 500);
-      return () => clearInterval(interval);
-    }
-  }, [activeSymbol, showLive]);
+  const { ladder: liveLadder, error: liveError, consecutiveFailures } = useOptionsLivePoller(
+    activeSymbol,
+    "0DTE",
+    showLive
+  );
 
   const expiries = data?.expiries ?? [];
   const idx = Math.min(expiryIdx, Math.max(expiries.length - 1, 0));

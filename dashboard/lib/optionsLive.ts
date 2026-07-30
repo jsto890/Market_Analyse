@@ -61,10 +61,11 @@ export interface LadderSnapshot {
  */
 export async function fetchOptionsLive(
   symbol: string,
-  expiry: string = "0DTE"
+  expiry: string = "0DTE",
+  signal?: AbortSignal
 ): Promise<LadderSnapshot | null> {
   try {
-    const res = await fetch(`/api/argus/options/live/${symbol}?expiry=${expiry}`);
+    const res = await fetch(`/api/argus/options/live/${symbol}?expiry=${expiry}`, { signal });
     if (!res.ok) {
       console.warn(`Failed to fetch live ladder for ${symbol}: ${res.status}`);
       return null;
@@ -72,6 +73,7 @@ export async function fetchOptionsLive(
     const data = await res.json();
     return data as LadderSnapshot;
   } catch (err) {
+    if (err instanceof DOMException && err.name === "AbortError") throw err;
     console.error(`Failed to fetch live ladder for ${symbol}:`, err);
     return null;
   }
