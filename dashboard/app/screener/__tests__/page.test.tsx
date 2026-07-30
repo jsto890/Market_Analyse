@@ -60,3 +60,26 @@ describe("ScreenerPage control styling (SC-09)", () => {
     expect(tickerInput.className).not.toContain("outline-none");
   });
 });
+
+describe("ScreenerPage verdict badge (SC-04)", () => {
+  it("renders verdict through Badge, not raw colored text", async () => {
+    mockFetchJson({
+      "/api/watchlist": { watchlist: [] },
+      "/api/argus/screener?min_conviction=0.3": {
+        results: [
+          { symbol: "NVDA", verdict: "LONG", score: 0.812, high_conviction: true, entry: 1, stop: 1, target: 1,
+            risk_reward: 2.1, long_votes: 40, short_votes: 5, wait_votes: 2, agreement_pct: 85.1,
+            ret_1d: 0.024, ret_5d: 0.081, ret_20d: null, is_extended: false, entry_quality: "good" },
+        ],
+        as_of: "2026-07-28T00:00:00Z",
+        cached: true,
+      },
+    });
+    render(<ScreenerPage />);
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("button", { name: "Full universe" }));
+    await screen.findByText("NVDA");
+    const badge = screen.getByText("LONG");
+    expect(badge.className).toContain("bg-pos/15");
+  });
+});

@@ -10,14 +10,9 @@ import type { ScreenerResult } from "@/types/argus";
 import DataTable, { Column } from "@/components/ui/DataTable";
 import Input from "@/components/ui/Input";
 import Button from "@/components/ui/Button";
+import Badge from "@/components/ui/Badge";
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
-
-function verdictColor(v: string): string {
-  if (v === "LONG") return "text-pos";
-  if (v === "SHORT") return "text-neg";
-  return "text-warn";
-}
 
 function scoreColor(s: number): string {
   if (s >= 0.7) return "text-pos";
@@ -126,11 +121,7 @@ export default function ScreenerPage() {
     {
       key: "verdict",
       header: "Verdict",
-      render: (r) => (
-        <span className={`font-mono font-semibold ${verdictColor(r.verdict)}`}>
-          {r.verdict}
-        </span>
-      ),
+      render: (r) => <Badge variant="verdict" value={r.verdict} />,
     },
     {
       key: "score",
