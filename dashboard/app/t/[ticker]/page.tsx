@@ -14,6 +14,7 @@ import AiPanel from "@/components/ticker/AiPanel";
 import CatalystStrip from "@/components/ticker/CatalystStrip";
 import NewsCard from "@/components/ticker/NewsCard";
 import TickerSubNav from "@/components/ticker/TickerSubNav";
+import TickerNav from "@/components/ticker/TickerNav";
 import { loadBridgeSignals } from "@/lib/bridge";
 import { signalHistory } from "@/lib/signals";
 import { MEDIAN_PEAK_PCT, MEDIAN_DAYS_TO_PEAK } from "@/lib/perf-constants";
@@ -80,6 +81,7 @@ export default async function TickerPage({
 
   return (
     <main className="max-w-[1400px] mx-auto px-4 py-4 space-y-4">
+      <TickerNav ticker={ticker} />
       {/* Header: server-rendered shell, client SWR for quote */}
       <section className="rounded-lg border border-line bg-surface">
         <Header

@@ -17,6 +17,7 @@ import Select from "@/components/ui/Select";
 import Input from "@/components/ui/Input";
 import InfoTip from "@/components/ui/InfoTip";
 import Button from "@/components/ui/Button";
+import { setTickerNav } from "@/lib/tickerNav";
 
 const FILTERS_KEY = "dash:today:filters";
 
@@ -479,7 +480,10 @@ export default function SignalGroups({
     };
   }, [groups, active]);
 
-  const onOpen = (r: BridgeRow) => router.push(`/t/${r.ticker}`);
+  const onOpen = (r: BridgeRow, group: string, rows: BridgeRow[]) => {
+    setTickerNav(group, rows.map((row) => row.ticker.toUpperCase()));
+    router.push(`/t/${r.ticker}`);
+  };
 
   return (
     <div className="space-y-3">
@@ -551,7 +555,7 @@ export default function SignalGroups({
             <GroupTable
               rows={sorted[g.key]}
               newSet={newSet}
-              onOpen={onOpen}
+              onOpen={(r) => onOpen(r, g.title, sorted[g.key])}
               persistKey={`today-${g.key}`}
             />
           </Panel>
@@ -569,7 +573,7 @@ export default function SignalGroups({
         <GroupTable
           rows={sorted.other}
           newSet={newSet}
-          onOpen={onOpen}
+          onOpen={(r) => onOpen(r, "EVERYTHING ELSE", sorted.other)}
           persistKey="today-other-table"
         />
       </Panel>
