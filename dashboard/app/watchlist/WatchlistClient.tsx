@@ -15,6 +15,7 @@ import Button from "@/components/ui/Button";
 import { heatBg } from "@/lib/heat";
 import { price, pct, relativeAge } from "@/lib/format";
 import { WATCHLIST_STATUS_LABEL } from "@/lib/labels";
+import { STATIC_KEYS } from "@/lib/storageKeys";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -562,38 +563,79 @@ export default function WatchlistClient({
 
   const entries = watchlistData?.watchlist ?? [];
 
+  const [migrationResult, setMigrationResult] = useState<{ ok: number; failed: number } | null>(() => {
+    if (typeof window === "undefined") return null;
+    const raw = window.localStorage.getItem(STATIC_KEYS.watchlistMigrationResult);
+    if (!raw) return null;
+    try {
+      return JSON.parse(raw) as { ok: number; failed: number };
+    } catch {
+      return null;
+    }
+  });
+
   // One-time migration from old localStorage format
   useEffect(() => {
-    const raw = localStorage.getItem("argus_watchlist");
-    if (!raw) return;
-    try {
-      const tickers = (JSON.parse(raw) as unknown[]).map((e) =>
-        typeof e === "string" ? e : (e as { ticker?: string }).ticker
+    const alreadyRan = window.localStorage.getItem(STATIC_KEYS.watchlistMigrationResult) !== null;
+    const raw = window.localStorage.getItem("argus_watchlist");
+    if (alreadyRan || !raw) return;
+    let cancelled = false;
+    (async () => {
+      let tickers: string[] = [];
+      try {
+        tickers = ((JSON.parse(raw) as unknown[]) ?? [])
+          .map((e) => (e as { ticker?: string }).ticker)
+          .filter((t): t is string => typeof t === "string" && t.length > 0);
+      } catch {
+        tickers = [];
+      }
+      const results = await Promise.allSettled(
+        tickers.map((t) =>
+          fetch("/api/watchlist", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ ticker: t }),
+          }).then((r) => {
+            if (!r.ok) throw new Error(r.statusText);
+          })
+        )
       );
-      Promise.allSettled(
-        tickers
-          .filter(Boolean)
-          .map((t) =>
-            fetch("/api/watchlist", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ ticker: t }),
-            }).then((r) => { if (!r.ok) throw new Error(r.statusText); })
-          )
-      ).then((results) => {
-        const allOk = results.every((r) => r.status === "fulfilled");
-        if (allOk) localStorage.removeItem("argus_watchlist");
-        mutate();
-      });
-    } catch {
-      localStorage.removeItem("argus_watchlist");
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+      if (cancelled) return;
+      const ok = results.filter((r) => r.status === "fulfilled").length;
+      const failed = results.length - ok;
+      const outcome = { ok, failed };
+      window.localStorage.setItem(STATIC_KEYS.watchlistMigrationResult, JSON.stringify(outcome));
+      window.localStorage.removeItem("argus_watchlist");
+      setMigrationResult(outcome);
+      mutate();
+    })();
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return (
     <main className="max-w-5xl mx-auto px-4 py-6 space-y-4">
       <PageHeader title="Watchlist" subtitle="Pinned names + auto-flagged recent picks" />
+      {migrationResult && (
+        <div className="flex items-center gap-3 rounded border border-line bg-elevated px-3 py-2 text-[12px] text-muted">
+          <span>
+            Migrated {migrationResult.ok} of {migrationResult.ok + migrationResult.failed} ticker
+            {migrationResult.ok + migrationResult.failed === 1 ? "" : "s"} from your old watchlist
+            {migrationResult.failed > 0 ? ` (${migrationResult.failed} failed — re-add manually if needed)` : ""}.
+          </span>
+          <button
+            type="button"
+            onClick={() => {
+              window.localStorage.removeItem(STATIC_KEYS.watchlistMigrationResult);
+              setMigrationResult(null);
+            }}
+            className="ml-auto text-muted hover:text-foreground"
+            aria-label="Dismiss migration result"
+          >
+            ×
+          </button>
+        </div>
+      )}
       <PinnedSection entries={entries} onAdded={mutate} />
       <RecentPicksSection medianDaysToPeak={medianDaysToPeak} />
     </main>

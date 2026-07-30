@@ -12,6 +12,7 @@ export const STATIC_KEYS = {
   commandkRecent: "dash:commandk:recent",
   riskAccountSize: "dash:risk:accountSize",
   riskPct: "dash:risk:pct",
+  watchlistMigrationResult: "dash:watchlist:migration-result",
 } as const;
 
 /**

@@ -1,6 +1,7 @@
 import { describe, it, expect, vi } from "vitest";
 import { render, screen, userEvent } from "@/test/render";
 import { mockFetchJson } from "@/test/fetchMock";
+import { seedLocalStorage, resetLocalStorage } from "@/test/localStorage";
 import WatchlistClient from "@/app/watchlist/WatchlistClient";
 import UndoToastProvider from "@/components/ui/UndoToastProvider";
 
@@ -188,5 +189,25 @@ describe("WatchlistClient declarative headers (WL-05)", () => {
     expect(screen.queryByRole("columnheader", { name: "Still in?" })).not.toBeInTheDocument();
     expect(screen.getByRole("columnheader", { name: "Pin price" })).toBeInTheDocument();
     expect(screen.getByRole("columnheader", { name: "Flag price" })).toBeInTheDocument();
+  });
+});
+
+describe("WatchlistClient legacy migration (WL-07)", () => {
+  it("migrates once, shows a result banner, and does not retry on next mount", async () => {
+    resetLocalStorage();
+    seedLocalStorage("argus_watchlist", [{ ticker: "TSLA" }]);
+    mockFetchJson({
+      ...baseMocks(),
+      "/api/watchlist": { watchlist: [] },
+    });
+    const { unmount } = render(<WatchlistClient medianDaysToPeak={12} />);
+    expect(await screen.findByText(/Migrated 1 of 1 ticker/)).toBeInTheDocument();
+    expect(window.localStorage.getItem("argus_watchlist")).toBeNull();
+    expect(window.localStorage.getItem("dash:watchlist:migration-result")).not.toBeNull();
+    unmount();
+
+    render(<WatchlistClient medianDaysToPeak={12} />);
+    // second mount: banner still shows the stored result (until dismissed), but no new POST is made
+    expect(await screen.findByText(/Migrated 1 of 1 ticker/)).toBeInTheDocument();
   });
 });
