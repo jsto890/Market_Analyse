@@ -13,6 +13,7 @@ export const STATIC_KEYS = {
   riskAccountSize: "dash:risk:accountSize",
   riskPct: "dash:risk:pct",
   watchlistMigrationResult: "dash:watchlist:migration-result",
+  screenerLastResult: "dash:screener:last-result",
 } as const;
 
 /**

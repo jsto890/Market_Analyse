@@ -1,6 +1,7 @@
 import { describe, it, expect, vi } from "vitest";
 import { render, screen, userEvent } from "@/test/render";
 import { mockFetchJson } from "@/test/fetchMock";
+import { resetLocalStorage } from "@/test/localStorage";
 import ScreenerPage from "@/app/screener/page";
 import UndoToastProvider from "@/components/ui/UndoToastProvider";
 
@@ -184,5 +185,39 @@ describe("ScreenerPage always-visible refresh (SC-07)", () => {
     const user = userEvent.setup();
     await user.click(screen.getByRole("button", { name: "Full universe" }));
     expect(await screen.findByRole("button", { name: /re-run/i })).toBeInTheDocument();
+  });
+});
+
+describe("ScreenerPage persistence + cancel (SC-03)", () => {
+  it("restores the last result from localStorage on mount", async () => {
+    resetLocalStorage();
+    window.localStorage.setItem(
+      "dash:screener:last-result",
+      JSON.stringify({
+        results: [
+          { symbol: "AMD", verdict: "LONG", score: 0.5, high_conviction: false, entry: 1, stop: 1, target: 1,
+            risk_reward: 1.5, long_votes: 1, short_votes: 0, wait_votes: 0, agreement_pct: 90,
+            ret_1d: null, ret_5d: null, ret_20d: null, is_extended: false, entry_quality: "ok" },
+        ],
+        as_of: "2026-07-27T00:00:00Z",
+        cached: true,
+      })
+    );
+    mockFetchJson({ "/api/watchlist": { watchlist: [] } });
+    render(
+      <UndoToastProvider>
+        <ScreenerPage />
+      </UndoToastProvider>
+    );
+    expect(await screen.findByText("AMD")).toBeInTheDocument();
+  });
+
+  it("shows a Cancel button while a run is in flight", async () => {
+    mockFetchJson({ "/api/watchlist": { watchlist: [] } });
+    vi.mocked(fetch).mockImplementationOnce(() => new Promise(() => {}));
+    const user = userEvent.setup();
+    render(<ScreenerPage />);
+    await user.click(screen.getByRole("button", { name: "Run" }));
+    expect(await screen.findByRole("button", { name: "Cancel" })).toBeInTheDocument();
   });
 });

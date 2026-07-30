@@ -2,7 +2,7 @@
 import PageHeader from "@/components/ui/PageHeader";
 import SkeletonTable from "@/components/ui/SkeletonTable";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Search, ArrowRight, Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import type { ScreenerResult } from "@/types/argus";
@@ -14,6 +14,7 @@ import PinToggle from "@/components/ui/PinToggle";
 import InfoTip from "@/components/ui/InfoTip";
 import { HEADER_GLOSS } from "@/lib/labels";
 import { pctWhole, pct } from "@/lib/format";
+import { STATIC_KEYS } from "@/lib/storageKeys";
 
 function scoreColor(s: number): string {
   if (s >= 0.7) return "text-pos";
@@ -33,11 +34,30 @@ export default function ScreenerPage() {
   const router = useRouter();
   const [tickerInput, setTickerInput] = useState("");
   const [minScore, setMinScore] = useState("0.3");
-  const [results, setResults] = useState<ScreenerResult[] | null>(null);
+  const [results, setResults] = useState<ScreenerResult[] | null>(() => {
+    if (typeof window === "undefined") return null;
+    const raw = window.localStorage.getItem(STATIC_KEYS.screenerLastResult);
+    if (!raw) return null;
+    try {
+      return (JSON.parse(raw) as { results: ScreenerResult[] }).results ?? null;
+    } catch {
+      return null;
+    }
+  });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [asOf, setAsOf] = useState<string | null>(null);
+  const [asOf, setAsOf] = useState<string | null>(() => {
+    if (typeof window === "undefined") return null;
+    const raw = window.localStorage.getItem(STATIC_KEYS.screenerLastResult);
+    if (!raw) return null;
+    try {
+      return (JSON.parse(raw) as { as_of: string | null }).as_of ?? null;
+    } catch {
+      return null;
+    }
+  });
   const [cached, setCached] = useState(false);
+  const abortRef = useRef<AbortController | null>(null);
 
   const columns: Column<ScreenerResult>[] = [
     {
@@ -141,12 +161,15 @@ export default function ScreenerPage() {
   async function runScreener(tickers: string[] | null, refresh = false) {
     setLoading(true);
     setError(null);
+    const controller = new AbortController();
+    abortRef.current = controller;
     try {
       let res: Response;
       if (tickers === null) {
-        const params = new URLSearchParams({ min_conviction: minScore });
+        const params = new URLSearchParams();
+        params.set("min_conviction", String(parseFloat(minScore) || 0));
         if (refresh) params.set("refresh", "1");
-        res = await fetch(`/api/argus/screener?${params.toString()}`);
+        res = await fetch(`/api/argus/screener?${params.toString()}`, { signal: controller.signal });
       } else {
         res = await fetch("/api/argus/screener", {
           method: "POST",
@@ -155,6 +178,7 @@ export default function ScreenerPage() {
             universe: tickers,
             min_conviction: parseFloat(minScore),
           }),
+          signal: controller.signal,
         });
       }
       const data = (await res.json()) as ApiResponse;
@@ -165,13 +189,26 @@ export default function ScreenerPage() {
         setResults(data.results);
         setAsOf(data.as_of ?? null);
         setCached(data.cached ?? false);
+        window.localStorage.setItem(
+          STATIC_KEYS.screenerLastResult,
+          JSON.stringify({ results: data.results, as_of: data.as_of ?? null, cached: data.cached ?? false })
+        );
       }
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Network error");
-      setResults(null);
+      if (e instanceof Error && e.name === "AbortError") {
+        setError(null);
+      } else {
+        setError(e instanceof Error ? e.message : "Network error");
+        setResults(null);
+      }
     } finally {
       setLoading(false);
+      abortRef.current = null;
     }
+  }
+
+  function handleCancel() {
+    abortRef.current?.abort();
   }
 
   function handleRun() {
@@ -241,6 +278,7 @@ export default function ScreenerPage() {
         {loading && (
           <p className="flex items-center gap-1.5 text-xs font-mono text-muted">
             <Loader2 size={12} className="animate-spin" /> Running agent ensemble… (10–30s)
+            <Button variant="ghost" size="sm" onClick={handleCancel}>Cancel</Button>
           </p>
         )}
 
