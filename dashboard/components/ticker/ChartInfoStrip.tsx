@@ -4,6 +4,7 @@ import useSWR from "swr";
 import type { Bar } from "@/components/charts/CandleChart";
 import { range52w, volumeVsAvg } from "@/lib/bar-stats";
 import { STATE_LABEL, usMarketState } from "@/lib/market-clock";
+import StatChip from "@/components/ui/StatChip";
 
 const fetcher = (url: string) =>
   fetch(url).then((r) => {
@@ -27,34 +28,29 @@ export default function ChartInfoStrip({ ticker, bars }: { ticker: string; bars:
   const extPct = ext && last.close > 0 ? ((ext.price - last.close) / last.close) * 100 : null;
 
   return (
-    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 font-mono text-[12px] tabular-nums text-muted mt-2 px-0.5">
-      <span className="inline-flex items-center rounded border border-line bg-elevated px-1.5 py-px text-[10px]">
-        {STATE_LABEL[state]}
-      </span>
-      <span>
-        close <span className="text-foreground">{last.close.toFixed(2)}</span>
-      </span>
-      <span>
-        range {last.low.toFixed(2)}–{last.high.toFixed(2)}
-      </span>
+    <div className="flex flex-wrap items-center gap-1.5 mt-2 px-0.5">
+      <StatChip label="Session" value={STATE_LABEL[state]} />
+      <StatChip label="Close" value={last.close.toFixed(2)} />
+      <StatChip label="Range" value={`${last.low.toFixed(2)}–${last.high.toFixed(2)}`} />
       {volX !== null && (
-        <span>
-          vol <span className={volX >= 1.5 ? "text-warn" : "text-foreground"}>{volX.toFixed(1)}×</span> avg
-        </span>
+        <StatChip
+          label="Vol"
+          value={`${volX.toFixed(1)}× avg`}
+          tone={volX >= 1.5 ? "warn" : undefined}
+        />
       )}
       {r52 && (
-        <span>
-          52w {r52.lo.toFixed(0)}–{r52.hi.toFixed(0)} ({Math.round(r52.pos * 100)}%)
-        </span>
+        <StatChip
+          label="52w"
+          value={`${r52.lo.toFixed(0)}–${r52.hi.toFixed(0)} (${Math.round(r52.pos * 100)}%)`}
+        />
       )}
       {extended && ext && extPct !== null && (
-        <span>
-          {state === "pre" ? "pre" : "after"}{" "}
-          <span className={extPct >= 0 ? "text-pos" : "text-neg"}>
-            {ext.price.toFixed(2)} ({extPct >= 0 ? "+" : ""}
-            {extPct.toFixed(1)}%)
-          </span>
-        </span>
+        <StatChip
+          label={state === "pre" ? "Pre" : "After"}
+          value={`${ext.price.toFixed(2)} (${extPct >= 0 ? "+" : ""}${extPct.toFixed(1)}%)`}
+          tone={extPct >= 0 ? "pos" : "neg"}
+        />
       )}
     </div>
   );
