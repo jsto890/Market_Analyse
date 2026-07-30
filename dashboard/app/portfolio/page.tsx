@@ -1,6 +1,5 @@
 "use client";
 import PageHeader from "@/components/ui/PageHeader";
-import SkeletonTable from "@/components/ui/SkeletonTable";
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -125,12 +124,11 @@ export default function PortfolioPage() {
 
             <div>
               <p className="mb-1.5 text-[11px] uppercase tracking-wide text-muted/60">
-                Positions (connect gateway)
+                Positions (connect TWS to populate)
               </p>
-              <SkeletonTable
-                headers={["Symbol", "Position", "Avg Cost", "Argus", "Score", "Edge"]}
-                rows={4}
-              />
+              <div className="rounded border border-line bg-surface/40 px-3 py-2 text-[11px] text-muted/60">
+                Symbol · Position · Avg Cost · Argus · Score · Edge
+              </div>
             </div>
           </div>
         )}

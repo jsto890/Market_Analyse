@@ -16,3 +16,15 @@ describe("PortfolioPage subtitle (PF-02)", () => {
     expect(screen.queryByText(/IBKR Gateway 4002/)).not.toBeInTheDocument();
   });
 });
+
+describe("PortfolioPage offline state has no fake-loading skeleton (PF-03)", () => {
+  it("does not render an animated skeleton when IBKR is offline", async () => {
+    mockFetchJson({
+      "/api/argus/portfolio": { error: "IBKR not connected", ibkr_offline: true },
+      "/api/watchlist": { watchlist: [] },
+    });
+    render(<PortfolioPage />);
+    await screen.findByText(/TWS · port 7496 · live/);
+    expect(document.querySelectorAll(".animate-pulse").length).toBe(0);
+  });
+});
