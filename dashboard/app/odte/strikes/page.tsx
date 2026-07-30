@@ -325,7 +325,7 @@ export default function OdteStrikesPage() {
                           {level.call.oi != null ? level.call.oi.toFixed(0) : "—"}
                         </td>
                         <td className="px-1 py-1 text-center">
-                          {level.gex_by_strike != null ? (level.gex_by_strike / 1000).toFixed(0) : "—"}
+                          {level.call_gex_by_strike != null ? (level.call_gex_by_strike / 1000).toFixed(0) : "—"}
                         </td>
                         {/* Put Greeks */}
                         <td className="px-1 py-1 text-center">
@@ -359,7 +359,7 @@ export default function OdteStrikesPage() {
                           {level.put.oi != null ? level.put.oi.toFixed(0) : "—"}
                         </td>
                         <td className="px-1 py-1 text-center">
-                          {level.gex_by_strike != null ? (level.gex_by_strike / 1000).toFixed(0) : "—"}
+                          {level.put_gex_by_strike != null ? (level.put_gex_by_strike / 1000).toFixed(0) : "—"}
                         </td>
                       </tr>
                     ))}

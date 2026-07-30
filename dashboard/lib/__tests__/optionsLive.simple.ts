@@ -33,6 +33,8 @@ const level: StrikeLevel = {
   zero_gamma_side: "C",
   wall_type: "call",
   gex_by_strike: -500000,
+  call_gex_by_strike: -300000,
+  put_gex_by_strike: -200000,
   max_pain_delta: 0.1,
 };
 

@@ -28,6 +28,8 @@ export interface StrikeLevel {
   zero_gamma_side: string | null;
   wall_type: string | null;
   gex_by_strike: number | null;
+  call_gex_by_strike: number | null;
+  put_gex_by_strike: number | null;
   max_pain_delta: number | null;
 }
 

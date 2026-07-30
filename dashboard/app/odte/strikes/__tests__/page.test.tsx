@@ -29,7 +29,19 @@ describe("OdteStrikesPage — single ladder mode (OL-02)", () => {
         stale_ms: 0,
         fresh_contract_ratio: 1,
         expiry: "0DTE",
-        levels: [],
+        levels: [
+          {
+            strike: 565,
+            call: { bid: 1, ask: 1.1, mid: 1.05, spread_pct: 9.5, iv: 0.2, delta: 0.5, gamma: 0.01, theta: -0.05, vega: 0.2, rho: 0.1, per_dollar_gamma: 1, per_dollar_delta: 50, volume: 100, oi: 1000, stale_ms: 0, liquid: true },
+            put: { bid: 0.9, ask: 1.0, mid: 0.95, spread_pct: 10.5, iv: 0.19, delta: -0.5, gamma: 0.01, theta: -0.02, vega: 0.2, rho: -0.1, per_dollar_gamma: 1, per_dollar_delta: -50, volume: 90, oi: 900, stale_ms: 0, liquid: true },
+            zero_gamma_side: null,
+            wall_type: null,
+            gex_by_strike: 5000,
+            call_gex_by_strike: 3200,
+            put_gex_by_strike: 1800,
+            max_pain_delta: 0,
+          },
+        ],
         atm_strike: 565,
         zero_gamma_strike: 560,
         call_wall_strike: 570,
@@ -58,5 +70,18 @@ describe("OdteStrikesPage — single ladder mode (OL-02)", () => {
     await user.click(screen.getByRole("button", { name: /live/i }));
     await screen.findByText("C Bid");
     expect(screen.queryByText("call IV")).not.toBeInTheDocument();
+  });
+
+  it("shows independent call and put GEX values, not the same number twice (OL-03)", async () => {
+    const user = userEvent.setup();
+    render(<OdteStrikesPage />);
+    await screen.findByText(/call IV/i);
+    await user.click(screen.getByRole("button", { name: /live/i }));
+    const rows = await screen.findAllByRole("row");
+    const strikeRow = rows.find((r) => r.textContent?.includes("565"));
+    expect(strikeRow).toBeDefined();
+    const cells = strikeRow!.querySelectorAll("td");
+    // Call GEX is the 11th <td> (index 10), put GEX is the last (index 21).
+    expect(cells[10].textContent).not.toBe(cells[21].textContent);
   });
 });

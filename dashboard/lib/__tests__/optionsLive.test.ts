@@ -74,6 +74,8 @@ describe("optionsLive types", () => {
       zero_gamma_side: null,
       wall_type: null,
       gex_by_strike: -500000,
+      call_gex_by_strike: -300000,
+      put_gex_by_strike: -200000,
       max_pain_delta: 0.1,
     };
 
@@ -127,5 +129,29 @@ describe("optionsLive types", () => {
     await fetchOptionsLive("SPY", "0DTE");
 
     expect(calls[0]).toBe("/api/argus/options/live/SPY?expiry=0DTE");
+  });
+
+  test("StrikeLevel carries independent call and put GEX fields", () => {
+    const level: StrikeLevel = {
+      strike: 100,
+      call: {
+        bid: 1.5, ask: 1.6, mid: 1.55, spread_pct: 0.65, iv: 0.25, delta: 0.5,
+        gamma: 0.01, theta: -0.05, vega: 0.2, rho: 0.1, per_dollar_gamma: 1.05,
+        per_dollar_delta: 50, volume: 100, oi: 1000, stale_ms: 0, liquid: true,
+      },
+      put: {
+        bid: 0.5, ask: 0.6, mid: 0.55, spread_pct: 0.91, iv: 0.23, delta: -0.5,
+        gamma: 0.01, theta: -0.02, vega: 0.2, rho: -0.1, per_dollar_gamma: 1.05,
+        per_dollar_delta: -50, volume: 150, oi: 1200, stale_ms: 0, liquid: true,
+      },
+      zero_gamma_side: null,
+      wall_type: null,
+      gex_by_strike: 5000,
+      call_gex_by_strike: 3200,
+      put_gex_by_strike: 1800,
+      max_pain_delta: 0.1,
+    };
+
+    expect(level.call_gex_by_strike).not.toBe(level.put_gex_by_strike);
   });
 });
