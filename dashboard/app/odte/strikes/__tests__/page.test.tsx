@@ -84,4 +84,18 @@ describe("OdteStrikesPage — single ladder mode (OL-02)", () => {
     // Call GEX is the 11th <td> (index 10), put GEX is the last (index 21).
     expect(cells[10].textContent).not.toBe(cells[21].textContent);
   });
+
+  it("uses tokenised classes for the live toggle and provenance badge, not raw palette colours (OL-09)", async () => {
+    const user = userEvent.setup();
+    render(<OdteStrikesPage />);
+    await screen.findByText(/call IV/i);
+    const toggle = screen.getByRole("button", { name: /live/i });
+    expect(toggle.className).not.toMatch(/blue-|gray-/);
+    await user.click(toggle);
+    const badges = await screen.findAllByText("LIVE");
+    const badge = badges.find((el) => el.tagName === "SPAN")!;
+    expect(badge).toBeDefined();
+    expect(badge.className).not.toMatch(/green-|yellow-|gray-/);
+    expect(badge.className).toMatch(/tone-live/);
+  });
 });

@@ -140,7 +140,7 @@ export default function OdteStrikesPage() {
           <button
             onClick={() => setShowLive(!showLive)}
             className={`px-2 py-1 text-xs rounded ${
-              showLive ? "bg-blue-500/30 text-blue-300" : "bg-gray-500/20 text-gray-400"
+              showLive ? "tone-live" : "border border-line text-muted"
             }`}
           >
             {showLive ? "LIVE" : "live"}
@@ -198,10 +198,10 @@ export default function OdteStrikesPage() {
                   <span
                     className={`px-2 py-0.5 text-xs rounded font-semibold ${
                       liveLadder.source === "LIVE"
-                        ? "bg-green-500/30 text-green-300"
+                        ? "tone-live"
                         : liveLadder.source === "FROZEN"
-                          ? "bg-yellow-500/30 text-yellow-300"
-                          : "bg-gray-500/30 text-gray-300"
+                          ? "tone-frozen"
+                          : "tone-eod"
                     }`}
                   >
                     {liveLadder.source}
@@ -290,8 +290,8 @@ export default function OdteStrikesPage() {
                       <tr
                         key={level.strike}
                         className={`border-b border-line/50 ${
-                          level.strike === liveLadder.zero_gamma_strike ? "bg-yellow-500/10" : ""
-                        } ${level.strike === liveLadder.atm_strike ? "bg-blue-500/10" : ""}`}
+                          level.strike === liveLadder.zero_gamma_strike ? "bg-teal/10" : ""
+                        } ${level.strike === liveLadder.atm_strike ? "bg-warn/10" : ""}`}
                       >
                         <td className="px-2 py-1 font-bold">{level.strike.toFixed(0)}</td>
                         {/* Call Greeks */}
