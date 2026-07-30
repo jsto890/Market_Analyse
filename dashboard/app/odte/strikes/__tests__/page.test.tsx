@@ -1,4 +1,5 @@
-import { render, screen } from "@/test/render";
+import { vi } from "vitest";
+import { render, screen, waitFor } from "@/test/render";
 import { mockFetchJson } from "@/test/fetchMock";
 import { resetLocalStorage } from "@/test/localStorage";
 import userEvent from "@testing-library/user-event";
@@ -121,6 +122,25 @@ describe("OdteStrikesPage — single ladder mode (OL-02)", () => {
     const strip = stripHeading.closest("div")!.parentElement!;
     expect(strip.className).toMatch(/flex-wrap/);
     expect(strip.className).not.toMatch(/grid-cols-6/);
+  });
+
+  it("centers on the spot row once on load, and again on demand via a manual control, not on every tick (OD-06)", async () => {
+    const scrollIntoViewMock = vi.fn();
+    // test/setup.ts already installs a no-op on HTMLElement.prototype — that
+    // shadows an Element.prototype assignment, so the mock must go on the
+    // same prototype to actually be invoked by row.scrollIntoView().
+    window.HTMLElement.prototype.scrollIntoView = scrollIntoViewMock;
+    const user = userEvent.setup();
+    render(<OdteStrikesPage />);
+    // Wait on the mount effect's own side effect rather than DOM text — the
+    // fixture's single row makes every marker (SPOT/ZG/CW/PW) nearest-match
+    // to it, and the static markers legend also renders literal "SPOT" text,
+    // so any findByText("SPOT") is ambiguous.
+    await waitFor(() => expect(scrollIntoViewMock).toHaveBeenCalled());
+    const afterMount = scrollIntoViewMock.mock.calls.length;
+
+    await user.click(screen.getByRole("button", { name: /center on spot/i }));
+    expect(scrollIntoViewMock.mock.calls.length).toBe(afterMount + 1);
   });
 
   it("keeps <main> free of font-mono so prose renders in the body sans font, while tabular data stays monospace (OD-03)", async () => {

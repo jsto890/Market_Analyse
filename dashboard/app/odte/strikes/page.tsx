@@ -101,9 +101,13 @@ export default function OdteStrikesPage() {
   // Anchor the ladder on the spot row so the pin zone (spot/walls/zero-gamma)
   // is visible first instead of the lowest strike.
   const spotRowRef = useRef<HTMLTableRowElement | null>(null);
+  const centerOnSpot = () => spotRowRef.current?.scrollIntoView({ block: "center" });
   useEffect(() => {
-    spotRowRef.current?.scrollIntoView({ block: "center" });
-  }, [activeSymbol, idx, spotIdx, data?.spot]);
+    // Only re-center on a symbol or expiry change (OD-06) — re-running this on
+    // every `data.spot` tick repeatedly yanked the user's scroll position.
+    centerOnSpot();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeSymbol, idx, rows.length]);
 
   return (
     <main className="flex flex-col h-full">
@@ -365,6 +369,13 @@ export default function OdteStrikesPage() {
                 {e.expiry} · EM {e.expected_move_pct.toFixed(2)}%
               </button>
             ))}
+            <button
+              type="button"
+              onClick={centerOnSpot}
+              className="ml-auto shrink-0 px-2 py-1 text-[11px] text-teal hover:underline"
+            >
+              Center on spot
+            </button>
           </div>
 
           {/* Legend + critical levels */}
