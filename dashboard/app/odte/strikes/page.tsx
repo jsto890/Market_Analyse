@@ -14,6 +14,8 @@ import GexChart from "@/components/GexChart";
 import SymbolSwitcher from "@/components/odte/SymbolSwitcher";
 import InfoTip from "@/components/ui/InfoTip";
 import Collapsible from "@/components/ui/Collapsible";
+import { GREEK_LABEL } from "@/lib/labels";
+import type { GreekKind } from "@/lib/format";
 
 function fmtIv(iv: number | null | undefined): string {
   return iv != null ? `${(iv * 100).toFixed(1)}%` : "—";
@@ -25,15 +27,6 @@ function fmtNum(v: number | null | undefined): string {
 
 function fmtLvl(v: number | null | undefined): string {
   return v != null ? v.toFixed(0) : "—";
-}
-
-function LegendItem({ code, cls, label }: { code: string; cls: string; label: string }) {
-  return (
-    <span className="inline-flex items-center gap-1">
-      <span className={`font-mono font-semibold ${cls}`}>{code}</span>
-      <span className="text-muted">{label}</span>
-    </span>
-  );
 }
 
 /** OI/Vol cell with a background bar; put bars grow toward the strike from the
@@ -389,12 +382,6 @@ export default function OdteStrikesPage() {
 
           {/* Legend + critical levels */}
           <div className="flex flex-wrap items-center gap-x-5 gap-y-1.5 border-b border-line px-4 py-2 text-[11px]">
-            <span className="eyebrow">Markers</span>
-            <LegendItem code="SPOT" cls="text-warn" label="last price" />
-            <LegendItem code="ZG" cls="text-teal" label="zero-gamma flip" />
-            <LegendItem code="CW" cls="text-pos" label="call wall (resistance)" />
-            <LegendItem code="PW" cls="text-neg" label="put wall (support)" />
-            <span className="h-3 w-px bg-line" />
             <span className="eyebrow">Levels</span>
             <Lvl label="zero-γ" value={fmtLvl(data.levels?.zero_gamma)} />
             <Lvl label="call wall" value={fmtLvl(data.levels?.call_wall)} />
@@ -468,6 +455,16 @@ export default function OdteStrikesPage() {
                       <b className="text-foreground">GEX</b> — dealer-signed gamma exposure. Green
                       (positive) dampens; red (negative) amplifies.
                     </li>
+                    <li>
+                      {(["delta", "gamma", "theta", "vega", "rho"] as GreekKind[]).map((k, i, arr) => (
+                        <span key={k}>
+                          <b className="font-mono text-foreground">{GREEK_LABEL[k].symbol}</b>{" "}
+                          {GREEK_LABEL[k].gloss}
+                          {i < arr.length - 1 ? " · " : " "}
+                        </span>
+                      ))}
+                      <span className="text-muted">(live ladder only)</span>
+                    </li>
                   </ul>
                 </div>
                 <div className="sm:col-span-2">
@@ -534,16 +531,16 @@ export default function OdteStrikesPage() {
                             <span className="ml-1 text-[11px] text-teal align-middle">Copied</span>
                           )}
                           {isSpot && (
-                            <span className="ml-1 text-[9px] text-warn align-middle">SPOT</span>
+                            <span className="ml-1 text-[11px] text-warn align-middle">SPOT</span>
                           )}
                           {isZg && (
-                            <span className="ml-1 text-[9px] text-teal align-middle">ZG</span>
+                            <span className="ml-1 text-[11px] text-teal align-middle">ZG</span>
                           )}
                           {isCallWall && (
-                            <span className="ml-1 text-[9px] text-pos align-middle">CW</span>
+                            <span className="ml-1 text-[11px] text-pos align-middle">CW</span>
                           )}
                           {isPutWall && (
-                            <span className="ml-1 text-[9px] text-neg align-middle">PW</span>
+                            <span className="ml-1 text-[11px] text-neg align-middle">PW</span>
                           )}
                         </td>
                         <td className="text-left px-2 py-1 text-muted">{fmtIv(row.call?.iv)}</td>

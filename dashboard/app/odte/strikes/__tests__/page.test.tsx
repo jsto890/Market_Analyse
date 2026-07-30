@@ -196,4 +196,29 @@ describe("OdteStrikesPage — single ladder mode (OL-02)", () => {
     expect(writeText).toHaveBeenCalledWith(expect.stringMatching(/call IV.*put IV.*GEX/));
     expect(await screen.findByText("Copied")).toBeInTheDocument();
   });
+
+  it("shows marker legend once, not duplicated between the levels strip and the explainer (OD-10)", async () => {
+    render(<OdteStrikesPage />);
+    await screen.findByText(/call IV/i);
+    // Old inline LegendItem caption from the levels strip is gone — the
+    // how-to-read explainer (promoted above the fold, Task 16) is now the
+    // sole place marker vocabulary is spelled out.
+    expect(screen.queryByText("last price")).not.toBeInTheDocument();
+  });
+
+  it("uses an 11px floor for strike-cell marker chips, never 9px (OL-12)", async () => {
+    render(<OdteStrikesPage />);
+    await screen.findByText(/call IV/i);
+    const chips = screen.getAllByText(/^(SPOT|ZG|CW|PW)$/).filter((el) => el.tagName === "SPAN");
+    expect(chips.length).toBeGreaterThan(0);
+    for (const chip of chips) {
+      expect(chip.className).not.toMatch(/text-\[9px\]/);
+    }
+  });
+
+  it("extends the how-to-read explainer's Columns section with greek glosses (OD-10)", async () => {
+    render(<OdteStrikesPage />);
+    await screen.findByText(/call IV/i);
+    expect(screen.getByText("Θ")).toBeInTheDocument();
+  });
 });
