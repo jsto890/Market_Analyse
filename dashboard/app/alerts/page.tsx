@@ -5,6 +5,7 @@ import useSWR from "swr";
 import { Bell, Trash2, Play } from "lucide-react";
 import PageHeader from "@/components/ui/PageHeader";
 import Toggle from "@/components/ui/Toggle";
+import { useUndoAction } from "@/components/ui/UndoToastProvider";
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
@@ -51,6 +52,7 @@ export default function AlertsPage() {
     { refreshInterval: 30000 }
   );
   const { data: channels } = useSWR<Record<string, boolean>>("/api/argus/alerts/channels", fetcher);
+  const { run } = useUndoAction();
 
   const [kind, setKind] = useState("verdict");
   const [symbol, setSymbol] = useState("");
@@ -96,9 +98,21 @@ export default function AlertsPage() {
     }
   }
 
-  async function removeRule(id: number) {
-    await fetch(`/api/argus/alerts/rules/${id}`, { method: "DELETE" });
-    mutateRules();
+  function removeRule(rule: Rule) {
+    mutateRules((prev) => (prev ? { rules: prev.rules.filter((r) => r.id !== rule.id) } : prev), false);
+    run({
+      label: `Removed ${rule.symbol} ${rule.kind} alert`,
+      commit: () => fetch(`/api/argus/alerts/rules/${rule.id}`, { method: "DELETE" }),
+      onError: () => mutateRules(),
+      undo: () => {
+        mutateRules((prev) => (prev ? { rules: [rule, ...prev.rules] } : prev), false);
+        fetch("/api/argus/alerts/rules", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ kind: rule.kind, symbol: rule.symbol, params: rule.params, note: rule.note }),
+        }).then(() => mutateRules());
+      },
+    });
   }
 
   async function updateRuleEnabled(id: number, enabled: boolean) {
@@ -277,7 +291,7 @@ export default function AlertsPage() {
                     className="ml-auto"
                   />
                   <button
-                    onClick={() => removeRule(r.id)}
+                    onClick={() => removeRule(r)}
                     className="text-muted transition-colors hover:text-neg"
                     aria-label="Delete rule"
                   >
