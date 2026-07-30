@@ -106,3 +106,22 @@ describe("WatchlistClient reserved column widths (WL-02)", () => {
     expect(sinceHeader).toHaveStyle({ width: "88px" });
   });
 });
+
+describe("WatchlistClient Context column removal (WL-03)", () => {
+  it("shows typical-peak text once in panel subtitle, not per row", async () => {
+    mockFetchJson({
+      ...baseMocks(),
+      "/api/signals/recent?days=14": [
+        { ticker: "AMD", first_date: "2026-07-15", first_group: "prime", entry_at_flag: 140, last_date: "2026-07-20" },
+      ],
+    });
+    render(
+      <UndoToastProvider>
+        <WatchlistClient medianDaysToPeak={12} />
+      </UndoToastProvider>
+    );
+    await screen.findByText("AMD");
+    expect(screen.getByText(/typical peak ~12d/)).toBeInTheDocument();
+    expect(screen.queryByRole("columnheader", { name: "Context" })).not.toBeInTheDocument();
+  });
+});

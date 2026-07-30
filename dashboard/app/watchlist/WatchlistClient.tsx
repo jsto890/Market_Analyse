@@ -507,21 +507,12 @@ function RecentPicksSection({ medianDaysToPeak }: { medianDaysToPeak: number }) 
         );
       },
     },
-    {
-      key: "context",
-      header: "Context",
-      render: (r) => (
-        <span className="text-[12px] text-muted">
-          typical peak ~{medianDaysToPeak}d
-        </span>
-      ),
-    },
   ];
 
   return (
     <Panel
       title="Recent picks (auto)"
-      subtitle="aligned / pullback / tech_fund first-flagged last 14 days"
+      subtitle={`aligned / pullback / tech_fund first-flagged last 14 days · typical peak ~${medianDaysToPeak}d`}
       persistKey="watchlist-recent"
     >
       {!recentData ? (
