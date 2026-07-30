@@ -29,6 +29,7 @@ describe("SourcesTable", () => {
 
   it("seeding initialTicker (from ?ticker=) narrows both tables", () => {
     render(<SourcesTable rows={rows} initialTicker="NVDA" />);
+    expect(screen.getByText("Today's tickers (1)")).toBeInTheDocument();
     expect(screen.getAllByText("NVDA").length).toBeGreaterThan(0);
     expect(screen.getAllByText("@alpha").length).toBeGreaterThan(0);
     expect(screen.getAllByText("@beta").length).toBeGreaterThan(0);
@@ -38,6 +39,7 @@ describe("SourcesTable", () => {
     render(<SourcesTable rows={rows} initialTicker="" />);
     const input = screen.getByPlaceholderText(/filter by ticker or account/i);
     fireEvent.change(input, { target: { value: "amd" } });
+    expect(screen.getByText("Today's tickers (1)")).toBeInTheDocument();
     expect(screen.getAllByText("AMD").length).toBeGreaterThan(0);
   });
 });
