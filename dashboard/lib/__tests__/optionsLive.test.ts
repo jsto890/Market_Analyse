@@ -2,7 +2,19 @@
  * Test suite for optionsLive types and fetch function
  */
 
-import { OptionLiveQuote, StrikeLevel, LadderSnapshot, fetchOptionsLive } from "../optionsLive";
+import { OptionLiveQuote, StrikeLevel, LadderSnapshot, fetchOptionsLive, isStale, STALE_AFTER_FAILURES } from "../optionsLive";
+
+describe("isStale", () => {
+  test("false below the consecutive-failure threshold", () => {
+    expect(isStale(0)).toBe(false);
+    expect(isStale(STALE_AFTER_FAILURES - 1)).toBe(false);
+  });
+
+  test("true at and above the threshold", () => {
+    expect(isStale(STALE_AFTER_FAILURES)).toBe(true);
+    expect(isStale(STALE_AFTER_FAILURES + 5)).toBe(true);
+  });
+});
 
 describe("optionsLive types", () => {
   test("OptionLiveQuote interface exports correctly", () => {

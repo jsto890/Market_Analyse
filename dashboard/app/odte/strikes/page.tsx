@@ -11,6 +11,7 @@ import {
 } from "@/lib/odte";
 import { fmtGex } from "@/lib/odteCompanion";
 import { useOptionsLivePoller } from "@/lib/useOptionsLivePoller";
+import { isStale } from "@/lib/optionsLive";
 import GexChart from "@/components/GexChart";
 
 function fmtIv(iv: number | null | undefined): string {
@@ -181,14 +182,16 @@ export default function OdteStrikesPage() {
                 <div className="flex items-center gap-3">
                   <span
                     className={`px-2 py-0.5 text-xs rounded font-semibold ${
-                      liveLadder.source === "LIVE"
-                        ? "tone-live"
-                        : liveLadder.source === "FROZEN"
-                          ? "tone-frozen"
-                          : "tone-eod"
+                      isStale(consecutiveFailures)
+                        ? "tone-frozen"
+                        : liveLadder.source === "LIVE"
+                          ? "tone-live"
+                          : liveLadder.source === "FROZEN"
+                            ? "tone-frozen"
+                            : "tone-eod"
                     }`}
                   >
-                    {liveLadder.source}
+                    {isStale(consecutiveFailures) ? "STALE" : liveLadder.source}
                   </span>
                   <span className="text-[11px] text-muted">
                     {new Date(liveLadder.as_of).toLocaleTimeString()}
@@ -238,7 +241,10 @@ export default function OdteStrikesPage() {
               </div>
 
               {/* 23-Column Live Ladder Table */}
-              <div className="flex-1 overflow-auto">
+              <div
+                className="flex-1 overflow-auto"
+                style={isStale(consecutiveFailures) ? { filter: "grayscale(0.6)" } : undefined}
+              >
                 <table className="w-full text-[11px] border-collapse">
                   <thead className="sticky top-0 bg-elevated">
                     <tr className="border-b border-line">

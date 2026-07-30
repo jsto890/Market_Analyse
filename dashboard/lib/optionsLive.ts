@@ -78,3 +78,13 @@ export async function fetchOptionsLive(
     return null;
   }
 }
+
+/** Consecutive failed polls after which the ladder on screen is treated as
+ * stale rather than live, even though it is still fully rendered (OL-06 —
+ * a frozen ladder that still looks live is the most dangerous failure mode
+ * in the product). */
+export const STALE_AFTER_FAILURES = 3;
+
+export function isStale(consecutiveFailures: number): boolean {
+  return consecutiveFailures >= STALE_AFTER_FAILURES;
+}
