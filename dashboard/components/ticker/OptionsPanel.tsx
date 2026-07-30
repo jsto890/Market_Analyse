@@ -195,7 +195,11 @@ export default function OptionsPanel({ ticker }: { ticker: string }) {
         )}
 
         {/* P/C summary table */}
-        <table className="w-full font-mono text-[12px] tabular-nums border-collapse">
+        <div>
+          <p className="text-[11px] font-medium text-muted uppercase tracking-wide mb-1.5">
+            P/C Summary
+          </p>
+          <table className="w-full font-mono text-[12px] tabular-nums border-collapse">
           <thead>
             <tr className="text-left text-[11px] text-muted border-b border-line">
               <th className="pb-1 font-medium" />
@@ -225,50 +229,46 @@ export default function OptionsPanel({ ticker }: { ticker: string }) {
               <td className="py-1 text-right text-foreground">{data.summary.pcr_vol.toFixed(2)}</td>
             </tr>
           </tbody>
-        </table>
+          </table>
+        </div>
 
         {/* IV row */}
-        <div className="flex flex-wrap gap-4 font-mono text-[12px] tabular-nums border-t border-line pt-2">
-          <span>
-            <span className="text-muted">ATM IV c </span>
-            <span className="text-pos">{fmtPct(data.iv_atm_call)}</span>
-          </span>
-          <span>
-            <span className="text-muted">p </span>
-            <span className="text-neg">{fmtPct(data.iv_atm_put)}</span>
-          </span>
-          <span>
-            <span className="text-muted">skew </span>
-            <span
-              className={
-                data.iv_skew == null
-                  ? "text-muted"
-                  : data.iv_skew > 0
-                  ? "text-pos"
-                  : data.iv_skew < 0
-                  ? "text-neg"
-                  : "text-foreground"
-              }
-            >
-              {data.iv_skew == null
-                ? "—"
-                : `${data.iv_skew >= 0 ? "+" : ""}${data.iv_skew.toFixed(3)}`}
+        <div className="border-t border-line pt-2">
+          <p className="text-[11px] font-medium text-muted uppercase tracking-wide mb-1.5">
+            Implied Volatility
+          </p>
+          <div className="flex flex-wrap gap-4 font-mono text-[12px] tabular-nums">
+            <span>
+              <span className="text-muted">ATM IV c </span>
+              <span className="text-pos">{fmtPct(data.iv_atm_call)}</span>
             </span>
-          </span>
+            <span>
+              <span className="text-muted">p </span>
+              <span className="text-neg">{fmtPct(data.iv_atm_put)}</span>
+            </span>
+            <span>
+              <span className="text-muted">skew </span>
+              <span
+                className={
+                  data.iv_skew == null
+                    ? "text-muted"
+                    : data.iv_skew > 0
+                    ? "text-pos"
+                    : data.iv_skew < 0
+                    ? "text-neg"
+                    : "text-foreground"
+                }
+              >
+                {data.iv_skew == null
+                  ? "—"
+                  : `${data.iv_skew >= 0 ? "+" : ""}${data.iv_skew.toFixed(3)}`}
+              </span>
+            </span>
+          </div>
         </div>
 
         {/* Unusual activity */}
-        {(data.unusual_calls_top.length > 0 || data.unusual_puts_top.length > 0) ? (
-          <div className="space-y-3 border-t border-line pt-2">
-            {data.unusual_as_of ? (
-              <p className="font-mono text-[11px] text-muted border-t border-line pt-2">
-                as of {data.unusual_as_of} close (US) — robust-score (beta), validation pending
-              </p>
-            ) : null}
-            <UnusualTable rows={data.unusual_calls_top} label="Unusual Calls" />
-            <UnusualTable rows={data.unusual_puts_top} label="Unusual Puts" />
-          </div>
-        ) : data.unusual_as_of ? (
+        {data.unusual_as_of ? (
           <p className="font-mono text-[11px] text-muted border-t border-line pt-2">
             as of {data.unusual_as_of} close (US) — robust-score (beta), validation pending
           </p>
@@ -278,6 +278,12 @@ export default function OptionsPanel({ ticker }: { ticker: string }) {
             recaps land with WS-1 snapshots
           </p>
         ) : null}
+        {(data.unusual_calls_top.length > 0 || data.unusual_puts_top.length > 0) && (
+          <div className="space-y-3 border-t border-line pt-2">
+            <UnusualTable rows={data.unusual_calls_top} label="Unusual Calls" />
+            <UnusualTable rows={data.unusual_puts_top} label="Unusual Puts" />
+          </div>
+        )}
       </div>
     </Panel>
   );
