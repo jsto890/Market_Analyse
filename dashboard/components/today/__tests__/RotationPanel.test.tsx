@@ -65,3 +65,20 @@ describe("Header glosses (RO-04)", () => {
     expect(screen.getByRole("button", { name: /Breadth/ })).toBeInTheDocument();
   });
 });
+
+describe("Thin-basket rows (RO-05)", () => {
+  it("shows a 'thin' chip next to the name instead of dimming the whole row", () => {
+    const thinRow: RotationRow[] = [{ ...rows[0], industry: "Materials", n: 12 }];
+    render(<RotationPanel rows={thinRow} />);
+    const name = screen.getByText("Materials");
+    expect(name).toBeInTheDocument();
+    expect(name.className).not.toMatch(/text-muted/);
+    expect(screen.getByText("thin")).toBeInTheDocument();
+  });
+
+  it("shows no chip for a normal-sized basket", () => {
+    const normalRow: RotationRow[] = [{ ...rows[0], industry: "Financials", n: 40 }];
+    render(<RotationPanel rows={normalRow} />);
+    expect(screen.queryByText("thin")).not.toBeInTheDocument();
+  });
+});

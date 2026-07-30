@@ -27,8 +27,6 @@ interface RotationPanelProps {
   collapsible?: boolean;
 }
 
-const THIN_TOOLTIP =
-  "thin basket — displayed RS values are noisier than the (shrinkage-adjusted) rank suggests";
 
 function QuadrantDot({ quadrant }: { quadrant: string }) {
   const color = QUADRANT_COLOR[quadrant] ?? "var(--muted)";
@@ -90,25 +88,20 @@ const columns: Column<RotationRow>[] = [
   {
     key: "industry",
     header: "Industry",
-    render: (r) =>
-      r.n != null && r.n < 20 ? (
-        <Tooltip.Root>
-          <Tooltip.Trigger asChild>
-            <span className="cursor-default border-b border-dotted border-muted/50">{r.industry}</span>
-          </Tooltip.Trigger>
-          <Tooltip.Portal>
-            <Tooltip.Content
-              className="max-w-xs rounded bg-elevated px-2 py-1 text-[12px] text-muted shadow-lg border border-line z-50"
-              sideOffset={4}
-            >
-              {THIN_TOOLTIP}
-              <Tooltip.Arrow className="fill-elevated" />
-            </Tooltip.Content>
-          </Tooltip.Portal>
-        </Tooltip.Root>
-      ) : (
-        r.industry
-      ),
+    render: (r) => {
+      const thin = r.n != null && r.n < 20;
+      if (!thin) return r.industry;
+      return (
+        <span className="inline-flex items-center gap-1.5">
+          {r.industry}
+          <InfoTip content={HEADER_GLOSS.n}>
+            <span className="rounded border border-line px-1 text-[11px] uppercase tracking-wide text-muted">
+              thin
+            </span>
+          </InfoTip>
+        </span>
+      );
+    },
   },
   {
     key: "drank",
