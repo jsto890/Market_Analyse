@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import useSWR from "swr";
+import { useSearchParams } from "next/navigation";
 import { useMacro, useMacroSeries, scopeLabel, toneClass } from "@/lib/macro";
 import { MacroChart, type SpxBar } from "@/components/macro/MacroChart";
 import EmptyState from "@/components/ui/EmptyState";
@@ -9,11 +10,16 @@ import PageHeader from "@/components/ui/PageHeader";
 
 const fetcher = (u: string) => fetch(u).then((r) => { if (!r.ok) throw new Error(`${r.status}`); return r.json(); });
 const WINDOWS = ["1h", "1d", "1w"];
+const VALID_WINDOWS = new Set(WINDOWS);
 
-export default function MacroPage() {
+function MacroPageInner() {
+  const searchParams = useSearchParams();
+  const initialWindow = searchParams.get("window");
   const { data } = useMacro();
   const [scope, setScope] = useState("global");
-  const [window, setWindow] = useState("1d");
+  const [window, setWindow] = useState(
+    initialWindow && VALID_WINDOWS.has(initialWindow) ? initialWindow : "1d"
+  );
   const { data: series } = useMacroSeries(scope, window);
   // SPY daily history already served by Argus; reuse it as the benchmark overlay.
   const { data: hist } = useSWR<{ bars: SpxBar[] }>(
@@ -76,5 +82,13 @@ export default function MacroPage() {
         <EmptyState message="No macro data yet — the aggregator runs every 20 min." />
       )}
     </main>
+  );
+}
+
+export default function MacroPage() {
+  return (
+    <Suspense fallback={null}>
+      <MacroPageInner />
+    </Suspense>
   );
 }

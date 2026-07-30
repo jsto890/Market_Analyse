@@ -1,7 +1,12 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { render, screen, userEvent } from "@/test/render";
 import { mockFetchJson } from "@/test/fetchMock";
 import MacroPage from "../page";
+
+const searchParamsMock = vi.hoisted(() => ({ current: "" }));
+vi.mock("next/navigation", () => ({
+  useSearchParams: () => new URLSearchParams(searchParamsMock.current),
+}));
 
 const GAUGES = [
   { scope: "global", window: "1d", score: 0.1, n: 50, ts: "2026-07-28T00:00:00Z" },
@@ -70,6 +75,29 @@ describe("MacroPage gauge card semantics (MC-05)", () => {
     const nEl = await screen.findByText("n=50");
     expect(nEl.className).toMatch(/text-\[11px\]/);
     expect(nEl.className).not.toMatch(/opacity-/);
+  });
+});
+
+describe("MacroPage window from URL (MC-06)", () => {
+  it("initializes the window from a ?window= query param", async () => {
+    searchParamsMock.current = "window=1w";
+    mockFetchJson((url: string) => {
+      if (url === "/api/argus/macro") return { gauges: [{ scope: "global", window: "1w", score: 0.1, n: 10, ts: "2026-07-28T00:00:00Z" }] };
+      if (url.startsWith("/api/argus/macro/series")) return { scope: "global", window: "1w", points: [] };
+      if (url.startsWith("/api/argus/history/SPY")) return { bars: [] };
+      return {};
+    });
+    render(<MacroPage />);
+    const activeWindow = await screen.findByRole("button", { name: "1w" });
+    expect(activeWindow.className).toMatch(/bg-accent\/20/);
+  });
+
+  it("defaults to 1d when no query param is present", async () => {
+    searchParamsMock.current = "";
+    mockMacroFetch();
+    render(<MacroPage />);
+    const activeWindow = await screen.findByRole("button", { name: "1d" });
+    expect(activeWindow.className).toMatch(/bg-accent\/20/);
   });
 });
 

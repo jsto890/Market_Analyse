@@ -33,3 +33,14 @@ describe("MacroGauges (LR-07, LR-06)", () => {
     expect(empty.className).not.toContain("opacity-60");
   });
 });
+
+describe("MacroGauges deep link (MC-06)", () => {
+  it("carries the selected window into the /macro link", async () => {
+    vi.mocked(macroLib.useMacro).mockReturnValue({
+      data: { gauges: [{ scope: "global", window: "1w", score: 0.1, n: 10, ts: "2026-07-28T00:00:00Z" }] },
+    } as ReturnType<typeof macroLib.useMacro>);
+    render(<MacroGauges window="1w" />);
+    const link = await screen.findByRole("link", { name: "1w ›" });
+    expect(link).toHaveAttribute("href", "/macro?window=1w");
+  });
+});

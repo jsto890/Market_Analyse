@@ -43,7 +43,7 @@ export function MacroGauges({ window = "1d" }: { window?: string }) {
         <span className="text-[10px] font-medium uppercase tracking-[0.08em] text-muted font-mono leading-none">
           Macro
         </span>
-        <Link href="/macro" className="text-[10px] font-mono text-muted hover:text-accent">{window} ›</Link>
+        <Link href={`/macro?window=${window}`} className="text-[10px] font-mono text-muted hover:text-accent">{window} ›</Link>
       </div>
       {show.length === 0
         ? <p className="px-3 py-1 text-[10px] font-mono text-muted-2">building…</p>
