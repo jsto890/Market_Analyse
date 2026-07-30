@@ -60,27 +60,34 @@ export default function AlertsPage() {
   const [direction, setDirection] = useState("above");
   const [busy, setBusy] = useState(false);
   const [sendTestResult, setSendTestResult] = useState<string | null>(null);
+  const [addError, setAddError] = useState<string | null>(null);
 
   const rules = rulesData?.rules ?? [];
   const log = logData?.items ?? [];
+  const isIncomplete = !symbol.trim() || (kind === "price" && !level.trim());
 
   async function addRule() {
     const sym = symbol.trim().toUpperCase();
-    if (!sym) return;
+    if (isIncomplete) return;
     const params =
       kind === "verdict"
         ? { target }
         : kind === "earnings"
           ? { days: Number(days) }
           : { level: Number(level), direction };
-    if (kind === "price" && !level) return;
+    setAddError(null);
     setBusy(true);
     try {
-      await fetch("/api/argus/alerts/rules", {
+      const res = await fetch("/api/argus/alerts/rules", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ kind, symbol: sym, params }),
       });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        setAddError(body?.error ?? `Failed to add rule for ${sym}`);
+        return;
+      }
       setSymbol("");
       setLevel("");
       await mutateRules();
@@ -227,12 +234,15 @@ export default function AlertsPage() {
             )}
             <button
               onClick={addRule}
-              disabled={busy || !symbol.trim()}
+              disabled={busy || isIncomplete}
               className="inline-flex h-9 items-center gap-1.5 rounded-md bg-accent px-4 text-sm font-semibold text-white shadow-sm transition-opacity hover:opacity-90 disabled:opacity-50"
             >
               <Bell size={14} /> Add
             </button>
           </div>
+          {addError && (
+            <p className="px-4 pb-3 text-[12px] text-neg">{addError}</p>
+          )}
         </section>
 
         {/* Active rules */}

@@ -56,3 +56,19 @@ describe("AlertsPage channel status (AL-02)", () => {
     expect(await screen.findByText(/Test alert sent/)).toBeInTheDocument();
   });
 });
+
+describe("AlertsPage validation (AL-03)", () => {
+  it("disables Add for an incomplete price rule and surfaces a server error", async () => {
+    mockFetchJson({
+      ...baseMocks(),
+      "/api/argus/alerts/rules:POST": { error: "symbol not recognized" },
+    });
+    const user = userEvent.setup();
+    render(<AlertsPage />);
+    await user.selectOptions(screen.getByLabelText("Condition"), "price");
+    await user.type(screen.getByLabelText("Symbol"), "ZZZZ");
+    expect(screen.getByRole("button", { name: "Add" })).toBeDisabled();
+    await user.type(screen.getByLabelText("Level"), "200");
+    expect(screen.getByRole("button", { name: "Add" })).toBeEnabled();
+  });
+});
