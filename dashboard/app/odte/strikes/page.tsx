@@ -13,6 +13,7 @@ import { isStale } from "@/lib/optionsLive";
 import GexChart from "@/components/GexChart";
 import SymbolSwitcher from "@/components/odte/SymbolSwitcher";
 import InfoTip from "@/components/ui/InfoTip";
+import Collapsible from "@/components/ui/Collapsible";
 
 function fmtIv(iv: number | null | undefined): string {
   return iv != null ? `${(iv * 100).toFixed(1)}%` : "—";
@@ -401,6 +402,83 @@ export default function OdteStrikesPage() {
             />
           </div>
 
+          {/* How to read this ladder — promoted above the fold (OD-07): kept
+             verbatim, only its position and expand/collapse mechanics change. */}
+          <div className="mx-4 mt-2">
+            <Collapsible
+              persistKey="strikes-how-to-read"
+              defaultOpen
+              trigger={
+                <span className="tick text-[13px] font-semibold text-foreground">
+                  How to read this ladder
+                </span>
+              }
+              className="rounded-md border border-line bg-elevated"
+              triggerClassName="px-4 py-2.5"
+            >
+              <div className="grid gap-x-8 gap-y-3 border-t border-line px-4 py-3 text-[12px] leading-relaxed text-muted sm:grid-cols-2">
+                <div>
+                  <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-foreground">
+                    Markers
+                  </p>
+                  <ul className="space-y-1">
+                    <li>
+                      <b className="font-mono text-warn">SPOT</b> — current underlying price; the
+                      ladder auto-centers here on load.
+                    </li>
+                    <li>
+                      <b className="font-mono text-teal">ZG</b> — zero-gamma flip. Below it dealers
+                      are short gamma and hedging <b className="text-foreground">extends</b> moves;
+                      above it they&apos;re long gamma and moves <b className="text-foreground">
+                        pin / dampen
+                      </b>
+                      .
+                    </li>
+                    <li>
+                      <b className="font-mono text-pos">CW</b> — call wall: heaviest dealer gamma
+                      above spot; acts as resistance and an upside magnet.
+                    </li>
+                    <li>
+                      <b className="font-mono text-neg">PW</b> — put wall: heaviest dealer gamma
+                      below spot; acts as support.
+                    </li>
+                  </ul>
+                </div>
+                <div>
+                  <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-foreground">
+                    Columns
+                  </p>
+                  <ul className="space-y-1">
+                    <li>
+                      <b className="text-foreground">OI / Vol</b> — open interest &amp; today&apos;s
+                      volume per strike (puts on the left, calls on the right of the strike).
+                    </li>
+                    <li>
+                      <b className="text-foreground">IV</b> — implied volatility at that strike.
+                    </li>
+                    <li>
+                      <b className="text-foreground">GEX</b> — dealer-signed gamma exposure. Green
+                      (positive) dampens; red (negative) amplifies.
+                    </li>
+                  </ul>
+                </div>
+                <div className="sm:col-span-2">
+                  <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-foreground">
+                    Picking a strike
+                  </p>
+                  <p>
+                    Start <b className="text-foreground">ATM</b> (nearest SPOT) for delta, then let
+                    the walls frame the trade: buy toward the wall in your direction (
+                    <b className="font-mono text-pos">CW</b> for calls,{" "}
+                    <b className="font-mono text-neg">PW</b> for puts) as the magnet, and treat the
+                    opposite wall as where the move likely stalls. Strikes beyond the expected move
+                    are low-probability lottery tickets — cheap, but usually expire worthless.
+                  </p>
+                </div>
+              </div>
+            </Collapsible>
+          </div>
+
           <div className="flex-1 overflow-y-auto p-3">
             <div className="bg-surface border border-line rounded overflow-x-auto max-h-[70vh] overflow-y-auto">
               <table className="w-full font-mono text-[11px] tabular-nums border-collapse">
@@ -499,73 +577,6 @@ export default function OdteStrikesPage() {
             </div>
 
             {/* Educational footer */}
-            <section className="mt-4 rounded-md border border-line bg-elevated">
-              <div className="px-4 py-2.5">
-                <span className="tick text-[13px] font-semibold text-foreground">
-                  How to read this ladder
-                </span>
-              </div>
-              <div className="grid gap-x-8 gap-y-3 border-t border-line px-4 py-3 text-[12px] leading-relaxed text-muted sm:grid-cols-2">
-                <div>
-                  <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-foreground">
-                    Markers
-                  </p>
-                  <ul className="space-y-1">
-                    <li>
-                      <b className="font-mono text-warn">SPOT</b> — current underlying price; the
-                      ladder auto-centers here on load.
-                    </li>
-                    <li>
-                      <b className="font-mono text-teal">ZG</b> — zero-gamma flip. Below it dealers
-                      are short gamma and hedging <b className="text-foreground">extends</b> moves;
-                      above it they&apos;re long gamma and moves <b className="text-foreground">
-                        pin / dampen
-                      </b>
-                      .
-                    </li>
-                    <li>
-                      <b className="font-mono text-pos">CW</b> — call wall: heaviest dealer gamma
-                      above spot; acts as resistance and an upside magnet.
-                    </li>
-                    <li>
-                      <b className="font-mono text-neg">PW</b> — put wall: heaviest dealer gamma
-                      below spot; acts as support.
-                    </li>
-                  </ul>
-                </div>
-                <div>
-                  <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-foreground">
-                    Columns
-                  </p>
-                  <ul className="space-y-1">
-                    <li>
-                      <b className="text-foreground">OI / Vol</b> — open interest &amp; today&apos;s
-                      volume per strike (puts on the left, calls on the right of the strike).
-                    </li>
-                    <li>
-                      <b className="text-foreground">IV</b> — implied volatility at that strike.
-                    </li>
-                    <li>
-                      <b className="text-foreground">GEX</b> — dealer-signed gamma exposure. Green
-                      (positive) dampens; red (negative) amplifies.
-                    </li>
-                  </ul>
-                </div>
-                <div className="sm:col-span-2">
-                  <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-foreground">
-                    Picking a strike
-                  </p>
-                  <p>
-                    Start <b className="text-foreground">ATM</b> (nearest SPOT) for delta, then let
-                    the walls frame the trade: buy toward the wall in your direction (
-                    <b className="font-mono text-pos">CW</b> for calls,{" "}
-                    <b className="font-mono text-neg">PW</b> for puts) as the magnet, and treat the
-                    opposite wall as where the move likely stalls. Strikes beyond the expected move
-                    are low-probability lottery tickets — cheap, but usually expire worthless.
-                  </p>
-                </div>
-              </div>
-            </section>
           </div>
             </>
           )}

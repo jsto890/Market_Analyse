@@ -151,4 +151,34 @@ describe("OdteStrikesPage — single ladder mode (OL-02)", () => {
     const table = document.querySelector("table");
     if (table) expect(table.className).toMatch(/font-mono/);
   });
+
+  it("shows the how-to-read explainer above the ladder table, open by default on first visit (OD-07)", async () => {
+    resetLocalStorage();
+    render(<OdteStrikesPage />);
+    const heading = await screen.findByText("How to read this ladder");
+    expect(screen.getByText(/ladder auto-centers here on load/i)).toBeInTheDocument();
+    const main = screen.getByRole("main");
+    const all = Array.from(main.querySelectorAll("*"));
+    expect(all.indexOf(heading)).toBeLessThan(all.indexOf(document.querySelector("table")!));
+  });
+
+  it("persists a collapsed choice across remounts (OD-07)", async () => {
+    resetLocalStorage();
+    const user = userEvent.setup();
+    const { unmount } = render(<OdteStrikesPage />);
+    await screen.findByText("How to read this ladder");
+    // Collapsible always mounts its children (CSS-only grid collapse), so
+    // assert on aria-expanded rather than text presence, per its own
+    // established test convention (components/ui/__tests__/Collapsible.test.tsx).
+    const trigger = screen.getByRole("button", { name: /how to read this ladder/i });
+    expect(trigger).toHaveAttribute("aria-expanded", "true");
+    await user.click(trigger);
+    expect(trigger).toHaveAttribute("aria-expanded", "false");
+    unmount();
+
+    render(<OdteStrikesPage />);
+    expect(
+      await screen.findByRole("button", { name: /how to read this ladder/i, expanded: false })
+    ).toBeInTheDocument();
+  });
 });
