@@ -112,7 +112,10 @@ function VoteRow({ agent, direction, confidence, note }: VoteRowProps) {
         {(confidence * 100).toFixed(0)}%
       </span>
       {note && (
-        <span className="font-mono text-[11px] text-muted truncate max-w-[240px] shrink-0">
+        <span
+          className="font-mono text-[11px] text-muted truncate max-w-[240px] shrink-0"
+          title={note ?? undefined}
+        >
           {note}
         </span>
       )}
