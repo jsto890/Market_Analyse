@@ -23,6 +23,9 @@ export interface DataTableProps<T> {
   persistKey?: string;
   onOpen?: (row: T) => void;
   onRowHover?: (row: T) => void;
+  /** Row marked as the current selection by something outside the table — a
+   *  chart, a map — so picking there paints the matching row here. */
+  selectedKey?: string | null;
   /** Visually-hidden <caption> giving the table an accessible name. Optional for backward compat; new/touched tables should always pass one. */
   caption?: string;
   /** Shown in place of the body when `rows` is empty. The header stays, so the
@@ -53,6 +56,7 @@ export default function DataTable<T>({
   persistKey,
   onOpen,
   onRowHover,
+  selectedKey = null,
   caption,
   emptyMessage = "No rows match the current filters.",
   emptyAction,
@@ -264,7 +268,7 @@ export default function DataTable<T>({
             {sortedRows.map((row, ri) => {
               const key = rowKey(row);
               const isExpanded = expandedKeys.has(key);
-              const isFocused = focusedKey === key;
+              const isFocused = focusedKey === key || selectedKey === key;
               const isEven = ri % 2 === 0;
               const stickyBg = isEven ? "bg-surface" : "bg-bg";
 

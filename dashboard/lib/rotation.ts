@@ -45,6 +45,18 @@ export function splitDegenerate<T extends { rs_ratio: number; rs_mom: number }>(
   return { plotted, hidden };
 }
 
+/** The number drawn beside each scatter point, keyed by industry. The chart
+ *  draws it and the rotation table prints it in front of the sector name — the
+ *  table is the chart's legend, so the two must agree. Degenerate rows have no
+ *  point and so no number. */
+export function rrgIndexByIndustry(rows: RotationRow[]): Record<string, number> {
+  const out: Record<string, number> = {};
+  splitDegenerate(rows).plotted.forEach((r, i) => {
+    out[r.industry] = i + 1;
+  });
+  return out;
+}
+
 /** Same computation RotationPanel.tsx uses for its own Panel subtitle, extracted
  *  so the Today-page teaser link (`app/page.tsx`) can show it too, instead of the
  *  contentless "N sectors tracked" (TD-13). Transplanted here from Phase 3's

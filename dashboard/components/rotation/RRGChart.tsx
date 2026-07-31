@@ -13,11 +13,10 @@ import {
   Tooltip,
 } from "recharts";
 import Link from "next/link";
-import { useState } from "react";
 import Panel from "@/components/ui/Panel";
 import Empty from "@/components/ui/Empty";
 import type { RotationRow } from "@/components/today/RotationPanel";
-import { QUADRANT_COLOR, deriveQuadrant, splitDegenerate } from "@/lib/rotation";
+import { QUADRANT_COLOR, deriveQuadrant, splitDegenerate, rrgIndexByIndustry } from "@/lib/rotation";
 import { CHART_HEIGHT, CHART_AXIS_STYLE } from "@/lib/chartConventions";
 import { QUADRANT_GLOSS, QUADRANT_LABEL } from "@/lib/labels";
 
@@ -110,13 +109,18 @@ function RRGTooltip({ active, payload }: { active?: boolean; payload?: TooltipPa
 export default function RRGChart({
   rows,
   namesBySector,
+  selected = null,
+  onSelect,
 }: {
   rows: RotationRow[];
   /** Omitted when the signals file could not be read — the picked-names line
    *  then never renders, rather than claiming every sector is empty. */
   namesBySector?: SectorNames;
+  /** Selection is owned above the chart, because the rotation table is the
+   *  chart's legend and picking in either place has to move the other. */
+  selected?: string | null;
+  onSelect?: (industry: string | null) => void;
 }) {
-  const [selected, setSelected] = useState<string | null>(null);
   if (!rows.length) return null;
 
   const { plotted, hidden } = splitDegenerate(rows);
@@ -141,13 +145,17 @@ export default function RRGChart({
   const xDomain: [number, number] = [minR - padR, maxR + padR];
   const yDomain: [number, number] = [minM - padM, maxM + padM];
 
-  const data = plotted.map((r, i) => ({
+  const indexByIndustry = rrgIndexByIndustry(rows);
+  const data = plotted.map((r) => ({
     ...r,
     quadrantKey: deriveQuadrant(r),
-    rrgIndex: i + 1,
+    rrgIndex: indexByIndustry[r.industry],
   }));
 
-  const selectedRow = data.find((r) => r.industry === selected) ?? null;
+  // Searched across every row, not just the plotted ones: a flat sector has no
+  // point but still has a table row, and picking it should still name its
+  // candidates rather than silently doing nothing.
+  const selectedRow = rows.find((r) => r.industry === selected) ?? null;
   const picked = selectedRow ? (namesBySector?.[selectedRow.industry] ?? []) : [];
 
   return (
@@ -246,7 +254,7 @@ export default function RRGChart({
                 return (
                   <g
                     onClick={() =>
-                      setSelected(isSelected ? null : (p.payload as RotationRow).industry)
+                      onSelect?.(isSelected ? null : (p.payload as RotationRow).industry)
                     }
                     style={{ cursor: "pointer" }}
                   >
@@ -254,11 +262,10 @@ export default function RRGChart({
                       <circle cx={p.cx} cy={p.cy} r={8} fill="none" stroke={color} strokeWidth={1.5} />
                     )}
                     <circle cx={p.cx} cy={p.cy} r={4} fill={color} stroke="var(--bg)" strokeWidth={1} />
-                    {/* Index only — the name goes in the keyed legend below.
-                     * Naming just the uncrowded points was both inconsistent
-                     * (2 of 12 labelled) and unreadable: an abbreviated sector
-                     * name still ellipsised, so it named nothing the legend
-                     * didn't already name in full. */}
+                    {/* Index only — the name is in the table below, against the
+                     * same number. Naming just the uncrowded points was both
+                     * inconsistent (2 of 12 labelled) and unreadable: an
+                     * abbreviated sector name still ellipsised. */}
                     <text
                       x={p.cx + (right ? 7 : -7)}
                       y={p.cy + (up ? -3 : 9)}
@@ -282,32 +289,9 @@ export default function RRGChart({
           </ScatterChart>
         </ResponsiveContainer>
       </div>
-      {/* Keyed legend — every plotted sector is named exactly once, so a
-       * cluster near the origin stays identifiable without hovering. */}
-      <ul className="mt-3 grid grid-cols-2 gap-x-5 gap-y-1 px-1 text-body md:grid-cols-3">
-        {data.map((r) => (
-          <li key={r.industry} className="flex min-w-0">
-            {/* The legend is also the picker: a scatter dot is a 4px target,
-             *  and the sector's name is here rather than there (RO-11). */}
-            <button
-              type="button"
-              onClick={() => setSelected(selected === r.industry ? null : r.industry)}
-              aria-pressed={selected === r.industry}
-              className={`flex min-w-0 items-center gap-1.5 rounded px-1 text-left hover:text-foreground ${
-                selected === r.industry ? "text-foreground" : "text-muted"
-              }`}
-            >
-              <span
-                aria-hidden
-                className="h-1.5 w-1.5 flex-shrink-0 rounded-full"
-                style={{ background: QUADRANT_COLOR[r.quadrantKey] ?? "var(--accent)" }}
-              />
-              <span className="w-5 flex-shrink-0 text-right text-data text-muted">{r.rrgIndex}</span>
-              <span className="truncate">{r.industry}</span>
-            </button>
-          </li>
-        ))}
-      </ul>
+      {/* No legend here. It named all twelve sectors ~100px above the table
+       * that names the same twelve — the numbered points key into that table
+       * instead, and its rows are the picker. */}
       {selectedRow && namesBySector && (
         <div className="mt-2 flex flex-wrap items-baseline gap-x-2 gap-y-1 border-t border-line px-1 pt-2 text-body">
           <span className="eyebrow">{selectedRow.industry} · on today&rsquo;s list</span>

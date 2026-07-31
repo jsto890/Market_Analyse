@@ -1,8 +1,9 @@
 import fs from "fs";
 import path from "path";
 import Link from "next/link";
-import RotationPanel, { type RotationRow } from "@/components/today/RotationPanel";
-import RRGChart, { type SectorNames } from "@/components/rotation/RRGChart";
+import { type RotationRow } from "@/components/today/RotationPanel";
+import { type SectorNames } from "@/components/rotation/RRGChart";
+import RotationView from "@/components/rotation/RotationView";
 import Failed from "@/components/ui/Failed";
 import Stale from "@/components/ui/Stale";
 import Page from "@/components/ui/Page";
@@ -76,10 +77,7 @@ export default function RotationPage() {
         }
       />
       {rotation ? (
-        <>
-          <RRGChart rows={rotation} namesBySector={namesBySector} />
-          <RotationPanel rows={rotation} defaultOpen collapsible={false} />
-        </>
+        <RotationView rows={rotation} namesBySector={namesBySector} />
       ) : (
         <Failed
           title="No rotation data"

@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo } from "react";
 import * as Tooltip from "@radix-ui/react-tooltip";
 import Panel from "@/components/ui/Panel";
 import DataTable, { type Column } from "@/components/ui/DataTable";
@@ -26,6 +27,12 @@ interface RotationPanelProps {
   rows: RotationRow[];
   defaultOpen?: boolean;
   collapsible?: boolean;
+  /** Passed only on /rotation, where this table doubles as the RRG's legend:
+   *  the number in front of each industry is the number on its scatter point.
+   *  Absent on Today, where there is no chart to key into. */
+  rrgIndex?: Record<string, number>;
+  selected?: string | null;
+  onSelect?: (industry: string | null) => void;
 }
 
 
@@ -143,7 +150,47 @@ const columns: Column<RotationRow>[] = [
   { key: "r3m", align: "right", header: "3M", render: (r) => <Ret v={r.r3m} /> },
 ];
 
-export default function RotationPanel({ rows, defaultOpen = false, collapsible = true }: RotationPanelProps) {
+/**
+ * The RRG numbers its points and leaves them unnamed; this is where a number
+ * becomes a sector. Prefixing the industry column rather than adding a column
+ * of its own keeps the sticky-left cell the one that identifies the row.
+ */
+function withRrgIndex(
+  cols: Column<RotationRow>[],
+  rrgIndex: Record<string, number>
+): Column<RotationRow>[] {
+  const [industry, ...rest] = cols;
+  return [
+    {
+      ...industry,
+      header: (
+        <span className="inline-flex items-baseline gap-2">
+          <span className="w-4 text-right text-muted">#</span>
+          <span>Industry</span>
+        </span>
+      ),
+      render: (r) => (
+        <span className="inline-flex items-baseline gap-2">
+          <span className="w-4 shrink-0 text-right text-data text-muted">
+            {rrgIndex[r.industry] ?? "·"}
+          </span>
+          <span>{industry.render(r)}</span>
+        </span>
+      ),
+    },
+    ...rest,
+  ];
+}
+
+export default function RotationPanel({
+  rows,
+  defaultOpen = false,
+  collapsible = true,
+  rrgIndex,
+  selected = null,
+  onSelect,
+}: RotationPanelProps) {
+  const cols = useMemo(() => (rrgIndex ? withRrgIndex(columns, rrgIndex) : columns), [rrgIndex]);
   const sorted = [...rows].sort((a, b) => a.rank - b.rank);
   const fading = rows.filter((r) => r.quadrant === "weakening" || r.quadrant === "lagging").length;
   const leading = sorted
@@ -155,7 +202,14 @@ export default function RotationPanel({ rows, defaultOpen = false, collapsible =
 
   return (
     <Panel title="Sector rotation" subtitle={summary} collapsible={collapsible} defaultOpen={defaultOpen} persistKey="rotation">
-      <DataTable<RotationRow> columns={columns} rows={sorted} rowKey={(r) => r.industry} persistKey="rotation-table" />
+      <DataTable<RotationRow>
+        columns={cols}
+        rows={sorted}
+        rowKey={(r) => r.industry}
+        persistKey="rotation-table"
+        selectedKey={selected}
+        onOpen={onSelect ? (r) => onSelect(selected === r.industry ? null : r.industry) : undefined}
+      />
     </Panel>
   );
 }
