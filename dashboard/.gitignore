@@ -38,8 +38,10 @@ next-env.d.ts
 # smoke test screenshots
 .smoke/
 
-# UI audit screenshots + metrics (regenerate: npx playwright test e2e/screens.spec.ts)
-screens/
+# UI audit screenshots + metrics (regenerate: npx playwright test e2e/screens.spec.ts).
+# screens/baseline/ is the committed pre-overhaul reference each phase diffs against.
+screens/*
+!screens/baseline/
 
 # Tauri standalone server bundle (build artifact)
 dist-app/
