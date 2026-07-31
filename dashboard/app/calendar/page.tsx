@@ -16,6 +16,7 @@ import {
   type CalEvent,
 } from "@/lib/calendar";
 import { useWatchlistTickers } from "@/lib/watchlist";
+import { useHeldPositions } from "@/lib/positions";
 import { useLocalStorage } from "@/lib/useLocalStorage";
 import { STATIC_KEYS } from "@/lib/storageKeys";
 import Page from "@/components/ui/Page";
@@ -50,6 +51,7 @@ export default function CalendarPage() {
   const [show, setShow] = useLocalStorage<ShowMode>(STATIC_KEYS.calendarShow, "all");
   const { data, error, isLoading } = useCalendar(horizon);
   const watchlist = useWatchlistTickers();
+  const held = useHeldPositions();
 
   const today = data?.today ?? "";
   const all = useMemo(() => data?.events ?? [], [data]);
@@ -131,6 +133,7 @@ export default function CalendarPage() {
                         key={`${ev.event}-${ev.date}-${i}`}
                         ev={ev}
                         isWatchlist={ev.ticker != null && watchlist.has(ev.ticker.toUpperCase())}
+                        held={held}
                       />
                     ))}
                   </div>

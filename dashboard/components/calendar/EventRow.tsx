@@ -16,6 +16,7 @@ import {
   eventMeta,
   eventShortName,
 } from "@/lib/eventMeta";
+import { HeldChips } from "@/lib/positions";
 
 /** One of the three figure columns. Held at 96px so consensus, prior and actual
  * line up down the whole day, which is the comparison the row exists to make. */
@@ -42,9 +43,13 @@ function Chain({ label, text, tone }: { label: string; text: string; tone: strin
 export default function EventRow({
   ev,
   isWatchlist,
+  held,
 }: {
   ev: CalEvent;
   isWatchlist: boolean;
+  /** Your open positions, fetched once by the page. The row already names the
+   *  tickers a print moves; this is what closes the loop to your own book. */
+  held?: Map<string, number>;
 }) {
   const meta = eventMeta(ev.event, ev.category, ev.ticker);
   const earnings = isEarnings(ev);
@@ -135,6 +140,7 @@ export default function EventRow({
                   ${t}
                 </Link>
               ))}
+              {held && <HeldChips symbols={meta.tickers} held={held} />}
             </div>
           </>
         ) : (

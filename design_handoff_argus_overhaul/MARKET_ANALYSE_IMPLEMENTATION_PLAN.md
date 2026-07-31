@@ -304,6 +304,13 @@ read off the serving code path — not off the pipeline's description of itself.
 
 Then the cross-links that turn ten dashboards into one workflow: signal → ticker → options → alert; calendar event → affected names → positions; macro scope → sector → rotation → holdings.
 
+**Built 2026-08-01.** Chain 1 is `ActionBar` itself — every surface that names a ticker carries the same five verbs. Chains 2 and 3 both ended at the same missing step, "which of these do I own", so they share one piece: `lib/positions.tsx` (`useHeldPositions` + `HeldChips`), rendered in the calendar row's transmission block and in the RRG's selected-sector band.
+
+Two premises in the original text turned out to be wrong and the build differs accordingly:
+
+- *macro scope → sector → rotation* cannot carry the sector across. The macro scopes are `sector_taxonomy` families (`AI / Compute`, `Financials`); the rotation rows are yfinance industries (`Semiconductors`, `Software - Application`). A `/rotation?industry=…` link built from a macro scope would never match a row, so the two pages stay linked page-to-page in both directions and no selection is passed.
+- *rotation → holdings* can only reach the holdings it can map to a sector, which is the sector's candidates from today's bridge signals. A position in a name that did not make the list has no industry anywhere in the UI, so it is not shown rather than guessed at.
+
 ---
 
 ## Component work order

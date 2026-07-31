@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import RRGChart, { type SectorNames } from "@/components/rotation/RRGChart";
 import RotationPanel, { type RotationRow } from "@/components/today/RotationPanel";
 import { rrgIndexByIndustry } from "@/lib/rotation";
+import { useHeldPositions } from "@/lib/positions";
 
 /**
  * The chart's legend named all twelve sectors roughly 100px above the table
@@ -20,12 +21,14 @@ export default function RotationView({
 }) {
   const [selected, setSelected] = useState<string | null>(null);
   const rrgIndex = useMemo(() => rrgIndexByIndustry(rows), [rows]);
+  const held = useHeldPositions();
 
   return (
     <>
       <RRGChart
         rows={rows}
         namesBySector={namesBySector}
+        held={held}
         selected={selected}
         onSelect={setSelected}
       />

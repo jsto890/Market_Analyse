@@ -1,6 +1,7 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, beforeEach } from "vitest";
 import { render, screen } from "@/test/render";
 import userEvent from "@testing-library/user-event";
+import { mockFetchJson } from "@/test/fetchMock";
 import RotationView from "../RotationView";
 import type { RotationRow } from "@/components/today/RotationPanel";
 
@@ -10,6 +11,10 @@ const rows: RotationRow[] = [
 ];
 
 const names = { Energy: [{ ticker: "XOM" }] };
+
+beforeEach(() => {
+  mockFetchJson(() => []);
+});
 
 describe("RotationView — the table is the chart's legend", () => {
   it("names each sector exactly once on the page", () => {
@@ -31,6 +36,24 @@ describe("RotationView — the table is the chart's legend", () => {
     await user.click(screen.getByText("Energy"));
     expect(screen.getByText(/Energy · on today/)).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "XOM" })).toHaveAttribute("href", "/t/XOM");
+  });
+
+  it("says which of the sector's candidates you already hold", async () => {
+    mockFetchJson({ "/api/argus/portfolio": [{ symbol: "XOM", position: 200 }] });
+    const user = userEvent.setup();
+    render(<RotationView rows={rows} namesBySector={names} />);
+    await user.click(screen.getByText("Energy"));
+    expect(await screen.findByText("you hold")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /XOM \+200/ })).toHaveAttribute("href", "/portfolio");
+  });
+
+  it("says nothing about holdings for a sector none of whose candidates you own", async () => {
+    mockFetchJson({ "/api/argus/portfolio": [{ symbol: "NVDA", position: 200 }] });
+    const user = userEvent.setup();
+    render(<RotationView rows={rows} namesBySector={names} />);
+    await user.click(screen.getByText("Energy"));
+    await screen.findByText(/Energy · on today/);
+    expect(screen.queryByText("you hold")).not.toBeInTheDocument();
   });
 
   it("releases the pick when the same row is clicked again", async () => {

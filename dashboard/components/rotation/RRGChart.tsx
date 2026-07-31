@@ -17,6 +17,7 @@ import Panel from "@/components/ui/Panel";
 import Empty from "@/components/ui/Empty";
 import type { RotationRow } from "@/components/today/RotationPanel";
 import { QUADRANT_COLOR, deriveQuadrant, splitDegenerate, rrgIndexByIndustry } from "@/lib/rotation";
+import { HeldChips } from "@/lib/positions";
 import { CHART_HEIGHT, CHART_AXIS_STYLE } from "@/lib/chartConventions";
 import { QUADRANT_GLOSS, QUADRANT_LABEL } from "@/lib/labels";
 
@@ -109,6 +110,7 @@ function RRGTooltip({ active, payload }: { active?: boolean; payload?: TooltipPa
 export default function RRGChart({
   rows,
   namesBySector,
+  held,
   selected = null,
   onSelect,
 }: {
@@ -116,6 +118,10 @@ export default function RRGChart({
   /** Omitted when the signals file could not be read — the picked-names line
    *  then never renders, rather than claiming every sector is empty. */
   namesBySector?: SectorNames;
+  /** Your open positions. A sector's candidates are the only names it can map to
+   *  tickers, so this says which of *those* you already own — not everything you
+   *  hold in the sector, which nothing here knows the industry of. */
+  held?: Map<string, number>;
   /** Selection is owned above the chart, because the rotation table is the
    *  chart's legend and picking in either place has to move the other. */
   selected?: string | null;
@@ -310,6 +316,13 @@ export default function RRGChart({
               Nothing from this sector made today&rsquo;s list — the rotation is there, the setups
               are not.
             </span>
+          )}
+          {held && (
+            <HeldChips
+              symbols={picked.map((n) => n.ticker)}
+              held={held}
+              className="border-l border-line pl-2"
+            />
           )}
         </div>
       )}
