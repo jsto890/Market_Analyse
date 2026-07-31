@@ -5,6 +5,7 @@ import RRGChart, { type SectorNames } from "@/components/rotation/RRGChart";
 import RotationPanel, { type RotationRow } from "@/components/today/RotationPanel";
 import { rrgIndexByIndustry } from "@/lib/rotation";
 import { useHeldPositions } from "@/lib/positions";
+import type { TrailPoint } from "@/lib/rotationTrails";
 
 /**
  * The chart's legend named all twelve sectors roughly 100px above the table
@@ -15,9 +16,11 @@ import { useHeldPositions } from "@/lib/positions";
 export default function RotationView({
   rows,
   namesBySector,
+  trails,
 }: {
   rows: RotationRow[];
   namesBySector?: SectorNames;
+  trails?: Record<string, TrailPoint[]>;
 }) {
   const [selected, setSelected] = useState<string | null>(null);
   const rrgIndex = useMemo(() => rrgIndexByIndustry(rows), [rows]);
@@ -29,6 +32,7 @@ export default function RotationView({
         rows={rows}
         namesBySector={namesBySector}
         held={held}
+        trails={trails}
         selected={selected}
         onSelect={setSelected}
       />

@@ -353,6 +353,32 @@ def _save_rank_snapshot(today: str, ranks: dict[str, int]) -> None:
         pass
 
 
+# ── RS coordinate history (the RRG's trails) ─────────────────────────────────
+_TRAIL_PATH = _REPORTS_DIR / "rotation_history.json"
+_TRAIL_DAYS = 70   # ten weeks of daily runs; the chart draws one point per week
+
+
+def _save_trail_snapshot(today: str, rows: list[dict]) -> None:
+    """Today's RS coordinates, appended to the dated history the RRG trails read.
+
+    Keyed by date, so re-running on the same day corrects that day rather than
+    bending the trail with a second point."""
+    try:
+        hist = json.loads(_TRAIL_PATH.read_text()) if _TRAIL_PATH.exists() else {}
+    except Exception:
+        hist = {}
+    hist[today] = {r["industry"]: [r["rs_ratio"], r["rs_mom"]] for r in rows}
+    for old in sorted(hist)[:-_TRAIL_DAYS]:
+        hist.pop(old, None)
+    try:
+        _REPORTS_DIR.mkdir(parents=True, exist_ok=True)
+        tmp = _TRAIL_PATH.with_suffix(".json.tmp")
+        tmp.write_text(json.dumps(hist, indent=2))
+        tmp.replace(_TRAIL_PATH)
+    except Exception as e:
+        print(f"[rotation] trail history failed: {e}")
+
+
 def _rank_delta_tag(industry: str, cur_rank: int, baseline: dict[str, int]) -> str:
     """Movement up/down the rotation leaderboard since the previous report.
 
@@ -456,6 +482,8 @@ def build_rotation_section(force_refresh: bool = False,
         _tmp.replace(_REPORTS_DIR / "rotation_latest.json")
     except Exception as e:
         print(f"[rotation] sidecar failed: {e}")
+
+    _save_trail_snapshot(today, rotation_rows)
 
     return "\n".join(lines)
 
