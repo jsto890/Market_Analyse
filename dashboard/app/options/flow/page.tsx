@@ -3,7 +3,7 @@
 import { useMemo } from "react";
 import useSWR from "swr";
 import { useLadder, useOdteSymbol } from "@/lib/odte";
-import { densityPct, withinBand } from "@/lib/optionsAnalytics";
+import { densityCount, withinStrikes } from "@/lib/optionsAnalytics";
 import { useOptionsUi } from "@/lib/optionsUi";
 import type { PcrPayload } from "@/lib/odteCompanion";
 import { deriveFlow } from "@/lib/odte-verdicts";
@@ -24,17 +24,17 @@ const jsonFetcher = (url: string) =>
 export default function OptionsFlowPage() {
   const [activeSymbol] = useOdteSymbol();
   const { density, expiry } = useOptionsUi();
-  const band = densityPct(density);
+  const count = densityCount(density);
 
   const { data: pcr } = useSWR<PcrPayload>(`/api/odte/pcr?symbol=${activeSymbol}`, jsonFetcher, {
     refreshInterval: 60_000,
   });
-  const { data: ladder } = useLadder(activeSymbol, 4, band ?? 0.5);
+  const { data: ladder } = useLadder(activeSymbol, 4, 0.5);
 
   const idx = Math.max(0, (ladder?.expiries ?? []).findIndex((e) => e.expiry === expiry));
   const rows = useMemo(
-    () => withinBand(ladder?.expiries?.[idx]?.rows ?? [], ladder?.spot ?? null, band),
-    [ladder, idx, band]
+    () => withinStrikes(ladder?.expiries?.[idx]?.rows ?? [], ladder?.spot ?? null, count),
+    [ladder, idx, count]
   );
 
   const { callVol, putVol, callOi, putOi, busiest } = useMemo(() => {
@@ -74,7 +74,7 @@ export default function OptionsFlowPage() {
       <div className="grid gap-3 lg:grid-cols-2">
         <Panel
           title="Today's tape"
-          subtitle={`${density} density · ${rows.length} strikes`}
+          subtitle={`${count === null ? "All" : `±${count}`} strikes · ${rows.length} shown`}
           actions={
             <InfoTip
               label="Where these totals come from"

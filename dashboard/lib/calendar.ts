@@ -37,6 +37,17 @@ export function importanceMeta(importance: string): { cls: string; label: string
   return { cls: "w-1 h-1 rounded-full border border-muted bg-transparent", label: "Low importance" };
 }
 
+/**
+ * The rank as a two- or three-letter code, so importance survives in a 26px
+ * column. Paired with `IMPORTANCE_LABEL` for the accessible name — the code is
+ * a glyph, and "TOP" read aloud is not a rank.
+ */
+export const IMPORTANCE_RANK: Record<string, string> = {
+  high: "TOP",
+  medium: "MID",
+  low: "LOW",
+};
+
 /** Text tone for the importance chip — a visible rank, not a hover-only dot (MAC-04). */
 export function importanceChipClass(importance: string): string {
   if (importance === "high") return "border-warn/50 bg-warn/10 text-warn";
@@ -128,6 +139,42 @@ export function groupByWeek(events: CalEvent[], today: string): CalWeek[] {
   return Array.from(buckets.entries())
     .sort(([a], [b]) => a.localeCompare(b))
     .map(([start, evs]) => ({ start, label: weekLabel(start, today), events: evs }));
+}
+
+/**
+ * This week / Next week / Later this month. The plain week grouping ran to five
+ * or six headings over a 30-day horizon and eight over 60, which is a list of
+ * weeks rather than a spine you can find "soon" in.
+ */
+export function groupBySpine(events: CalEvent[], today: string): CalWeek[] {
+  const weeks = groupByWeek(events, today);
+  const near = weeks.filter((w) => w.label === "This week" || w.label === "Next week");
+  const later = weeks.filter((w) => w.label !== "This week" && w.label !== "Next week");
+  if (later.length === 0) return near;
+  const tail = later.flatMap((w) => w.events);
+  // "Later this month" only when it is: at a 60-day horizon the tail runs into
+  // the next month, and a heading that says otherwise is simply wrong.
+  const sameMonth = tail.every((e) => e.date.slice(0, 7) === today.slice(0, 7));
+  return [
+    ...near,
+    { start: later[0].start, label: sameMonth ? "Later this month" : "Later", events: tail },
+  ];
+}
+
+/**
+ * Before the open, after the close, or in session — the half of an earnings
+ * date that decides which session the gap lands in. Null when the feed sends no
+ * time, which is currently every row: the Argus earnings seed carries a date
+ * only, so this reads "session TBA" until a timed feed lands.
+ */
+export function earningsSession(timeEt: string | null): "BMO" | "AMC" | "intraday" | null {
+  if (!timeEt) return null;
+  const [hh, mm] = timeEt.split(":").map(Number);
+  if (!Number.isFinite(hh) || !Number.isFinite(mm)) return null;
+  const minutes = hh * 60 + mm;
+  if (minutes < 9 * 60 + 30) return "BMO";
+  if (minutes >= 16 * 60) return "AMC";
+  return "intraday";
 }
 
 export function isEarnings(ev: CalEvent): boolean {

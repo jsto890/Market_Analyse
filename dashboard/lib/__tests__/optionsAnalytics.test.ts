@@ -3,11 +3,13 @@ import {
   atmSkew,
   deltaBands,
   deltaSkew,
-  densityPct,
+  densityCount,
   dexProfile,
+  exposureTotals,
   ivSkewProfile,
+  normalizeDensity,
   rankMvc,
-  withinBand,
+  withinStrikes,
 } from "@/lib/optionsAnalytics";
 import type { OptionLiveQuote, StrikeLevel } from "@/lib/optionsLive";
 
@@ -48,21 +50,31 @@ function level(strike: number, call: Partial<OptionLiveQuote>, put: Partial<Opti
 }
 
 describe("density", () => {
-  it("maps every option key to its band, and All to null", () => {
-    expect(densityPct("tight")).toBe(0.03);
-    expect(densityPct("all")).toBeNull();
-    expect(DENSITY_OPTIONS.map((d) => d.key)).toEqual(["tight", "normal", "wide", "all"]);
+  it("maps every option key to its strike count, and All to null", () => {
+    expect(densityCount("n10")).toBe(10);
+    expect(densityCount("n40")).toBe(40);
+    expect(densityCount("all")).toBeNull();
+    expect(DENSITY_OPTIONS.map((d) => d.key)).toEqual(["n10", "n20", "n40", "all"]);
   });
 
-  it("falls back to the normal band for an unknown key", () => {
-    expect(densityPct("nonsense")).toBe(0.06);
+  it("migrates the percent-band keys the setting used to store", () => {
+    expect(normalizeDensity("normal")).toBe("n20");
+    expect(normalizeDensity("tight")).toBe("n20");
+    expect(normalizeDensity("all")).toBe("all");
+    expect(normalizeDensity("n40")).toBe("n40");
   });
 
-  it("keeps only strikes inside the band, and everything when the band is null", () => {
-    const rows = [{ strike: 90 }, { strike: 100 }, { strike: 103 }, { strike: 120 }];
-    expect(withinBand(rows, 100, 0.05).map((r) => r.strike)).toEqual([100, 103]);
-    expect(withinBand(rows, 100, null)).toHaveLength(4);
-    expect(withinBand(rows, null, 0.05)).toHaveLength(4);
+  it("keeps N strikes either side of spot regardless of price spacing", () => {
+    const rows = [90, 100, 103, 120].map((strike) => ({ strike }));
+    expect(withinStrikes(rows, 100, 1).map((r) => r.strike)).toEqual([90, 100, 103]);
+    expect(withinStrikes(rows, 100, null)).toHaveLength(4);
+    expect(withinStrikes(rows, null, 1)).toHaveLength(4);
+  });
+
+  it("preserves the caller's row order and clamps at the ends of the chain", () => {
+    const rows = [120, 103, 100, 90].map((strike) => ({ strike }));
+    expect(withinStrikes(rows, 90, 1).map((r) => r.strike)).toEqual([100, 90]);
+    expect(withinStrikes(rows, 100, 99)).toHaveLength(4);
   });
 });
 
@@ -117,6 +129,44 @@ describe("dexProfile", () => {
   it("reports no crossing when dealers never go flat in range", () => {
     const levels = [level(100, { delta: 0.5, oi: 10 }, { delta: -0.5, oi: 10 })];
     expect(dexProfile(levels, 100).flipStrike).toBeNull();
+  });
+});
+
+describe("exposureTotals", () => {
+  it("signs every greek the dealer way and scales each to its own unit", () => {
+    const levels = [level(100, { delta: 0.5, gamma: 0.02, vega: 0.2, theta: -0.05, oi: 10 },
+                              { delta: -0.5, gamma: 0.02, vega: 0.2, theta: -0.05, oi: 10 })];
+    const t = exposureTotals(levels, 100);
+    expect(t.dex).toBeCloseTo(100_000);  // (0.5·10 − −0.5·10) ·100 ·spot 100
+    expect(t.gex).toBeCloseTo(0);        // gamma is equal on both sides — it nets out
+    expect(t.vex).toBeCloseTo(0);
+    expect(t.tex).toBeCloseTo(0);
+  });
+
+  it("keeps gamma per 1% of spot, not per dollar", () => {
+    const levels = [level(100, { gamma: 0.02, oi: 10 }, { gamma: 0, oi: 0 })];
+    // 0.02 ·10 ·100 ·100² ·0.01 = 2,000
+    expect(exposureTotals(levels, 100).gex).toBeCloseTo(2_000);
+  });
+
+  it("flips theta so a book collecting decay reads positive", () => {
+    const levels = [level(100, { theta: -0.05, oi: 10 }, { theta: null, oi: 0 })];
+    expect(exposureTotals(levels, 100).tex).toBeCloseTo(50);
+  });
+
+  it("counts coverage instead of scoring a missing greek as zero", () => {
+    const levels = [
+      level(100, { delta: 0.5, gamma: null, oi: 10 }, { delta: -0.5, gamma: null, oi: 10 }),
+      level(105, { delta: null, gamma: null, oi: 10 }, { delta: null, gamma: null, oi: 10 }),
+    ];
+    const t = exposureTotals(levels, 100);
+    expect(t.covered.dex).toBe(1);
+    expect(t.covered.gex).toBe(0);
+  });
+
+  it("falls back to a spot of 1 rather than zeroing every dollar figure", () => {
+    const levels = [level(100, { delta: 0.5, oi: 10 }, { delta: 0, oi: 0 })];
+    expect(exposureTotals(levels, null).dex).toBeCloseTo(500);
   });
 });
 

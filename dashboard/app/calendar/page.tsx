@@ -6,9 +6,11 @@ import Empty from "@/components/ui/Empty";
 import Failed from "@/components/ui/Failed";
 import Loading from "@/components/ui/Loading";
 import EventRow from "@/components/calendar/EventRow";
+import MonthStrip from "@/components/calendar/MonthStrip";
+import SegmentedControl from "@/components/ui/SegmentedControl";
 import {
   fullDayLabel,
-  groupByWeek,
+  groupBySpine,
   isEarnings,
   useCalendar,
   type CalEvent,
@@ -18,46 +20,20 @@ import { useLocalStorage } from "@/lib/useLocalStorage";
 import { STATIC_KEYS } from "@/lib/storageKeys";
 import Page from "@/components/ui/Page";
 
-const HORIZONS = [30, 60] as const;
+const HORIZONS = [
+  { key: 30, label: "30d", blurb: "the next month" },
+  { key: 60, label: "60d", blurb: "the next two months" },
+] as const;
+
+/** Filters on one axis — what is on the calendar — rather than the old mix of
+ * source and ownership, which made "macro only" and "my watchlist" read as
+ * alternatives to each other rather than to "everything". */
 const SHOW = [
-  { key: "all", label: "Everything" },
-  { key: "macro", label: "Macro only" },
-  { key: "watchlist", label: "Macro + my watchlist" },
+  { key: "all", label: "All", blurb: "every scheduled release and tracked earnings date" },
+  { key: "high", label: "High impact", blurb: "the prints that move the whole tape" },
+  { key: "watchlist", label: "Watchlist earnings", blurb: "only names you hold or track" },
 ] as const;
 type ShowMode = (typeof SHOW)[number]["key"];
-
-function Segmented<T extends string | number>({
-  label,
-  value,
-  options,
-  onChange,
-}: {
-  label: string;
-  value: T;
-  options: readonly { key: T; label: string }[];
-  onChange: (v: T) => void;
-}) {
-  return (
-    <div className="flex items-center gap-2">
-      <span className="eyebrow">{label}</span>
-      <div className="flex overflow-hidden rounded border border-line">
-        {options.map((o) => (
-          <button
-            key={String(o.key)}
-            type="button"
-            onClick={() => onChange(o.key)}
-            aria-pressed={o.key === value}
-            className={`px-2 py-1 text-micro ${
-              o.key === value ? "bg-accent/20 text-accent" : "text-muted hover:text-foreground"
-            }`}
-          >
-            {o.label}
-          </button>
-        ))}
-      </div>
-    </div>
-  );
-}
 
 function byDay(events: CalEvent[]): [string, CalEvent[]][] {
   const days = new Map<string, CalEvent[]>();
@@ -71,7 +47,7 @@ function byDay(events: CalEvent[]): [string, CalEvent[]][] {
 
 export default function CalendarPage() {
   const [horizon, setHorizon] = useLocalStorage<number>(STATIC_KEYS.calendarHorizon, 30);
-  const [show, setShow] = useLocalStorage<ShowMode>(STATIC_KEYS.calendarShow, "watchlist");
+  const [show, setShow] = useLocalStorage<ShowMode>(STATIC_KEYS.calendarShow, "all");
   const { data, error, isLoading } = useCalendar(horizon);
   const watchlist = useWatchlistTickers();
 
@@ -80,14 +56,13 @@ export default function CalendarPage() {
 
   const filtered = useMemo(() => {
     if (show === "all") return all;
-    return all.filter((ev) => {
-      if (!isEarnings(ev)) return true;
-      if (show === "macro") return false;
-      return ev.ticker != null && watchlist.has(ev.ticker.toUpperCase());
-    });
+    if (show === "high") return all.filter((ev) => ev.importance === "high");
+    return all.filter(
+      (ev) => isEarnings(ev) && ev.ticker != null && watchlist.has(ev.ticker.toUpperCase())
+    );
   }, [all, show, watchlist]);
 
-  const weeks = useMemo(() => groupByWeek(filtered, today), [filtered, today]);
+  const weeks = useMemo(() => groupBySpine(filtered, today), [filtered, today]);
   const macroCount = filtered.filter((e) => !isEarnings(e)).length;
   const earningsCount = filtered.length - macroCount;
 
@@ -104,17 +79,14 @@ export default function CalendarPage() {
       />
 
       <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
-        <Segmented
-          label="Horizon"
-          value={horizon}
-          options={HORIZONS.map((d) => ({ key: d, label: `${d} days` }))}
-          onChange={setHorizon}
-        />
-        <Segmented label="Show" value={show} options={SHOW} onChange={setShow} />
+        <SegmentedControl label="Horizon" value={horizon} options={HORIZONS} onChange={setHorizon} />
+        <SegmentedControl label="Show" value={show} options={SHOW} onChange={setShow} />
         <span className="text-data text-muted">
           {macroCount} macro · {earningsCount} earnings
         </span>
       </div>
+
+      {data && <MonthStrip events={filtered} today={today} watchlist={watchlist} />}
 
       {isLoading && !data && <Loading count={6} label="Loading calendar" />}
       {error && !data && (
@@ -131,11 +103,14 @@ export default function CalendarPage() {
         {weeks.map((week) => (
           <section key={week.start}>
             <h2 className="tick mb-2 text-title text-foreground">{week.label}</h2>
-            <div className="space-y-3">
+            {/* Day beside its events, not stacked above them: the date is the
+               spine you scan down, so it holds one column of its own rather
+               than interrupting the run of rows every few lines. */}
+            <div className="divide-y divide-line overflow-hidden rounded-md border border-line bg-surface">
               {byDay(week.events).map(([date, evs]) => (
-                <div key={date} className="overflow-hidden rounded-md border border-line bg-surface">
+                <div key={date} className="grid grid-cols-1 sm:grid-cols-[104px_1fr]">
                   <div
-                    className={`flex items-baseline gap-2 border-b border-line px-3 py-1.5 ${
+                    className={`flex items-baseline gap-2 px-3 py-2 sm:flex-col sm:items-start sm:gap-0.5 sm:border-r sm:border-line ${
                       date === today ? "bg-accent/5" : "bg-elevated/40"
                     }`}
                   >
@@ -146,20 +121,19 @@ export default function CalendarPage() {
                     >
                       {fullDayLabel(date)}
                     </span>
-                    {date === today && (
-                      <span className="text-micro text-accent">today</span>
-                    )}
-                    <span className="ml-auto text-data text-muted">
-                      {evs.length} {evs.length === 1 ? "event" : "events"}
+                    <span className="text-micro text-3">
+                      {date === today ? "today" : `${evs.length} ${evs.length === 1 ? "event" : "events"}`}
                     </span>
                   </div>
-                  {evs.map((ev, i) => (
-                    <EventRow
-                      key={`${ev.event}-${ev.date}-${i}`}
-                      ev={ev}
-                      isWatchlist={ev.ticker != null && watchlist.has(ev.ticker.toUpperCase())}
-                    />
-                  ))}
+                  <div className="min-w-0 divide-y divide-line">
+                    {evs.map((ev, i) => (
+                      <EventRow
+                        key={`${ev.event}-${ev.date}-${i}`}
+                        ev={ev}
+                        isWatchlist={ev.ticker != null && watchlist.has(ev.ticker.toUpperCase())}
+                      />
+                    ))}
+                  </div>
                 </div>
               ))}
             </div>

@@ -3,6 +3,8 @@
 import Link from "next/link";
 import Collapsible from "@/components/ui/Collapsible";
 import {
+  IMPORTANCE_RANK,
+  earningsSession,
   importanceChipClass,
   isEarnings,
   localTimeLabel,
@@ -15,24 +17,15 @@ import {
   eventShortName,
 } from "@/lib/eventMeta";
 
-function Consensus({ ev }: { ev: CalEvent }) {
-  const cells: [string, string | null | undefined][] = [
-    ["consensus", ev.consensus],
-    ["prior", ev.prior],
-    ["actual", ev.actual],
-  ];
-  const present = cells.filter(([, v]) => v != null && v !== "");
-  if (present.length === 0) {
-    return <span className="text-body text-muted">consensus · prior not tracked</span>;
-  }
+/** One of the three figure columns. Held at 96px so consensus, prior and actual
+ * line up down the whole day, which is the comparison the row exists to make. */
+function Figure({ label, value }: { label: string; value: string | null | undefined }) {
   return (
-    <span className="flex flex-wrap items-center gap-x-3 text-data">
-      {present.map(([label, value]) => (
-        <span key={label}>
-          <span className="text-muted">{label} </span>
-          <span className="text-foreground">{value}</span>
-        </span>
-      ))}
+    <span className="hidden w-24 shrink-0 flex-col text-right sm:flex">
+      <span className="text-micro uppercase tracking-[0.08em] text-3">{label}</span>
+      <span className={value ? "text-data text-foreground" : "text-data text-muted"}>
+        {value || "—"}
+      </span>
     </span>
   );
 }
@@ -58,46 +51,57 @@ export default function EventRow({
   const local = localTimeLabel(ev.date, ev.time_et);
   const name = eventShortName(ev.event, ev.category, ev.ticker);
 
+  const session = earnings ? earningsSession(ev.time_et) : null;
+
+  /* Fixed tracks, not a wrapping flex row: time · rank · name · three figures,
+     so a day's worth of events reads as columns rather than as ragged
+     sentences. The chevron is Collapsible's own 20px slot. */
   const header = (
-    <div className="flex min-w-0 flex-1 flex-wrap items-baseline gap-x-2.5 gap-y-1">
+    <div className="flex min-w-0 flex-1 items-center gap-2.5">
+      <span className="w-[62px] shrink-0 text-data leading-tight text-muted">
+        {ev.time_et ? `${ev.time_et} ET` : <span className="text-3">TBA</span>}
+        {local && <span className="block text-micro text-3">{local}</span>}
+      </span>
       <span
-        className={`shrink-0 rounded border px-1.5 py-px font-mono text-micro uppercase tracking-wide ${importanceChipClass(
+        className={`w-[38px] shrink-0 rounded border py-px text-center font-mono text-micro tracking-wide ${importanceChipClass(
           ev.importance
         )}`}
       >
-        {IMPORTANCE_LABEL[ev.importance] ?? ev.importance}
+        <span className="sr-only">{IMPORTANCE_LABEL[ev.importance] ?? ev.importance} importance</span>
+        <span aria-hidden>{IMPORTANCE_RANK[ev.importance] ?? ev.importance}</span>
       </span>
-      <span className="truncate text-body font-medium text-foreground">
-        {earnings && ev.ticker ? (
-          <span className="font-mono">{ev.ticker}</span>
-        ) : (
-          name
+      <span className="min-w-0 flex-1 truncate text-body font-medium text-foreground">
+        {earnings && ev.ticker ? <span className="font-mono">{ev.ticker}</span> : name}
+        {earnings && (
+          <span className="ml-1.5 text-body text-muted">
+            earnings{session ? ` · ${session}` : " · session TBA"}
+          </span>
         )}
-        {earnings && <span className="ml-1.5 text-body text-muted">earnings</span>}
+        {isWatchlist && (
+          <span className="ml-1.5 rounded border border-accent/50 bg-accent/10 px-1 py-px font-mono text-micro text-accent">
+            watchlist
+          </span>
+        )}
+        {/* The category on an earnings row is the word "earnings" a second
+            time — it only says something on a macro release. */}
+        {!earnings && (
+          <span className="ml-1.5 text-body text-3">
+            {CATEGORY_LABEL[ev.category] ?? ev.category}
+          </span>
+        )}
       </span>
-      {isWatchlist && (
-        <span className="shrink-0 rounded border border-accent/50 bg-accent/10 px-1 py-px font-mono text-micro text-accent">
-          watchlist
-        </span>
-      )}
-      <span className="shrink-0 text-body text-muted">
-        {CATEGORY_LABEL[ev.category] ?? ev.category}
-      </span>
-      <span className="ml-auto shrink-0 text-data text-muted">
-        {ev.time_et ? `${ev.time_et} ET` : "time TBA"}
-        {local && <span> · {local}</span>}
-      </span>
+      <Figure label="cons" value={ev.consensus} />
+      <Figure label="prior" value={ev.prior} />
+      <Figure label="actual" value={ev.actual} />
     </div>
   );
 
   return (
     <Collapsible
-      className="border-b border-line last:border-b-0"
       triggerClassName="px-3 py-2 hover:bg-elevated/50"
       trigger={header}
     >
       <div className="space-y-2.5 border-t border-line bg-elevated/30 px-3 py-3">
-        <Consensus ev={ev} />
         {meta ? (
           <>
             <p className="text-body leading-relaxed text-2">

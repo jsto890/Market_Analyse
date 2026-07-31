@@ -1,7 +1,9 @@
 import { describe, it, expect } from "vitest";
 import {
+  earningsSession,
   etInstant,
   fullDayLabel,
+  groupBySpine,
   groupByWeek,
   isEarnings,
   localTimeLabel,
@@ -42,6 +44,41 @@ describe("calendar week spine", () => {
 
   it("names the day in full for the day header", () => {
     expect(fullDayLabel("2026-07-31")).toMatch(/^Friday\b.*31 Jul$/);
+  });
+
+  it("collapses everything past next week into one bucket", () => {
+    const spine = groupBySpine(
+      [ev("2026-07-31"), ev("2026-08-03"), ev("2026-08-17"), ev("2026-08-24")],
+      "2026-07-31"
+    );
+    expect(spine.map((w) => w.label)).toEqual(["This week", "Next week", "Later"]);
+    expect(spine[2].events).toHaveLength(2);
+  });
+
+  it("only says 'this month' when the tail really is in this month", () => {
+    const sameMonth = groupBySpine([ev("2026-07-31"), ev("2026-08-17")], "2026-08-01");
+    expect(sameMonth.map((w) => w.label)).toEqual(["This week", "Later this month"]);
+  });
+
+  it("leaves the spine alone when nothing runs past next week", () => {
+    const spine = groupBySpine([ev("2026-07-31"), ev("2026-08-03")], "2026-07-31");
+    expect(spine.map((w) => w.label)).toEqual(["This week", "Next week"]);
+  });
+});
+
+describe("earnings session", () => {
+  it("splits the tape at the open and the close", () => {
+    expect(earningsSession("07:00")).toBe("BMO");
+    expect(earningsSession("09:29")).toBe("BMO");
+    expect(earningsSession("12:00")).toBe("intraday");
+    expect(earningsSession("16:00")).toBe("AMC");
+    expect(earningsSession("16:30")).toBe("AMC");
+  });
+
+  it("returns null rather than guessing a session the feed never sent", () => {
+    // Every earnings row from the Argus seed carries a date and no time.
+    expect(earningsSession(null)).toBeNull();
+    expect(earningsSession("TBA")).toBeNull();
   });
 });
 

@@ -6,11 +6,12 @@ import { nearestStrikeIndex, useLadder, useOdteSymbol } from "@/lib/odte";
 import { fmtGex } from "@/lib/odteCompanion";
 import { useOptionsLivePoller } from "@/lib/useOptionsLivePoller";
 import { isStale, type StrikeLevel } from "@/lib/optionsLive";
-import { DENSITY_OPTIONS, densityPct, withinBand, type DensityKey } from "@/lib/optionsAnalytics";
+import { DENSITY_OPTIONS, densityCount, withinStrikes, type DensityKey } from "@/lib/optionsAnalytics";
 import { useOptionsUi } from "@/lib/optionsUi";
 import GexChart from "@/components/GexChart";
 import MvcCard from "@/components/odte/MvcCard";
 import InfoTip from "@/components/ui/InfoTip";
+import SegmentedControl from "@/components/ui/SegmentedControl";
 import Collapsible from "@/components/ui/Collapsible";
 import Page from "@/components/ui/Page";
 import Loading from "@/components/ui/Loading";
@@ -25,6 +26,25 @@ import type { GreekKind } from "@/lib/format";
 
 const ALL_GREEKS: GreekKind[] = ["delta", "gamma", "theta", "vega", "rho"];
 const DEFAULT_GREEKS: GreekKind[] = ["delta", "gamma", "theta"];
+
+/** The live ladder used to render 23 columns at once. Grouping them lets the
+ * default be the 13 a strike read actually needs, without deleting the rest. */
+type GroupKey = "price" | "flow" | "gamma" | "greeks" | "quality";
+
+const COLUMN_GROUPS: { key: GroupKey; label: string; blurb: string }[] = [
+  { key: "price", label: "Price", blurb: "bid · ask · IV" },
+  { key: "flow", label: "Flow", blurb: "volume · open interest" },
+  { key: "gamma", label: "Gamma", blurb: "dealer gamma at the strike" },
+  { key: "greeks", label: "Greeks", blurb: "per-contract sensitivities" },
+  { key: "quality", label: "Quality", blurb: "spread width · two-sided flag" },
+];
+
+const DEFAULT_GROUPS: GroupKey[] = ["price", "flow", "gamma"];
+
+/** Second sticky header row. `top-[25px]` clears the group row above it —
+ * a two-row sticky header has no way to measure the first row from CSS. */
+const LIVE_HEAD =
+  "sticky top-[25px] z-20 border-b border-line bg-surface px-1 py-1 text-center font-normal";
 
 /** Centre a row inside its own scroll box and nowhere else. `scrollIntoView`
  * scrolls every scrollable ancestor, so centring on spot also dragged the outer
@@ -48,24 +68,29 @@ function fmtLvl(v: number | null | undefined): string {
   return v != null ? v.toFixed(0) : "—";
 }
 
-/** OI/Vol cell with a background bar; put bars grow toward the strike from the
- * left, call bars from the right — a mirrored liquidity profile. */
+/** OI/Vol cell with a background bar. `anchor` is the edge the bar grows from,
+ * always the one nearest the strike column, so the two sides read as one
+ * mirrored liquidity profile spreading outward from the centre. */
 function BarCell({
   value,
   max,
-  side,
+  anchor,
   tone,
+  className = "px-2 py-1",
 }: {
   value: number | null | undefined;
   max: number;
-  side: "put" | "call";
+  anchor: "left" | "right";
   tone: string;
+  className?: string;
 }) {
   const w = value != null && max > 0 ? Math.min(100, (value / max) * 100) : 0;
   return (
-    <td className={`relative px-2 py-1 text-muted ${side === "put" ? "text-right" : "text-left"}`}>
+    <td
+      className={`relative text-muted ${anchor === "right" ? "text-right" : "text-left"} ${className}`}
+    >
       <div
-        className={`absolute inset-y-[3px] ${side === "put" ? "right-0" : "left-0"} rounded-sm ${tone}`}
+        className={`absolute inset-y-[3px] ${anchor === "right" ? "right-0" : "left-0"} rounded-sm ${tone}`}
         style={{ width: `${w}%` }}
       />
       <span className="relative">{fmtNum(value)}</span>
@@ -105,6 +130,101 @@ function MarkerLegend({ codes }: { codes: string[] }) {
   );
 }
 
+interface LiveScale {
+  oi: number;
+  vol: number;
+}
+
+interface LiveCol {
+  id: string;
+  group: GroupKey;
+  head: string;
+  gloss?: string;
+}
+
+/** Columns in spec order **outward from the strike**: Bid · Ask · Vol · OI ·
+ * IV · GEX, then the optional groups further out. Calls render this reversed,
+ * so both sides read from the centre. */
+function liveColumns(groups: GroupKey[], greekCols: GreekKind[]): LiveCol[] {
+  const on = (g: GroupKey) => groups.includes(g);
+  const cols: LiveCol[] = [];
+  if (on("price")) cols.push({ id: "bid", group: "price", head: "bid" }, { id: "ask", group: "price", head: "ask" });
+  if (on("flow")) cols.push({ id: "vol", group: "flow", head: "vol" }, { id: "oi", group: "flow", head: "OI" });
+  if (on("price")) cols.push({ id: "iv", group: "price", head: "IV" });
+  if (on("gamma")) cols.push({ id: "gex", group: "gamma", head: "GEX" });
+  if (on("greeks")) {
+    for (const g of greekCols) {
+      cols.push({ id: g, group: "greeks", head: GREEK_LABEL[g].symbol, gloss: GREEK_LABEL[g].gloss });
+    }
+  }
+  if (on("quality")) {
+    cols.push(
+      { id: "spread", group: "quality", head: "spr%", gloss: "Bid–ask width as a percent of the mid. Above ~15% the screen price is not a price you can trade." },
+      { id: "liq", group: "quality", head: "liq", gloss: "● two-sided and inside the spread cap · ○ wide or one-sided — treat the mid as unreliable." }
+    );
+  }
+  return cols;
+}
+
+function LiveCell({
+  col,
+  level,
+  side,
+  scale,
+  anchor,
+}: {
+  col: LiveCol;
+  level: StrikeLevel;
+  side: "call" | "put";
+  scale: LiveScale;
+  anchor: "left" | "right";
+}) {
+  const q = level[side];
+  const align = anchor === "right" ? "text-right" : "text-left";
+  const gex = side === "call" ? level.call_gex_by_strike : level.put_gex_by_strike;
+  const barTone = side === "call" ? "bg-call" : "bg-put";
+
+  switch (col.id) {
+    case "bid":
+      return <td className={`px-1 py-1 ${align}`}>{q.bid != null ? price(q.bid) : "—"}</td>;
+    case "ask":
+      return <td className={`px-1 py-1 ${align}`}>{q.ask != null ? price(q.ask) : "—"}</td>;
+    case "vol":
+      return (
+        <BarCell value={q.volume} max={scale.vol} anchor={anchor} tone={`${barTone}/10`} className="px-1 py-1" />
+      );
+    case "oi":
+      return <BarCell value={q.oi} max={scale.oi} anchor={anchor} tone={`${barTone}/20`} className="px-1 py-1" />;
+    case "iv":
+      return <td className={`px-1 py-1 ${align}`}>{q.iv != null ? (q.iv * 100).toFixed(1) : "—"}</td>;
+    case "gex":
+      return (
+        <td className={`px-1 py-1 ${align} ${(gex ?? 0) >= 0 ? "text-pos" : "text-neg"}`}>
+          {gex != null ? fmtGex(gex) : "—"}
+        </td>
+      );
+    case "spread":
+      return (
+        <td className={`px-1 py-1 ${align}`}>{q.spread_pct != null ? q.spread_pct.toFixed(1) : "—"}</td>
+      );
+    case "liq":
+      return (
+        <td className="px-1 py-1 text-center">
+          {/* No per-cell title: 100 rows × 2 sides meant 200 copies of the same
+           * two words. The column header carries the key once. */}
+          <span className={q.liquid ? "text-teal" : "text-muted"}>
+            <span className="sr-only">{q.liquid ? "liquid" : "wide or one-sided"}</span>
+            <span aria-hidden>{q.liquid ? "●" : "○"}</span>
+          </span>
+        </td>
+      );
+    default: {
+      const g = col.id as GreekKind;
+      return <td className={`px-1 py-1 ${align}`}>{q[g] != null ? greek(q[g], g) : "—"}</td>;
+    }
+  }
+}
+
 function LiveLadderRow({
   level,
   zeroGammaStrike,
@@ -113,9 +233,12 @@ function LiveLadderRow({
   putWallStrike,
   msiCallStrike,
   msiPutStrike,
-  greekCols,
+  cols,
+  scale,
   rowRef,
   flash,
+  copied,
+  onCopy,
 }: {
   level: StrikeLevel;
   zeroGammaStrike: number | null;
@@ -124,9 +247,12 @@ function LiveLadderRow({
   putWallStrike: number | null;
   msiCallStrike: number | null;
   msiPutStrike: number | null;
-  greekCols: GreekKind[];
+  cols: LiveCol[];
+  scale: LiveScale;
   rowRef?: (el: HTMLTableRowElement | null) => void;
   flash?: boolean;
+  copied?: boolean;
+  onCopy: () => void;
 }) {
   const isZg = level.strike === zeroGammaStrike;
   const isAtm = level.strike === atmStrike;
@@ -142,49 +268,38 @@ function LiveLadderRow({
       ? "[&>td:first-child]:border-l-2 [&>td:first-child]:border-l-teal"
       : "";
 
-  const side = (kind: "call" | "put") => {
-    const q = level[kind];
-    const gex = kind === "call" ? level.call_gex_by_strike : level.put_gex_by_strike;
-    const edge = kind === "put" ? "border-l border-line" : "";
-    return (
-      <>
-        <td className={`px-1 py-1 text-right ${edge}`}>{q.bid != null ? price(q.bid) : "—"}</td>
-        <td className="px-1 py-1 text-right">{q.ask != null ? price(q.ask) : "—"}</td>
-        <td className="px-1 py-1 text-right">{q.iv != null ? (q.iv * 100).toFixed(1) : "—"}</td>
-        {greekCols.map((g) => (
-          <td key={g} className="px-1 py-1 text-right">
-            {q[g] != null ? greek(q[g], g) : "—"}
-          </td>
-        ))}
-        <td className="px-1 py-1 text-right">
-          {q.spread_pct != null ? q.spread_pct.toFixed(1) : "—"}
-        </td>
-        <td className="px-1 py-1 text-center">
-          {/* No per-cell title: 100 rows × 2 sides meant 200 copies of the same
-           * two words. The column header carries the key once. */}
-          <span className={q.liquid ? "text-teal" : "text-muted"}>
-            <span className="sr-only">{q.liquid ? "liquid" : "wide or one-sided"}</span>
-            <span aria-hidden>{q.liquid ? "●" : "○"}</span>
-          </span>
-        </td>
-        <td className="px-1 py-1 text-right">{q.volume != null ? q.volume.toFixed(0) : "—"}</td>
-        <td className="px-1 py-1 text-right">{q.oi != null ? q.oi.toFixed(0) : "—"}</td>
-        <td className={`px-1 py-1 text-right ${(gex ?? 0) >= 0 ? "text-pos" : "text-neg"}`}>
-          {gex != null ? fmtGex(gex) : "—"}
-        </td>
-      </>
-    );
-  };
-
   return (
     <tr
       ref={rowRef}
-      className={`[&>td]:border-b [&>td]:border-line/50 ${
+      onClick={onCopy}
+      tabIndex={0}
+      aria-label={`Copy strike ${level.strike}`}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onCopy();
+        }
+      }}
+      className={`group cursor-pointer [&>td]:border-b [&>td]:border-line/50 hover:[&>td]:bg-elevated/60 focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-teal ${
         flash ? "[&>td]:bg-teal/10" : ""
       } ${leftBorder}`}
     >
-      <td className={`sticky left-0 z-10 px-2 py-1 font-bold ${flash ? "bg-teal/10" : "bg-elevated"}`}>
-        {level.strike.toFixed(0)}
+      {[...cols].reverse().map((c) => (
+        <LiveCell key={`c-${c.id}`} col={c} level={level} side="call" scale={scale} anchor="right" />
+      ))}
+      <td
+        className={`sticky left-0 z-10 border-x-2 border-line-strong px-2 py-1 text-center font-bold ${
+          flash ? "bg-teal/10" : "bg-elevated"
+        }`}
+      >
+        <span>{level.strike.toFixed(0)}</span>
+        {copied ? (
+          <span className="ml-1 align-middle text-micro text-teal">Copied</span>
+        ) : (
+          <span className="ml-1 align-middle text-micro text-muted opacity-0 transition-opacity group-hover:opacity-100">
+            copy
+          </span>
+        )}
         {isAtm && <Marker text="ATM" tone="text-warn" />}
         {isZg && <Marker text="ZG" tone="text-teal" />}
         {isCallWall && <Marker text="CW" tone="text-call" />}
@@ -192,8 +307,9 @@ function LiveLadderRow({
         {isMsiCall && <Marker text="MSI-C" tone="text-call" />}
         {isMsiPut && <Marker text="MSI-P" tone="text-put" />}
       </td>
-      {side("call")}
-      {side("put")}
+      {cols.map((c) => (
+        <LiveCell key={`p-${c.id}`} col={c} level={level} side="put" scale={scale} anchor="left" />
+      ))}
     </tr>
   );
 }
@@ -226,19 +342,44 @@ export default function OptionsLadderPage() {
     STATIC_KEYS.odteGreekCols,
     DEFAULT_GREEKS
   );
+  const [groups, setGroups] = useLocalStorage<GroupKey[]>(
+    STATIC_KEYS.odteColumnGroups,
+    DEFAULT_GROUPS
+  );
   const [descending, setDescending] = useState(true);
   const [jump, setJump] = useState("");
   const [flashStrike, setFlashStrike] = useState<number | null>(null);
 
-  const band = densityPct(density);
-  const { data, error, isLoading } = useLadder(activeSymbol, 4, band ?? 0.5);
+  const count = densityCount(density);
+  // Fetch wide and slice on the client: the snapshot endpoint takes a percent
+  // band, not a strike count, so a ±40-strike request has no server-side form.
+  const { data, error, isLoading } = useLadder(activeSymbol, 4, 0.5);
 
   const [copiedStrike, setCopiedStrike] = useState<number | null>(null);
+  function flagCopied(strike: number) {
+    setCopiedStrike(strike);
+    window.setTimeout(() => setCopiedStrike((s) => (s === strike ? null : s)), 1500);
+  }
+
   function copyStrike(row: { strike: number; call: { iv: number | null } | null; put: { iv: number | null } | null; gex: number }) {
     const text = `${row.strike} · call IV ${fmtIv(row.call?.iv)} / put IV ${fmtIv(row.put?.iv)} · GEX ${fmtGex(row.gex)}`;
     navigator.clipboard?.writeText(text);
-    setCopiedStrike(row.strike);
-    window.setTimeout(() => setCopiedStrike((s) => (s === row.strike ? null : s)), 1500);
+    flagCopied(row.strike);
+  }
+
+  /** Copy works in live mode too — it used to be snapshot-only, so the ladder
+   * you actually trade off was the one you could not lift a strike out of. */
+  function copyLiveStrike(level: StrikeLevel) {
+    const gex = (level.call_gex_by_strike ?? 0) + (level.put_gex_by_strike ?? 0);
+    const text = `${level.strike} · call ${price(level.call.bid)}/${price(level.call.ask)} IV ${fmtIv(
+      level.call.iv
+    )} · put ${price(level.put.bid)}/${price(level.put.ask)} IV ${fmtIv(level.put.iv)} · GEX ${fmtGex(gex)}`;
+    navigator.clipboard?.writeText(text);
+    flagCopied(level.strike);
+  }
+
+  function toggleGroup(g: GroupKey) {
+    setGroups(groups.includes(g) ? groups.filter((x) => x !== g) : [...groups, g]);
   }
 
   const {
@@ -254,14 +395,25 @@ export default function OptionsLadderPage() {
 
   // Density and sort apply to whichever ladder is on screen (OPT-01, OPT-02).
   const rows = useMemo(() => {
-    const banded = withinBand(active?.rows ?? [], data?.spot ?? null, band);
+    const banded = withinStrikes(active?.rows ?? [], data?.spot ?? null, count);
     return descending ? [...banded].sort((a, b) => b.strike - a.strike) : [...banded].sort((a, b) => a.strike - b.strike);
-  }, [active, data?.spot, band, descending]);
+  }, [active, data?.spot, count, descending]);
 
   const liveLevels = useMemo(() => {
-    const banded = withinBand(liveLadder?.levels ?? [], liveLadder?.spot ?? null, band);
+    const banded = withinStrikes(liveLadder?.levels ?? [], liveLadder?.spot ?? null, count);
     return descending ? [...banded].sort((a, b) => b.strike - a.strike) : [...banded].sort((a, b) => a.strike - b.strike);
-  }, [liveLadder, band, descending]);
+  }, [liveLadder, count, descending]);
+
+  const liveCols = useMemo(() => liveColumns(groups, greekCols), [groups, greekCols]);
+  // Bars scale against the visible window, not the whole chain: a ±10 view
+  // otherwise renders every bar as a sliver of some far-wing open interest.
+  const liveScale = useMemo<LiveScale>(
+    () => ({
+      oi: Math.max(1, ...liveLevels.flatMap((l) => [l.call.oi ?? 0, l.put.oi ?? 0])),
+      vol: Math.max(1, ...liveLevels.flatMap((l) => [l.call.volume ?? 0, l.put.volume ?? 0])),
+    }),
+    [liveLevels]
+  );
 
   const zgIdx = nearestStrikeIndex(rows, data?.levels?.zero_gamma ?? null);
   const callWallIdx =
@@ -353,27 +505,14 @@ export default function OptionsLadderPage() {
           {expiries.length === 0 && <span className="px-2 text-data text-muted">—</span>}
         </div>
 
-        {/* Density (OPT-01) — the ladder used to be pinned at ±6% with no say. */}
-        <div className="flex items-center gap-1">
-          <span className="eyebrow shrink-0">Density</span>
-          {DENSITY_OPTIONS.map((d) => (
-            <button
-              key={d.key}
-              onClick={() => setDensity(d.key as DensityKey)}
-              aria-pressed={density === d.key}
-              className={`rounded px-2 py-1 text-body ${
-                density === d.key ? "bg-elevated text-foreground" : "text-muted hover:text-foreground"
-              }`}
-            >
-              {d.label}
-            </button>
-          ))}
-          {/* The selected option's blurb, inline — five native titles meant the
-           * explanation was mouse-only and only for the option you hovered. */}
-          <span className="text-body text-2">
-            {DENSITY_OPTIONS.find((d) => d.key === density)?.blurb}
-          </span>
-        </div>
+        {/* Strikes (OPT-01) — the ladder used to be pinned at ±6% with no say,
+           and a percent band means a different row count on every symbol. */}
+        <SegmentedControl
+          label="Strikes"
+          value={density}
+          options={DENSITY_OPTIONS}
+          onChange={setDensity}
+        />
 
         <div className="flex items-center gap-1">
           <span className="eyebrow shrink-0">Sort</span>
@@ -419,8 +558,35 @@ export default function OptionsLadderPage() {
 
       {showLive && (
         <>
-          {/* Greek columns (OPT-05) — vega and rho were unreachable before. */}
+          {/* Column groups (OPT-04) — the live ladder opened at 23 columns, so
+             the numbers a strike read needs sat next to ones it does not.
+             Off by default: greeks (per-contract sensitivities) and quality
+             (spread width, two-sided flag). */}
           <div className="flex flex-wrap items-center gap-2 border-b border-line px-[var(--page-x)] py-1.5">
+            <span className="eyebrow shrink-0">Columns</span>
+            {COLUMN_GROUPS.map((g) => (
+              <label key={g.key} className="flex items-center gap-1 text-body text-muted">
+                <input
+                  type="checkbox"
+                  checked={groups.includes(g.key)}
+                  onChange={() => toggleGroup(g.key)}
+                  className="accent-[var(--teal)]"
+                />
+                {g.label}
+                <span className="text-2">{g.blurb}</span>
+              </label>
+            ))}
+            <span className="ml-auto text-body text-2">
+              {liveCols.length * 2 + 1} columns
+            </span>
+          </div>
+
+          {/* Greek columns (OPT-05) — vega and rho were unreachable before. */}
+          <div
+            className={`flex flex-wrap items-center gap-2 border-b border-line px-[var(--page-x)] py-1.5 ${
+              groups.includes("greeks") ? "" : "hidden"
+            }`}
+          >
             <span className="eyebrow shrink-0">Greeks</span>
             {ALL_GREEKS.map((g) => (
               <span key={g} className="flex items-center gap-1">
@@ -554,48 +720,69 @@ export default function OptionsLadderPage() {
                    * carried by the c-/p- prefix and tone on every column. */}
                   <table className="w-full border-separate border-spacing-0 text-data">
                     <thead>
+                      {/* Two header rows: the side is stated once as a spanning
+                       * group rather than prefixed onto all 12 columns, which
+                       * is what let the column set shrink from 23 to 13. */}
                       <tr className="text-micro uppercase tracking-[0.06em]">
-                        <th scope="col" className="sticky left-0 top-0 z-30 border-b border-line bg-elevated px-2 py-1 text-left font-semibold">
+                        <th
+                          scope="colgroup"
+                          colSpan={liveCols.length}
+                          className="sticky top-0 z-20 border-b border-line bg-surface px-2 py-1 text-center font-semibold text-call"
+                        >
+                          {/* Tint as a child, not the cell background: a sticky
+                           * header painted `bg-call/10` is 90% transparent, so
+                           * the rows scroll straight through it. */}
+                          <span className="relative block">
+                            <span className="absolute inset-y-[-4px] inset-x-0 bg-call/10" />
+                            <span className="relative">Calls</span>
+                          </span>
+                        </th>
+                        <th
+                          scope="col"
+                          className="sticky left-0 top-0 z-30 border-x-2 border-b border-line-strong bg-elevated px-2 py-1 text-center font-semibold"
+                        >
                           Strike
                         </th>
-                        {(["call", "put"] as const).map((side) => {
-                          const p = side === "call" ? "c" : "p";
-                          const tone = side === "call" ? "text-call" : "text-put";
-                          const hd = `sticky top-0 z-20 border-b border-line bg-elevated px-1 py-1 text-center font-normal ${tone}`;
-                          return (
-                            <Fragment key={side}>
-                              <th scope="col" className={`${hd} ${side === "put" ? "border-l border-line" : ""}`}>
-                                {p} bid
-                              </th>
-                              <th scope="col" className={hd}>{p} ask</th>
-                              <th scope="col" className={hd}>{p} IV</th>
-                              {greekCols.map((g) => (
-                                <th key={g} scope="col" className={hd}>
-                                  <InfoTip
-                                    label={`What ${GREEK_LABEL[g].symbol} means`}
-                                    content={GREEK_LABEL[g].gloss}
-                                    className={tone}
-                                  >
-                                    {p} {GREEK_LABEL[g].symbol}
-                                  </InfoTip>
-                                </th>
-                              ))}
-                              <th scope="col" className={hd}>{p} spread%</th>
-                              <th scope="col" className={hd}>
-                                <InfoTip
-                                  label="What liq means"
-                                  content="● two-sided and inside the spread cap · ○ wide or one-sided — treat the mid as unreliable."
-                                  className={tone}
-                                >
-                                  {p} liq
-                                </InfoTip>
-                              </th>
-                              <th scope="col" className={hd}>{p} vol</th>
-                              <th scope="col" className={hd}>{p} OI</th>
-                              <th scope="col" className={hd}>{p} GEX</th>
-                            </Fragment>
-                          );
-                        })}
+                        <th
+                          scope="colgroup"
+                          colSpan={liveCols.length}
+                          className="sticky top-0 z-20 border-b border-line bg-surface px-2 py-1 text-center font-semibold text-put"
+                        >
+                          <span className="relative block">
+                            <span className="absolute inset-y-[-4px] inset-x-0 bg-put/10" />
+                            <span className="relative">Puts</span>
+                          </span>
+                        </th>
+                      </tr>
+                      <tr className="text-micro uppercase tracking-[0.06em]">
+                        {[...liveCols].reverse().map((c) => (
+                          <th key={`hc-${c.id}`} scope="col" className={`${LIVE_HEAD} text-call`}>
+                            {c.gloss ? (
+                              <InfoTip label={`What ${c.head} means`} content={c.gloss} className="text-call">
+                                {c.head}
+                              </InfoTip>
+                            ) : (
+                              c.head
+                            )}
+                          </th>
+                        ))}
+                        <th
+                          scope="col"
+                          className="sticky left-0 top-[25px] z-30 border-x-2 border-b border-line-strong bg-elevated px-2 py-1 text-center font-normal text-muted"
+                        >
+                          —
+                        </th>
+                        {liveCols.map((c) => (
+                          <th key={`hp-${c.id}`} scope="col" className={`${LIVE_HEAD} text-put`}>
+                            {c.gloss ? (
+                              <InfoTip label={`What ${c.head} means`} content={c.gloss} className="text-put">
+                                {c.head}
+                              </InfoTip>
+                            ) : (
+                              c.head
+                            )}
+                          </th>
+                        ))}
                       </tr>
                     </thead>
                     <tbody>
@@ -609,10 +796,14 @@ export default function OptionsLadderPage() {
                           putWallStrike={liveLadder.put_wall_strike}
                           msiCallStrike={liveLadder.msi_call_strike}
                           msiPutStrike={liveLadder.msi_put_strike}
-                          greekCols={greekCols}
+                          cols={liveCols}
+                          scale={liveScale}
                           flash={flashStrike === level.strike}
+                          copied={copiedStrike === level.strike}
+                          onCopy={() => copyLiveStrike(level)}
                           rowRef={(el) => {
                             if (el) rowRefs.current.set(level.strike, el);
+                            if (level.strike === liveLadder.atm_strike) spotRowRef.current = el;
                           }}
                         />
                       ))}
@@ -683,16 +874,20 @@ export default function OptionsLadderPage() {
                * when the table is scrolled horizontally. */}
               <table className="w-full border-separate border-spacing-0 text-data">
                 <thead>
+                  {/* Calls left, puts right, both reading outward from the
+                     centre strike — the same geometry as the live ladder. The
+                     two modes used to be mirror images of each other, so
+                     flipping the switch moved every column. */}
                   <tr className="text-micro uppercase tracking-[0.06em]">
-                    <th scope="col" className="sticky top-0 z-20 border-b border-line bg-surface px-2 py-1.5 text-right font-normal text-put">put OI</th>
-                    <th scope="col" className="sticky top-0 z-20 border-b border-line bg-surface px-2 py-1.5 text-right font-normal text-put">put vol</th>
-                    <th scope="col" className="sticky top-0 z-20 border-b border-line bg-surface px-2 py-1.5 text-right font-normal text-put">put IV</th>
+                    <th scope="col" className="sticky top-0 z-20 border-b border-line bg-surface px-2 py-1.5 text-right font-normal text-call">call OI</th>
+                    <th scope="col" className="sticky top-0 z-20 border-b border-line bg-surface px-2 py-1.5 text-right font-normal text-call">call vol</th>
+                    <th scope="col" className="sticky top-0 z-20 border-b border-line bg-surface px-2 py-1.5 text-right font-normal text-call">call IV</th>
                     <th scope="col" className="sticky left-0 top-0 z-30 border-x border-b border-line bg-surface px-3 py-1.5 text-center font-semibold text-foreground">
                       strike
                     </th>
-                    <th scope="col" className="sticky top-0 z-20 border-b border-line bg-surface px-2 py-1.5 text-left font-normal text-call">call IV</th>
-                    <th scope="col" className="sticky top-0 z-20 border-b border-line bg-surface px-2 py-1.5 text-left font-normal text-call">call vol</th>
-                    <th scope="col" className="sticky top-0 z-20 border-b border-line bg-surface px-2 py-1.5 text-left font-normal text-call">call OI</th>
+                    <th scope="col" className="sticky top-0 z-20 border-b border-line bg-surface px-2 py-1.5 text-left font-normal text-put">put IV</th>
+                    <th scope="col" className="sticky top-0 z-20 border-b border-line bg-surface px-2 py-1.5 text-left font-normal text-put">put vol</th>
+                    <th scope="col" className="sticky top-0 z-20 border-b border-line bg-surface px-2 py-1.5 text-left font-normal text-put">put OI</th>
                     <th scope="col" className="sticky top-0 z-20 border-b border-line bg-surface px-2 py-1.5 text-left font-normal text-muted">GEX</th>
                   </tr>
                 </thead>
@@ -739,9 +934,9 @@ export default function OptionsLadderPage() {
                           highlight ? "[&>td]:bg-elevated" : ""
                         } ${flashStrike === row.strike ? "[&>td]:bg-teal/10" : ""} ${leftBorder}`}
                       >
-                        <BarCell value={row.put?.oi} max={maxOi} side="put" tone="bg-put/20" />
-                        <BarCell value={row.put?.vol} max={maxVol} side="put" tone="bg-put/10" />
-                        <td className="px-2 py-1 text-right text-muted">{fmtIv(row.put?.iv)}</td>
+                        <BarCell value={row.call?.oi} max={maxOi} anchor="right" tone="bg-call/20" />
+                        <BarCell value={row.call?.vol} max={maxVol} anchor="right" tone="bg-call/10" />
+                        <td className="px-2 py-1 text-right text-muted">{fmtIv(row.call?.iv)}</td>
                         <td
                           className={`sticky left-0 z-10 border-x border-line px-3 py-1 text-center text-foreground ${strikeBg}`}
                         >
@@ -758,9 +953,9 @@ export default function OptionsLadderPage() {
                           {isCallWall && <Marker text="CW" tone="text-call" />}
                           {isPutWall && <Marker text="PW" tone="text-put" />}
                         </td>
-                        <td className="px-2 py-1 text-left text-muted">{fmtIv(row.call?.iv)}</td>
-                        <BarCell value={row.call?.vol} max={maxVol} side="call" tone="bg-call/10" />
-                        <BarCell value={row.call?.oi} max={maxOi} side="call" tone="bg-call/20" />
+                        <td className="px-2 py-1 text-left text-muted">{fmtIv(row.put?.iv)}</td>
+                        <BarCell value={row.put?.vol} max={maxVol} anchor="left" tone="bg-put/10" />
+                        <BarCell value={row.put?.oi} max={maxOi} anchor="left" tone="bg-put/20" />
                         <td className="relative px-2 py-1 text-left">
                           <div
                             className={`absolute inset-y-[3px] rounded-sm ${

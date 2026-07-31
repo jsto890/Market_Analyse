@@ -8,30 +8,51 @@ import type { StrikeLevel } from "@/lib/optionsLive";
 
 /* ------------------------------------------------------------------ density */
 
+/** Counted in strikes, not percent of spot: ±6% is 76 strikes on SPY and 4 on a
+ * $20 name, so a percent band means a different ladder on every symbol. */
 export const DENSITY_OPTIONS = [
-  { key: "tight", label: "Tight", pct: 0.03, blurb: "±3% of spot" },
-  { key: "normal", label: "Normal", pct: 0.06, blurb: "±6% of spot" },
-  { key: "wide", label: "Wide", pct: 0.12, blurb: "±12% of spot" },
-  { key: "all", label: "All", pct: null, blurb: "every strike returned" },
+  { key: "n10", label: "±10", count: 10, blurb: "10 strikes either side of spot" },
+  { key: "n20", label: "±20", count: 20, blurb: "20 strikes either side of spot" },
+  { key: "n40", label: "±40", count: 40, blurb: "40 strikes either side of spot" },
+  { key: "all", label: "All", count: null, blurb: "every strike the chain returned" },
 ] as const;
 
 export type DensityKey = (typeof DENSITY_OPTIONS)[number]["key"];
 
-export function densityPct(key: string): number | null {
+export const DEFAULT_DENSITY: DensityKey = "n20";
+
+/** Coerce a stored value to a live key — the setting predates strike counts and
+ * localStorage still holds `tight`/`normal`/`wide` for anyone who set it. */
+export function normalizeDensity(key: string): DensityKey {
   const found = DENSITY_OPTIONS.find((d) => d.key === key);
-  return found ? found.pct : 0.06;
+  if (found) return found.key;
+  return key === "all" ? "all" : DEFAULT_DENSITY;
 }
 
-/** Strikes within `pct` of spot. `pct === null` (or no spot) keeps everything. */
-export function withinBand<T extends { strike: number }>(
+export function densityCount(key: string): number | null {
+  const found = DENSITY_OPTIONS.find((d) => d.key === key);
+  return found ? found.count : 20;
+}
+
+/**
+ * The `count` strikes either side of spot. `count === null` (or no spot) keeps
+ * everything. Counting outward from the strike nearest spot rather than
+ * slicing a price window is what makes the row count the same on every symbol.
+ */
+export function withinStrikes<T extends { strike: number }>(
   rows: T[],
   spot: number | null | undefined,
-  pct: number | null
+  count: number | null
 ): T[] {
-  if (pct === null || spot == null || !Number.isFinite(spot) || spot <= 0) return rows;
-  const lo = spot * (1 - pct);
-  const hi = spot * (1 + pct);
-  return rows.filter((r) => r.strike >= lo && r.strike <= hi);
+  if (count === null || spot == null || !Number.isFinite(spot) || spot <= 0) return rows;
+  const sorted = [...rows].sort((a, b) => a.strike - b.strike);
+  if (sorted.length === 0) return rows;
+  let atm = 0;
+  for (let i = 1; i < sorted.length; i++) {
+    if (Math.abs(sorted[i].strike - spot) < Math.abs(sorted[atm].strike - spot)) atm = i;
+  }
+  const keep = new Set(sorted.slice(Math.max(0, atm - count), atm + count + 1));
+  return rows.filter((r) => keep.has(r));
 }
 
 /* --------------------------------------------------------------- delta bands */
@@ -141,6 +162,65 @@ export function dexProfile(
   }
 
   return { points, flipStrike, total: running };
+}
+
+/* ------------------------------------------------- aggregate dealer exposure */
+
+export interface ExposureTotals {
+  /** Dollars of underlying dealers hold per the whole chain. */
+  dex: number;
+  /** Dollars of delta dealers must trade per 1% move in spot. */
+  gex: number;
+  /** Dollars dealers gain or lose per 1 implied-vol point. */
+  vex: number;
+  /** Dollars of time decay accruing to dealers per day. */
+  tex: number;
+  /** Contracts that carried the greek — the rest were quoted without one. */
+  covered: { dex: number; gex: number; vex: number; tex: number };
+}
+
+/**
+ * Chain-wide dealer exposure, one number per greek. Signed the same way as
+ * `dexProfile`: dealers are short what customers buy, so `call·callOI −
+ * put·putOI`. Contracts quoted without a greek are skipped rather than counted
+ * as zero, and `covered` reports how many made it in — an exposure summed over
+ * a third of the chain is a different number, not a smaller one.
+ */
+export function exposureTotals(
+  levels: StrikeLevel[],
+  spot: number | null | undefined,
+  multiplier = 100
+): ExposureTotals {
+  const px = spot != null && Number.isFinite(spot) && spot > 0 ? spot : 1;
+  const t = { dex: 0, gex: 0, vex: 0, tex: 0 };
+  const covered = { dex: 0, gex: 0, vex: 0, tex: 0 };
+
+  for (const l of levels) {
+    const coi = l.call.oi ?? 0;
+    const poi = l.put.oi ?? 0;
+    if (l.call.delta != null || l.put.delta != null) {
+      t.dex += ((l.call.delta ?? 0) * coi - (l.put.delta ?? 0) * poi) * multiplier * px;
+      covered.dex++;
+    }
+    if (l.call.gamma != null || l.put.gamma != null) {
+      // ×spot² ×0.01: gamma is dΔ per $1, so the dollar figure per 1% move is
+      // Γ · spot · (1% of spot) · multiplier.
+      t.gex += ((l.call.gamma ?? 0) * coi - (l.put.gamma ?? 0) * poi) * multiplier * px * px * 0.01;
+      covered.gex++;
+    }
+    if (l.call.vega != null || l.put.vega != null) {
+      t.vex += ((l.call.vega ?? 0) * coi - (l.put.vega ?? 0) * poi) * multiplier;
+      covered.vex++;
+    }
+    if (l.call.theta != null || l.put.theta != null) {
+      // Negated: theta is quoted from the holder's side, and the dealer is on
+      // the other one — decay the customer pays is decay the dealer collects.
+      t.tex -= ((l.call.theta ?? 0) * coi - (l.put.theta ?? 0) * poi) * multiplier;
+      covered.tex++;
+    }
+  }
+
+  return { ...t, covered };
 }
 
 /* ------------------------------------------------------------------ IV skew */

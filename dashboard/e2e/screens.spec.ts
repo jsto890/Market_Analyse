@@ -96,6 +96,7 @@ const ROUTES: { path: string; name: string }[] = [
   { path: "/options/ladder", name: "options-ladder" },
   { path: "/options/gamma", name: "options-gamma" },
   { path: "/options/flow", name: "options-flow" },
+  { path: "/options/greeks", name: "options-greeks" },
   { path: "/options/learn", name: "options-learn" },
   { path: "/calendar", name: "calendar" },
   { path: "/watchlist", name: "watchlist" },
@@ -462,4 +463,71 @@ test("contract: Phase 1 substrate holds on every route", async ({ page }) => {
     contentWidths.size,
     `content widths: ${Array.from(contentWidths).join(", ")}`,
   ).toBeLessThanOrEqual(MAX_CONTENT_WIDTHS);
+});
+
+// ── 5. Phase 2 contract — /calendar and the options split ────────────────────
+
+/** Two months of macro releases plus watchlist earnings. Below this the page is
+ * a stub, which is what it was before the endpoint served more than 7 days. */
+const MIN_CALENDAR_EVENTS = 20;
+
+/** The five sections one page became. All must resolve, or a tab is a 404. */
+const OPTIONS_ROUTES = [
+  "/options",
+  "/options/ladder",
+  "/options/gamma",
+  "/options/flow",
+  "/options/greeks",
+];
+
+test("contract: Phase 2 — calendar has events and every options tab resolves", async ({
+  page,
+}) => {
+  test.setTimeout(180_000);
+  await page.setViewportSize(LAPTOP);
+
+  const violations: string[] = [];
+
+  const calendar = await page.goto("/calendar");
+  if (calendar?.status() !== 200) violations.push(`/calendar: HTTP ${calendar?.status()}`);
+  await settle(page, 2500);
+
+  // Each event is one Collapsible; nothing else on the page discloses.
+  const events = await page.locator("#main button[aria-expanded]").count();
+  if (events < MIN_CALENDAR_EVENTS)
+    violations.push(`/calendar: ${events} events, expected ≥ ${MIN_CALENDAR_EVENTS}`);
+
+  // The rail's overflow link is the only route into the full calendar from a
+  // page that is not the calendar.
+  const railHref = await page
+    .locator('aside a[href="/calendar"]')
+    .first()
+    .getAttribute("href")
+    .catch(() => null);
+  if (railHref !== "/calendar") violations.push(`rail overflow href: ${railHref}`);
+
+  for (const route of OPTIONS_ROUTES) {
+    const res = await page.goto(route);
+    if (res?.status() !== 200) violations.push(`${route}: HTTP ${res?.status()}`);
+    await settle(page, 1500);
+
+    // The mode switch used to be a 36×20 rectangle labelled only by
+    // `aria-label` — it stated neither what it was nor which way it sat.
+    const mode = await page.evaluate(() => {
+      const group = document.querySelector<HTMLElement>('#main [role="radiogroup"]');
+      if (!group) return null;
+      return {
+        text: (group.textContent ?? "").trim(),
+        segments: Array.from(group.querySelectorAll<HTMLElement>('[role="radio"]')).map((r) =>
+          (r.textContent ?? "").trim(),
+        ),
+      };
+    });
+    if (!mode) violations.push(`${route}: no mode control`);
+    else if (!mode.text) violations.push(`${route}: mode control has empty textContent`);
+    else if (mode.segments.some((s) => !s))
+      violations.push(`${route}: unlabelled segment in mode control`);
+  }
+
+  expect(violations, violations.join("\n")).toEqual([]);
 });

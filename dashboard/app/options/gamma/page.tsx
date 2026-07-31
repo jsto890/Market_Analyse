@@ -3,7 +3,7 @@
 import { useMemo } from "react";
 import { useLadder, useOdteSymbol } from "@/lib/odte";
 import { useOptionsLivePoller } from "@/lib/useOptionsLivePoller";
-import { deltaSkew, densityPct, withinBand } from "@/lib/optionsAnalytics";
+import { deltaSkew, densityCount, withinStrikes } from "@/lib/optionsAnalytics";
 import { useOptionsUi } from "@/lib/optionsUi";
 import GexChart from "@/components/GexChart";
 import GexCard from "@/components/odte/GexCard";
@@ -16,19 +16,19 @@ import Page from "@/components/ui/Page";
 export default function OptionsGammaPage() {
   const [activeSymbol] = useOdteSymbol();
   const { live, density, expiry } = useOptionsUi();
-  const band = densityPct(density);
+  const count = densityCount(density);
 
-  const { data } = useLadder(activeSymbol, 4, band ?? 0.5);
+  const { data } = useLadder(activeSymbol, 4, 0.5);
   const { ladder: liveLadder } = useOptionsLivePoller(activeSymbol, expiry || "0DTE", live);
 
   const idx = Math.max(0, (data?.expiries ?? []).findIndex((e) => e.expiry === expiry));
   const classicRows = useMemo(
-    () => withinBand(data?.expiries?.[idx]?.rows ?? [], data?.spot ?? null, band),
-    [data, idx, band]
+    () => withinStrikes(data?.expiries?.[idx]?.rows ?? [], data?.spot ?? null, count),
+    [data, idx, count]
   );
   const levels = useMemo(
-    () => withinBand(liveLadder?.levels ?? [], liveLadder?.spot ?? null, band),
-    [liveLadder, band]
+    () => withinStrikes(liveLadder?.levels ?? [], liveLadder?.spot ?? null, count),
+    [liveLadder, count]
   );
 
   const spot = liveLadder?.spot ?? data?.spot ?? null;

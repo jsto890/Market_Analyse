@@ -5,12 +5,17 @@ import { usePathname } from "next/navigation";
 import useSWR from "swr";
 import SymbolSwitcher from "@/components/odte/SymbolSwitcher";
 import InfoTip from "@/components/ui/InfoTip";
-import Toggle from "@/components/ui/Toggle";
+import SegmentedControl from "@/components/ui/SegmentedControl";
 import { odteBadge, useOdteSymbol, type OdteHealth } from "@/lib/odte";
 import { companionSymbol, isProxied } from "@/lib/odteCompanion";
 import { OPTIONS_TABS, OptionsUiProvider, useOptionsUi } from "@/lib/optionsUi";
 
 const fetcher = (u: string) => fetch(u, { cache: "no-store" }).then((r) => r.json());
+
+const DATA_MODES = [
+  { key: "live", label: "Live" },
+  { key: "eod", label: "EOD" },
+] as const;
 
 const toneClass: Record<string, string> = {
   live: "bg-teal/15 text-teal",
@@ -53,19 +58,21 @@ function OptionsChrome({ children }: { children: React.ReactNode }) {
         <div className="overflow-x-auto">
           <SymbolSwitcher active={activeSymbol} onChange={switchSymbol} />
         </div>
-        {/* One live control for every tab, with its name and its state both in
-           text — the bare switch said neither (OPT-03). */}
-        <div className="ml-auto flex items-center gap-1.5">
-          <span className="eyebrow">Live ladder</span>
-          <Toggle checked={live} onChange={setLive} label="Live ladder" />
-          <span
-            className={`w-6 text-data ${live ? "text-teal" : "text-muted"}`}
-            aria-hidden
-          >
-            {live ? "on" : "off"}
-          </span>
+        {/* One data-mode control for every tab, both segments named. The switch
+           it replaces was a 36×20 rectangle whose only label was an
+           `aria-label` — it stated neither what it was nor which way it sat
+           (OPT-03). */}
+        <div className="ml-auto flex items-center gap-2">
+          <SegmentedControl
+            label="Data"
+            value={live ? "live" : "eod"}
+            options={DATA_MODES}
+            onChange={(v) => setLive(v === "live")}
+          />
           <p role="status" aria-live="polite" className="sr-only">
-            Live ladder {live ? "on — streaming quotes and greeks" : "off — showing the daily snapshot"}
+            {live
+              ? "Live data — streaming quotes and greeks"
+              : "End-of-day data — showing the daily snapshot"}
           </p>
           <span className={`rounded px-2 py-0.5 text-micro ${toneClass[badge.tone]}`}>{badge.label}</span>
           <InfoTip

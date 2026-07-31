@@ -96,26 +96,32 @@ describe("OptionsLadderPage — controls (OPT-01, OPT-05)", () => {
     mockAll();
   });
 
-  it("refetches at the chosen density instead of a hard-coded ±6% band", async () => {
+  it("counts density in strikes, so the row count is the same on every symbol", async () => {
+    // A percent band is 76 strikes on SPY and 4 on a $20 name. The endpoint
+    // only takes a percent, so the fetch stays wide and the slice is local —
+    // which also means changing density must not refire the request.
     const user = userEvent.setup();
     render(<OptionsLadderPage />);
     await screen.findByText("call IV");
 
-    await user.click(screen.getByRole("button", { name: "Tight" }));
+    const urls = () => vi.mocked(global.fetch).mock.calls.map((c) => String(c[0]));
+    expect(urls().some((u) => u.includes("band=0.5"))).toBe(true);
+    const before = urls().length;
 
-    await waitFor(() => {
-      const urls = vi.mocked(global.fetch).mock.calls.map((c) => String(c[0]));
-      expect(urls.some((u) => u.includes("band=0.03"))).toBe(true);
-    });
+    await user.click(screen.getByRole("radio", { name: "±10" }));
+    await user.click(screen.getByRole("radio", { name: "All" }));
+
+    expect(urls().length).toBe(before);
   });
 
-  it("keeps every density option reachable and marks the active one", async () => {
+  it("names the strike control and every one of its options", async () => {
     render(<OptionsLadderPage />);
     await screen.findByText("call IV");
-    for (const label of ["Tight", "Normal", "Wide", "All"]) {
-      expect(screen.getByRole("button", { name: label })).toBeInTheDocument();
+    expect(screen.getByRole("radiogroup", { name: "Strikes" })).toBeInTheDocument();
+    for (const label of ["±10", "±20", "±40", "All"]) {
+      expect(screen.getByRole("radio", { name: label })).toBeInTheDocument();
     }
-    expect(screen.getByRole("button", { name: "Normal" })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("radio", { name: "±20" })).toHaveAttribute("aria-checked", "true");
   });
 
   it("reverses strike order on demand", async () => {
@@ -254,23 +260,45 @@ describe("OptionsLadderPage — live ladder", () => {
     mockAll();
   });
 
-  it("names the side in every live column header, not in a spanning row (OPT-10)", async () => {
-    // A two-row header needs a hardcoded top offset on the second row to stay
-    // sticky, and the side label scrolls out of view horizontally. Each column
-    // carries its own c-/p- prefix instead.
+  it("states the side once as a spanning group and mirrors the columns (OPT-10)", async () => {
+    // Prefixing the side onto all 12 columns is what made the header 23 columns
+    // wide. It is stated once per side instead, and each side's columns run
+    // outward from the strike so the two read as one profile.
     render(<OptionsLadderPage />);
-    await screen.findByText("c bid");
-    for (const label of ["c bid", "c ask", "c IV", "c vol", "c OI", "c GEX"]) {
-      expect(screen.getByText(label).closest("th")).toBeInTheDocument();
+    await screen.findAllByText("bid");
+
+    const groups = screen.getAllByRole("columnheader").filter((th) => th.hasAttribute("colspan"));
+    expect(groups.map((th) => th.textContent)).toEqual(["Calls", "Puts"]);
+    expect(groups.every((th) => th.getAttribute("colspan") === "6")).toBe(true);
+
+    const head = document.querySelector("thead")!;
+    for (const label of ["bid", "ask", "vol", "OI", "IV", "GEX"]) {
+      expect(within(head).getAllByText(label)).toHaveLength(2);
     }
-    for (const label of ["p bid", "p ask", "p IV", "p vol", "p OI", "p GEX"]) {
-      expect(screen.getByText(label).closest("th")).toBeInTheDocument();
-    }
+  });
+
+  it("opens at 13 columns, not 23, with greeks and quality off (OPT-04)", async () => {
+    render(<OptionsLadderPage />);
+    await screen.findAllByText("bid");
+    expect(screen.getByText("13 columns")).toBeInTheDocument();
+    expect(screen.getByRole("checkbox", { name: /Greeks/ })).not.toBeChecked();
+    expect(screen.getByRole("checkbox", { name: /Quality/ })).not.toBeChecked();
+  });
+
+  it("copies a strike from the live ladder too, not only the snapshot (OPT-06)", async () => {
+    const writeText = vi.fn();
+    Object.defineProperty(navigator, "clipboard", { value: { writeText }, configurable: true });
+    render(<OptionsLadderPage />);
+    await screen.findAllByText("bid");
+
+    fireEvent.click(screen.getByRole("row", { name: "Copy strike 570" }));
+
+    expect(writeText).toHaveBeenCalledWith(expect.stringMatching(/570.*call.*put.*GEX/));
   });
 
   it("marks the MSI strikes on the ladder, not just in a summary chip", async () => {
     render(<OptionsLadderPage />);
-    await screen.findByText("c bid");
+    await screen.findAllByText("bid");
     // Also named in the legend above the table, so scope the assertion to the
     // ladder body itself.
     const table = document.querySelector("table")!;
@@ -280,26 +308,29 @@ describe("OptionsLadderPage — live ladder", () => {
 
   it("formats GEX with the same scale as everywhere else (OPT-11)", async () => {
     render(<OptionsLadderPage />);
-    await screen.findByText("c bid");
+    await screen.findAllByText("bid");
     expect(screen.getByText("+3M")).toBeInTheDocument();
     expect(screen.getByText("−2M")).toBeInTheDocument();
   });
 
-  it("exposes vega and rho as toggleable columns (OPT-05)", async () => {
+  it("exposes vega and rho as toggleable columns behind the greeks group (OPT-05)", async () => {
     const user = userEvent.setup();
     render(<OptionsLadderPage />);
-    await screen.findByText("c bid");
+    await screen.findAllByText("bid");
 
-    const vegaHeaders = () =>
-      [...screen.queryAllByText(/^[cp] ν$/)].map((el) => el.closest("th")).filter(Boolean);
+    const vegaHeaders = () => screen.queryAllByText("ν").map((el) => el.closest("th")).filter(Boolean);
     expect(vegaHeaders()).toHaveLength(0);
+
+    // Greeks are a group now: turning the group on brings its own per-greek
+    // toggles with it, so vega takes two clicks rather than being always-on.
+    await user.click(screen.getByRole("checkbox", { name: /Greeks/ }));
     await user.click(screen.getByRole("checkbox", { name: /vega/i }));
     expect(vegaHeaders()).toHaveLength(2);
   });
 
   it("groups the levels strip by what each number answers (OPT-12, OPT-13)", async () => {
     render(<OptionsLadderPage />);
-    await screen.findByText("c bid");
+    await screen.findAllByText("bid");
     for (const group of ["Pin", "Dealer gamma", "Crowd", "Data"]) {
       expect(screen.getByText(group)).toBeInTheDocument();
     }
@@ -307,14 +338,14 @@ describe("OptionsLadderPage — live ladder", () => {
 
   it("gives every levels tooltip a real accessible name, not an sr-only child (OPT-14)", async () => {
     render(<OptionsLadderPage />);
-    await screen.findByText("c bid");
+    await screen.findAllByText("bid");
     expect(screen.getByRole("button", { name: /what max pain means/i })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /what fresh means/i })).toBeInTheDocument();
   });
 
   it("keeps the mutating table out of the live region and announces mode in a status", async () => {
     render(<OptionsLadderPage />);
-    await screen.findByText("c bid");
+    await screen.findAllByText("bid");
     const table = document.querySelector("table")!;
     expect(table.closest("[aria-live]")?.getAttribute("aria-live")).toBe("off");
     expect(screen.getAllByRole("status").some((s) => /live ladder on/i.test(s.textContent ?? ""))).toBe(

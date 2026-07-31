@@ -18,6 +18,7 @@ export const STATIC_KEYS = {
   odteExpiry: "dash:odte:expiry",
   odteDensity: "dash:odte:density",
   odteGreekCols: "dash:odte:greek-cols",
+  odteColumnGroups: "dash:odte:column-groups",
   calendarHorizon: "dash:calendar:horizon",
   calendarShow: "dash:calendar:show",
   macroWindow: "dash:macro:window",

@@ -36,23 +36,33 @@ describe("OptionsLayout — one page became five (OPT-07)", () => {
     expect(screen.getByRole("link", { name: "Overview" })).not.toHaveAttribute("aria-current");
   });
 
-  it("names the live control and its state in visible text (OPT-03)", async () => {
+  it("names the data control and both of its modes in visible text (OPT-03)", async () => {
+    // A switch labelled only by `aria-label` reads as an unlabelled rectangle:
+    // it states neither what it is nor which way it sits. Both segments carry
+    // their own text, and the group carries the control's name.
     const user = userEvent.setup();
     render(<OptionsLayout>{null}</OptionsLayout>);
 
-    expect(screen.getByText("Live ladder")).toBeInTheDocument();
-    expect(screen.getByText("off")).toBeInTheDocument();
+    const group = screen.getByRole("radiogroup", { name: "Data" });
+    expect(screen.getByText("Data")).toBeInTheDocument();
+    expect(within(group).getByRole("radio", { name: "EOD" })).toHaveAttribute(
+      "aria-checked",
+      "true"
+    );
 
-    await user.click(screen.getByRole("switch", { name: /live ladder/i }));
-    expect(screen.getByText("on")).toBeInTheDocument();
+    await user.click(within(group).getByRole("radio", { name: "Live" }));
+    expect(within(group).getByRole("radio", { name: "Live" })).toHaveAttribute(
+      "aria-checked",
+      "true"
+    );
   });
 
   it("announces the mode switch rather than silently swapping tables (OPT-04)", async () => {
     const user = userEvent.setup();
     render(<OptionsLayout>{null}</OptionsLayout>);
-    await user.click(screen.getByRole("switch", { name: /live ladder/i }));
+    await user.click(screen.getByRole("radio", { name: "Live" }));
     expect(
-      screen.getAllByRole("status").some((s) => /live ladder on/i.test(s.textContent ?? ""))
+      screen.getAllByRole("status").some((s) => /live data/i.test(s.textContent ?? ""))
     ).toBe(true);
   });
 
