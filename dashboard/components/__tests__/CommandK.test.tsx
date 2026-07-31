@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { it, expect, vi, beforeEach } from "vitest";
 import { render, screen, waitFor } from "@/test/render";
 import { mockFetchJson } from "@/test/fetchMock";
 import { resetLocalStorage } from "@/test/localStorage";

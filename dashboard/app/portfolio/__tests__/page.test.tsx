@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import { render, screen, userEvent } from "@/test/render";
+import { render, screen } from "@/test/render";
 import { mockFetchJson } from "@/test/fetchMock";
 import PortfolioPage from "../page";
 

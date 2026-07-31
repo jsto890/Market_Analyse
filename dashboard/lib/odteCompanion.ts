@@ -1,4 +1,4 @@
-import { odteSymbols, type OdteSymbol } from "@/lib/odte-core";
+import { type OdteSymbol } from "@/lib/odte-core";
 
 /**
  * Every underlying now has its own real option chain — indices are fetched from

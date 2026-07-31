@@ -259,7 +259,7 @@ export default function CandleChart({
     let destroyed = false;
 
     import("lightweight-charts").then(
-      ({ createChart, ColorType, LineStyle }) => {
+      ({ createChart, ColorType }) => {
         if (destroyed || !containerRef.current) return;
 
         // lightweight-charts hands series/price-line colors straight to the Canvas 2D

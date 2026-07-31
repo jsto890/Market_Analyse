@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { it, expect } from "vitest";
 import { openDb, NEW_COLS } from "@/lib/db";
 import Database from "better-sqlite3";
 import fs from "fs";

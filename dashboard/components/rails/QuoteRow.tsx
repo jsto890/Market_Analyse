@@ -9,7 +9,6 @@ interface QuoteRowProps {
   price: number;
   changePct: number;
   /** True when the pct shows the last completed session (market closed). */
-  prevBasis?: boolean;
   skeleton?: boolean;
 }
 
@@ -52,7 +51,7 @@ function pctColor(pct: number): string {
   return pct > 0 ? "text-pos" : "text-neg";
 }
 
-export function QuoteRow({ symbol, price, changePct, prevBasis, skeleton }: QuoteRowProps) {
+export function QuoteRow({ symbol, price, changePct, skeleton }: QuoteRowProps) {
   const label = RAIL_LABEL[symbol] ?? symbol;
 
   if (skeleton) {

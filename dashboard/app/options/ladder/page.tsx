@@ -1,12 +1,12 @@
 "use client";
 
-import { Fragment, useState, useEffect, useMemo, useRef } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import Link from "next/link";
 import { nearestStrikeIndex, useLadder, useOdteSymbol } from "@/lib/odte";
 import { fmtGex } from "@/lib/odteCompanion";
 import { useOptionsLivePoller } from "@/lib/useOptionsLivePoller";
 import { isStale, type StrikeLevel } from "@/lib/optionsLive";
-import { DENSITY_OPTIONS, densityCount, withinStrikes, type DensityKey } from "@/lib/optionsAnalytics";
+import { DENSITY_OPTIONS, densityCount, withinStrikes } from "@/lib/optionsAnalytics";
 import { useOptionsUi } from "@/lib/optionsUi";
 import GexChart from "@/components/GexChart";
 import MvcCard from "@/components/odte/MvcCard";
