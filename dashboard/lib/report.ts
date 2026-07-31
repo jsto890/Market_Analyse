@@ -84,6 +84,21 @@ export function asOf(generatedAt: string | undefined, nowMs = Date.now()): strin
   return `${Math.round(hours / 24)}d ago`;
 }
 
+/**
+ * The three parts of the brief's positioning line, so the tile can give the
+ * verdict its own weight instead of printing one 90-character sentence in muted
+ * mono. `gex_line` is generated to a fixed shape (argus/report/morning.py:73):
+ * `GEX <verdict> (<figures>) — <read>`. Anything else renders whole.
+ */
+export interface Positioning { verdict: string | null; figures: string; read: string | null }
+
+export function parseGexLine(line: string | null | undefined): Positioning | null {
+  if (!line) return null;
+  const m = /^GEX (\S+) \(([^)]*)\)\s*—\s*(.+)$/.exec(line);
+  if (!m) return { verdict: null, figures: line, read: null };
+  return { verdict: m[1], figures: m[2], read: m[3] };
+}
+
 /** Strip the markdown bold used in the Obsidian render for plain dashboard text. */
 export function plain(tone: string | null | undefined): string {
   if (!tone) return "";

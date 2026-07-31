@@ -4,15 +4,15 @@ import { loadBridgeSignals } from "@/lib/bridge";
 import { groupSignals } from "@/lib/groups";
 import { diffReports, loadYesterdayRows, type DiffRow } from "@/lib/diff";
 import { byDate, reportDates } from "@/lib/signals";
-import { rotationSummary } from "@/lib/rotation";
 import type { BridgeRow, ReportGroup } from "@/types/bridge";
 import { statusMessage } from "@/lib/todayStatus";
 import DiffStrip from "@/components/today/DiffStrip";
 import SignalGroups from "@/components/today/SignalGroups";
 import DateStepper from "@/components/today/DateStepper";
-import Link from "next/link";
 import { type RotationRow } from "@/components/today/RotationPanel";
 import { MorningReport } from "@/components/today/MorningReport";
+import TodaysTape from "@/components/today/TodaysTape";
+import SectorStrip from "@/components/today/SectorStrip";
 import Page from "@/components/ui/Page";
 import Failed from "@/components/ui/Failed";
 import Stale from "@/components/ui/Stale";
@@ -129,12 +129,14 @@ export default async function Home({
     new Set(rows.map((r) => r.industry).filter((s): s is string => !!s))
   ).sort();
 
+  const stepper = <DateStepper dates={dates} current={viewingHistory ? requestedDate : null} />;
+
   return (
     <Page width="wide">
-      <div className="flex items-center justify-between">
-        <MorningReport />
-      </div>
-      <DateStepper dates={dates} current={viewingHistory ? requestedDate : null} />
+      <MorningReport />
+      {/* The stepper rides in the tape's header rather than floating under it.
+          On a history date there is no tape to ride in. */}
+      {viewingHistory ? stepper : <TodaysTape actions={stepper} />}
       {(() => {
         const status = statusMessage({ rows, viewingHistory, stale, generatedAt: meta.generated_at });
         if (!status) return null;
@@ -158,14 +160,7 @@ export default async function Home({
 
       <SignalGroups groups={groups} newTickers={diffData.newTickers} sectors={sectors} />
 
-      {rotation && rotation.length > 0 && (
-        <Link
-          href="/rotation"
-          className="block rounded-md border border-line bg-elevated px-4 py-2.5 text-body text-muted hover:text-foreground transition-colors"
-        >
-          {rotationSummary(rotation)}
-        </Link>
-      )}
+      {rotation && rotation.length > 0 && <SectorStrip rows={rotation} />}
     </Page>
   );
 }

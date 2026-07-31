@@ -7,9 +7,11 @@ import { Search, X } from "lucide-react";
 import type { BridgeRow } from "@/types/bridge";
 import { tierSort } from "@/lib/groups";
 import DataTable, { Column } from "@/components/ui/DataTable";
-import Panel from "@/components/ui/Panel";
+import Empty from "@/components/ui/Empty";
+import ReadThis from "@/components/ui/ReadThis";
+import PinToggle from "@/components/ui/PinToggle";
 import { heatBg } from "@/lib/heat";
-import Badge from "@/components/ui/Badge";
+import Badge, { BADGE_LABEL } from "@/components/ui/Badge";
 import ConvictionDot from "@/components/ui/ConvictionDot";
 import MicroBar from "@/components/ui/MicroBar";
 import Sparkline from "@/components/ui/Sparkline";
@@ -79,23 +81,32 @@ const DEFAULT_FILTERS: Filters = { search: "", hcOnly: false, conviction: "", se
 const GROUP_META: { key: keyof GroupedRows; title: string; rationale: string }[] = [
   {
     key: "aligned",
-    title: "ALIGNED",
-    rationale: "sentiment + technical + fundamental all bullish",
+    title: "Aligned",
+    rationale: "Sentiment, technical and fundamental all bullish.",
   },
   {
     key: "pullback",
-    title: "HIGH CONVICTION, PULLING BACK",
-    rationale: "strong chatter + catalyst, sentiment dipping — watch for the turn",
+    title: "Pulling back",
+    rationale: "Strong chatter and a catalyst, sentiment dipping — watch for the turn.",
   },
   {
     key: "tech_fund",
-    title: "TECHNICAL + FUNDAMENTAL",
-    rationale: "near-aligned: sentiment just below the 0.30 bar",
+    title: "Tech + fund",
+    rationale: "Near-aligned: sentiment just below the 0.30 bar.",
+  },
+  {
+    key: "other",
+    title: "Everything else",
+    rationale: "Mixed or partial-agreement signals that cleared none of the three bars.",
   },
 ];
 
-const CAVEAT_LINE =
-  "Levels are indicative, not orders. Score magnitude does not predict returns (r≈0). High conviction means consensus, not edge.";
+export const CAVEAT_LINE =
+  "Levels are indicative, not orders — score magnitude does not predict returns (r≈0), and high conviction means consensus, not edge.";
+
+/** The active group's top names, in full. Below the cards the same rows stay
+ *  tabular: three stacked tables meant the third was never read. */
+const CARD_COUNT = 3;
 
 // ---------- cell components ----------
 
@@ -162,12 +173,17 @@ function RowFlags({ ext, earnDays }: { ext: boolean; earnDays: number | null }) 
   );
 }
 
+/** The feed writes `contract+, earnings_beat+` — comma-separated tokens, each
+ *  suffixed with the direction it cuts, and a literal `nan` when there are
+ *  none. Splitting on the sign instead of the separator left a leading comma
+ *  on every token after the first. */
 function splitCatalysts(value: string | null): string[] {
   if (!value) return [];
   return value
-    .split(/[+;]/)
+    .split(/[,;]/)
     .map((s) => s.replace(/["]/g, "").trim())
-    .filter(Boolean);
+    .filter((s) => s && s.toLowerCase() !== "nan")
+    .map((s) => s.replace(/\+$/, " ▲").replace(/-$/, " ▼").replace(/_/g, " "));
 }
 
 function CatalystCount({ value }: { value: string | null }) {
@@ -325,6 +341,78 @@ function ExpandedRow({ row }: { row: BridgeRow }) {
         </Link>
       </div>
     </div>
+  );
+}
+
+// ---------- cards ----------
+
+/** The top names of the active group, read in full instead of squeezed into a
+ *  table row. Everything on the card comes off the bridge row — there is no
+ *  per-name narrative feed, so the card says nothing where the mock has prose. */
+function SignalCard({
+  row,
+  isNew,
+  onOpen,
+}: {
+  row: BridgeRow;
+  isNew: boolean;
+  onOpen: () => void;
+}) {
+  const catalysts = splitCatalysts(row.catalysts);
+  return (
+    <article className="flex flex-col gap-2 rounded-md border border-line bg-raised px-3 py-2.5">
+      <div className="flex items-baseline justify-between gap-2">
+        <span className="flex min-w-0 items-baseline gap-2">
+          <Link href={`/t/${row.ticker}`} className="text-title text-accent hover:underline">
+            {row.ticker}
+          </Link>
+          {isNew && <span className="eyebrow text-warn">new</span>}
+          {row.industry && <span className="truncate text-body text-3">{row.industry}</span>}
+        </span>
+        <Badge variant="tier" value={row.action_label} label={BADGE_LABEL[row.action_label]} />
+      </div>
+
+      <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
+        <span className="flex items-baseline gap-1.5">
+          <span className="text-headline font-mono text-model">{fmtNum(row.combined_score)}</span>
+          <span className="eyebrow">score</span>
+        </span>
+        <span className="flex items-baseline gap-1.5">
+          <LegBars s={row.sentiment_score} t={row.tech_score} f={row.catalyst_score} />
+          <span className="eyebrow">sent · tech · fund</span>
+        </span>
+        <Ret v={row.ret_1d} />
+        <RowFlags ext={row.is_extended} earnDays={row.earnings_in_days} />
+      </div>
+
+      {catalysts.length > 0 && (
+        <p className="text-body text-2">{catalysts.slice(0, 3).join(" · ")}</p>
+      )}
+
+      <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 text-data">
+        <span>
+          <span className="text-muted">E</span> {fmtNum(row.entry)}
+        </span>
+        <span>
+          <span className="text-muted">S</span> {fmtNum(row.stop)}
+        </span>
+        <span>
+          <span className="text-muted">T</span> {fmtNum(row.target)}
+        </span>
+        <span className="text-2">{fmtNum(row.risk_reward, 1)}x</span>
+      </div>
+
+      <div className="flex flex-wrap items-center gap-3">
+        <PinToggle symbol={row.ticker} />
+        <Link
+          href={`/t/${row.ticker}`}
+          onClick={onOpen}
+          className="text-body text-accent hover:underline"
+        >
+          Open →
+        </Link>
+      </div>
+    </article>
   );
 }
 
@@ -489,6 +577,13 @@ export default function SignalGroups({
     router.push(`/t/${r.ticker}`);
   };
 
+  const [tab, setTab] = useState<keyof GroupedRows>("aligned");
+  const meta = GROUP_META.find((g) => g.key === tab) ?? GROUP_META[0];
+  const rows = sorted[tab];
+  const hidden = groups[tab].length - rows.length;
+  const cards = rows.slice(0, CARD_COUNT);
+  const rest = rows.slice(CARD_COUNT);
+
   return (
     <div className="space-y-3">
       {/* Filters toolbar */}
@@ -545,42 +640,88 @@ export default function SignalGroups({
         )}
       </div>
 
-      {GROUP_META.map((g) => {
-        const shown = sorted[g.key].length;
-        const total = groups[g.key].length;
-        const hidden = total - shown;
-        const title =
-          hidden > 0
-            ? `${g.title}  (${shown} shown · ${hidden} hidden by filters)`
-            : `${g.title}  (${shown})`;
-        return (
-          <Panel key={g.key} title={title} subtitle={g.rationale}>
-            {sorted[g.key].length > 0 && <p className="mb-2 border-b border-line pb-2 text-body text-2">{CAVEAT_LINE}</p>}
-            <GroupTable
-              rows={sorted[g.key]}
-              newSet={newSet}
-              onOpen={(r) => onOpen(r, g.title, sorted[g.key])}
-              persistKey={`today-${g.key}`}
-            />
-          </Panel>
-        );
-      })}
+      <section className="rounded-md border border-line bg-elevated">
+        {/* Four stacked tables meant the third was never scrolled to. */}
+        <div role="tablist" aria-label="Signal groups" className="flex flex-wrap gap-1 px-2 pt-2">
+          {GROUP_META.map((g) => {
+            const selected = g.key === tab;
+            return (
+              <button
+                key={g.key}
+                type="button"
+                role="tab"
+                id={`signals-tab-${g.key}`}
+                aria-selected={selected}
+                aria-controls={`signals-panel-${g.key}`}
+                onClick={() => setTab(g.key)}
+                className={`flex items-baseline gap-1.5 rounded-t border-b-2 px-3 py-1.5 text-body transition-colors ${
+                  selected
+                    ? "border-accent text-foreground"
+                    : "border-transparent text-muted hover:text-foreground"
+                }`}
+              >
+                {g.title}
+                <span className="font-mono text-micro tabular-nums text-muted">
+                  {sorted[g.key].length}
+                </span>
+              </button>
+            );
+          })}
+        </div>
 
-      <Panel
-        title={`Everything else  (${sorted.other.length})`}
-        subtitle="didn't clear the bar for ALIGNED, PULLING BACK or TECHNICAL+FUNDAMENTAL — mixed or partial-agreement signals"
-        collapsible
-        defaultOpen={false}
-        persistKey="today-other"
-      >
-        {sorted.other.length > 0 && <p className="mb-2 border-b border-line pb-2 text-body text-2">{CAVEAT_LINE}</p>}
-        <GroupTable
-          rows={sorted.other}
-          newSet={newSet}
-          onOpen={(r) => onOpen(r, "EVERYTHING ELSE", sorted.other)}
-          persistKey="today-other-table"
-        />
-      </Panel>
+        <div
+          role="tabpanel"
+          id={`signals-panel-${tab}`}
+          aria-labelledby={`signals-tab-${tab}`}
+          className="border-t border-line px-4 py-3"
+        >
+          <p className="text-body text-2">
+            {meta.rationale}
+            {hidden > 0 && (
+              <span className="text-3"> {hidden} hidden by filters.</span>
+            )}
+          </p>
+
+          {rows.length === 0 ? (
+            <Empty
+              title="Nothing in this group"
+              message={
+                hidden > 0
+                  ? "Every name here is filtered out. Clear the filters to see them."
+                  : "No name cleared this group's bar in today's run."
+              }
+            />
+          ) : (
+            <>
+              {cards.length > 0 && (
+                <div className="mt-3 grid gap-2 lg:grid-cols-3">
+                  {cards.map((r) => (
+                    <SignalCard
+                      key={r.ticker}
+                      row={r}
+                      isNew={newSet.has(r.ticker)}
+                      onOpen={() => onOpen(r, meta.title, rows)}
+                    />
+                  ))}
+                </div>
+              )}
+              {rest.length > 0 && (
+                <div className="mt-3">
+                  <GroupTable
+                    rows={rest}
+                    newSet={newSet}
+                    onOpen={(r) => onOpen(r, meta.title, rows)}
+                    persistKey={`today-${tab}`}
+                  />
+                </div>
+              )}
+            </>
+          )}
+        </div>
+
+        {/* Printed once. It used to print above all four tables. */}
+        <ReadThis>{CAVEAT_LINE}</ReadThis>
+      </section>
     </div>
   );
 }

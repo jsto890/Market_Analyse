@@ -39,10 +39,12 @@ describe("MorningReport — loading/error/collapse (TD-09)", () => {
     expect(await screen.findByText(/couldn.t load the morning brief/i)).toBeInTheDocument();
   });
 
-  it("renders inside a foldable Collapsible once loaded", async () => {
+  it("renders as a masthead once loaded — a heading, not a fold to open", async () => {
     mockFetchJson({ "/api/argus/report/morning": baseReport });
     render(<MorningReport />);
-    expect(await screen.findByRole("button", { name: /Morning Brief/i })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Morning brief" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Morning Brief/i })).not.toBeInTheDocument();
+    expect(screen.getByText(/Tuesday 2026-07-28/)).toBeInTheDocument();
   });
 
   it("links watchlist-news rows with next/link, not a bare <a>", async () => {
@@ -82,22 +84,20 @@ describe("MorningReport — content (MB-01..MB-09)", () => {
     expect(screen.getByText("AAPL: supplier cut")).toBeInTheDocument();
   });
 
-  it("scopes the macro block to today and tomorrow, pushing the rest to the calendar (MB-03)", async () => {
+  it("leaves the day's schedule to the tape and carries none of it itself (MB-03)", async () => {
     mockFetchJson({
       "/api/argus/report/morning": {
         ...baseReport,
         macro_events: [
           { date: "2026-07-28", time_et: "08:30", event: "CPI (Consumer Price Index)", category: "inflation", importance: "high", ticker: null },
-          { date: "2026-08-06", time_et: "08:30", event: "Initial jobless claims", category: "jobs", importance: "medium", ticker: null },
           { date: "2026-08-07", time_et: "08:30", event: "Employment Situation (Nonfarm Payrolls)", category: "jobs", importance: "high", ticker: null },
         ],
       },
     });
     render(<MorningReport />);
-    expect(await screen.findByText(/today 08:30 ET · CPI/)).toBeInTheDocument();
-    expect(screen.queryByText(/Jobless claims/)).not.toBeInTheDocument();
-    const more = screen.getByText("+2 later this week · calendar ›");
-    expect(more.closest("a")).toHaveAttribute("href", "/calendar");
+    await screen.findByRole("heading", { name: "Morning brief" });
+    expect(screen.queryByText(/CPI/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Nonfarm Payrolls/)).not.toBeInTheDocument();
   });
 
   it("gives the positioning line stronger type than the tone line (MB-04)", async () => {
@@ -114,7 +114,7 @@ describe("MorningReport — content (MB-01..MB-09)", () => {
     expect(gex.className).not.toContain("text-micro");
   });
 
-  it("labels the three prose lines with roles (MB-05)", async () => {
+  it("labels the three reads as tiles (MB-05)", async () => {
     mockFetchJson({
       "/api/argus/report/morning": {
         ...baseReport,
@@ -122,39 +122,36 @@ describe("MorningReport — content (MB-01..MB-09)", () => {
       },
     });
     render(<MorningReport />);
-    expect(await screen.findByText("Setup")).toBeInTheDocument();
+    expect(await screen.findByText("Tape")).toBeInTheDocument();
     expect(screen.getByText("Positioning")).toBeInTheDocument();
     expect(screen.getByText("Tone")).toBeInTheDocument();
   });
 
-  it("says the neutral tone once, with a link out, instead of twice (MB-06)", async () => {
+  it("says the neutral tone once, with a way through to the gauge (MB-06)", async () => {
     mockFetchJson({
       "/api/argus/report/morning": { ...baseReport, macro: { us_1d: 0.04, global_1d: 0.04 } },
     });
     render(<MorningReport />);
-    expect(await screen.findByText(/inside the ±0.05 neutral band/)).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /why/ })).toHaveAttribute("href", "/macro");
+    expect(await screen.findByText(/inside the ±0.05 neutral band/i)).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /macro/ })).toHaveAttribute("href", "/macro");
   });
 
-  it("omits the session chip entirely when no feed carries one (MB-07)", async () => {
+  it("splits the parsed GEX line into a verdict, its figures and the read (MB-07)", async () => {
     mockFetchJson({
       "/api/argus/report/morning": {
         ...baseReport,
         day_ahead: {
           ...baseReport.day_ahead,
-          earnings_today: [{
-            date: "2026-07-28", time_et: null, event: "AAPL earnings", category: "earnings",
-            importance: "high", ticker: "AAPL", session: "—", watchlist: true,
-          }],
+          gex_line: "GEX supportive (+2.1B, spot +0.8% vs zero-gamma) — dips likely bought",
         },
       },
     });
     render(<MorningReport />);
-    // Every earnings row is session "—", so a chip saying so printed on all of
-    // them and distinguished nothing. The row still names its ticker.
-    expect(await screen.findByText("AAPL")).toBeInTheDocument();
-    expect(screen.queryByText("time TBA")).not.toBeInTheDocument();
-    expect(screen.queryByText("—")).not.toBeInTheDocument();
+    expect(await screen.findByText("supportive")).toBeInTheDocument();
+    expect(screen.getByText("+2.1B, spot +0.8% vs zero-gamma")).toBeInTheDocument();
+    expect(screen.getByText("dips likely bought")).toBeInTheDocument();
+    // The tile is the way through to the page that owns the number.
+    expect(screen.getByRole("link", { name: /gamma/ })).toHaveAttribute("href", "/options/gamma");
   });
 
   it("renders futures as chips with the raw symbol suffixes stripped (MB-08)", async () => {
@@ -168,6 +165,49 @@ describe("MorningReport — content (MB-01..MB-09)", () => {
     expect(await screen.findByText("ES")).toBeInTheDocument();
     expect(screen.getByText("VIX")).toBeInTheDocument();
     expect(screen.queryByText("^VIX")).not.toBeInTheDocument();
+  });
+
+  it("gives the tape tile the same verdict → figures → read shape as its neighbours", async () => {
+    mockFetchJson({
+      "/api/argus/report/morning": {
+        ...baseReport,
+        futures: [
+          { symbol: "ES=F", change_pct: 0.42 },
+          { symbol: "^VIX", change_pct: -1.5 },
+        ],
+      },
+    });
+    render(<MorningReport />);
+    expect(await screen.findByText("risk-on")).toBeInTheDocument();
+    expect(screen.getByText(/Futures bid and vol offered/)).toBeInTheDocument();
+  });
+
+  it("won't call a direction on futures inside the flat band", async () => {
+    mockFetchJson({
+      "/api/argus/report/morning": {
+        ...baseReport,
+        futures: [
+          { symbol: "ES=F", change_pct: 0.04 },
+          { symbol: "^VIX", change_pct: -1.5 },
+        ],
+      },
+    });
+    render(<MorningReport />);
+    expect(await screen.findByText("flat")).toBeInTheDocument();
+  });
+
+  it("drops the arrow when the tone delta rounds to zero", async () => {
+    mockFetchJson({
+      "/api/argus/macro/tiles?window=1d&points=20": {
+        window: "1d",
+        tiles: [{ scope: "us", score: 0.42, delta_1d: 0.001 }],
+      },
+      "/api/argus/report/morning": baseReport,
+    });
+    render(<MorningReport />);
+    // +0.00 ▲ asserts a direction the printed figure doesn't have.
+    expect(await screen.findByText(/\+0\.00 1d/)).toBeInTheDocument();
+    expect(screen.queryByText(/▲/)).not.toBeInTheDocument();
   });
 
   it("stamps when the brief was built, not just its date (MB-09)", async () => {

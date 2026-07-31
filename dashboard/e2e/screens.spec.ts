@@ -230,18 +230,25 @@ test("state: today — filters active, and Everything else open", async ({ page 
     await page.goto("/");
     await freeze(page);
     await settle(page);
-    await page.locator("tbody tr").first().click({ timeout: 4000 });
+    // Filters persist in localStorage across the steps above, and the table
+    // only appears below the top three cards — so clear them and take the
+    // fullest group.
+    await page.getByRole("button", { name: /clear filters/i }).click({ timeout: 4000 });
+    await page.getByRole("tab", { name: /everything else/i }).click({ timeout: 4000 });
+    await page.waitForTimeout(400);
+    // A row click opens the ticker now; expansion has its own control.
+    await page.getByRole("button", { name: "Show details" }).first().click({ timeout: 4000 });
     await page.waitForTimeout(500);
     await shot(page, "state--today-row-expanded");
   });
 
-  await step("morning brief collapsed", async () => {
+  await step("masthead and tape", async () => {
     await page.goto("/");
     await freeze(page);
     await settle(page);
-    await page.getByText(/morning brief/i).first().click({ timeout: 4000 });
+    await page.locator("section", { hasText: "Today’s tape" }).first().scrollIntoViewIfNeeded();
     await page.waitForTimeout(300);
-    await shot(page, "state--today-brief-collapsed");
+    await shot(page, "state--today-masthead-tape");
   });
 });
 
@@ -528,6 +535,53 @@ test("contract: Phase 2 — calendar has events and every options tab resolves",
     else if (mode.segments.some((s) => !s))
       violations.push(`${route}: unlabelled segment in mode control`);
   }
+
+  expect(violations, violations.join("\n")).toEqual([]);
+});
+
+/** Aligned, Pulling back, Tech + fund, Everything else. */
+const SIGNAL_TABS = 4;
+
+test("contract: Phase 3 — Today is one masthead, one tape, one caveat", async ({ page }) => {
+  test.setTimeout(120_000);
+  await page.setViewportSize(LAPTOP);
+
+  const violations: string[] = [];
+
+  const home = await page.goto("/");
+  if (home?.status() !== 200) violations.push(`/: HTTP ${home?.status()}`);
+  await settle(page, 2500);
+
+  // It used to print above each of the four stacked tables.
+  const caveats = await page.getByText(/score magnitude does not predict returns/).count();
+  if (caveats !== 1) violations.push(`/: caveat printed ${caveats}×, expected once`);
+
+  const tabs = await page.locator('#main [role="tab"]').count();
+  if (tabs !== SIGNAL_TABS) violations.push(`/: ${tabs} signal tabs, expected ${SIGNAL_TABS}`);
+  const selected = await page.locator('#main [role="tab"][aria-selected="true"]').count();
+  if (selected !== 1) violations.push(`/: ${selected} tabs selected, expected exactly 1`);
+
+  // A tab label that is also a panel title says the same thing twice.
+  const dupes = await page.evaluate(() => {
+    const labels = new Set(
+      Array.from(document.querySelectorAll<HTMLElement>('#main [role="tab"]')).map((t) =>
+        (t.textContent ?? "").replace(/\d+$/, "").trim()
+      )
+    );
+    return Array.from(document.querySelectorAll<HTMLElement>("#main h2, #main h3"))
+      .map((h) => (h.textContent ?? "").trim())
+      .filter((t) => labels.has(t));
+  });
+  if (dupes.length > 0) violations.push(`/: tab label repeated as a heading: ${dupes.join(", ")}`);
+
+  // The masthead and the tape share one request; on a cold Argus that outlasts
+  // the settle above, so wait for the tape rather than assume it has landed.
+  const tape = page.getByText("Today’s tape");
+  await tape
+    .first()
+    .waitFor({ timeout: 30_000 })
+    .catch(() => {});
+  if ((await tape.count()) < 1) violations.push("/: no tape on the page");
 
   expect(violations, violations.join("\n")).toEqual([]);
 });
