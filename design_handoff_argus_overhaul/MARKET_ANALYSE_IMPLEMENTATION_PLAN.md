@@ -131,13 +131,15 @@ The two things a user hits and bounces off.
 - Horizon 30 days (60 behind a toggle), grouped **this week / next week / later**.
 - Every row: time (ET + local), importance as a visible rank, **consensus · prior · actual**.
 - Expandable per event: *what it measures*, *why it matters now*, *beat / miss ⇒ what moves* — the macro → rates → sector → your-watchlist chain.
-- Watchlist earnings overlaid on the same timeline, with session and implied move.
+- Watchlist earnings overlaid on the same timeline, with session and implied move **when the feed carries them**. `time_et` is NULL for every earnings row today and implied move has no source at all — omit the slot rather than printing `session TBA` on twenty rows. A field with no feed renders nothing, not a placeholder.
 - Cross-link both directions: event ⇄ affected tickers ⇄ the `/macro` scope.
 - Nav gains a `Calendar` entry.
 
 **Why first:** `+N more ›` currently sends you from a *calendar* to a FinBERT *sentiment gauge*. It is the worst navigational lie in the product and the user has hit it.
 
-**Acceptance:** the rail overflow lands on a page containing calendar events; `/calendar` shows ≥ 20 events; every high-importance event has all three of consensus, prior and the three-part explanation.
+**Acceptance:** the rail overflow lands on a page containing calendar events; `/calendar` shows ≥ 20 events; every high-importance event carries the three-part explanation, and the consensus · prior · actual columns exist and align whether or not they hold values.
+
+> **Ruled 2026-07-31 (Phase 2 review).** The data half of this clause is not shippable in v1: `argus/argus/calendar/schema.py` puts actual-vs-forecast out of scope and no feed stands behind it. The columns are built at 96px and populate the day one lands — that is the correct outcome, not a gap. Do not approximate, and do not delete the columns to make a test pass.
 
 ### 2.2 Options split — five routes `[2a] [2c] [2d] [2e] [3a]`
 
@@ -159,13 +161,15 @@ Keep `/odte/*` as redirects for one release.
 1. **Visible label on the mode switch.** Replace `<Toggle checked={showLive} label="Show live options ladder" />` (a 36×20 track whose only label is `aria-label`) with a two-segment `Live` / `EOD` control, provenance badge beside it. This is the control the user could not identify.
 2. **Strike density control.** `±10 / ±20 / ±40 / All`, persisted, default `±20`, driving **both** modes. Today `useLadder(symbol, 4, 0.06)` hard-codes ±6% — ~76 strikes per expiry on SPY — with no UI, while `/odte` calls the same hook with a different density. The live ladder needs the same parameter server-side.
 3. **Mirrored layout.** Strike down the centre, 2px divider each side, spanning `CALLS` / `PUTS` group headers, puts on `--put`. Column order from the strike outward: **Bid · Ask · Vol · OI · IV · GEX** on each side.
-4. **Column groups.** `Price` / `Flow` / `Gamma` / `Greeks`, greeks off by default. 23 columns → 13.
+4. **Column groups.** `Price` / `Flow` / `Gamma` / `Quality` / `Greeks` — quality (spread width, two-sided flag) and greeks both off by default. Default view is price + flow + gamma = 13 columns exactly. 23 → 13.
 5. **Grid affordances.** Jump-to-strike, centre-on-spot in both modes (live currently never centres and lands on the lowest strike), visible copy action on row hover/focus in both modes.
 6. **One GEX unit.** Live cells divide by 1000 under a header saying only `GEX`; classic uses `fmtGex()` with B/M. Put the unit in the header, use one formatter.
 7. **Levels strip grouped** into *Price levels* / *Regime* / *Data quality* at one precision.
 8. **Explainer to the bottom**, collapsed, with a `How to read this →` link in the header. It currently opens above the ladder on every visit *and* documents the classic layout while rendering in both modes.
 
 **Acceptance:** all five routes render; the mode control has visible text; changing density changes row count in both modes; the ladder is reachable in ≤ 1 scroll from page top.
+
+**`/options/greeks` scope.** Δ / Γ / ν / Θ only — the per-contract feed carries first-order greeks. Vanna and charm are cross-partials requiring a fitted vol surface this stack does not build. The page states the omission in one line rather than approximating it, and shows its EOD empty state honestly.
 
 ---
 
@@ -222,6 +226,8 @@ Keep `/odte/*` as redirects for one release.
 - **Sector names, not ETF tickers**, on the dots — with a legend mapping name → ETF.
 - Click a sector → the names you hold in it, from the signals data already loaded on `/`.
 - Cross-link to `/macro` — sentiment by sector and rotation by sector are the same question asked twice.
+
+> **Prerequisite — trails are blocked (verified 2026-07-31).** `reports/rotation_latest.json` is a flat 12-row snapshot overwritten daily: no dated retention, no prior position, so there is nothing to draw a trail *from*. There is also no rotation route in the API at all — `app/rotation/page.tsx` reads the file straight off disk. Before any trail work: dated retention or a history table, **plus** an actual endpoint. The endpoint is worth doing regardless of trails. Phase 3's sector heat strip (§3.1) needs only the current snapshot and is not blocked by this.
 
 ### 4.3 Watchlist `[4a]`
 **Files:** `app/watchlist/WatchlistClient.tsx` (648 lines)
