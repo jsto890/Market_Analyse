@@ -40,7 +40,7 @@ export default function RootLayout({
       <body className="font-sans">
         <a
           href="#main"
-          className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-[100] focus:rounded focus:bg-elevated focus:border focus:border-line focus:px-3 focus:py-1.5 focus:text-[13px] focus:text-foreground"
+          className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-[100] focus:rounded focus:bg-elevated focus:border focus:border-line focus:px-3 focus:py-1.5 focus:text-body focus:text-foreground"
         >
           Skip to content
         </a>

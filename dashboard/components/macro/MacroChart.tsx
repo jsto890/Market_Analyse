@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import type { MacroPoint } from "@/lib/macro";
+import { NEUTRAL_BAND, type MacroPoint } from "@/lib/macro";
 import { CHART_HEIGHT, resolveChartTokens } from "@/lib/chartConventions";
 
 export interface SpxBar { ts: string; Close: number }
@@ -36,23 +36,69 @@ export function MacroChart({ points, spx }: { points: MacroPoint[]; spx: SpxBar[
         grid: { vertLines: { visible: false }, horzLines: { color: tokens.line } },
         rightPriceScale: { borderColor: tokens.lineStrong },
         leftPriceScale: { visible: true, borderColor: tokens.lineStrong },
-        timeScale: { borderColor: tokens.lineStrong, timeVisible: true },
+        // secondsVisible off and a uniform tick format: with timeVisible alone
+        // the axis interleaved bare day numbers with clock times ("20 · 12:13 ·
+        // 21 · 12:01"), which reads as two different scales on one axis.
+        timeScale: {
+          borderColor: tokens.lineStrong,
+          timeVisible: true,
+          secondsVisible: false,
+          tickMarkFormatter: (time: number) => {
+            const d = new Date(time * 1000);
+            return `${d.getDate()} ${String(d.getHours()).padStart(2, "0")}:${String(
+              d.getMinutes()
+            ).padStart(2, "0")}`;
+          },
+        },
       });
 
+      // No series `title`: lightweight-charts paints it as a pill pinned to the
+      // left edge, directly over the price-scale ticks. The legend row above the
+      // chart already names both series.
       const macro = chart.addLineSeries({
-        color: tokens.accent, priceScaleId: "left", lineWidth: 2, title: "macro",
+        color: tokens.model, priceScaleId: "left", lineWidth: 2,
       });
-      macro.setData(clean(points.map((p) => ({ time: toSec(p.ts), value: p.score }))) as never);
+      const macroData = clean(points.map((p) => ({ time: toSec(p.ts), value: p.score })));
+      macro.setData(macroData as never);
+
+      // The ±0.05 neutral band was applied invisibly in toneClass — draw it
+      // so a +0.04 reading is visibly inside the band, not just muted (MAC-06).
+      for (const level of [NEUTRAL_BAND, 0, -NEUTRAL_BAND]) {
+        macro.createPriceLine({
+          price: level,
+          color: level === 0 ? tokens.lineStrong : tokens.line,
+          lineWidth: 1,
+          lineStyle: 2,
+          // No axis pill and no title: both render at the left edge on top of
+          // the price-scale ticks (measured collision — "+0.05 neutral edge"
+          // overprinted the 0.05/0.04 labels). The dashed lines carry the band,
+          // and the legend above the chart states the ±0.05 threshold.
+          axisLabelVisible: false,
+        });
+      }
 
       if (spx.length) {
         const spy = chart.addLineSeries({
-          color: tokens.muted, priceScaleId: "right", lineWidth: 1, title: "SPY",
+          color: tokens.muted, priceScaleId: "right", lineWidth: 1,
           priceLineVisible: false, lastValueVisible: false,
         });
-        spy.setData(clean(spx.map((b) => ({ time: toSec(b.ts), value: b.Close }))) as never);
+        // Clip the benchmark to the sentiment span — otherwise a longer bar
+        // history compresses the macro line into the right edge.
+        const from = macroData.length ? macroData[0].time : -Infinity;
+        const to = macroData.length ? macroData[macroData.length - 1].time : Infinity;
+        const bars = clean(spx.map((b) => ({ time: toSec(b.ts), value: b.Close })))
+          .filter((b) => b.time >= from && b.time <= to);
+        spy.setData((bars.length ? bars : []) as never);
       }
 
-      chart.timeScale().fitContent();
+      // fitContent alone puts the first data point at x=0, so the leftmost tick
+      // label ("20 10:05") is drawn centred on the edge and loses its leading
+      // digit. Pad the logical range by a couple of bars so every tick label
+      // has room to render whole.
+      const ts = chart.timeScale();
+      ts.fitContent();
+      const range = ts.getVisibleLogicalRange();
+      if (range) ts.setVisibleLogicalRange({ from: range.from - 2, to: range.to + 2 });
       (ref.current as HTMLDivElement & { _chart?: unknown })._chart = chart;
     });
 

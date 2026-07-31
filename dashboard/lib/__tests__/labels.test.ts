@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   HEADER_GLOSS,
   QUADRANT_LABEL,
+  QUADRANT_GLOSS,
   COMBO_POSITION_LABEL,
   COMBO_LETTER_LABEL,
   LADDER_CODE_LABEL,
@@ -61,6 +62,23 @@ describe("labels.GREEK_LABEL", () => {
     expect(GREEK_LABEL.delta.symbol).toBe("Δ");
     expect(GREEK_LABEL.theta.symbol).toBe("Θ");
     expect(GREEK_LABEL.rho.gloss).toContain("interest rate");
+  });
+});
+
+describe("labels.QUADRANT_GLOSS (RO-08)", () => {
+  it("glosses every quadrant the chart can draw", () => {
+    for (const key of Object.keys(QUADRANT_LABEL) as (keyof typeof QUADRANT_LABEL)[]) {
+      expect(QUADRANT_GLOSS[key]).toBeTruthy();
+    }
+  });
+
+  it("says which half of each axis the quadrant sits on, not just the word again", () => {
+    // "Weakening" is on the strong side of RS-Ratio — the gloss is the only
+    // thing that stops that reading backwards.
+    expect(QUADRANT_GLOSS.weakening).toMatch(/^strong/);
+    expect(QUADRANT_GLOSS.leading).toMatch(/^strong/);
+    expect(QUADRANT_GLOSS.improving).toMatch(/^weak/);
+    expect(QUADRANT_GLOSS.lagging).toMatch(/^weak/);
   });
 });
 

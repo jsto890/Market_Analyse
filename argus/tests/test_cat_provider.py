@@ -59,6 +59,41 @@ def test_empty_symbol_safe(monkeypatch):
     assert c["next_earnings"] is None and c["last_earnings"] is None and c["analyst"] == []
 
 
+def test_next_earnings_skips_the_report_already_out():
+    # yfinance returns the window around today, oldest first, so the naive
+    # ed[0] is the report that already happened.
+    cal = lambda s: {"Earnings Date": [pd.Timestamp("2026-05-28").date(),
+                                       pd.Timestamp("2026-08-01").date()]}
+    c = build_catalysts("AAPL", today="2026-06-13", calendar=cal,
+                        upgrades=lambda s: None, history=lambda s, **k: None,
+                        past_earnings=lambda s: None)
+    assert c["next_earnings"] == "2026-08-01"
+
+
+def test_next_earnings_is_none_when_every_date_is_past():
+    cal = lambda s: {"Earnings Date": [pd.Timestamp("2026-05-28").date()]}
+    c = build_catalysts("AAPL", today="2026-06-13", calendar=cal,
+                        upgrades=lambda s: None, history=lambda s, **k: None,
+                        past_earnings=lambda s: None)
+    assert c["next_earnings"] is None
+
+
+def test_next_earnings_counts_today_as_next():
+    cal = lambda s: {"Earnings Date": [pd.Timestamp("2026-06-13").date()]}
+    c = build_catalysts("AAPL", today="2026-06-13", calendar=cal,
+                        upgrades=lambda s: None, history=lambda s, **k: None,
+                        past_earnings=lambda s: None)
+    assert c["next_earnings"] == "2026-06-13"
+
+
+def test_next_earnings_handles_a_tz_aware_single_value():
+    cal = lambda s: {"Earnings Date": pd.Timestamp("2026-08-01", tz="America/New_York")}
+    c = build_catalysts("AAPL", today="2026-06-13", calendar=cal,
+                        upgrades=lambda s: None, history=lambda s, **k: None,
+                        past_earnings=lambda s: None)
+    assert c["next_earnings"] == "2026-08-01"
+
+
 def test_tz_aware_indices_do_not_raise():
     up = pd.DataFrame({"Firm": ["UBS"], "ToGrade": ["Buy"], "FromGrade": ["Neutral"],
                        "Action": ["up"]},

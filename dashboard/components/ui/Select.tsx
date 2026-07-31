@@ -17,7 +17,7 @@ const Select = forwardRef<HTMLSelectElement, SelectProps>(function Select(
 ) {
   const cls = [
     "h-8 w-full cursor-pointer appearance-none rounded border border-line bg-raised",
-    "pl-2.5 pr-7 text-[13px] text-foreground focus:border-accent",
+    "pl-2.5 pr-7 text-body text-foreground focus:border-accent",
     className ?? "",
   ].join(" ");
 

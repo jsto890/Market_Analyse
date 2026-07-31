@@ -72,13 +72,23 @@ def test_clear_earnings_keeps_seed(tmp_path):
 def test_earnings_event_from_calendar():
     import pandas as pd
     cal = {"Earnings Date": [pd.Timestamp("2026-07-30")]}
-    ev = earnings_event("NVDA", cal)
+    ev = earnings_event("NVDA", cal, today="2026-07-01")
     assert ev["date"] == "2026-07-30"
     assert ev["ticker"] == "NVDA" and ev["category"] == "earnings"
     assert ev["dedup_key"] == "earnings:NVDA:2026-07-30"
     # no date → no event
-    assert earnings_event("NVDA", {}) is None
+    assert earnings_event("NVDA", {}, today="2026-07-01") is None
     assert next_earnings_date(None) is None
+
+
+def test_next_earnings_date_skips_the_report_already_out():
+    import pandas as pd
+    # yfinance lists the window around today, oldest first.
+    cal = {"Earnings Date": [pd.Timestamp("2026-05-28"), pd.Timestamp("2026-08-12")]}
+    assert next_earnings_date(cal, today="2026-07-01") == "2026-08-12"
+    assert next_earnings_date(cal, today="2026-09-01") is None
+    # Reporting today is still ahead of you.
+    assert next_earnings_date(cal, today="2026-08-12") == "2026-08-12"
 
 
 def test_fetch_earnings_is_failure_tolerant():

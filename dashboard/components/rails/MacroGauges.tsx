@@ -2,23 +2,25 @@
 
 import Link from "next/link";
 import { useMacro, scopeLabel, toneClass, type MacroGauge } from "@/lib/macro";
+import Loading from "@/components/ui/Loading";
 
-/** A compact −1..1 bar centred at 0. */
+/** A compact −1..1 bar centred at 0. The score is model output, so it takes
+ * --model rather than P&L green/red; direction is carried by the bar's side. */
 function Gauge({ g }: { g: MacroGauge }) {
   const pct = Math.max(-1, Math.min(1, g.score)) * 50; // ±50% from centre
   const pos = g.score >= 0;
   return (
     <div className="px-3 py-1">
       <div className="flex items-baseline justify-between">
-        <span className="text-[11px] font-mono text-muted truncate">{scopeLabel(g.scope)}</span>
-        <span className={`text-[11px] font-mono tabular-nums ${toneClass(g.score)}`}>
+        <span className="eyebrow truncate">{scopeLabel(g.scope)}</span>
+        <span className={`text-data ${toneClass(g.score)}`}>
           {g.score >= 0 ? "+" : ""}{g.score.toFixed(2)}
         </span>
       </div>
       <div className="relative h-1 mt-0.5 bg-elevated rounded-full overflow-hidden">
         <span className="absolute left-1/2 top-0 h-full w-px bg-line" />
         <span
-          className={`absolute top-0 h-full ${pos ? "bg-pos" : "bg-neg"}`}
+          className="absolute top-0 h-full bg-model"
           style={{ left: pos ? "50%" : `${50 + pct}%`, width: `${Math.abs(pct)}%` }}
         />
       </div>
@@ -40,13 +42,11 @@ export function MacroGauges({ window = "1d" }: { window?: string }) {
   return (
     <div className="border-t border-line-strong">
       <div className="h-[24px] flex items-center justify-between px-3">
-        <span className="text-[11px] font-medium uppercase tracking-[0.08em] text-muted font-mono leading-none">
-          Macro
-        </span>
-        <Link href={`/macro?window=${window}`} className="text-[11px] font-mono text-muted hover:text-accent">{window} ›</Link>
+        <span className="eyebrow leading-none">Macro</span>
+        <Link href={`/macro?window=${window}`} className="text-micro font-mono text-muted hover:text-accent">{window} ›</Link>
       </div>
       {show.length === 0
-        ? <p className="px-3 py-1 text-[11px] font-mono text-muted-2">building…</p>
+        ? <Loading variant="lines" count={2} label="Building macro gauges" className="px-3 py-1.5" />
         : show.map((g) => <Gauge key={`${g.scope}-${g.window}`} g={g} />)}
     </div>
   );

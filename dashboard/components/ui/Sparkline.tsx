@@ -2,9 +2,11 @@ interface SparklineProps {
   values: number[];
   w?: number;
   h?: number;
+  /** Stroke tone class — the line draws in currentColor. */
+  className?: string;
 }
 
-export default function Sparkline({ values, w = 120, h = 32 }: SparklineProps) {
+export default function Sparkline({ values, w = 120, h = 32, className = "text-muted" }: SparklineProps) {
   const clean = values.filter(Number.isFinite);
 
   if (clean.length < 2) {
@@ -47,7 +49,7 @@ export default function Sparkline({ values, w = 120, h = 32 }: SparklineProps) {
         strokeWidth="1.5"
         strokeLinejoin="round"
         strokeLinecap="round"
-        className="text-muted"
+        className={className}
       />
     </svg>
   );

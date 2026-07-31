@@ -19,7 +19,39 @@
   --amber: #d29922;
   --teal: #2dd4bf;
   --muted-2: #737b8c;
+  /* Puts. They previously borrowed --red, which also means "down" — so a rising
+   * put read red for two contradictory reasons. */
+  --put: #e372b0;
+  /* Calls. Alias of --teal so the calls/puts pair is named, not inferred. */
+  --call: var(--teal);
+  /* Model output: scores, conviction, verdicts. Never P&L green/red — the app's
+   * own caveat says magnitude does not predict returns (r≈0). */
+  --model: #9d7cf5;
+  /* Reading copy below --text: explanations, card body, read-this strips. */
+  --text-2: #c8cede;
+  /* Tertiary: subtitles, supporting detail under a heading. */
+  --text-3: #9aa3b4;
   --nav-h: 46px;
+  --rail-l: 200px;
+  --rail-r: 288px;
+  /* Six type roles. Declared here for non-Tailwind consumers (charts, canvas
+   * labels) so they can't drift from the utility classes. 11px is an eyebrow
+   * and column-header size only — it is not a content size. */
+  --fs-micro: 11px;
+  --fs-body: 13px;
+  --fs-data: 13px;
+  --fs-title: 15px;
+  --fs-headline: 20px;
+  --fs-display: 28px;
+  /* Page rhythm. Declared in px, not rem: the 14px root would render Tailwind's
+   * py-6/space-y-5 as 21px/17.5px. `Page` is the only consumer. */
+  --page-x: 24px;
+  --page-y: 24px;
+  --stack: 20px; /* between page sections */
+  --stack-tight: 12px; /* within a section */
+  /* Content caps. Three, and only three. */
+  --w-prose: 880px;
+  --w-wide: 1240px;
   /* Aliases so Tailwind's background/foreground tokens resolve. */
   --background: var(--bg);
   --foreground: var(--text);
@@ -39,12 +71,22 @@
   border-radius: 2px;
 }
 
-html,
+html {
+  background: var(--bg);
+  /* 14px root is load-bearing for rem-based *spacing* utilities (p-4 = 14px).
+   * It also rescales rem-based *font-size* utilities, which is why every size
+   * token in tailwind.config.ts is declared in px — never add a rem font-size. */
+  font-size: 14px;
+}
+
 body {
   background: var(--bg);
   color: var(--text);
   font-family: var(--font-sans), system-ui, sans-serif;
-  font-size: 14px;
+  /* Inherited text lands on the scale rather than on the 14px rem root — which
+   * is a spacing unit, not a type step. The audit found 111–330 elements per
+   * route rendering at 14px purely because nothing set a size. */
+  font-size: var(--fs-body);
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
@@ -83,6 +125,30 @@ body {
   font-feature-settings: "tnum" 1, "zero" 1;
 }
 
+/* `text-data` is the numeric role: 13px mono with tabular figures. Tailwind's
+ * fontSize plugin supplies the size/line-height; family and figures live here
+ * because a fontSize tuple cannot express them. Declared in the components
+ * layer so a call site can still override family or weight with a utility. */
+@layer components {
+  .text-data {
+    font-family: var(--font-mono), ui-monospace, monospace;
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum" 1, "zero" 1;
+  }
+  /* `text-display` is the one number (or symbol) a page is about. */
+  .text-display {
+    font-family: var(--font-mono), ui-monospace, monospace;
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum" 1, "zero" 1;
+  }
+  /* `text-micro` is the label role — mono, uppercase, tracked. It never
+   * carries a sentence; that is what `body` and `data` are for. */
+  .text-micro {
+    font-family: var(--font-mono), ui-monospace, monospace;
+    text-transform: uppercase;
+  }
+}
+
 /* Smooth interactive feedback without animating layout. */
 a,
 button,
@@ -106,7 +172,8 @@ select {
 @layer components {
   /* Section eyebrow: uppercase, tracked, muted micro-label. */
   .eyebrow {
-    @apply text-[11px] font-medium uppercase tracking-[0.1em] text-muted;
+    @apply text-micro font-medium uppercase text-muted;
+    font-family: var(--font-mono), ui-monospace, monospace;
   }
   /* Accent tick preceding a section title. */
   .tick::before {

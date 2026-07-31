@@ -20,7 +20,8 @@ Single-user, no auth (binds to 127.0.0.1 by default). Argus feature set:
 from __future__ import annotations
 
 import asyncio
-from datetime import datetime, timezone
+import json
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Optional, List
 
@@ -65,7 +66,10 @@ from ..news.schema import ensure_news_schema
 from ..news.store import fetch_after, fetch_latest
 from ..news.ticker_news import ticker_news
 from ..macro.schema import ensure_macro_schema
-from ..macro.store import latest_macro, macro_series
+from ..macro.aggregate import WINDOWS as MACRO_WINDOWS, contributors, tile_stats, _parse_ts
+from ..macro.scope import scopes_for
+from ..macro.store import (latest_macro, macro_series, macro_series_all,
+                           scored_news_detail_since)
 from ..calendar.schema import ensure_calendar_schema
 from ..calendar.store import upcoming as calendar_upcoming
 from ..options_live.session import Session
@@ -197,6 +201,37 @@ def build_app() -> FastAPI:
             conn.close()
         return {"scope": scope, "window": window, "points": points}
 
+    @app.get("/api/macro/tiles")
+    def macro_tiles_route(window: str = "1d", points: int = 20):
+        """Latest score per scope with 1h/1d change and a sparkline — one query,
+        so the tile grid can show change rather than a bare number."""
+        conn = get_conn()
+        ensure_macro_schema(conn)
+        try:
+            rows = [dict(r) for r in macro_series_all(conn, window, limit=max(points, 80))]
+        finally:
+            conn.close()
+        tiles = tile_stats(rows, datetime.now(timezone.utc), spark_points=points)
+        return {"window": window, "tiles": tiles}
+
+    @app.get("/api/macro/contributors")
+    def macro_contributors_route(scope: str = "global", window: str = "1d", limit: int = 20):
+        """The scored headlines behind one gauge, ranked by their weighted share."""
+        if window not in MACRO_WINDOWS:
+            raise HTTPException(400, f"unknown window {window!r}")
+        now = datetime.now(timezone.utc)
+        since = (now - timedelta(seconds=MACRO_WINDOWS[window])).isoformat(timespec="seconds")
+        conn = get_conn()
+        ensure_macro_schema(conn)
+        try:
+            rows = scored_news_detail_since(conn, since)
+        finally:
+            conn.close()
+        items = [{"ts": _parse_ts(r["ts"]), "score": r["score"], "headline": r["headline"],
+                  "ticker": r["ticker"], "source": r["source"], "url": r["url"],
+                  "scopes": scopes_for(r["ticker"], r["headline"])} for r in rows]
+        return contributors(items, now, window, scope, limit=limit)
+
     @app.get("/api/calendar")
     def calendar(days: int = 7):
         from datetime import date
@@ -210,9 +245,9 @@ def build_app() -> FastAPI:
         return {"today": today, "days": days, "events": events}
 
     @app.get("/api/report/morning")
-    def report_morning():
+    def report_morning(limit: int = 6, days: int = 7):
         from ..report.morning import generate
-        return generate()
+        return generate(limit=limit, days=days)
 
     @app.get("/api/unusual/{symbol}")
     def unusual(symbol: str):
@@ -462,6 +497,13 @@ def build_app() -> FastAPI:
                 "analyst_target": _num("targetMeanPrice"),
                 "analyst_rating": info.get("recommendationKey"),
                 "short_pct_float": _num("shortPercentOfFloat", 100.0),
+                # Identity + liquidity context for the ticker header.
+                "sector": info.get("sector"),
+                "industry": info.get("industry"),
+                "week52_high": _num("fiftyTwoWeekHigh"),
+                "week52_low": _num("fiftyTwoWeekLow"),
+                "volume": _num("volume") or _num("regularMarketVolume"),
+                "avg_volume": _num("averageVolume") or _num("averageDailyVolume10Day"),
             }
             if all(out[k] is None for k in ("pe_ratio", "eps_ttm", "analyst_target")):
                 return {"error": f"no fundamentals for {sym} (IBKR + yfinance)", "symbol": sym}
@@ -593,9 +635,20 @@ def build_app() -> FastAPI:
         conn = get_conn()
         try:
             rows = conn.execute(
-                "SELECT id, ts, title, body FROM alerts_log ORDER BY id DESC LIMIT ?",
+                "SELECT id, ts, title, body, payload_json FROM alerts_log ORDER BY id DESC LIMIT ?",
                 (limit,)).fetchall()
-            return {"items": [dict(r) for r in rows]}
+            items = []
+            for r in rows:
+                item = dict(r)
+                raw = item.pop("payload_json", None)
+                # Rule fires carry {rule_id, kind, symbol}; manually dispatched
+                # alerts carry whatever the caller sent, which may be nothing.
+                try:
+                    item["payload"] = json.loads(raw) if raw else {}
+                except (TypeError, ValueError):
+                    item["payload"] = {}
+                items.append(item)
+            return {"items": items}
         finally:
             conn.close()
 

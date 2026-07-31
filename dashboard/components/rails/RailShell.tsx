@@ -10,7 +10,7 @@ export default function RailShell({ children }: { children: React.ReactNode }) {
        * visually between the rails via order-2; LeftRail/RightRail carry
        * order-1/order-3 on their own <aside> roots (G-11, A11Y-05). */}
       {/* div, not <main>: 4 of 7 pages already render their own <main>; nested <main> is invalid HTML */}
-      <div id="main" tabIndex={-1} className="order-2 flex-1 min-w-0 overflow-y-auto">
+      <div id="main" tabIndex={-1} className="order-2 flex min-w-0 flex-1 flex-col overflow-y-auto">
         {children}
       </div>
       <LeftRail />

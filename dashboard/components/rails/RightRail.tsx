@@ -1,10 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { AlertTriangle } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useNewsFeed, relTime, sortNewsByTs, type NewsItem } from "@/lib/news";
 import { useWatchlistTickers } from "@/lib/watchlist";
+import Loading from "@/components/ui/Loading";
+import Empty from "@/components/ui/Empty";
+import Failed from "@/components/ui/Failed";
 
 const LS_KEY = "rail-right-collapsed";
 
@@ -31,7 +33,9 @@ export function RightRail() {
     const stored = readStored();
     if (stored === "1") setCollapsed(true);
     else if (stored === "0") setCollapsed(false);
-    else setCollapsed(window.innerWidth < 1280);
+    // Default closed at every width: the feed is ambient, and 260px of
+    // permanent chrome is the single largest tax on the content column.
+    else setCollapsed(true);
 
     if (typeof window.matchMedia !== "function") return;
     const mql = window.matchMedia(NARROW_QUERY);
@@ -87,17 +91,17 @@ export function RightRail() {
         {/* Expand button — top, per spec §6.2 */}
         <button
           onClick={toggle}
-          aria-label="Expand news rail"
+          aria-label="Expand chatter rail"
           className="w-9 h-9 flex items-center justify-center text-muted hover:text-foreground hover:bg-elevated"
         >
-          <span className="text-[14px] leading-none select-none">‹</span>
+          <span className="text-body leading-none select-none">‹</span>
         </button>
-        {/* Rotated "NEWS" label per spec §6.2 */}
+        {/* Rotated label per spec §6.2 */}
         <span
-          className="text-[11px] font-mono font-medium uppercase tracking-[0.12em] text-muted mt-4"
+          className="eyebrow tracking-[0.12em] mt-4"
           style={{ writingMode: "vertical-rl", transform: "rotate(180deg)" }}
         >
-          NEWS
+          CHATTER &amp; FLOW
         </span>
       </aside>
     );
@@ -110,11 +114,21 @@ export function RightRail() {
       onScroll={handleScroll}
       className="order-3 w-[260px] flex-shrink-0 bg-surface border-l border-line font-mono sticky top-[var(--nav-h)] h-[calc(100vh-var(--nav-h))] overflow-y-auto"
     >
-      {/* Header row per spec §7.1 — NEWS label + live item count */}
-      <div className="h-[24px] flex items-center justify-between px-3 border-b border-line">
-        <span className="text-[11px] font-medium uppercase tracking-[0.08em] text-muted font-mono leading-none">
-          NEWS
-        </span>
+      {/* Header row — collapse control lives here, not at the bottom of a
+       * scrolling column where a long feed pushes it out of reach. */}
+      <div className="sticky top-0 z-10 flex h-[26px] items-center justify-between gap-2 border-b border-line bg-surface px-2">
+        <button
+          onClick={toggle}
+          aria-label="Collapse chatter rail"
+          className="-ml-1 flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-sm text-muted hover:bg-elevated hover:text-foreground"
+        >
+          <span className="text-body leading-none select-none">›</span>
+        </button>
+        {/* Not "News": this feed is Discord chatter and whale prints, never
+         * press headlines — those live on the ticker page's News card, from a
+         * different table entirely. One label for each, so neither reads as a
+         * copy of the other. */}
+        <span className="mr-auto eyebrow leading-none">Chatter &amp; Flow</span>
         <NewsFeedHeader />
       </div>
 
@@ -146,15 +160,6 @@ export function RightRail() {
 
       {/* Live feed body */}
       <NewsFeedBody filter={filter} />
-
-      {/* Collapse button per spec §8.5 — right rail: expanded shows › (push outward = collapse) */}
-      <button
-        onClick={toggle}
-        aria-label="Collapse news rail"
-        className="w-9 h-9 flex items-center justify-center text-muted hover:text-foreground hover:bg-elevated"
-      >
-        <span className="text-[14px] leading-none select-none">›</span>
-      </button>
     </aside>
   );
 }
@@ -180,10 +185,10 @@ function shortSource(s: string): string {
 // ── Header right-side: item count indicator ───────────────────────────────────
 function NewsFeedHeader() {
   const { data, error } = useNewsFeed();
-  if (error) return <span className="text-[11px] text-warn leading-none">offline</span>;
-  if (!data) return <span className="text-[11px] text-muted opacity-40 leading-none">…</span>;
+  if (error) return <span className="text-micro text-warn leading-none">offline</span>;
+  if (!data) return <span className="text-micro text-muted opacity-40 leading-none">…</span>;
   return (
-    <span className="text-[11px] text-muted leading-none">
+    <span className="text-data text-muted leading-none">
       {data.items.length}
     </span>
   );
@@ -196,22 +201,16 @@ function NewsFeedBody({ filter }: { filter: "all" | "mine" }) {
 
   if (error) {
     return (
-      <p className="flex items-center gap-1.5 text-[11px] text-warn px-3 pt-3 leading-relaxed">
-        <AlertTriangle size={12} strokeWidth={2} className="flex-shrink-0" />
-        news feed offline
-      </p>
+      <Failed
+        title="Chatter feed offline"
+        message="The ingest service isn’t responding."
+        className="m-3"
+      />
     );
   }
 
   if (!data) {
-    // Loading skeleton
-    return (
-      <div className="px-3 pt-4 flex flex-col gap-3">
-        <div className="h-3 bg-elevated rounded animate-pulse" style={{ width: "70%" }} />
-        <div className="h-3 bg-elevated rounded animate-pulse" style={{ width: "55%" }} />
-        <div className="h-3 bg-elevated rounded animate-pulse" style={{ width: "80%" }} />
-      </div>
-    );
+    return <Loading variant="lines" count={3} label="Loading news" className="px-3 pt-4" />;
   }
 
   const sorted = sortNewsByTs(data.items);
@@ -221,34 +220,71 @@ function NewsFeedBody({ filter }: { filter: "all" | "mine" }) {
 
   if (items.length === 0) {
     return (
-      <p className="text-[11px] text-muted opacity-70 px-3 pt-3 leading-relaxed">
-        {filter === "mine"
-          ? "no news for your watchlist tickers yet"
-          : "no news yet — feed starts when the ingest service runs"}
-      </p>
+      <Empty
+        message={
+          filter === "mine"
+            ? "Nothing yet on the tickers on your watchlist."
+            : "No chatter or flow yet — the feed starts when the ingest service runs."
+        }
+      />
     );
   }
 
+  // An undifferentiated column of 60 rows reads as one blur; the hour is the
+  // unit a trader recalls in ("what came out after the open"). Rows stay in
+  // time order — the headers only say where each hour starts.
   return (
     <div>
-      {items.map((item: NewsItem) => (
-        <NewsRow key={item.id} item={item} />
+      {groupByHour(items).map(([label, group]) => (
+        <div key={label}>
+          <div className="sticky top-[26px] z-[9] border-b border-line bg-elevated px-3 py-0.5">
+            <span className="eyebrow leading-none">{label}</span>
+          </div>
+          {group.map((item: NewsItem) => (
+            <NewsRow key={item.id} item={item} onWatchlist={!!item.ticker && watchlist.has(item.ticker)} />
+          ))}
+        </div>
       ))}
     </div>
   );
 }
 
-// ── Individual news row ───────────────────────────────────────────────────────
-function NewsRow({ item }: { item: NewsItem }) {
-  const isBreaking = Boolean(item.is_breaking);
-  const isWhale = item.source === "whale";
+/** Buckets an already-sorted feed by clock hour, keeping order. The date is
+ *  carried on the label only when the item is not from today — the common case
+ *  is a feed that never leaves the current session. */
+function groupByHour(items: NewsItem[]): [string, NewsItem[]][] {
+  const now = new Date();
+  const out: [string, NewsItem[]][] = [];
+  for (const item of items) {
+    const d = new Date(item.ts.replace(" ", "T"));
+    if (Number.isNaN(d.getTime())) {
+      if (out.length === 0 || out[out.length - 1][0] !== "Undated") out.push(["Undated", []]);
+      out[out.length - 1][1].push(item);
+      continue;
+    }
+    const sameDay = d.toDateString() === now.toDateString();
+    const hh = `${String(d.getHours()).padStart(2, "0")}:00`;
+    const label = sameDay
+      ? hh
+      : `${d.toLocaleDateString(undefined, { month: "short", day: "numeric" })} · ${hh}`;
+    if (out.length === 0 || out[out.length - 1][0] !== label) out.push([label, []]);
+    out[out.length - 1][1].push(item);
+  }
+  return out;
+}
 
+// ── Individual news row ───────────────────────────────────────────────────────
+function NewsRow({ item, onWatchlist }: { item: NewsItem; onWatchlist: boolean }) {
+  const isBreaking = Boolean(item.is_breaking);
+
+  // No per-source accent stripe: the feed is predominantly whale prints, so a
+  // teal border on every row carried no signal. Source is already stated in
+  // the meta line. Only BREAKING — genuinely exceptional — gets an edge mark.
   return (
     <div
       className={[
         "px-3 py-1.5 border-b border-line/50",
         isBreaking ? "border-l-2 border-neg pl-2" : "",
-        isWhale && !isBreaking ? "border-l-2 border-teal pl-2" : "",
       ]
         .filter(Boolean)
         .join(" ")}
@@ -256,20 +292,25 @@ function NewsRow({ item }: { item: NewsItem }) {
       {/* Top meta line */}
       <div className="flex items-center gap-1.5 mb-0.5">
         {isBreaking && (
-          <span className="text-[11px] font-medium text-neg mr-1 leading-none">
+          <span className="text-micro font-medium text-neg mr-1 leading-none">
             BREAKING
           </span>
         )}
-        <span className="text-[11px] text-muted leading-none">
+        <span className="text-data text-muted leading-none">
           {relTime(item.ts)}
         </span>
-        <span className="text-[11px] text-muted uppercase leading-none">
+        <span className="eyebrow leading-none">
           {shortSource(item.source)}
         </span>
         {item.ticker && (
+          /* A name you hold reads differently from a name you don't. The chip
+             is the only thing that separates the two in a 60-row feed. */
           <Link
             href={`/t/${item.ticker}`}
-            className="text-[11px] text-accent leading-none ml-auto -my-1.5 py-1.5 px-1"
+            aria-label={onWatchlist ? `${item.ticker} — on your watchlist` : item.ticker}
+            className={`text-data leading-none ml-auto -my-1.5 py-1.5 px-1 ${
+              onWatchlist ? "rounded-sm bg-accent/15 text-accent font-medium" : "text-muted"
+            }`}
           >
             {item.ticker}
           </Link>
@@ -282,13 +323,12 @@ function NewsRow({ item }: { item: NewsItem }) {
           href={item.url}
           target="_blank"
           rel="noreferrer"
-          title={item.headline}
-          className="text-[12px] text-foreground leading-snug line-clamp-3 block"
+          className="text-body text-foreground leading-snug block"
         >
           {item.headline}
         </a>
       ) : (
-        <p title={item.headline} className="text-[12px] text-foreground leading-snug line-clamp-3">
+        <p className="text-body text-foreground leading-snug">
           {item.headline}
         </p>
       )}

@@ -1,6 +1,7 @@
 "use client";
 
-import * as Tooltip from "@radix-ui/react-tooltip";
+import Empty from "@/components/ui/Empty";
+import InfoTip from "@/components/ui/InfoTip";
 import { useLocalStorage } from "@/lib/useLocalStorage";
 import { useTickerData } from "@/lib/useTickerData";
 import { deriveLevels } from "@/lib/levels";
@@ -21,95 +22,6 @@ function stopAnchorLabel(anchor: string): string {
   if (n.startsWith("ema200") || n.startsWith("sma200")) return "Stop rides the 200-day moving average";
   if (n.startsWith("atr")) return "Stop set via ATR volatility band";
   return anchor;
-}
-
-function InfoTooltip({ text }: { text: string }) {
-  return (
-    <Tooltip.Root>
-      <Tooltip.Trigger asChild>
-        <button
-          type="button"
-          className="ml-1 cursor-default select-none font-mono text-[11px] leading-none text-muted"
-          aria-label="info"
-        >
-          i
-        </button>
-      </Tooltip.Trigger>
-      <Tooltip.Portal>
-        <Tooltip.Content
-          className="z-50 max-w-[240px] rounded border border-line bg-elevated px-2 py-1 text-[12px] text-muted shadow-lg"
-          sideOffset={4}
-        >
-          {text}
-          <Tooltip.Arrow className="fill-elevated" />
-        </Tooltip.Content>
-      </Tooltip.Portal>
-    </Tooltip.Root>
-  );
-}
-
-/** Horizontal range bar plotting stop / entry / current / target as positions. */
-function PriceRail({
-  stop,
-  entry,
-  target,
-  price,
-}: {
-  stop: number;
-  entry: number;
-  target: number;
-  price: number | null;
-}) {
-  const vals = [stop, entry, target, price].filter((v): v is number => v != null);
-  const lo = Math.min(...vals);
-  const hi = Math.max(...vals);
-  const span = hi - lo || 1;
-  const pos = (v: number) => ((v - lo) / span) * 100;
-  const priceLeft = price != null ? Math.min(96, Math.max(4, pos(price))) : null;
-  return (
-    <div className="pt-4" data-testid="price-rail">
-      <div className="relative h-1.5 rounded-full bg-line">
-        <div
-          className="absolute h-full rounded-l-full bg-neg/40"
-          style={{ left: `${pos(Math.min(stop, entry))}%`, width: `${Math.abs(pos(entry) - pos(stop))}%` }}
-        />
-        <div
-          className="absolute h-full rounded-r-full bg-pos/40"
-          style={{ left: `${pos(Math.min(entry, target))}%`, width: `${Math.abs(pos(target) - pos(entry))}%` }}
-        />
-        {[
-          { v: stop, cls: "bg-neg", label: "S" },
-          { v: entry, cls: "bg-foreground", label: "E" },
-          { v: target, cls: "bg-pos", label: "T" },
-        ].map((m) => (
-          <div
-            key={m.label}
-            className={`absolute top-1/2 h-2.5 w-0.5 -translate-y-1/2 ${m.cls}`}
-            style={{ left: `${pos(m.v)}%` }}
-          />
-        ))}
-        {price != null && priceLeft != null && (
-          <>
-            <span
-              className="absolute -top-4 -translate-x-1/2 whitespace-nowrap font-mono text-[11px] tabular-nums text-accent"
-              style={{ left: `${priceLeft}%` }}
-            >
-              {price.toFixed(2)}
-            </span>
-            <div
-              className="absolute top-1/2 h-3.5 w-3.5 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-accent bg-bg"
-              style={{ left: `${priceLeft}%` }}
-              title={`price ${price.toFixed(2)}`}
-            />
-          </>
-        )}
-      </div>
-      <div className="mt-1 flex items-center justify-between font-mono text-[11px] tabular-nums text-muted">
-        <span>{lo.toFixed(2)}</span>
-        <span>{hi.toFixed(2)}</span>
-      </div>
-    </div>
-  );
 }
 
 export default function LevelsCard({ ticker, bridgeRow }: LevelsCardProps) {
@@ -168,20 +80,20 @@ export default function LevelsCard({ ticker, bridgeRow }: LevelsCardProps) {
   return (
     <section className="rounded-md border border-line bg-elevated">
       <div className="flex items-center gap-2 border-b border-line px-4 py-3">
-        <span className="tick text-[13px] font-semibold text-foreground">Trade levels</span>
-        <InfoTooltip text="Entry/stop/target from the live scorer. Context, not a mechanical exit system." />
+        <span className="tick text-title text-foreground">Trade plan</span>
+        <InfoTip content="Entry, stop and target from the live scorer, drawn on the chart. Context, not a mechanical exit system." label="How these levels are set" />
       </div>
 
       {!valid ? (
-        <div className="px-4 py-4 text-[12px] text-muted">
-          No trade levels for {ticker} yet — the scorer needs a directional setup (entry, stop and
-          target must differ).
-        </div>
+        <Empty
+          title="No trade levels"
+          message={`The scorer has not issued a directional setup for ${ticker}. Entry, stop and target have to differ before levels mean anything.`}
+        />
       ) : (
         <div className="space-y-3 px-4 py-3">
           {/* Directional trade plan synthesized from the model verdict + levels */}
           <div
-            className={`rounded border px-3 py-2 text-[12px] leading-relaxed ${
+            className={`rounded border px-3 py-2 text-body leading-relaxed ${
               dir === "long"
                 ? "border-pos/30 bg-pos/[0.06]"
                 : dir === "short"
@@ -195,20 +107,20 @@ export default function LevelsCard({ ticker, bridgeRow }: LevelsCardProps) {
                   {dir === "long" ? "Long" : "Short"} {committed ? "plan" : "bias"}
                 </span>
                 {!committed && (
-                  <span className="ml-1.5 text-[11px] font-medium uppercase text-muted">watch</span>
+                  <span className="ml-1.5 text-micro text-muted">watch</span>
                 )}
-                {hc && <span className="ml-1.5 text-[11px] font-semibold text-warn">HIGH CONV</span>}
+                {hc && <span className="ml-1.5 text-micro text-warn">HIGH CONV</span>}
                 <span className="text-muted">
                   {" — "}
                   {dir === "long" ? "enter near" : "sell near"}{" "}
-                  <span className="font-mono text-foreground">{entry!.toFixed(2)}</span>, stop{" "}
-                  <span className="font-mono text-neg">{stop!.toFixed(2)}</span>
+                  <span className="text-data text-foreground">{entry!.toFixed(2)}</span>, stop{" "}
+                  <span className="text-data text-neg">{stop!.toFixed(2)}</span>
                   {stopPct != null && ` (${stopPct}%)`}, target{" "}
-                  <span className="font-mono text-pos">{target!.toFixed(2)}</span>
+                  <span className="text-data text-pos">{target!.toFixed(2)}</span>
                   {tgtPct != null && ` (${Number(tgtPct) >= 0 ? "+" : ""}${tgtPct}%)`} at{" "}
-                  <span className="font-mono text-foreground">{rrLabel}</span> R:R. Invalidates on a
+                  <span className="text-data text-foreground">{rrLabel}</span> R:R. Invalidates on a
                   close {dir === "long" ? "below" : "above"}{" "}
-                  <span className="font-mono text-foreground">{stop!.toFixed(2)}</span>.
+                  <span className="text-data text-foreground">{stop!.toFixed(2)}</span>.
                 </span>
               </>
             ) : (
@@ -219,41 +131,11 @@ export default function LevelsCard({ ticker, bridgeRow }: LevelsCardProps) {
             )}
           </div>
 
-          <div className="grid grid-cols-4 gap-2 text-center">
-            <div>
-              <p className="mb-0.5 text-[11px] uppercase tracking-wide text-muted">Entry</p>
-              <p className="font-mono text-[14px] tabular-nums text-foreground">
-                {entry!.toFixed(2)}
-              </p>
-            </div>
-            <div>
-              <p className="mb-0.5 text-[11px] uppercase tracking-wide text-muted">Stop</p>
-              <p className="font-mono text-[14px] tabular-nums text-neg">{stop!.toFixed(2)}</p>
-            </div>
-            <div>
-              <p className="mb-0.5 text-[11px] uppercase tracking-wide text-muted">Target</p>
-              <p className="font-mono text-[14px] tabular-nums text-pos">{target!.toFixed(2)}</p>
-            </div>
-            <div>
-              <p className="mb-0.5 text-[11px] uppercase tracking-wide text-muted">R:R</p>
-              <p
-                className={`font-mono text-[14px] tabular-nums ${
-                  risk_reward != null && risk_reward >= 2
-                    ? "text-pos"
-                    : risk_reward != null && risk_reward < 1
-                      ? "text-warn"
-                      : "text-foreground"
-                }`}
-              >
-                {rrLabel}
-              </p>
-            </div>
-          </div>
-
-          <PriceRail stop={stop!} entry={entry!} target={target!} price={livePrice} />
-
+          {/* Entry, stop and target are drawn on the chart to the left as
+              titled price lines. A four-cell grid and a rail restating them was
+              the same three numbers a third and a fourth time (TK-02). */}
           {distToEntry !== null && (
-            <p className="font-mono text-[12px] tabular-nums text-muted">
+            <p className="text-data text-muted">
               price{" "}
               <span className={Number(distToEntry) >= 0 ? "text-pos" : "text-neg"}>
                 {Number(distToEntry) >= 0 ? "+" : ""}
@@ -263,11 +145,11 @@ export default function LevelsCard({ ticker, bridgeRow }: LevelsCardProps) {
             </p>
           )}
 
-          {anchorLabel && <p className="text-[12px] text-muted">{anchorLabel}</p>}
+          {anchorLabel && <p className="text-body text-muted">{anchorLabel}</p>}
 
           <div className="space-y-2 border-t border-line pt-3">
             <div className="flex flex-wrap items-center gap-2">
-              <label className="font-mono text-muted" htmlFor="risk-account">
+              <label className="text-data text-muted" htmlFor="risk-account">
                 Account $
               </label>
               <input
@@ -280,9 +162,9 @@ export default function LevelsCard({ ticker, bridgeRow }: LevelsCardProps) {
                   const v = Number(e.target.value);
                   if (!Number.isNaN(v) && v >= 0) setAccountSize(v);
                 }}
-                className="w-24 rounded border border-line bg-raised px-2 py-0.5 font-mono text-[12px] tabular-nums text-foreground focus:border-accent focus:outline-none"
+                className="w-24 rounded border border-line bg-raised px-2 py-0.5 text-data text-foreground focus:border-accent focus:outline-none"
               />
-              <label className="font-mono text-muted" htmlFor="risk-pct">
+              <label className="text-data text-muted" htmlFor="risk-pct">
                 Risk %
               </label>
               <input
@@ -296,19 +178,19 @@ export default function LevelsCard({ ticker, bridgeRow }: LevelsCardProps) {
                   const v = Number(e.target.value);
                   if (!Number.isNaN(v) && v >= 0) setRiskPct(v);
                 }}
-                className="w-16 rounded border border-line bg-raised px-2 py-0.5 font-mono text-[12px] tabular-nums text-foreground focus:border-accent focus:outline-none"
+                className="w-16 rounded border border-line bg-raised px-2 py-0.5 text-data text-foreground focus:border-accent focus:outline-none"
               />
             </div>
             {shares !== null ? (
-              <p className="font-mono text-[13px] tabular-nums text-foreground">
+              <p className="text-data text-foreground">
                 = <span className="text-accent">{shares}</span> shares (risking{" "}
                 ${riskUsd.toLocaleString(undefined, { maximumFractionDigits: 0 })} = {riskPct}% $
                 {accountSize.toLocaleString(undefined, { maximumFractionDigits: 0 })} account)
               </p>
             ) : (
-              <span className="font-mono text-[13px] text-muted">—</span>
+              <span className="text-data text-muted">—</span>
             )}
-            <p className="text-[12px] leading-snug text-muted">
+            <p className="text-body leading-snug text-muted">
               No fees or slippage modeled. Levels are context, not a mechanical exit system.
             </p>
           </div>

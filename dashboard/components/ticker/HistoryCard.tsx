@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import Panel from "@/components/ui/Panel";
+import Empty from "@/components/ui/Empty";
+import { BADGE_LABEL } from "@/components/ui/Badge";
 
 interface SignalRow {
   date: string;
@@ -33,7 +35,10 @@ export default function HistoryCard({ rows, lastClose }: HistoryCardProps) {
   if (rows.length === 0) {
     return (
       <Panel title="Signal History">
-        <p className="text-[12px] text-muted">No prior flags in the database</p>
+        <Empty
+          title="Never flagged"
+          message="This name has not appeared in a prior signal run."
+        />
       </Panel>
     );
   }
@@ -46,9 +51,9 @@ export default function HistoryCard({ rows, lastClose }: HistoryCardProps) {
   return (
     <Panel title="Signal History">
       <div className="space-y-2">
-        <table className="w-full font-mono text-[12px] tabular-nums border-collapse">
+        <table className="w-full text-data border-collapse">
           <thead>
-            <tr className="text-left text-muted text-[11px]">
+            <tr className="text-left text-muted text-micro">
               <th className="pb-1 pr-3 font-medium">date</th>
               <th className="pb-1 pr-3 font-medium">group</th>
               <th className="pb-1 pr-3 font-medium">label</th>
@@ -63,7 +68,9 @@ export default function HistoryCard({ rows, lastClose }: HistoryCardProps) {
                 <tr key={`${r.date}-${i}`} className="border-t border-line">
                   <td className="py-1 pr-3 text-muted">{r.date}</td>
                   <td className="py-1 pr-3 text-foreground">{r.report_group ?? "—"}</td>
-                  <td className="py-1 pr-3 text-muted">{r.action_label ?? "—"}</td>
+                  <td className="py-1 pr-3 text-muted">
+                    {r.action_label ? (BADGE_LABEL[r.action_label] ?? r.action_label) : "—"}
+                  </td>
                   <td className="py-1 pr-3 text-right text-foreground">
                     {r.combined_score != null ? r.combined_score.toFixed(2) : "—"}
                   </td>
@@ -83,7 +90,7 @@ export default function HistoryCard({ rows, lastClose }: HistoryCardProps) {
           <button
             type="button"
             onClick={() => setExpanded((v) => !v)}
-            className="font-mono text-[11px] text-accent hover:text-foreground transition-colors"
+            className="text-data text-accent hover:text-foreground transition-colors"
           >
             {expanded ? "Show fewer" : `+${older} older — show all`}
           </button>

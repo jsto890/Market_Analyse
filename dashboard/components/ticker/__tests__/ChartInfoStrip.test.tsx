@@ -13,17 +13,24 @@ const bars: Bar[] = Array.from({ length: 30 }, (_, i) => ({
 }));
 
 describe("ChartInfoStrip", () => {
-  it("renders discrete labelled chips", () => {
+  it("no longer reprints the header's own numbers under the chart (TK-05)", () => {
     render(<ChartInfoStrip ticker="AAPL" bars={bars} />);
-    expect(screen.getByText("Session")).toBeInTheDocument();
-    expect(screen.getByText("Close")).toBeInTheDocument();
-    expect(screen.getByText("Range")).toBeInTheDocument();
-    const last = bars[bars.length - 1];
-    expect(screen.getByText(last.close.toFixed(2))).toBeInTheDocument();
+    // Close, day range, volume vs average and 52w all live in the header's
+    // price zone now; session phase belongs to the context strip.
+    expect(screen.queryByText("Session")).not.toBeInTheDocument();
+    expect(screen.queryByText("Close")).not.toBeInTheDocument();
+    expect(screen.queryByText("Range")).not.toBeInTheDocument();
+    expect(screen.queryByText("Vol")).not.toBeInTheDocument();
+    expect(screen.queryByText("52w")).not.toBeInTheDocument();
   });
 
   it("renders nothing when bars is empty", () => {
     const { container } = render(<ChartInfoStrip ticker="AAPL" bars={[]} />);
+    expect(container.firstChild).toBeNull();
+  });
+
+  it("renders nothing outside pre/after hours, when it has nothing to add", () => {
+    const { container } = render(<ChartInfoStrip ticker="AAPL" bars={bars} />);
     expect(container.firstChild).toBeNull();
   });
 });

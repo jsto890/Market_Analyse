@@ -9,7 +9,7 @@ import { isOdteSymbol } from "./odte-core";
 
 export * from "./odte-core";
 
-/** Underlying selection persisted across /odte and /odte/strikes; backend sync is best-effort. */
+/** Underlying selection persisted across the /options tabs; backend sync is best-effort. */
 export function useOdteSymbol(): [OdteSymbol, (symbol: OdteSymbol) => void] {
   const [stored, setStored] = useLocalStorage<string>("odte-symbol", "SPY");
   const active: OdteSymbol = isOdteSymbol(stored) ? stored : "SPY";

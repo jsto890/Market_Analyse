@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { QUADRANT_COLOR, deriveQuadrant, abbreviate, splitDegenerate, computeLabelCollisions, rotationSummary } from "@/lib/rotation";
+import { QUADRANT_COLOR, deriveQuadrant, splitDegenerate, rotationSummary } from "@/lib/rotation";
 import type { RotationRow } from "@/components/today/RotationPanel";
 
 describe("QUADRANT_COLOR", () => {
@@ -25,15 +25,6 @@ describe("deriveQuadrant", () => {
   });
 });
 
-describe("abbreviate", () => {
-  it("passes short names through", () => {
-    expect(abbreviate("Energy")).toBe("Energy");
-  });
-  it("truncates with an ellipsis at the max length", () => {
-    expect(abbreviate("Semiconductors & Equip", 10)).toBe("Semicondu…");
-  });
-});
-
 describe("splitDegenerate", () => {
   it("separates flat 100/100 rows from real ones, and names them (RO-06)", () => {
     const rows = [
@@ -44,20 +35,6 @@ describe("splitDegenerate", () => {
     const { plotted, hidden } = splitDegenerate(rows);
     expect(plotted.map((r) => r.industry)).toEqual(["Energy", "Telecom"]);
     expect(hidden.map((r) => r.industry)).toEqual(["Utilities"]);
-  });
-});
-
-describe("computeLabelCollisions", () => {
-  it("flags points within the threshold of a neighbour, leaves isolated points unflagged", () => {
-    const points = [
-      { rs_ratio: 100, rs_mom: 100 },
-      { rs_ratio: 100.5, rs_mom: 100.5 }, // ~0.7 units from point 0 -> collides
-      { rs_ratio: 130, rs_mom: 70 }, // far from everything -> isolated
-    ];
-    expect(computeLabelCollisions(points, 1.5)).toEqual([true, true, false]);
-  });
-  it("returns all-false for a single point", () => {
-    expect(computeLabelCollisions([{ rs_ratio: 100, rs_mom: 100 }])).toEqual([false]);
   });
 });
 

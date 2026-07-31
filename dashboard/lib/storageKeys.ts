@@ -14,8 +14,15 @@ export const STATIC_KEYS = {
   riskPct: "dash:risk:pct",
   watchlistMigrationResult: "dash:watchlist:migration-result",
   screenerLastResult: "dash:screener:last-result",
+  screenerSavedScreens: "dash:screener:screens",
   odteLiveMode: "dash:odte:live-mode",
   odteExpiry: "dash:odte:expiry",
+  odteDensity: "dash:odte:density",
+  odteGreekCols: "dash:odte:greek-cols",
+  odteColumnGroups: "dash:odte:column-groups",
+  calendarHorizon: "dash:calendar:horizon",
+  calendarShow: "dash:calendar:show",
+  macroWindow: "dash:macro:window",
 } as const;
 
 /**

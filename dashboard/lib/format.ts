@@ -30,11 +30,12 @@ export function signedCurrency(v: number | null | undefined): string {
   return `${sign}$${Math.abs(v).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
-/** Compact large number (GEX notional, OI, volume): "842", "12.3K", "4.7M", "1.2B". */
+/** Compact large number (GEX notional, OI, volume, market cap): "842", "12.3K", "4.7M", "1.2B", "3.4T". */
 export function compactNumber(v: number | null | undefined): string {
   if (v === null || v === undefined || !Number.isFinite(v)) return "—";
   const abs = Math.abs(v);
   const sign = v < 0 ? "-" : "";
+  if (abs >= 1_000_000_000_000) return `${sign}${(abs / 1_000_000_000_000).toFixed(1)}T`;
   if (abs >= 1_000_000_000) return `${sign}${(abs / 1_000_000_000).toFixed(1)}B`;
   if (abs >= 1_000_000) return `${sign}${(abs / 1_000_000).toFixed(1)}M`;
   if (abs >= 1_000) return `${sign}${(abs / 1_000).toFixed(1)}K`;

@@ -1,9 +1,11 @@
 "use client";
 
+import { useMemo } from "react";
 import * as Tooltip from "@radix-ui/react-tooltip";
 import Panel from "@/components/ui/Panel";
 import DataTable, { type Column } from "@/components/ui/DataTable";
 import InfoTip from "@/components/ui/InfoTip";
+import Gloss from "@/components/ui/Gloss";
 import { QUADRANT_COLOR } from "@/lib/rotation";
 import { QUADRANT_LABEL, HEADER_GLOSS } from "@/lib/labels";
 
@@ -25,6 +27,12 @@ interface RotationPanelProps {
   rows: RotationRow[];
   defaultOpen?: boolean;
   collapsible?: boolean;
+  /** Passed only on /rotation, where this table doubles as the RRG's legend:
+   *  the number in front of each industry is the number on its scatter point.
+   *  Absent on Today, where there is no chart to key into. */
+  rrgIndex?: Record<string, number>;
+  selected?: string | null;
+  onSelect?: (industry: string | null) => void;
 }
 
 
@@ -40,7 +48,7 @@ function QuadrantDot({ quadrant }: { quadrant: string }) {
       </Tooltip.Trigger>
       <Tooltip.Portal>
         <Tooltip.Content
-          className="rounded bg-elevated px-2 py-1 text-[12px] text-muted shadow-lg border border-line z-50"
+          className="rounded bg-elevated px-2 py-1 text-body text-2 shadow-lg border border-line z-50"
           sideOffset={4}
         >
           {label}
@@ -57,7 +65,7 @@ function DRank({ drank }: { drank: number | null }) {
     const sign = drank > 0 ? "+" : "";
     return (
       <InfoTip content={HEADER_GLOSS["Δrank"]}>
-        <span className="tabular-nums text-muted">
+        <span className="text-data text-muted">
           {sign}
           {drank}
         </span>
@@ -66,7 +74,7 @@ function DRank({ drank }: { drank: number | null }) {
   }
   const sign = drank > 0 ? "+" : "";
   return (
-    <span className={drank > 0 ? "text-pos" : "text-neg"}>
+    <span className="text-data text-model">
       {sign}
       {drank}
     </span>
@@ -95,9 +103,7 @@ const columns: Column<RotationRow>[] = [
         <span className="inline-flex items-center gap-1.5">
           {r.industry}
           <InfoTip content={HEADER_GLOSS.n}>
-            <span className="rounded border border-line px-1 text-[11px] uppercase tracking-wide text-muted">
-              thin
-            </span>
+            <span className="rounded border border-line px-1 eyebrow">thin</span>
           </InfoTip>
         </span>
       );
@@ -105,62 +111,38 @@ const columns: Column<RotationRow>[] = [
   },
   {
     key: "drank",
-    header: (
-      <InfoTip content={HEADER_GLOSS["Δrank"]}>
-        <span>Δrank</span>
-      </InfoTip>
-    ),
+    header: <Gloss term="Δrank" />,
     align: "center",
     render: (r) => <DRank drank={r.drank} />,
   },
   {
     key: "quadrant",
-    header: (
-      <InfoTip content={HEADER_GLOSS["◉"]}>
-        <span>◉</span>
-      </InfoTip>
-    ),
+    header: <Gloss term="◉" />,
     align: "center",
     render: (r) => <QuadrantDot quadrant={r.quadrant} />,
   },
   {
     key: "rs_ratio",
     align: "right",
-    header: (
-      <InfoTip content={HEADER_GLOSS["RS-Ratio"]}>
-        <span>RS-Ratio</span>
-      </InfoTip>
-    ),
+    header: <Gloss term="RS-Ratio" />,
     render: (r) => r.rs_ratio.toFixed(1),
   },
   {
     key: "rs_mom",
     align: "right",
-    header: (
-      <InfoTip content={HEADER_GLOSS["RS-Mom"]}>
-        <span>RS-Mom</span>
-      </InfoTip>
-    ),
+    header: <Gloss term="RS-Mom" />,
     render: (r) => r.rs_mom.toFixed(1),
   },
   {
     key: "breadth",
     align: "right",
-    header: (
-      <InfoTip content={HEADER_GLOSS.Breadth}>
-        <span>Breadth</span>
-      </InfoTip>
-    ),
+    header: <Gloss term="Breadth" />,
     render: (r) => (Number.isFinite(r.breadth) ? Math.round(r.breadth!) + "%" : "—"),
   },
   {
     key: "n",
     align: "right",
-    header: (
-      <InfoTip content={HEADER_GLOSS.n}>
-        <span>n</span>
-      </InfoTip>
-    ),
+    header: <Gloss term="n" />,
     render: (r) => r.n ?? "—",
   },
   { key: "r1w", align: "right", header: "1W", render: (r) => <Ret v={r.r1w} /> },
@@ -168,7 +150,47 @@ const columns: Column<RotationRow>[] = [
   { key: "r3m", align: "right", header: "3M", render: (r) => <Ret v={r.r3m} /> },
 ];
 
-export default function RotationPanel({ rows, defaultOpen = false, collapsible = true }: RotationPanelProps) {
+/**
+ * The RRG numbers its points and leaves them unnamed; this is where a number
+ * becomes a sector. Prefixing the industry column rather than adding a column
+ * of its own keeps the sticky-left cell the one that identifies the row.
+ */
+function withRrgIndex(
+  cols: Column<RotationRow>[],
+  rrgIndex: Record<string, number>
+): Column<RotationRow>[] {
+  const [industry, ...rest] = cols;
+  return [
+    {
+      ...industry,
+      header: (
+        <span className="inline-flex items-baseline gap-2">
+          <span className="w-4 text-right text-muted">#</span>
+          <span>Industry</span>
+        </span>
+      ),
+      render: (r) => (
+        <span className="inline-flex items-baseline gap-2">
+          <span className="w-4 shrink-0 text-right text-data text-muted">
+            {rrgIndex[r.industry] ?? "·"}
+          </span>
+          <span>{industry.render(r)}</span>
+        </span>
+      ),
+    },
+    ...rest,
+  ];
+}
+
+export default function RotationPanel({
+  rows,
+  defaultOpen = false,
+  collapsible = true,
+  rrgIndex,
+  selected = null,
+  onSelect,
+}: RotationPanelProps) {
+  const cols = useMemo(() => (rrgIndex ? withRrgIndex(columns, rrgIndex) : columns), [rrgIndex]);
   const sorted = [...rows].sort((a, b) => a.rank - b.rank);
   const fading = rows.filter((r) => r.quadrant === "weakening" || r.quadrant === "lagging").length;
   const leading = sorted
@@ -180,7 +202,14 @@ export default function RotationPanel({ rows, defaultOpen = false, collapsible =
 
   return (
     <Panel title="Sector rotation" subtitle={summary} collapsible={collapsible} defaultOpen={defaultOpen} persistKey="rotation">
-      <DataTable<RotationRow> columns={columns} rows={sorted} rowKey={(r) => r.industry} persistKey="rotation-table" />
+      <DataTable<RotationRow>
+        columns={cols}
+        rows={sorted}
+        rowKey={(r) => r.industry}
+        persistKey="rotation-table"
+        selectedKey={selected}
+        onOpen={onSelect ? (r) => onSelect(selected === r.industry ? null : r.industry) : undefined}
+      />
     </Panel>
   );
 }

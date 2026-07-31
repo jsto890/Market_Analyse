@@ -30,6 +30,14 @@ def scored_news_since(conn, since_ts: str) -> list:
         "WHERE n.ts >= ? ORDER BY n.id DESC", (since_ts,)).fetchall()
 
 
+def scored_news_detail_since(conn, since_ts: str) -> list:
+    """As scored_news_since, plus source and url — the drill-down behind a score."""
+    return conn.execute(
+        "SELECT n.id, n.ts, n.ticker, n.headline, n.source, n.url, s.score "
+        "FROM news_items n JOIN news_sentiment s ON s.news_id = n.id "
+        "WHERE n.ts >= ? ORDER BY n.id DESC", (since_ts,)).fetchall()
+
+
 def insert_aggregates(conn, rows: list[dict], ts: str) -> None:
     conn.executemany(
         "INSERT INTO macro_sentiment (scope, window, score, n, ts) VALUES (?,?,?,?,?)",
@@ -52,3 +60,17 @@ def macro_series(conn, scope: str, window: str, limit: int = 200) -> list:
         "SELECT ts, score, n FROM macro_sentiment WHERE scope=? AND window=? "
         "ORDER BY ts DESC LIMIT ?", (scope, window, limit)).fetchall()
     return list(reversed(rows))
+
+
+def macro_series_all(conn, window: str, limit: int = 80) -> list:
+    """Last `limit` snapshots for every scope in one window, chronological.
+
+    One query so the tile grid can show a change and a sparkline per scope
+    without N round trips."""
+    rows = conn.execute(
+        "SELECT scope, ts, score, n FROM ("
+        "  SELECT scope, ts, score, n,"
+        "         ROW_NUMBER() OVER (PARTITION BY scope ORDER BY ts DESC) AS rn"
+        "  FROM macro_sentiment WHERE window=?"
+        ") WHERE rn <= ? ORDER BY scope, ts", (window, limit)).fetchall()
+    return rows

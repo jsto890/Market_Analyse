@@ -1,9 +1,9 @@
 "use client";
-import PageHeader from "@/components/ui/PageHeader";
-import SkeletonTable from "@/components/ui/SkeletonTable";
+import Loading from "@/components/ui/Loading";
 
 import { useRef, useState } from "react";
-import { Search, ArrowRight, Loader2 } from "lucide-react";
+import Link from "next/link";
+import { Search, ArrowRight, Loader2, Filter, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import type { ScreenerResult } from "@/types/argus";
 import DataTable, { Column } from "@/components/ui/DataTable";
@@ -11,16 +11,15 @@ import Input from "@/components/ui/Input";
 import Button from "@/components/ui/Button";
 import Badge from "@/components/ui/Badge";
 import PinToggle from "@/components/ui/PinToggle";
-import InfoTip from "@/components/ui/InfoTip";
-import { HEADER_GLOSS } from "@/lib/labels";
+import ActionBar from "@/components/ui/ActionBar";
+import Gloss from "@/components/ui/Gloss";
+import Empty from "@/components/ui/Empty";
+import Failed from "@/components/ui/Failed";
+import Stale from "@/components/ui/Stale";
+import VoteBar from "@/components/ui/VoteBar";
 import { pctWhole, pct } from "@/lib/format";
 import { STATIC_KEYS } from "@/lib/storageKeys";
-
-function scoreColor(s: number): string {
-  if (s >= 0.7) return "text-pos";
-  if (s >= 0.5) return "text-warn";
-  return "text-muted";
-}
+import Page from "@/components/ui/Page";
 
 type ApiResponse =
   | { results: ScreenerResult[]; as_of?: string; cached?: boolean }
@@ -30,10 +29,96 @@ function isErrorResponse(r: ApiResponse): r is { error: string } {
   return "error" in r;
 }
 
+/** A named ticker list plus the cutoff you read it at. */
+interface SavedScreen {
+  name: string;
+  tickers: string;
+  minScore: number;
+}
+
+function loadScreens(): SavedScreen[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = window.localStorage.getItem(STATIC_KEYS.screenerSavedScreens);
+    return raw ? (JSON.parse(raw) as SavedScreen[]) : [];
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * The top of the list, in full. A card can carry the vote split, the agreement
+ * and the returns at a size you can read without tracking across a row — and
+ * the five names you are actually going to act on are worth that space.
+ */
+function ResultCard({ r }: { r: ScreenerResult }) {
+  return (
+    <div className="rounded-md border border-line bg-surface p-3">
+      <div className="flex items-center gap-2">
+        <Link href={`/t/${r.symbol}`} className="text-data text-title font-medium text-accent hover:underline">
+          {r.symbol}
+        </Link>
+        <Badge variant="verdict" value={r.verdict} />
+        {r.high_conviction && <span className="text-micro font-bold text-model">HC</span>}
+      </div>
+
+      <div className="mt-1.5 flex items-baseline gap-2">
+        <span className="text-data text-title text-model">{r.score.toFixed(3)}</span>
+        <span className="text-body text-muted">
+          score · {pctWhole(r.agreement_pct, "percent")} agree
+        </span>
+      </div>
+
+      <div className="mt-2">
+        <VoteBar long={r.long_votes} short={r.short_votes} wait={r.wait_votes} className="w-full" />
+        <p className="mt-1 text-micro text-muted">
+          {r.long_votes}L · {r.short_votes}S · {r.wait_votes}W
+        </p>
+      </div>
+
+      <div className="mt-2 grid grid-cols-3 gap-x-3 border-t border-line pt-2 text-body">
+        <div className="flex items-baseline gap-1.5">
+          <span className="eyebrow">R:R</span>
+          <span className="text-data text-foreground">{r.risk_reward.toFixed(1)}</span>
+        </div>
+        <div className="flex items-baseline gap-1.5">
+          <span className="eyebrow">1d</span>
+          <span className={`text-data ${r.ret_1d === null ? "text-muted" : r.ret_1d >= 0 ? "text-pos" : "text-neg"}`}>
+            {pct(r.ret_1d, "fraction")}
+          </span>
+        </div>
+        <div className="flex items-baseline gap-1.5">
+          <span className="eyebrow">5d</span>
+          <span className={`text-data ${r.ret_5d === null ? "text-muted" : r.ret_5d >= 0 ? "text-pos" : "text-neg"}`}>
+            {pct(r.ret_5d, "fraction")}
+          </span>
+        </div>
+      </div>
+
+      {/* No Compare: this page is the comparison. */}
+      <ActionBar symbol={r.symbol} actions={["pin", "alert", "options", "copy"]} className="mt-2" />
+    </div>
+  );
+}
+
 export default function ScreenerPage() {
   const router = useRouter();
-  const [tickerInput, setTickerInput] = useState("");
-  const [minScore, setMinScore] = useState("0.3");
+  // `?symbols=` seeds the box — the ticker page's Compare action arrives here
+  // with the name you came from, ready for you to add its peers. Read off
+  // `location` rather than `useSearchParams` so the page needs no Suspense
+  // boundary, matching how this component already reads localStorage.
+  const [tickerInput, setTickerInput] = useState(() =>
+    typeof window === "undefined"
+      ? ""
+      : (new URLSearchParams(window.location.search).get("symbols") ?? "")
+  );
+  // The cutoff filters here, not at Argus: the run scores the whole universe
+  // either way, so keeping every card client-side is what lets the slider say
+  // how many names it is about to drop before you let go of it.
+  const [minScore, setMinScore] = useState(0.3);
+  const [screens, setScreens] = useState<SavedScreen[]>(loadScreens);
+  const [naming, setNaming] = useState(false);
+  const [screenName, setScreenName] = useState("");
   const [results, setResults] = useState<ScreenerResult[] | null>(() => {
     if (typeof window === "undefined") return null;
     const raw = window.localStorage.getItem(STATIC_KEYS.screenerLastResult);
@@ -64,7 +149,7 @@ export default function ScreenerPage() {
       key: "symbol",
       header: "Ticker",
       render: (r) => (
-        <span className="font-mono font-semibold text-foreground">{r.symbol}</span>
+        <span className="text-data font-semibold text-foreground">{r.symbol}</span>
       ),
     },
     {
@@ -78,54 +163,44 @@ export default function ScreenerPage() {
       align: "right",
       sortable: true,
       sortFn: (a, b) => a.score - b.score,
+      render: (r) => <span className="text-data text-model">{r.score.toFixed(3)}</span>,
+    },
+    {
+      key: "votes",
+      header: <Gloss term="Votes" />,
+      width: "76px",
+      sortable: true,
+      sortFn: (a, b) => a.long_votes - b.long_votes,
       render: (r) => (
-        <span className={`font-mono ${scoreColor(r.score)}`}>{r.score.toFixed(3)}</span>
+        <VoteBar long={r.long_votes} short={r.short_votes} wait={r.wait_votes} className="w-14" />
       ),
     },
     {
-      key: "long_votes",
-      header: <InfoTip content={HEADER_GLOSS.L} label="Long votes info">L</InfoTip>,
-      align: "right",
-      render: (r) => <span className="text-pos">{r.long_votes}</span>,
-    },
-    {
-      key: "short_votes",
-      header: <InfoTip content={HEADER_GLOSS.S} label="Short votes info">S</InfoTip>,
-      align: "right",
-      render: (r) => <span className="text-neg">{r.short_votes}</span>,
-    },
-    {
-      key: "wait_votes",
-      header: <InfoTip content={HEADER_GLOSS.W} label="Wait votes info">W</InfoTip>,
-      align: "right",
-      render: (r) => <span className="text-warn">{r.wait_votes}</span>,
-    },
-    {
       key: "agreement_pct",
-      header: <InfoTip content={HEADER_GLOSS["Agree%"]} label="Agreement info">Agree%</InfoTip>,
+      header: <Gloss term="Agree%" />,
       align: "right",
       sortable: true,
       sortFn: (a, b) => a.agreement_pct - b.agreement_pct,
-      render: (r) => <span className="text-foreground">{pctWhole(r.agreement_pct, "percent")}</span>,
+      render: (r) => <span className="text-data text-model">{pctWhole(r.agreement_pct, "percent")}</span>,
     },
     {
       key: "high_conviction",
-      header: <InfoTip content={HEADER_GLOSS.HC} label="High conviction info">HC</InfoTip>,
+      header: <Gloss term="HC" />,
       align: "center",
       render: (r) =>
         r.high_conviction ? (
-          <span className="text-warn font-bold">HC</span>
+          <span className="text-body font-bold text-model">HC</span>
         ) : (
           <span className="text-muted">—</span>
         ),
     },
     {
       key: "risk_reward",
-      header: <InfoTip content={HEADER_GLOSS["R:R"]} label="Risk:reward info">R:R</InfoTip>,
+      header: <Gloss term="R:R" />,
       align: "right",
       sortable: true,
       sortFn: (a, b) => a.risk_reward - b.risk_reward,
-      render: (r) => <span className="text-foreground">{r.risk_reward.toFixed(1)}</span>,
+      render: (r) => <span className="text-data text-foreground">{r.risk_reward.toFixed(1)}</span>,
     },
     {
       key: "ret_1d",
@@ -134,7 +209,7 @@ export default function ScreenerPage() {
       sortable: true,
       sortFn: (a, b) => (a.ret_1d ?? -Infinity) - (b.ret_1d ?? -Infinity),
       render: (r) => (
-        <span className={r.ret_1d === null ? "text-muted" : r.ret_1d >= 0 ? "text-pos" : "text-neg"}>
+        <span className={`text-data ${r.ret_1d === null ? "text-muted" : r.ret_1d >= 0 ? "text-pos" : "text-neg"}`}>
           {pct(r.ret_1d, "fraction")}
         </span>
       ),
@@ -146,7 +221,7 @@ export default function ScreenerPage() {
       sortable: true,
       sortFn: (a, b) => (a.ret_5d ?? -Infinity) - (b.ret_5d ?? -Infinity),
       render: (r) => (
-        <span className={r.ret_5d === null ? "text-muted" : r.ret_5d >= 0 ? "text-pos" : "text-neg"}>
+        <span className={`text-data ${r.ret_5d === null ? "text-muted" : r.ret_5d >= 0 ? "text-pos" : "text-neg"}`}>
           {pct(r.ret_5d, "fraction")}
         </span>
       ),
@@ -167,17 +242,14 @@ export default function ScreenerPage() {
       let res: Response;
       if (tickers === null) {
         const params = new URLSearchParams();
-        params.set("min_conviction", String(parseFloat(minScore) || 0));
+        params.set("min_conviction", "0");
         if (refresh) params.set("refresh", "1");
         res = await fetch(`/api/argus/screener?${params.toString()}`, { signal: controller.signal });
       } else {
         res = await fetch("/api/argus/screener", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            universe: tickers,
-            min_conviction: parseFloat(minScore),
-          }),
+          body: JSON.stringify({ universe: tickers, min_conviction: 0 }),
           signal: controller.signal,
         });
       }
@@ -223,10 +295,40 @@ export default function ScreenerPage() {
     if (e.key === "Enter") handleRun();
   }
 
+  function persistScreens(next: SavedScreen[]) {
+    setScreens(next);
+    window.localStorage.setItem(STATIC_KEYS.screenerSavedScreens, JSON.stringify(next));
+  }
+
+  function saveScreen() {
+    const name = screenName.trim();
+    if (!name) return;
+    // Same name overwrites — a screen you re-save is the same screen.
+    persistScreens([
+      ...screens.filter((s) => s.name !== name),
+      { name, tickers: tickerInput, minScore },
+    ]);
+    setScreenName("");
+    setNaming(false);
+  }
+
+  function applyScreen(s: SavedScreen) {
+    setTickerInput(s.tickers);
+    setMinScore(s.minScore);
+    const tickers = s.tickers
+      .split(",")
+      .map((t) => t.trim().toUpperCase())
+      .filter(Boolean);
+    void runScreener(tickers.length > 0 ? tickers : null);
+  }
+
+  const shown = results === null ? null : results.filter((r) => Math.abs(r.score) >= minScore);
+  const lead = shown?.slice(0, 5) ?? [];
+  const rest = shown?.slice(5) ?? [];
+
   return (
-    <div className="min-h-screen bg-bg text-foreground">
-      <div className="max-w-6xl mx-auto px-4 py-6 space-y-4">
-        <PageHeader title="Screener" subtitle="Agent-ranked long candidates" />
+    <Page width="wide">
+        <Page.Header title="Screener" subtitle="Agent-ranked long candidates" />
 
         {/* Controls */}
         <div className="flex flex-wrap items-center gap-2 rounded-md border border-line bg-elevated px-3 py-2.5">
@@ -239,18 +341,28 @@ export default function ScreenerPage() {
             placeholder="Filter tickers — AAPL, TSLA, NVDA…"
             className="w-64"
           />
-          <label className="flex items-center gap-1.5 text-xs text-muted">
+          <label className="flex items-center gap-1.5 text-body text-muted">
             Min score
-            <Input
-              type="number"
+            <input
+              type="range"
+              aria-label="Min score"
               value={minScore}
-              onChange={(e) => setMinScore(e.target.value)}
+              onChange={(e) => setMinScore(Number(e.target.value))}
               step="0.05"
               min="0"
               max="1"
-              className="w-16"
+              className="w-28"
+              style={{ accentColor: "var(--accent)" }}
             />
+            <span className="text-data text-model">{minScore.toFixed(2)}</span>
           </label>
+          {/* The count the cutoff is about to produce, while you are still
+              dragging it — the number was only ever discoverable by running. */}
+          {results !== null && (
+            <span className="text-body text-muted">
+              {shown!.length} of {results.length} above {minScore.toFixed(2)}
+            </span>
+          )}
           <div className="ml-auto flex items-center gap-2">
             <Button
               variant="primary"
@@ -274,24 +386,74 @@ export default function ScreenerPage() {
           </div>
         </div>
 
+        {/* A screen is the ticker list and the cutoff together — re-typing both
+            from memory was the only way to come back to one. */}
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="eyebrow">Screens</span>
+          {screens.map((s) => (
+            <span
+              key={s.name}
+              className="inline-flex items-center rounded border border-line bg-surface text-body"
+            >
+              <button
+                type="button"
+                onClick={() => applyScreen(s)}
+                className="px-2 py-0.5 text-foreground hover:text-accent"
+              >
+                {s.name}
+              </button>
+              <button
+                type="button"
+                aria-label={`Delete screen ${s.name}`}
+                onClick={() => persistScreens(screens.filter((x) => x.name !== s.name))}
+                className="border-l border-line px-1.5 py-1 text-muted hover:text-neg"
+              >
+                <X size={11} />
+              </button>
+            </span>
+          ))}
+          {naming ? (
+            <Input
+              type="text"
+              autoFocus
+              value={screenName}
+              onChange={(e) => setScreenName(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") saveScreen();
+                if (e.key === "Escape") setNaming(false);
+              }}
+              onBlur={saveScreen}
+              placeholder="Name this screen…"
+              aria-label="Name this screen"
+              className="w-40"
+            />
+          ) : (
+            <Button variant="ghost" size="sm" onClick={() => setNaming(true)}>
+              Save screen
+            </Button>
+          )}
+        </div>
+
         {/* States */}
         {loading && (
-          <p className="flex items-center gap-1.5 text-xs font-mono text-muted">
+          <p className="flex items-center gap-1.5 text-body text-2">
             <Loader2 size={12} className="animate-spin" /> Running agent ensemble… (10–30s)
             <Button variant="ghost" size="sm" onClick={handleCancel}>Cancel</Button>
           </p>
         )}
 
         {error && (
-          <div className="rounded-md border border-neg/50 bg-neg/10 px-3 py-2 text-sm text-neg">
-            {error}
-          </div>
+          <Failed
+            title="Screener didn’t run"
+            message="Nothing was scored. Adjust the filters above and run again."
+            detail={error}
+          />
         )}
 
         {!loading && !error && results === null && (
           <div className="rounded-md border border-dashed border-line bg-elevated/40 px-6 py-8 text-center">
-            <p className="text-sm text-foreground">Rank long candidates with the agent ensemble</p>
-            <p className="mx-auto mt-1.5 max-w-md text-xs text-muted">
+            <p className="text-title text-foreground">Rank long candidates with the agent ensemble</p>
+            <p className="mx-auto mt-1.5 max-w-md text-body text-2">
               Enter tickers to score a shortlist, or run the full universe. Sort any column, click
               a row to open the ticker, and pin candidates to your watchlist.
             </p>
@@ -299,23 +461,19 @@ export default function ScreenerPage() {
         )}
 
         {loading && (
-          <SkeletonTable
-            headers={["Ticker", "Verdict", "Score", "Agree%", "R:R", "1d%", "5d%"]}
-            rows={6}
+          <Loading
+            variant="rows"
+            headers={["Ticker", "Verdict", "Score", "Votes", "Agree%", "R:R", "1d%", "5d%"]}
+            count={6}
           />
         )}
 
-        {!loading && !error && results !== null && (
+        {!loading && !error && results !== null && shown !== null && (
           <>
-            <div className="flex flex-wrap items-center gap-2 text-xs font-mono text-muted">
-              <span>
-                {results.length} signal{results.length !== 1 ? "s" : ""} found
-              </span>
-              {asOf && (
-                <span className="text-muted/70">
-                  · {cached ? "cached" : "fresh"} {new Date(asOf).toLocaleString()}
-                </span>
-              )}
+            {/* No count here — the cutoff control already says how many names
+                it keeps, and saying it twice was the §3.2 duplication again. */}
+            <div className="flex flex-wrap items-center gap-2 text-body text-muted">
+              {asOf && <Stale asOf={asOf} source={cached ? "cached" : "fresh"} variant="line" />}
               {asOf && (
                 <Button
                   variant="ghost"
@@ -327,22 +485,42 @@ export default function ScreenerPage() {
                 </Button>
               )}
             </div>
-            {results.length === 0 ? (
-              <p className="text-sm text-muted">No results above threshold.</p>
+            {shown.length === 0 ? (
+              <Empty
+                fill
+                icon={<Filter size={26} strokeWidth={1.5} />}
+                title="No signals above threshold"
+                message={
+                  results.length === 0
+                    ? "Nothing scored. Widen the universe, then re-run."
+                    : `All ${results.length} scanned symbols scored below ${minScore.toFixed(2)}. Drag the cutoff down to see them.`
+                }
+              />
             ) : (
-              <div className="bg-surface border border-line rounded p-4">
-                <DataTable
-                  columns={columns}
-                  rows={results}
-                  rowKey={(r) => r.symbol}
-                  persistKey="screener-table"
-                  onOpen={(r) => router.push(`/t/${r.symbol}`)}
-                />
-              </div>
+              <>
+                {/* Top five in full, the tail in a table. The names you act on
+                    and the names you scan are not the same reading job. */}
+                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                  {lead.map((r) => (
+                    <ResultCard key={r.symbol} r={r} />
+                  ))}
+                </div>
+                {rest.length > 0 && (
+                  <div className="bg-surface border border-line rounded p-4">
+                    <DataTable
+                      columns={columns}
+                      rows={rest}
+                      rowKey={(r) => r.symbol}
+                      persistKey="screener-table"
+                      caption="Screener results ranked below the top five"
+                      onOpen={(r) => router.push(`/t/${r.symbol}`)}
+                    />
+                  </div>
+                )}
+              </>
             )}
           </>
         )}
-      </div>
-    </div>
+    </Page>
   );
 }

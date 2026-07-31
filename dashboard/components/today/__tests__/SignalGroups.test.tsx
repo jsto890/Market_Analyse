@@ -72,8 +72,18 @@ function row(overrides: Partial<BridgeRow>): BridgeRow {
   } as BridgeRow;
 }
 
+/** The top three rows of a group render as cards; only the rest reach the
+ *  table. These outscore the row under test so it lands in the table. */
+function fillers(): BridgeRow[] {
+  return ["AAA", "BBB", "CCC"].map((t) =>
+    row({ ticker: t, fetch_symbol: t, combined_score: 9, industry: "Software" })
+  );
+}
+
+const SECTORS = ["Semiconductors", "Software"];
+
 describe("SignalGroups filter feedback (TD-02)", () => {
-  it("keeps the ALIGNED panel visible and explains why filters emptied it", async () => {
+  it("keeps the Aligned tab visible and explains why filters emptied it", async () => {
     resetLocalStorage();
     const user = userEvent.setup();
     const groups = {
@@ -82,17 +92,19 @@ describe("SignalGroups filter feedback (TD-02)", () => {
       tech_fund: [],
       other: [],
     };
-    render(<SignalGroups groups={groups} newTickers={[]} sectors={["Semiconductors"]} />);
+    render(<SignalGroups groups={groups} newTickers={[]} sectors={SECTORS} />);
 
     await screen.findByText("NVDA");
-    await user.click(screen.getByRole("button", { name: /HC only/i }));
+    await user.click(screen.getByRole("button", { name: "HC only" }));
 
-    expect(await screen.findByText(/0 shown/)).toBeInTheDocument();
+    // The tab stays, its count goes to zero, and the panel says where the row went.
+    expect(await screen.findByRole("tab", { name: /Aligned\s*0/ })).toBeInTheDocument();
     expect(screen.getByText(/1 hidden by filters/)).toBeInTheDocument();
+    expect(screen.getByText("Nothing in this group")).toBeInTheDocument();
     expect(screen.queryByText("NVDA")).not.toBeInTheDocument();
   });
 
-  it("does not toggle hcOnly when clicking the InfoTip trigger next to HC only", async () => {
+  it("leaves the HC filter off until it is pressed, and its InfoTip does not toggle it", async () => {
     resetLocalStorage();
     const user = userEvent.setup();
     const groups = {
@@ -101,7 +113,7 @@ describe("SignalGroups filter feedback (TD-02)", () => {
       tech_fund: [],
       other: [],
     };
-    render(<SignalGroups groups={groups} newTickers={[]} sectors={["Semiconductors"]} />);
+    render(<SignalGroups groups={groups} newTickers={[]} sectors={SECTORS} />);
 
     await screen.findByText("NVDA");
     await user.click(screen.getByRole("button", { name: "Conviction filter info" }));
@@ -121,9 +133,30 @@ describe("SignalGroups filter feedback (TD-02)", () => {
       tech_fund: [],
       other: [],
     };
-    render(<SignalGroups groups={groups} newTickers={[]} sectors={["Semiconductors"]} />);
-    expect(await screen.findByText(/ALIGNED\s+\(2\)/)).toBeInTheDocument();
+    render(<SignalGroups groups={groups} newTickers={[]} sectors={SECTORS} />);
+    expect(await screen.findByRole("tab", { name: /Aligned\s*2/ })).toBeInTheDocument();
     expect(screen.queryByText(/hidden by filters/)).not.toBeInTheDocument();
+  });
+});
+
+describe("SignalGroups — cards then table", () => {
+  it("reads the top three names as cards and drops the rest into the table", async () => {
+    resetLocalStorage();
+    mockFetchJson({});
+    const groups = {
+      aligned: [...fillers(), row({ ticker: "NVDA", entry: 100, stop: 90, target: 130 })],
+      pullback: [],
+      tech_fund: [],
+      other: [],
+    };
+    render(<SignalGroups groups={groups} newTickers={[]} sectors={SECTORS} />);
+
+    await screen.findByText("NVDA");
+    // Three cards, each carrying the levels the table only shows on expand.
+    expect(screen.getAllByRole("article")).toHaveLength(3);
+    expect(screen.getAllByRole("link", { name: "Open →" })).toHaveLength(3);
+    // The fourth name is tabular, not a card.
+    expect(screen.getByRole("cell", { name: "Semiconductors" })).toBeInTheDocument();
   });
 });
 
@@ -132,17 +165,22 @@ describe("SignalGroups — row-encoding diet (TD-03/04/05/06)", () => {
     resetLocalStorage();
     mockFetchJson({});
     const groups = {
-      aligned: [row({ ticker: "NVDA" })],
+      aligned: [...fillers(), row({ ticker: "NVDA" })],
       pullback: [],
       tech_fund: [],
       other: [],
     };
-    render(<SignalGroups groups={groups} newTickers={[]} sectors={["Semiconductors"]} />);
+    render(<SignalGroups groups={groups} newTickers={[]} sectors={SECTORS} />);
     await screen.findByText("NVDA");
-    const headers = screen.getAllByRole("columnheader").map((h) => h.textContent);
+    // The trailing disclosure column is sr-only and carries no data, so it is
+    // not one of the six a reader has to parse.
+    const headers = screen
+      .getAllByRole("columnheader")
+      .map((h) => h.textContent)
+      .filter((t) => t !== "Details");
     expect(headers).toHaveLength(6);
-    expect(screen.queryByRole("columnheader", { name: /^C$/ })).not.toBeInTheDocument();
-    expect(screen.queryByRole("columnheader", { name: "⚑" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("columnheader", { name: "Comb" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("columnheader", { name: "Conv" })).not.toBeInTheDocument();
     expect(screen.queryByRole("columnheader", { name: "Cat" })).not.toBeInTheDocument();
   });
 
@@ -150,28 +188,28 @@ describe("SignalGroups — row-encoding diet (TD-03/04/05/06)", () => {
     resetLocalStorage();
     mockFetchJson({});
     const groups = {
-      aligned: [row({ ticker: "NVDA" })],
+      aligned: [...fillers(), row({ ticker: "NVDA" })],
       pullback: [],
       tech_fund: [],
       other: [],
     };
     const user = userEvent.setup();
-    render(<SignalGroups groups={groups} newTickers={[]} sectors={["Semiconductors"]} />);
+    render(<SignalGroups groups={groups} newTickers={[]} sectors={SECTORS} />);
     await screen.findByText("NVDA");
-    // Radix Tooltip.Trigger closes/suppresses on pointerdown (click) by design —
-    // it only opens on hover or keyboard focus (see components/ui/__tests__/InfoTip.test.tsx,
-    // which tests the same two triggers). Use hover here to actually open it.
-    await user.hover(screen.getByRole("button", { name: /Sent · Tech · Fund/i }));
-    // Radix renders tooltip content twice (visible + an accessibility copy),
+    // userEvent.hover closes/suppresses Radix tooltips in jsdom — see the note in
+    // components/ui/__tests__/InfoTip.test.tsx.
+    await user.hover(screen.getByRole("button", { name: "What is Sent · Tech · Fund?" }));
+    // Radix renders tooltip content twice (visible + accessibility copy), for the
     // same reason components/ui/__tests__/InfoTip.test.tsx uses findAllByText.
     expect((await screen.findAllByText(/all three lit = aligned/)).length).toBeGreaterThan(0);
   });
 
-  it("moves conviction, catalyst count and flags into the expanded row, and renders 1W/6M/1Y as Ret chips", async () => {
+  it("moves conviction, catalyst count and flags into the expanded row, and renders 1W/6M/1Y Ret chips", async () => {
     resetLocalStorage();
     mockFetchJson({});
     const groups = {
       aligned: [
+        ...fillers(),
         row({
           ticker: "NVDA",
           is_extended: true,
@@ -187,16 +225,13 @@ describe("SignalGroups — row-encoding diet (TD-03/04/05/06)", () => {
       other: [],
     };
     const user = userEvent.setup();
-    render(<SignalGroups groups={groups} newTickers={[]} sectors={["Semiconductors"]} />);
+    render(<SignalGroups groups={groups} newTickers={[]} sectors={SECTORS} />);
     await screen.findByText("NVDA");
-    // Click the sector cell, not the ticker link — the ticker's <Link> calls
-    // stopPropagation() so it navigates instead of toggling the row.
-    // Scoped to role "cell" (not screen.getByText) because the sector filter's
-    // <select> also renders an <option>Semiconductors</option> with the same
-    // text — getByText matches both and throws a multiple-elements error.
-    await user.click(screen.getByRole("cell", { name: "Semiconductors" }));
-    // conviction, catalyst count and flags are gone from the main row's header set (checked above)
-    // and now live under the expanded row's own labels:
+    // Expansion has its own disclosure control now — a row click opens the
+    // ticker, since the row advertises itself as openable.
+    await user.click(screen.getByRole("button", { name: "Show details" }));
+    // Conviction, catalyst count and flags are gone from the main row's header
+    // set (checked above) and now live under the expanded row's own labels:
     expect(await screen.findByText("Conviction")).toBeInTheDocument();
     expect(screen.getByText("Catalysts")).toBeInTheDocument();
     expect(screen.getByText("Flags")).toBeInTheDocument();
@@ -207,38 +242,40 @@ describe("SignalGroups — row-encoding diet (TD-03/04/05/06)", () => {
 });
 
 describe("SignalGroups — visible caveats (TD-07/TD-14)", () => {
-  it("shows the honest-voice disclaimer under a group title without requiring a hover", async () => {
+  it("prints the honest-voice disclaimer once, at the foot, without requiring a hover", async () => {
     resetLocalStorage();
-    mockFetchJson({});
     const groups = {
       aligned: [row({ ticker: "NVDA" })],
       pullback: [],
       tech_fund: [],
       other: [],
     };
-    render(<SignalGroups groups={groups} newTickers={[]} sectors={["Semiconductors"]} />);
+    render(<SignalGroups groups={groups} newTickers={[]} sectors={SECTORS} />);
+    await screen.findByText("NVDA");
+    // It used to print above each of the four tables.
     expect(
-      await screen.findByText(/Score magnitude does not predict returns \(r≈0\)/)
-    ).toBeInTheDocument();
+      screen.getAllByText(/score magnitude does not predict returns \(r≈0\)/)
+    ).toHaveLength(1);
   });
 
   it("explains why a ticker lands in Everything else", async () => {
     resetLocalStorage();
-    mockFetchJson({});
+    const user = userEvent.setup();
     const groups = {
       aligned: [],
       pullback: [],
       tech_fund: [],
-      other: [row({ ticker: "XOM" })],
+      other: [row({ ticker: "XOM", industry: "Energy" })],
     };
-    render(<SignalGroups groups={groups} newTickers={[]} sectors={["Semiconductors"]} />);
-    expect(
-      await screen.findByText(/didn.t clear the bar for ALIGNED/)
-    ).toBeInTheDocument();
+    render(<SignalGroups groups={groups} newTickers={[]} sectors={SECTORS} />);
+
+    await user.click(screen.getByRole("tab", { name: /Everything else\s*1/ }));
+    expect(await screen.findByText(/cleared none of the three bars/)).toBeInTheDocument();
+    expect(screen.getByText("XOM")).toBeInTheDocument();
   });
 });
 
-describe("SignalGroups — history cache + hover prefetch (TD-08)", () => {
+describe("SignalGroups history prefetch (TD-08)", () => {
   it("prefetches history on row hover so the fetch has already started by the time the row expands", async () => {
     resetLocalStorage();
     let fetchCount = 0;
@@ -247,27 +284,26 @@ describe("SignalGroups — history cache + hover prefetch (TD-08)", () => {
       return { bars: [{ close: 10 }, { close: 11 }] };
     });
     // AMD (not NVDA) — historyCache is a page-lifetime module-scope Map shared
-    // by every test in this file; an earlier NVDA expand already cached it as
-    // "failed", which would make this hover a no-op cache hit instead of a
+    // by every test in this file; an earlier NVDA expand already cached
+    // "failed", which would make the hover a no-op cache hit instead of a
     // fresh fetch.
     const groups = {
-      aligned: [row({ ticker: "AMD", fetch_symbol: "AMD" })],
+      aligned: [...fillers(), row({ ticker: "AMD", fetch_symbol: "AMD" })],
       pullback: [],
       tech_fund: [],
       other: [],
     };
     const user = userEvent.setup();
-    render(<SignalGroups groups={groups} newTickers={[]} sectors={["Semiconductors"]} />);
+    render(<SignalGroups groups={groups} newTickers={[]} sectors={SECTORS} />);
     await screen.findByText("AMD");
     // Scoped to role "cell" — the sector filter's <select> also renders an
-    // <option>Semiconductors</option> with the same text (see the identical
-    // note in the TD-03/04/05/06 describe block above).
+    // <option>Semiconductors</option> with the same text.
     await user.hover(screen.getByRole("cell", { name: "Semiconductors" }));
     expect(fetchCount).toBe(1);
 
-    await user.click(screen.getByRole("cell", { name: "Semiconductors" }));
+    await user.click(screen.getByRole("button", { name: "Show details" }));
     await screen.findByText("Conviction");
-    // second call would only happen on a fresh (uncached) fetch — the hover already resolved it
+    // A second call would only happen on a fresh (uncached) fetch — the hover already resolved it.
     expect(fetchCount).toBe(1);
   });
 });

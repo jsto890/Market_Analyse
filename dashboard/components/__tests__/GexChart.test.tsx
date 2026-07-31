@@ -12,11 +12,11 @@ describe("GexChart", () => {
         ]}
       />
     );
-    expect(screen.queryByText("No GEX data")).not.toBeInTheDocument();
+    expect(screen.queryByText(/No GEX data/)).not.toBeInTheDocument();
   });
 
   it("shows an empty state for an empty array", () => {
     render(<GexChart data={[]} />);
-    expect(screen.getByText("No GEX data")).toBeInTheDocument();
+    expect(screen.getByText(/No GEX data/)).toBeInTheDocument();
   });
 });

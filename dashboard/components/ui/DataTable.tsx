@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback, useMemo, KeyboardEvent, Fragment, type ReactNode } from "react";
-import { ChevronUp, ChevronDown } from "lucide-react";
+import { ChevronUp, ChevronDown, ChevronRight } from "lucide-react";
+import Empty from "@/components/ui/Empty";
 
 export interface Column<T> {
   key: string;
@@ -22,8 +23,15 @@ export interface DataTableProps<T> {
   persistKey?: string;
   onOpen?: (row: T) => void;
   onRowHover?: (row: T) => void;
+  /** Row marked as the current selection by something outside the table — a
+   *  chart, a map — so picking there paints the matching row here. */
+  selectedKey?: string | null;
   /** Visually-hidden <caption> giving the table an accessible name. Optional for backward compat; new/touched tables should always pass one. */
   caption?: string;
+  /** Shown in place of the body when `rows` is empty. The header stays, so the
+   * reader can still see what the table *would* have contained. */
+  emptyMessage?: string;
+  emptyAction?: ReactNode;
 }
 
 interface SortState {
@@ -48,7 +56,10 @@ export default function DataTable<T>({
   persistKey,
   onOpen,
   onRowHover,
+  selectedKey = null,
   caption,
+  emptyMessage = "No rows match the current filters.",
+  emptyAction,
 }: DataTableProps<T>) {
   const storageKey = persistKey ? `dash:table:${persistKey}:sort` : null;
 
@@ -201,9 +212,13 @@ export default function DataTable<T>({
         onKeyDown={handleContainerKeyDown}
         className="overflow-x-auto focus:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-accent"
       >
-        <table className="w-full border-collapse text-[13px]">
+        {/* border-separate, not border-collapse: a collapsed table refuses to
+         * paint a background on <thead>/<tr>, so the sticky header was
+         * transparent and the first data rows scrolled through it. Sticky and
+         * background both live on the <th> cells now. */}
+        <table className="w-full border-separate border-spacing-0 text-body">
           {caption && <caption className="sr-only">{caption}</caption>}
-          <thead className="sticky top-0 z-30 bg-surface">
+          <thead>
             <tr>
               {columns.map((col, ci) => (
                 <th
@@ -211,10 +226,10 @@ export default function DataTable<T>({
                   scope="col"
                   style={{ width: col.width }}
                   className={[
-                    "px-3 py-2 font-medium text-muted border-b border-line whitespace-nowrap",
+                    "sticky top-0 z-20 bg-surface px-[16px] py-[8px] eyebrow border-b border-line whitespace-nowrap",
                     alignClass(col.align),
                     ci === 0
-                      ? "sticky left-0 z-10 bg-surface border-r border-line"
+                      ? "sticky left-0 z-30 border-r border-line"
                       : "",
                     col.sortable ? "cursor-pointer select-none hover:text-[var(--text)]" : "",
                   ].join(" ")}
@@ -232,13 +247,28 @@ export default function DataTable<T>({
                   </span>
                 </th>
               ))}
+              {expandedRender && (
+                <th scope="col" className="sticky top-0 z-20 w-8 bg-surface border-b border-line">
+                  <span className="sr-only">Details</span>
+                </th>
+              )}
             </tr>
           </thead>
           <tbody>
+            {sortedRows.length === 0 && (
+              <tr>
+                <td
+                  colSpan={columns.length + (expandedRender ? 1 : 0)}
+                  className="border-b border-line bg-surface"
+                >
+                  <Empty message={emptyMessage} action={emptyAction} />
+                </td>
+              </tr>
+            )}
             {sortedRows.map((row, ri) => {
               const key = rowKey(row);
               const isExpanded = expandedKeys.has(key);
-              const isFocused = focusedKey === key;
+              const isFocused = focusedKey === key || selectedKey === key;
               const isEven = ri % 2 === 0;
               const stickyBg = isEven ? "bg-surface" : "bg-bg";
 
@@ -251,11 +281,14 @@ export default function DataTable<T>({
                     }}
                     onMouseEnter={() => onRowHover?.(row)}
                     onClick={() => {
+                      // Open wins over expand, matching the keyboard model
+                      // (Enter opens, Space expands). Expandable rows used to
+                      // swallow the click, so a row painted with the accent
+                      // "openable" edge could never actually be opened.
                       setFocusedKey(key);
-                      if (expandedRender) toggleExpand(key);
-                      else onOpen?.(row);
+                      if (onOpen) onOpen(row);
+                      else if (expandedRender) toggleExpand(key);
                     }}
-                    aria-expanded={expandedRender ? isExpanded : undefined}
                     className={[
                       "cursor-pointer transition-colors hover:bg-raised scroll-mt-[var(--nav-h)]",
                       onOpen ? "hover:shadow-[inset_2px_0_0_0_var(--accent)]" : "",
@@ -267,9 +300,9 @@ export default function DataTable<T>({
                       <td
                         key={col.key}
                         className={[
-                          "px-3 py-2 border-b border-line",
+                          "px-[16px] py-[8px] border-b border-line",
                           alignClass(col.align),
-                          col.align === "right" ? "tabular-nums" : "",
+                          col.align === "right" ? "text-data" : "",
                           ci === 0
                             ? `sticky left-0 ${stickyBg} border-r border-line`
                             : "",
@@ -278,10 +311,30 @@ export default function DataTable<T>({
                         {col.render(row)}
                       </td>
                     ))}
+                    {expandedRender && (
+                      <td className="w-8 border-b border-line px-1 py-2 text-right">
+                        <button
+                          type="button"
+                          aria-label={isExpanded ? "Hide details" : "Show details"}
+                          aria-expanded={isExpanded}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setFocusedKey(key);
+                            toggleExpand(key);
+                          }}
+                          className="rounded p-0.5 text-muted hover:bg-raised hover:text-foreground"
+                        >
+                          <ChevronRight
+                            size={13}
+                            className={`transition-transform ${isExpanded ? "rotate-90" : ""}`}
+                          />
+                        </button>
+                      </td>
+                    )}
                   </tr>
                   {expandedRender && isExpanded && (
                     <tr>
-                      <td colSpan={columns.length} className="border-b border-line bg-elevated">
+                      <td colSpan={columns.length + 1} className="border-b border-line bg-elevated">
                         <div className="px-3">{expandedRender(row)}</div>
                       </td>
                     </tr>

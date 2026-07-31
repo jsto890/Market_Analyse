@@ -11,7 +11,11 @@ vi.mock("@/lib/rail-quotes", async (importOriginal) => {
   };
 });
 vi.mock("@/components/rails/EconCalendar", () => ({ EconCalendar: () => <div /> }));
-vi.mock("@/components/rails/MacroGauges", () => ({ MacroGauges: () => <div /> }));
+vi.mock("@/components/rails/MacroGauges", () => ({
+  MacroGauges: () => <div data-testid="rail-macro" />,
+}));
+let pathname = "/";
+vi.mock("next/navigation", () => ({ usePathname: () => pathname }));
 vi.mock("@/lib/macro", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/macro")>();
   return {
@@ -35,6 +39,7 @@ vi.mock("@/lib/calendar", async (importOriginal) => {
 
 beforeEach(() => {
   resetLocalStorage();
+  pathname = "/";
 });
 
 describe("LeftRail width-based collapse (LR-01)", () => {
@@ -52,10 +57,11 @@ describe("LeftRail width-based collapse (LR-01)", () => {
 });
 
 describe("LeftRail offline banner (LR-02)", () => {
-  it("renders QUOTE FEED OFFLINE exactly once, not once per block", () => {
+  it("renders the quote-feed failure exactly once, not once per block", () => {
     window.innerWidth = 1600;
     render(<LeftRail />);
-    expect(screen.getAllByText("QUOTE FEED OFFLINE")).toHaveLength(1);
+    expect(screen.getAllByText("Quote feed offline")).toHaveLength(1);
+    expect(screen.getAllByRole("alert")).toHaveLength(1);
   });
 });
 
@@ -84,6 +90,33 @@ describe("LeftRail block separation (LR-06)", () => {
     render(<LeftRail />);
     // Two Block instances use separator: "US Equity" and "Forex".
     expect(document.querySelectorAll(".border-line-strong").length).toBeGreaterThanOrEqual(2);
+  });
+});
+
+describe("LeftRail macro suppression on /macro", () => {
+  it("drops the gauge block when the macro page is already showing the same scores", () => {
+    window.innerWidth = 1600;
+    pathname = "/macro";
+    render(<LeftRail />);
+    expect(screen.queryByTestId("rail-macro")).not.toBeInTheDocument();
+    // The quote blocks are not duplicated by /macro, so they stay.
+    expect(screen.getByText("Futures")).toBeInTheDocument();
+  });
+
+  it("drops the collapsed strip's macro dot too — a 6px restatement is still a restatement", () => {
+    window.innerWidth = 1000;
+    pathname = "/macro";
+    render(<LeftRail />);
+    expect(screen.queryByLabelText(/^Macro:/)).not.toBeInTheDocument();
+    expect(screen.getByLabelText("Next: CPI")).toBeInTheDocument();
+    expect(screen.getByLabelText(/^FX:/)).toBeInTheDocument();
+  });
+
+  it("keeps both everywhere else — off /macro the rail is the only macro reading", () => {
+    window.innerWidth = 1600;
+    pathname = "/watchlist";
+    render(<LeftRail />);
+    expect(screen.getByTestId("rail-macro")).toBeInTheDocument();
   });
 });
 

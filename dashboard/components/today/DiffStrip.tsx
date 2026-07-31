@@ -22,7 +22,7 @@ interface DiffStripProps {
 
 function TickerLink({ ticker }: { ticker: string }) {
   return (
-    <Link href={`/t/${ticker}`} className="font-mono text-accent hover:underline">
+    <Link href={`/t/${ticker}`} className="text-data text-accent hover:underline">
       {ticker}
     </Link>
   );
@@ -46,13 +46,13 @@ export default function DiffStrip({ diff }: DiffStripProps) {
 
   return (
     <Collapsible
-      trigger={<span className="font-medium text-[13px]">Changes since yesterday</span>}
+      trigger={<span className="text-title">Changes since yesterday</span>}
       defaultOpen
       persistKey="diff"
       className="rounded-lg border border-line bg-surface"
       triggerClassName="px-4 py-3"
     >
-      <div className="space-y-1 border-t border-line px-4 py-3 text-[13px]">
+      <div className="space-y-1 border-t border-line px-4 py-3 text-body">
         {hasNew && (
           <div className="flex flex-wrap gap-2">
             <span className="text-muted">NEW:</span>
@@ -89,13 +89,13 @@ export default function DiffStrip({ diff }: DiffStripProps) {
           <div className="flex flex-wrap gap-2">
             <span className="text-muted">Dropped:</span>
             <Tickers list={diff.dropped.map((d) => d.ticker)} />
-            <span className="text-muted">
+            <span className="text-2">
               (info only — downgrades are not sell signals)
             </span>
           </div>
         )}
         {!hasNew && !hasMoves && !hasTurns && !hasDropped && (
-          <p className="text-muted">No changes since yesterday.</p>
+          <p className="text-2">No changes since yesterday.</p>
         )}
       </div>
     </Collapsible>

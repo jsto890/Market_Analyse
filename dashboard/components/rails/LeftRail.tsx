@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { usePathname } from "next/navigation";
 import { useRailQuotes, RAIL_LABEL, type RailQuote } from "@/lib/rail-quotes";
 import { pickChangeBasis } from "@/lib/change-basis";
 import { STATE_LABEL } from "@/lib/market-clock";
@@ -8,6 +9,8 @@ import { useMarketClock } from "@/lib/useMarketClock";
 import { forexSessions } from "@/lib/forex-session";
 import { useMacro } from "@/lib/macro";
 import { useCalendar } from "@/lib/calendar";
+import InfoTip from "@/components/ui/InfoTip";
+import Failed from "@/components/ui/Failed";
 import { QuoteRow } from "./QuoteRow";
 import { MacroGauges } from "./MacroGauges";
 import { EconCalendar } from "./EconCalendar";
@@ -27,7 +30,7 @@ function EquityBadge() {
       ? "bg-accent/10 text-accent/70"
       : "bg-warn/10 text-warn"; // closed
   return (
-    <span className={`rounded px-1.5 py-px text-[11px] font-medium font-mono leading-none ${cls}`}>
+    <span className={`rounded px-1.5 py-px text-micro font-medium font-mono leading-none ${cls}`}>
       {label}
     </span>
   );
@@ -38,7 +41,7 @@ function FxChip() {
   const { active, closed } = forexSessions();
   const state = closed ? "CLOSED" : active.length === 0 ? "OPEN" : active.join("·");
   return (
-    <span className="rounded px-1.5 py-px text-[11px] font-mono font-medium leading-none bg-elevated text-muted">
+    <span className="rounded px-1.5 py-px text-micro font-mono font-medium leading-none bg-elevated text-muted">
       FX · {state}
     </span>
   );
@@ -59,9 +62,7 @@ function Block({ label, badge, children, separator }: BlockProps) {
     <div className={separator ? "border-t border-line-strong pt-0.5" : undefined}>
       {/* Block header §4.3 / §8.2 */}
       <div className="h-[24px] flex items-center justify-between px-3">
-        <span className="text-[11px] font-medium uppercase tracking-[0.08em] text-muted font-mono leading-none">
-          {label}
-        </span>
+        <span className="eyebrow leading-none">{label}</span>
         {badge}
       </div>
       {children}
@@ -100,8 +101,8 @@ function MiniItem({ symbol, changePct }: MiniItemProps) {
 
   return (
     <div className="w-full flex flex-col items-center py-1.5 gap-0.5 hover:bg-elevated cursor-default">
-      <span className="text-[11px] font-mono text-muted leading-none uppercase">{label}</span>
-      <span className={`text-[11px] font-mono font-medium tabular-nums leading-none ${pctCls}`}>
+      <span className="eyebrow leading-none">{label}</span>
+      <span className={`text-micro font-mono font-medium tabular-nums leading-none ${pctCls}`}>
         {pctStr}
       </span>
     </div>
@@ -109,8 +110,10 @@ function MiniItem({ symbol, changePct }: MiniItemProps) {
 }
 
 /** Collapsed-strip glyphs for blocks the 36px strip otherwise drops entirely
- * (LR-04) — one dot each for FX session, next calendar event, macro sentiment. */
-function HiddenBlockGlyphs() {
+ * (LR-04) — one dot each for FX session, next calendar event, macro sentiment.
+ * The macro dot goes when the macro page is already on screen: a compressed
+ * restatement of the same score is still the same score said twice. */
+function HiddenBlockGlyphs({ showMacro }: { showMacro: boolean }) {
   const { active, closed } = forexSessions();
   const fxLabel = closed
     ? "FX: closed"
@@ -126,13 +129,8 @@ function HiddenBlockGlyphs() {
   const macroLabel = globalGauge
     ? `Macro: ${globalGauge.score >= 0 ? "+" : ""}${globalGauge.score.toFixed(2)}`
     : "Macro: —";
-  const macroClass = !globalGauge
-    ? "bg-muted"
-    : globalGauge.score > 0.05
-    ? "bg-pos"
-    : globalGauge.score < -0.05
-    ? "bg-neg"
-    : "bg-muted";
+  // Macro sentiment is model output, so it takes --model, never P&L green/red.
+  const macroClass = globalGauge && Math.abs(globalGauge.score) > 0.05 ? "bg-model" : "bg-muted";
 
   const { data: calData } = useCalendar(1);
   const nextEvent = calData?.events?.[0];
@@ -141,9 +139,19 @@ function HiddenBlockGlyphs() {
 
   return (
     <div className="flex flex-col items-center gap-1.5 py-1.5 border-t border-line w-full">
-      <span aria-label={fxLabel} title={fxLabel} className={`w-1.5 h-1.5 rounded-full ${fxClass}`} />
-      <span aria-label={calLabel} title={calLabel} className={`w-1.5 h-1.5 rounded-full ${calClass}`} />
-      <span aria-label={macroLabel} title={macroLabel} className={`w-1.5 h-1.5 rounded-full ${macroClass}`} />
+      {/* InfoTip, not `title`: these are 6px dots, so the label is the only way
+       * to read them — and a native title is mouse-only. */}
+      <InfoTip label={fxLabel} content={fxLabel}>
+        <span aria-hidden className={`w-1.5 h-1.5 rounded-full ${fxClass}`} />
+      </InfoTip>
+      <InfoTip label={calLabel} content={calLabel}>
+        <span aria-hidden className={`w-1.5 h-1.5 rounded-full ${calClass}`} />
+      </InfoTip>
+      {showMacro && (
+        <InfoTip label={macroLabel} content={macroLabel}>
+          <span aria-hidden className={`w-1.5 h-1.5 rounded-full ${macroClass}`} />
+        </InfoTip>
+      )}
     </div>
   );
 }
@@ -156,6 +164,9 @@ const NARROW_QUERY = "(max-width: 1279px)";
 export function LeftRail() {
   // Start expanded SSR; reconcile from localStorage/viewport on mount to avoid hydration mismatch
   const [collapsed, setCollapsed] = useState(false);
+  // The macro page shows every gauge in full; the rail's copy of the global
+  // one sits ~900px away saying the same thing. The rail is the one that loses.
+  const onMacroPage = (usePathname() ?? "").startsWith("/macro");
 
   useEffect(() => {
     const readStored = (): string | null => {
@@ -207,14 +218,14 @@ export function LeftRail() {
         <MiniItem symbol="SPY" changePct={spyQ?.change_pct} />
         <MiniItem symbol="QQQ" changePct={qqqQ?.change_pct} />
         <MiniItem symbol="^VIX" changePct={vixQ?.change_pct} />
-        <HiddenBlockGlyphs />
+        <HiddenBlockGlyphs showMacro={!onMacroPage} />
         {/* Expand button — bottom */}
         <button
           onClick={toggle}
           aria-label="Expand quote rail"
           className="mt-auto w-9 h-9 flex items-center justify-center text-muted hover:text-foreground hover:bg-elevated"
         >
-          <span className="text-[14px] leading-none select-none">›</span>
+          <span className="text-body leading-none select-none">›</span>
         </button>
       </aside>
     );
@@ -258,9 +269,11 @@ export function LeftRail() {
     >
       <div className="pt-1 flex-1 min-h-0 overflow-y-auto">
         {error && (
-          <div className="mx-3 mt-1 mb-0.5 px-2 py-1.5 rounded border border-warn/30 bg-warn/10 text-warn text-[11px] font-mono leading-snug">
-            QUOTE FEED OFFLINE
-          </div>
+          <Failed
+            title="Quote feed offline"
+            message="Futures, index and FX quotes are unavailable."
+            className="mx-3 mt-1 mb-0.5"
+          />
         )}
 
         {/* FUTURES block — no badge */}
@@ -284,7 +297,7 @@ export function LeftRail() {
 
       {/* Non-scrolling footer — always visible, no matter the viewport height (LR-05) */}
       <div className="flex-shrink-0">
-        <MacroGauges window="1d" />
+        {!onMacroPage && <MacroGauges window="1d" />}
 
         {/* Collapse button per spec §8.5 */}
         <button
@@ -292,7 +305,7 @@ export function LeftRail() {
           aria-label="Collapse quote rail"
           className="w-9 h-9 flex items-center justify-center text-muted hover:text-foreground hover:bg-elevated"
         >
-          <span className="text-[14px] leading-none select-none">‹</span>
+          <span className="text-body leading-none select-none">‹</span>
         </button>
       </div>
     </aside>

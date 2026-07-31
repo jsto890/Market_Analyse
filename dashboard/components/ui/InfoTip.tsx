@@ -6,7 +6,15 @@ import { ReactNode } from "react";
 export interface InfoTipProps {
   /** Tooltip body text (or short JSX, e.g. a <ul> of catalyst names). */
   content: ReactNode;
-  /** Trigger content. Default: a small Info glyph (12px), matching the existing header/inline icon usage. */
+  /**
+   * Trigger content. Must render visible pixels — an `sr-only` child produces
+   * a trigger nobody can see or point at, which is how four explanations on
+   * `/odte` and `/odte/strikes` became unreachable. Omit it and you get the
+   * Info glyph; pass a visible node and you get that.
+   *
+   * If the trigger is a *term* rather than an icon, use `Gloss` instead: it
+   * opens on click, works on touch, and reads as explainable at a glance.
+   */
   children?: ReactNode;
   /** aria-label for icon-only triggers (required when children is omitted or non-text). */
   label?: string;
@@ -14,6 +22,15 @@ export interface InfoTipProps {
 }
 
 export default function InfoTip({ content, children, label, className }: InfoTipProps) {
+  if (process.env.NODE_ENV !== "production" && typeof children === "object" && children !== null) {
+    const cls = (children as { props?: { className?: string } })?.props?.className ?? "";
+    if (/\bsr-only\b/.test(cls)) {
+      throw new Error(
+        "InfoTip: an sr-only child renders no visible trigger. Pass a visible child, omit children for the Info glyph, or use <Gloss> for a term.",
+      );
+    }
+  }
+
   return (
     <Tooltip.Root>
       <Tooltip.Trigger asChild>
@@ -27,7 +44,7 @@ export default function InfoTip({ content, children, label, className }: InfoTip
       </Tooltip.Trigger>
       <Tooltip.Portal>
         <Tooltip.Content
-          className="z-50 max-w-xs rounded border border-line bg-elevated px-2 py-1.5 text-[12px] font-normal normal-case tracking-normal text-muted shadow-lg"
+          className="z-50 max-w-xs rounded border border-line bg-elevated px-2 py-1.5 text-body font-normal normal-case tracking-normal text-2 shadow-lg"
           sideOffset={4}
         >
           {content}

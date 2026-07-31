@@ -24,21 +24,24 @@ describe("ConvictionDot", () => {
     expect((await screen.findAllByText("Display-only — not blended into the composite score")).length).toBeGreaterThan(0);
   });
 
-  it("tints filled dots green for high conviction", () => {
+  // Conviction is a model tier, so every filled dot is --model. The tier reads
+  // from the count, never from P&L green/red.
+  it.each([
+    ["high", 3],
+    ["med", 2],
+    ["low", 1],
+  ] as const)("fills %s conviction as %i model-tinted dots", (value, count) => {
+    const { container } = render(withProvider(<ConvictionDot value={value} />));
+    const filled = container.querySelectorAll("span[style*='background: var(--model)']");
+    expect(filled.length).toBe(count);
+  });
+
+  it("never tints a dot with a P&L colour", () => {
     const { container } = render(withProvider(<ConvictionDot value="high" />));
-    const filled = container.querySelectorAll("span[style*='background: var(--pos)']");
-    expect(filled.length).toBe(3);
-  });
-
-  it("tints filled dots amber for med conviction", () => {
-    const { container } = render(withProvider(<ConvictionDot value="med" />));
-    const filled = container.querySelectorAll("span[style*='background: var(--warn)']");
-    expect(filled.length).toBe(2);
-  });
-
-  it("tints the filled dot muted for low conviction", () => {
-    const { container } = render(withProvider(<ConvictionDot value="low" />));
-    const filled = container.querySelectorAll("span[style*='background: var(--muted)']");
-    expect(filled.length).toBe(1);
+    expect(
+      container.querySelectorAll(
+        "span[style*='var(--pos)'], span[style*='var(--neg)'], span[style*='var(--green)'], span[style*='var(--red)']",
+      ).length,
+    ).toBe(0);
   });
 });

@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from "vitest";
-import { render, screen, waitFor, within } from "@/test/render";
+import { render, screen, waitFor } from "@/test/render";
 import userEvent from "@testing-library/user-event";
 import { mockFetchJson } from "@/test/fetchMock";
 import { resetLocalStorage, seedLocalStorage } from "@/test/localStorage";
@@ -28,12 +28,17 @@ beforeEach(() => {
 });
 
 describe("LevelsCard", () => {
-  it("shows the rail's visible low/high scale and live price label", async () => {
+  it("states the plan once and leaves the levels to the chart that draws them (TK-02)", async () => {
     render(<LevelsCard ticker="AAPL" bridgeRow={bridgeRow()} />);
-    const rail = await waitFor(() => screen.getByTestId("price-rail"));
-    expect(within(rail).getByText("95.00")).toBeInTheDocument();
-    expect(within(rail).getByText("115.00")).toBeInTheDocument();
-    expect(within(rail).getByText("102.50")).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByText(/Invalidates on a close below/)).toBeInTheDocument());
+    // The rail and the four-cell grid were the same three numbers a third and a
+    // fourth time; the chart's titled price lines are the one display.
+    expect(screen.queryByTestId("price-rail")).not.toBeInTheDocument();
+    expect(screen.queryByText("Entry")).not.toBeInTheDocument();
+    expect(screen.queryByText("Target")).not.toBeInTheDocument();
+    // Once each, inside the sentence.
+    expect(screen.getAllByText("100.00")).toHaveLength(1);
+    expect(screen.getAllByText("115.00")).toHaveLength(1);
   });
 
   it("frames risk sizing as % of a stated account size with a fee/slippage caveat", async () => {

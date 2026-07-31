@@ -14,12 +14,13 @@ describe("resolveChartTokens", () => {
     el.style.setProperty("--accent", "#0000ff");
     el.style.setProperty("--amber", "#ffaa00");
     el.style.setProperty("--teal", "#00ffff");
+    el.style.setProperty("--model", "#9d7cf5");
     document.body.appendChild(el);
     const tokens = resolveChartTokens(el);
     expect(tokens).toEqual({
       bg: "#111111", text: "#eeeeee", muted: "#999999", line: "#222222",
       lineStrong: "#333333", green: "#00ff00", red: "#ff0000",
-      accent: "#0000ff", amber: "#ffaa00", teal: "#00ffff",
+      accent: "#0000ff", amber: "#ffaa00", teal: "#00ffff", model: "#9d7cf5",
     });
     document.body.removeChild(el);
   });
@@ -32,6 +33,7 @@ describe("resolveChartTokens", () => {
     expect(tokens.green).toBe("#3fb950");
     expect(tokens.red).toBe("#f85149");
     expect(tokens.accent).toBe("#4c8dff");
+    expect(tokens.model).toBe("#9d7cf5");
     document.body.removeChild(el);
   });
 });

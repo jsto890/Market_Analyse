@@ -2,7 +2,8 @@
 
 import { useState, useMemo, useCallback } from "react";
 import CandleChart, { type Bar, type Marker } from "@/components/charts/CandleChart";
-import EmptyState from "@/components/ui/EmptyState";
+import Empty from "@/components/ui/Empty";
+import Failed from "@/components/ui/Failed";
 import { useTickerData } from "@/lib/useTickerData";
 import { deriveLevels, levelsToChartLevels } from "@/lib/levels";
 import type { BridgeRow } from "@/types/bridge";
@@ -66,25 +67,39 @@ export default function TickerChartSection({
   }, [ticker]);
 
   if (status !== "ok") {
-    const message =
-      status === "timeout"
-        ? `History request for ${ticker} timed out`
-        : status === "no-data"
-        ? `No historical bars available for ${ticker}`
-        : `Couldn't load history for ${ticker}`;
+    if (status === "no-data") {
+      return (
+        <div className={className}>
+          <Empty
+            title="No price history"
+            message={`The bar feed returned nothing for ${ticker}.`}
+            fill
+          />
+        </div>
+      );
+    }
+    const retryButton = (
+      <button
+        type="button"
+        onClick={() => void retry()}
+        disabled={retrying}
+        className="rounded border border-accent/40 px-2 py-0.5 text-data text-accent transition-colors hover:bg-accent/10 disabled:opacity-50"
+      >
+        {retrying ? "Retrying…" : "Retry"}
+      </button>
+    );
     return (
       <div className={className}>
-        <EmptyState message={message} />
-        {status !== "no-data" && (
-          <button
-            type="button"
-            onClick={() => void retry()}
-            disabled={retrying}
-            className="mt-2 font-mono text-[11px] text-accent border border-accent/40 rounded px-2 py-0.5 hover:bg-accent/10 transition-colors disabled:opacity-50"
-          >
-            {retrying ? "Retrying…" : "Retry"}
-          </button>
-        )}
+        <Failed
+          title="Chart unavailable"
+          message={
+            status === "timeout"
+              ? `The history request for ${ticker} timed out. The chart is the only thing missing — everything else on this page is current.`
+              : `History for ${ticker} didn’t load. The chart is the only thing missing — everything else on this page is current.`
+          }
+          action={retryButton}
+          fill
+        />
       </div>
     );
   }

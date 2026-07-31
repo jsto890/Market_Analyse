@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { RAIL_LABEL } from "@/lib/rail-quotes";
+import Loading from "@/components/ui/Loading";
 
 interface QuoteRowProps {
   symbol: string;
@@ -57,15 +58,15 @@ export function QuoteRow({ symbol, price, changePct, prevBasis, skeleton }: Quot
   if (skeleton) {
     // Spec §8.8 — symbol label stays, price/pct are animated bars
     return (
-      <div className="h-[26px] flex items-center px-3 gap-2">
-        <span className="w-12 text-[11px] font-mono text-muted flex-shrink-0 leading-none">
+      <div className="h-[26px] flex items-center px-3 gap-2" aria-hidden="true">
+        <span className="eyebrow w-12 flex-shrink-0 leading-none">
           {label}
         </span>
         <div className="flex-1 flex justify-end">
-          <div className="h-3 w-14 rounded bg-elevated animate-pulse" />
+          <Loading variant="lines" count={1} className="w-14" />
         </div>
-        <div className="w-14 flex justify-end">
-          <div className="h-3 w-10 rounded bg-elevated animate-pulse" />
+        <div className="w-16 flex justify-end">
+          <Loading variant="lines" count={1} className="w-10" />
         </div>
       </div>
     );
@@ -75,14 +76,14 @@ export function QuoteRow({ symbol, price, changePct, prevBasis, skeleton }: Quot
   // pos/neg applied to the price). The % change column still colors normally.
   return (
     <Link href={`/t/${symbol}`} className="h-[26px] flex items-center px-3 hover:bg-elevated">
-      <span className="w-12 text-[11px] font-mono text-muted flex-shrink-0 leading-none">
+      <span className="eyebrow w-12 flex-shrink-0 leading-none">
         {label}
       </span>
-      <span className="flex-1 text-right text-[12px] font-mono tabular-nums text-foreground leading-none">
+      <span className="flex-1 text-right text-data text-foreground leading-none">
         {formatPrice(symbol, price)}
       </span>
       <span
-        className={`w-14 text-right text-[11px] font-mono font-medium tabular-nums leading-none ${pctColor(changePct)}`}
+        className={`w-16 text-right text-data font-medium leading-none ${pctColor(changePct)}`}
       >
         {formatPct(changePct)}
       </span>

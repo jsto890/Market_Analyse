@@ -12,7 +12,7 @@ export interface CenterBarProps {
 
 export default function CenterBar({ value, width = 56, height = 8, showValue = false }: CenterBarProps) {
   if (!Number.isFinite(value)) {
-    return <span className="font-mono text-[13px] tabular-nums text-muted">—</span>;
+    return <span className="text-data text-muted">—</span>;
   }
   const clamped = Math.max(-1, Math.min(1, value));
   const isPos = clamped >= 0;
@@ -26,12 +26,14 @@ export default function CenterBar({ value, width = 56, height = 8, showValue = f
       >
         <span
           className="absolute top-0 h-full"
-          style={{ left: isPos ? "50%" : `${50 - pct}%`, width: `${pct}%`, background: isPos ? "var(--green)" : "var(--red)" }}
+          // Net agreement / sentiment score are model output — direction reads
+          // from which side of centre fills, never from P&L green/red.
+          style={{ left: isPos ? "50%" : `${50 - pct}%`, width: `${pct}%`, background: "var(--model)" }}
         />
         <span className="absolute top-0 h-full w-px bg-muted/50" style={{ left: "50%" }} />
       </span>
       {showValue && (
-        <span className="font-mono text-[13px] tabular-nums text-muted w-[38px] text-right">
+        <span className="text-data text-muted w-[38px] text-right">
           {clamped > 0 ? "+" : ""}
           {clamped.toFixed(2)}
         </span>

@@ -14,9 +14,37 @@ const GAUGES = [
   { scope: "global", window: "1h", score: 0.05, n: 20, ts: "2026-07-28T00:00:00Z" },
 ];
 
+const TILES: Record<string, unknown> = {
+  "1d": {
+    window: "1d",
+    tiles: [
+      { scope: "global", score: 0.1, n: 50, ts: "2026-07-28T00:00:00Z", delta_1h: 0.02, delta_1d: -0.04, spark: [0.05, 0.08, 0.1] },
+      { scope: "sector:AI / Compute", score: 0.3, n: 10, ts: "2026-07-28T00:00:00Z", delta_1h: null, delta_1d: 0.12, spark: [0.2, 0.3] },
+    ],
+  },
+  "1h": {
+    window: "1h",
+    tiles: [
+      { scope: "global", score: 0.04, n: 20, ts: "2026-07-28T00:00:00Z", delta_1h: 0.0, delta_1d: null, spark: [0.03, 0.04] },
+    ],
+  },
+  "1w": {
+    window: "1w",
+    tiles: [
+      { scope: "global", score: 0.1, n: 90, ts: "2026-07-28T00:00:00Z", delta_1h: null, delta_1d: 0.01, spark: [0.09, 0.1] },
+    ],
+  },
+};
+
 function mockMacroFetch() {
   mockFetchJson((url: string) => {
     if (url === "/api/argus/macro") return { gauges: GAUGES };
+    if (url.startsWith("/api/argus/macro/tiles")) {
+      const win = new URL(url, "http://x").searchParams.get("window") ?? "1d";
+      return TILES[win];
+    }
+    if (url.startsWith("/api/argus/macro/contributors"))
+      return { scope: "global", window: "1d", n: 0, score: 0, items: [], tickers: [] };
     if (url.startsWith("/api/argus/macro/series")) return { scope: "global", window: "1d", points: [] };
     if (url.startsWith("/api/argus/history/SPY")) return { bars: [] };
     return {};
@@ -25,15 +53,19 @@ function mockMacroFetch() {
 
 describe("MacroPage empty state (MC-03)", () => {
   it("shows empty state in place of the chart when there is no macro data", async () => {
-    mockFetchJson({
-      "/api/argus/macro": { gauges: [] },
-      "/api/argus/history/SPY?period=1mo&interval=1d": { bars: [] },
+    searchParamsMock.current = "";
+    mockFetchJson((url: string) => {
+      if (url === "/api/argus/macro") return { gauges: [] };
+      if (url.startsWith("/api/argus/macro/tiles")) return { window: "1d", tiles: [] };
+      if (url.startsWith("/api/argus/history/SPY")) return { bars: [] };
+      return {};
     });
     render(<MacroPage />);
     expect(await screen.findByText("No macro data yet — the aggregator runs every 20 min.")).toBeInTheDocument();
   });
 
   it("shows the chart caption, not the empty state, once gauge data exists", async () => {
+    searchParamsMock.current = "";
     mockMacroFetch();
     render(<MacroPage />);
     await screen.findByText("AI / Compute");
@@ -41,26 +73,38 @@ describe("MacroPage empty state (MC-03)", () => {
   });
 });
 
-describe("MacroPage header + legend (MC-04)", () => {
+describe("MacroPage header + legend (MC-04, MAC-06)", () => {
   it("shows a page heading, subtitle, and a Macro/SPY legend", async () => {
+    searchParamsMock.current = "";
     mockMacroFetch();
     render(<MacroPage />);
     expect(screen.getByText("Macro Sentiment")).toBeInTheDocument();
     expect(screen.getByText(/FinBERT-scored news/)).toBeInTheDocument();
-    expect(await screen.findByText("Macro")).toBeInTheDocument();
-    expect(screen.getByText("SPY")).toBeInTheDocument();
+    expect(await screen.findByText("Macro score (left)")).toBeInTheDocument();
+    expect(screen.getByText(/SPY close \(right/)).toBeInTheDocument();
   });
 
-  it("keeps score and n values monospaced after the blanket font-mono is removed", async () => {
+  it("states the neutral band in the legend instead of applying it invisibly (MAC-06)", async () => {
+    searchParamsMock.current = "";
     mockMacroFetch();
     render(<MacroPage />);
-    const score = await screen.findByText("+0.10");
-    expect(score.className).toMatch(/font-mono/);
+    expect(await screen.findByText(/±0.05 neutral band/)).toBeInTheDocument();
+  });
+
+  it("discloses the model, corpus, decay and what a number means (MAC-05)", async () => {
+    searchParamsMock.current = "";
+    mockMacroFetch();
+    render(<MacroPage />);
+    expect(screen.getByText(/How this score is computed/)).toBeInTheDocument();
+    expect(screen.getByText(/FinBERT \(ProsusAI\/finbert\)/)).toBeInTheDocument();
+    expect(screen.getByText(/half-life of 12 hours/)).toBeInTheDocument();
+    expect(screen.getByText(/before decay weighting/)).toBeInTheDocument();
   });
 });
 
-describe("MacroPage gauge card semantics (MC-05)", () => {
+describe("MacroPage tiles (MAC-07)", () => {
   it("marks the selected scope card aria-pressed and leaves the rest unpressed", async () => {
+    searchParamsMock.current = "";
     mockMacroFetch();
     render(<MacroPage />);
     const globalCard = await screen.findByRole("button", { name: /GLOBAL/ });
@@ -69,50 +113,86 @@ describe("MacroPage gauge card semantics (MC-05)", () => {
     expect(sectorCard).toHaveAttribute("aria-pressed", "false");
   });
 
+  it("shows change over 1h and 1d, not just a static level", async () => {
+    searchParamsMock.current = "";
+    mockMacroFetch();
+    render(<MacroPage />);
+    expect(await screen.findByText(/1h ↑\+0\.02/)).toBeInTheDocument();
+    expect(screen.getByText(/1d ↓-0\.04/)).toBeInTheDocument();
+  });
+
   it("renders the n= count at the data-floor size with no opacity utility", async () => {
+    searchParamsMock.current = "";
     mockMacroFetch();
     render(<MacroPage />);
     const nEl = await screen.findByText("n=50");
-    expect(nEl.className).toMatch(/text-\[11px\]/);
+    expect(nEl.className).toMatch(/text-data/);
     expect(nEl.className).not.toMatch(/opacity-/);
   });
 });
 
-describe("MacroPage window from URL (MC-06)", () => {
+describe("MacroPage lookback control (MC-06, MAC-08, MAC-10)", () => {
   it("initializes the window from a ?window= query param", async () => {
     searchParamsMock.current = "window=1w";
+    mockMacroFetch();
+    render(<MacroPage />);
+    const activeWindow = await screen.findByRole("button", { name: "1 week" });
+    expect(activeWindow.className).toMatch(/bg-accent\/20/);
+  });
+
+  it("defaults to 1d and labels the control rather than showing bare codes (MAC-10)", async () => {
+    searchParamsMock.current = "";
+    mockMacroFetch();
+    render(<MacroPage />);
+    const activeWindow = await screen.findByRole("button", { name: "1 day" });
+    expect(activeWindow.className).toMatch(/bg-accent\/20/);
+    expect(screen.getByText("Lookback")).toBeInTheDocument();
+    expect(screen.getByText(/previous 24 hours/)).toBeInTheDocument();
+  });
+
+  it("moves the SPY benchmark timebase with the lookback (MAC-08)", async () => {
+    searchParamsMock.current = "";
+    const calls: string[] = [];
     mockFetchJson((url: string) => {
-      if (url === "/api/argus/macro") return { gauges: [{ scope: "global", window: "1w", score: 0.1, n: 10, ts: "2026-07-28T00:00:00Z" }] };
-      if (url.startsWith("/api/argus/macro/series")) return { scope: "global", window: "1w", points: [] };
+      calls.push(url);
+      if (url === "/api/argus/macro") return { gauges: GAUGES };
+      if (url.startsWith("/api/argus/macro/tiles")) {
+        const win = new URL(url, "http://x").searchParams.get("window") ?? "1d";
+        return TILES[win];
+      }
+      if (url.startsWith("/api/argus/macro/contributors"))
+        return { scope: "global", window: "1d", n: 0, score: 0, items: [], tickers: [] };
+      if (url.startsWith("/api/argus/macro/series")) return { scope: "global", window: "1d", points: [] };
       if (url.startsWith("/api/argus/history/SPY")) return { bars: [] };
       return {};
     });
     render(<MacroPage />);
-    const activeWindow = await screen.findByRole("button", { name: "1w" });
-    expect(activeWindow.className).toMatch(/bg-accent\/20/);
-  });
+    await screen.findByText("Macro score (left)");
+    expect(calls.some((u) => u === "/api/argus/history/SPY?period=5d&interval=30m")).toBe(true);
+    expect(calls.some((u) => u.includes("period=1mo&interval=1d"))).toBe(false);
 
-  it("defaults to 1d when no query param is present", async () => {
-    searchParamsMock.current = "";
-    mockMacroFetch();
-    render(<MacroPage />);
-    const activeWindow = await screen.findByRole("button", { name: "1d" });
-    expect(activeWindow.className).toMatch(/bg-accent\/20/);
+    await userEvent.click(screen.getByRole("button", { name: "1 hour" }));
+    await vi.waitFor(() =>
+      expect(calls.some((u) => u === "/api/argus/history/SPY?period=5d&interval=15m")).toBe(true)
+    );
   });
 });
 
-describe("MacroPage scope reconciliation (MC-02)", () => {
-  it("resets scope to global when the selected scope has no data in the newly-picked window", async () => {
+describe("MacroPage scope reconciliation (MC-02, MAC-11)", () => {
+  it("explains the reset instead of silently snapping back to global", async () => {
+    searchParamsMock.current = "";
     mockMacroFetch();
     render(<MacroPage />);
 
     const sectorCard = await screen.findByText("AI / Compute");
     await userEvent.click(sectorCard);
-    expect(await screen.findByText(/AI \/ Compute · 1d/)).toBeInTheDocument();
+    expect(await screen.findByText(/AI \/ Compute · 1 day lookback/)).toBeInTheDocument();
 
-    const hourButton = screen.getByRole("button", { name: "1h" });
-    await userEvent.click(hourButton);
+    await userEvent.click(screen.getByRole("button", { name: "1 hour" }));
 
-    expect(await screen.findByText(/GLOBAL · 1h/)).toBeInTheDocument();
+    expect(await screen.findByText(/GLOBAL · 1 hour lookback/)).toBeInTheDocument();
+    expect(screen.getByRole("status").textContent).toMatch(
+      /AI \/ Compute has no scored headlines in the 1 hour lookback/
+    );
   });
 });

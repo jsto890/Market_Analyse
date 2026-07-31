@@ -38,6 +38,36 @@ describe("RRGChart hidden sectors (RO-06)", () => {
   });
 });
 
+describe("RRGChart sector picker (RO-11)", () => {
+  const names = { Energy: [{ ticker: "XOM" }, { ticker: "CVX" }] };
+
+  it("names the picked sector's candidates, each linked to its ticker page", () => {
+    render(<RRGChart rows={rows} namesBySector={names} selected="Energy" onSelect={() => {}} />);
+    expect(screen.getByText(/Energy · on today/)).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "XOM" })).toHaveAttribute("href", "/t/XOM");
+    expect(screen.getByRole("link", { name: "CVX" })).toHaveAttribute("href", "/t/CVX");
+  });
+
+  it("says the sector produced no candidates rather than showing an empty row", () => {
+    render(<RRGChart rows={rows} namesBySector={names} selected="Utilities" onSelect={() => {}} />);
+    expect(screen.getByText(/Nothing from this sector made today/)).toBeInTheDocument();
+  });
+
+  it("renders no names band at all when the signals file could not be read", () => {
+    render(<RRGChart rows={rows} selected="Energy" onSelect={() => {}} />);
+    expect(screen.queryByText(/on today/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Nothing from this sector/)).not.toBeInTheDocument();
+  });
+});
+
+describe("RRGChart legend (RO duplication)", () => {
+  it("names no sector beside the plot — the rotation table below is the legend", () => {
+    render(<RRGChart rows={rows} selected={null} onSelect={() => {}} />);
+    expect(screen.queryByText("Energy")).not.toBeInTheDocument();
+    expect(screen.queryByText("Utilities")).not.toBeInTheDocument();
+  });
+});
+
 describe("RRGChart label decluttering (RO-07)", () => {
   it("mounts cleanly when several sectors cluster at nearly the same RS-Ratio/RS-Mom", () => {
     const clustered: RotationRow[] = [

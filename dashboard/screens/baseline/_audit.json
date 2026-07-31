@@ -1,0 +1,417 @@
+{
+  "/": {
+    "status": 200,
+    "consoleErrors": [],
+    "metrics": {
+      "scrollHeight": 1404,
+      "clientHeight": 674,
+      "contentWidth": 1048.5,
+      "contentPadding": "24px 24px 24px 24px",
+      "tables": 1,
+      "rows": 2,
+      "fontSizes": {
+        "13px": 392,
+        "11px": 108,
+        "15px": 12,
+        "12px": 5,
+        "20px": 4
+      },
+      "invisibleTips": 8,
+      "titleAttrs": 0
+    }
+  },
+  "/t/AAPL": {
+    "status": 200,
+    "consoleErrors": [],
+    "metrics": {
+      "scrollHeight": 2885,
+      "clientHeight": 674,
+      "contentWidth": 1048.5,
+      "contentPadding": "24px 24px 24px 24px",
+      "tables": 5,
+      "rows": 22,
+      "fontSizes": {
+        "13px": 703,
+        "11px": 397,
+        "15px": 11,
+        "28px": 1
+      },
+      "invisibleTips": 7,
+      "titleAttrs": 0
+    }
+  },
+  "/odte": {
+    "status": 200,
+    "consoleErrors": [],
+    "metrics": {
+      "scrollHeight": 754,
+      "clientHeight": 674,
+      "contentWidth": 1048.5,
+      "contentPadding": "0px 0px 0px 0px",
+      "tables": 0,
+      "rows": 0,
+      "fontSizes": {
+        "13px": 357,
+        "11px": 62,
+        "15px": 2
+      },
+      "invisibleTips": 8,
+      "titleAttrs": 0
+    }
+  },
+  "/odte/strikes": {
+    "status": 200,
+    "consoleErrors": [],
+    "metrics": {
+      "scrollHeight": 1252,
+      "clientHeight": 674,
+      "contentWidth": 1048.5,
+      "contentPadding": "0px 0px 0px 0px",
+      "tables": 1,
+      "rows": 41,
+      "fontSizes": {
+        "13px": 906,
+        "11px": 131,
+        "15px": 3
+      },
+      "invisibleTips": 9,
+      "titleAttrs": 0
+    }
+  },
+  "/options": {
+    "status": 200,
+    "consoleErrors": [],
+    "metrics": {
+      "scrollHeight": 754,
+      "clientHeight": 674,
+      "contentWidth": 1048.5,
+      "contentPadding": "0px 0px 0px 0px",
+      "tables": 0,
+      "rows": 0,
+      "fontSizes": {
+        "13px": 357,
+        "11px": 62,
+        "15px": 2
+      },
+      "invisibleTips": 8,
+      "titleAttrs": 0
+    }
+  },
+  "/options/ladder": {
+    "status": 200,
+    "consoleErrors": [],
+    "metrics": {
+      "scrollHeight": 1252,
+      "clientHeight": 674,
+      "contentWidth": 1048.5,
+      "contentPadding": "0px 0px 0px 0px",
+      "tables": 1,
+      "rows": 41,
+      "fontSizes": {
+        "13px": 906,
+        "11px": 131,
+        "15px": 3
+      },
+      "invisibleTips": 9,
+      "titleAttrs": 0
+    }
+  },
+  "/options/gamma": {
+    "status": 200,
+    "consoleErrors": [],
+    "metrics": {
+      "scrollHeight": 1066,
+      "clientHeight": 674,
+      "contentWidth": 1048.5,
+      "contentPadding": "0px 0px 0px 0px",
+      "tables": 0,
+      "rows": 0,
+      "fontSizes": {
+        "13px": 271,
+        "11px": 91,
+        "15px": 6
+      },
+      "invisibleTips": 8,
+      "titleAttrs": 0
+    }
+  },
+  "/options/flow": {
+    "status": 200,
+    "consoleErrors": [],
+    "metrics": {
+      "scrollHeight": 754,
+      "clientHeight": 674,
+      "contentWidth": 1048.5,
+      "contentPadding": "0px 0px 0px 0px",
+      "tables": 0,
+      "rows": 0,
+      "fontSizes": {
+        "13px": 233,
+        "11px": 52,
+        "15px": 2
+      },
+      "invisibleTips": 8,
+      "titleAttrs": 0
+    }
+  },
+  "/options/greeks": {
+    "status": 200,
+    "consoleErrors": [],
+    "metrics": {
+      "scrollHeight": 754,
+      "clientHeight": 674,
+      "contentWidth": 1048.5,
+      "contentPadding": "0px 0px 0px 0px",
+      "tables": 0,
+      "rows": 0,
+      "fontSizes": {
+        "13px": 166,
+        "11px": 48,
+        "15px": 1
+      },
+      "invisibleTips": 8,
+      "titleAttrs": 0
+    }
+  },
+  "/calendar": {
+    "status": 200,
+    "consoleErrors": [],
+    "metrics": {
+      "scrollHeight": 2121,
+      "clientHeight": 674,
+      "contentWidth": 1048.5,
+      "contentPadding": "24px 24px 24px 24px",
+      "tables": 0,
+      "rows": 0,
+      "fontSizes": {
+        "13px": 805,
+        "11px": 418,
+        "15px": 3,
+        "20px": 1
+      },
+      "invisibleTips": 35,
+      "titleAttrs": 0
+    }
+  },
+  "/watchlist": {
+    "status": 200,
+    "consoleErrors": [],
+    "metrics": {
+      "scrollHeight": 1770,
+      "clientHeight": 674,
+      "contentWidth": 1048.5,
+      "contentPadding": "24px 24px 24px 24px",
+      "tables": 1,
+      "rows": 31,
+      "fontSizes": {
+        "13px": 616,
+        "11px": 72,
+        "15px": 4,
+        "20px": 1
+      },
+      "invisibleTips": 7,
+      "titleAttrs": 0
+    }
+  },
+  "/screener": {
+    "status": 200,
+    "consoleErrors": [],
+    "metrics": {
+      "scrollHeight": 674,
+      "clientHeight": 674,
+      "contentWidth": 1048.5,
+      "contentPadding": "24px 24px 24px 24px",
+      "tables": 0,
+      "rows": 0,
+      "fontSizes": {
+        "13px": 148,
+        "11px": 45,
+        "15px": 2,
+        "20px": 1
+      },
+      "invisibleTips": 7,
+      "titleAttrs": 0
+    }
+  },
+  "/portfolio": {
+    "status": 200,
+    "consoleErrors": [],
+    "metrics": {
+      "scrollHeight": 674,
+      "clientHeight": 674,
+      "contentWidth": 1048.5,
+      "contentPadding": "24px 24px 24px 24px",
+      "tables": 1,
+      "rows": 1,
+      "fontSizes": {
+        "13px": 150,
+        "11px": 45,
+        "15px": 1,
+        "20px": 1
+      },
+      "invisibleTips": 7,
+      "titleAttrs": 0
+    }
+  },
+  "/alerts": {
+    "status": 200,
+    "consoleErrors": [],
+    "metrics": {
+      "scrollHeight": 860,
+      "clientHeight": 674,
+      "contentWidth": 880,
+      "contentPadding": "24px 24px 24px 24px",
+      "tables": 0,
+      "rows": 0,
+      "fontSizes": {
+        "13px": 175,
+        "11px": 44,
+        "15px": 6,
+        "20px": 1
+      },
+      "invisibleTips": 7,
+      "titleAttrs": 0
+    }
+  },
+  "/rotation": {
+    "status": 200,
+    "consoleErrors": [],
+    "metrics": {
+      "scrollHeight": 1044,
+      "clientHeight": 674,
+      "contentWidth": 1048.5,
+      "contentPadding": "24px 24px 24px 24px",
+      "tables": 1,
+      "rows": 12,
+      "fontSizes": {
+        "13px": 448,
+        "11px": 117,
+        "10px": 4,
+        "15px": 3,
+        "20px": 1
+      },
+      "invisibleTips": 7,
+      "titleAttrs": 0
+    }
+  },
+  "/macro": {
+    "status": 200,
+    "consoleErrors": [],
+    "metrics": {
+      "scrollHeight": 1045,
+      "clientHeight": 674,
+      "contentWidth": 1048.5,
+      "contentPadding": "24px 24px 24px 24px",
+      "tables": 1,
+      "rows": 0,
+      "fontSizes": {
+        "13px": 247,
+        "11px": 64,
+        "15px": 2,
+        "20px": 1
+      },
+      "invisibleTips": 7,
+      "titleAttrs": 0
+    }
+  },
+  "/brief": {
+    "status": 200,
+    "consoleErrors": [],
+    "metrics": {
+      "scrollHeight": 2190,
+      "clientHeight": 674,
+      "contentWidth": 880,
+      "contentPadding": "24px 24px 24px 24px",
+      "tables": 0,
+      "rows": 0,
+      "fontSizes": {
+        "13px": 429,
+        "11px": 68,
+        "15px": 6,
+        "20px": 1
+      },
+      "invisibleTips": 7,
+      "titleAttrs": 0
+    }
+  },
+  "/learn": {
+    "status": 200,
+    "consoleErrors": [],
+    "metrics": {
+      "scrollHeight": 674,
+      "clientHeight": 674,
+      "contentWidth": 880,
+      "contentPadding": "24px 24px 24px 24px",
+      "tables": 0,
+      "rows": 0,
+      "fontSizes": {
+        "13px": 146,
+        "11px": 44,
+        "15px": 4,
+        "20px": 1
+      },
+      "invisibleTips": 7,
+      "titleAttrs": 0
+    }
+  },
+  "/learn/glossary": {
+    "status": 200,
+    "consoleErrors": [],
+    "metrics": {
+      "scrollHeight": 3706,
+      "clientHeight": 674,
+      "contentWidth": 880,
+      "contentPadding": "24px 24px 24px 24px",
+      "tables": 0,
+      "rows": 0,
+      "fontSizes": {
+        "13px": 336,
+        "11px": 47,
+        "15px": 11,
+        "20px": 1
+      },
+      "invisibleTips": 7,
+      "titleAttrs": 0
+    }
+  },
+  "/learn/options": {
+    "status": 200,
+    "consoleErrors": [],
+    "metrics": {
+      "scrollHeight": 1488,
+      "clientHeight": 674,
+      "contentWidth": 880,
+      "contentPadding": "24px 24px 24px 24px",
+      "tables": 0,
+      "rows": 0,
+      "fontSizes": {
+        "13px": 252,
+        "11px": 47,
+        "15px": 6,
+        "20px": 1
+      },
+      "invisibleTips": 7,
+      "titleAttrs": 0
+    }
+  },
+  "/learn/data": {
+    "status": 200,
+    "consoleErrors": [],
+    "metrics": {
+      "scrollHeight": 7951,
+      "clientHeight": 674,
+      "contentWidth": 1048.5,
+      "contentPadding": "24px 24px 24px 24px",
+      "tables": 3,
+      "rows": 177,
+      "fontSizes": {
+        "13px": 1514,
+        "11px": 289,
+        "15px": 5,
+        "20px": 1
+      },
+      "invisibleTips": 7,
+      "titleAttrs": 0
+    }
+  }
+}

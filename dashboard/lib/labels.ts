@@ -15,7 +15,8 @@ export const HEADER_GLOSS: Record<string, string> = {
   L: "Long votes — number of agents in the ensemble voting long on this ticker.",
   S: "Short votes — number of agents voting short.",
   W: "Wait votes — number of agents voting no direction (wait).",
-  HC: "High conviction — this call passes the ensemble's tightened agreement/R:R/catalyst gates.",
+  Votes: "How the agent ensemble split — long (model purple), short (amber) and wait (grey), in proportion. Hover for the counts.",
+  HC: "High conviction — ≥75% of the indicator ensemble agrees and the verdict isn't WAIT. That is consensus, not edge: it says the signals line up, not that the trade is better.",
   "Agree%": "Agreement — share of voting agents aligned with the ensemble's final verdict direction.",
   "R:R": "Risk:reward — modeled target distance divided by modeled stop distance from entry.",
   "◉": "Quadrant — Leading / Improving / Weakening / Lagging (JdK RRG rotation quadrant). Hover/focus the dot for the current quadrant.",
@@ -28,6 +29,19 @@ export const QUADRANT_LABEL: Record<"leading" | "weakening" | "lagging" | "impro
   weakening: "Weakening",
   lagging: "Lagging",
   improving: "Improving",
+};
+
+/**
+ * What each quadrant word means, in the two axes it is built from: RS-Ratio is
+ * strength against the benchmark, RS-Momentum is whether that strength is
+ * building or draining. The words alone are jargon — "Weakening" sits on the
+ * strong half of the chart, which reads backwards until you know that.
+ */
+export const QUADRANT_GLOSS: Record<"leading" | "weakening" | "lagging" | "improving", string> = {
+  leading: "strong and still gaining",
+  improving: "weak, momentum turning up",
+  weakening: "strong, momentum rolling over",
+  lagging: "weak and still falling",
 };
 
 /**
@@ -55,7 +69,7 @@ export const COMBO_LETTER_LABEL: Record<"L" | "S" | "N", string> = {
   N: "Mixed / no dominant side",
 };
 
-/** Options ladder header codes (OL-13/OD-06). Ground truth: `app/odte/strikes/page.tsx`'s "How to read this ladder" copy. */
+/** Options ladder header codes (OL-13/OD-06). Ground truth: `app/learn/options/page.tsx`. */
 export const LADDER_CODE_LABEL: Record<"SPOT" | "ZG" | "CW" | "PW", string> = {
   SPOT: "Current underlying price — the ladder auto-scrolls to keep this centered.",
   ZG: "Zero-gamma flip — below it dealers are typically short gamma (moves amplify); above it, long gamma (moves dampen).",

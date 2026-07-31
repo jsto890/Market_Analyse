@@ -13,14 +13,14 @@ export default function NavActions() {
     <div className="flex items-center gap-3 flex-shrink-0">
       <button
         onClick={openCommandK}
-        className="text-[13px] text-muted hover:text-foreground transition-colors font-mono"
+        className="text-body text-muted hover:text-foreground transition-colors font-mono"
         aria-label="Open command palette"
       >
         ⌘K
       </button>
       <button
         onClick={openHelp}
-        className="text-[13px] text-muted hover:text-foreground transition-colors font-mono"
+        className="text-body text-muted hover:text-foreground transition-colors font-mono"
         aria-label="Show keyboard shortcuts"
       >
         ?

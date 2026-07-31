@@ -2,31 +2,23 @@
 
 import { Zap } from "lucide-react";
 import Panel from "@/components/ui/Panel";
-import Skeleton from "@/components/ui/Skeleton";
+import Loading from "@/components/ui/Loading";
 import type { BridgeRow } from "@/types/bridge";
 import { useTickerData } from "@/lib/useTickerData";
+import { parseCatalysts, type Catalyst } from "@/lib/catalysts";
 
 const NEG_TOKENS = ["downgrade", "miss", "dilution", "cut", "warn", "lawsuit", "fraud"];
 
-function splitCatalysts(value: string | null): string[] {
-  if (!value) return [];
-  return value
-    .split(/[+;]/)
-    .map((s) => s.replace(/["]/g, "").trim())
-    .filter(Boolean);
-}
-
-function humanize(token: string): string {
-  return token.replace(/_/g, " ");
-}
-
-function isNegative(token: string): boolean {
-  const t = token.toLowerCase();
+/** The feed states the direction in the token's suffix; the word list is only
+ *  the fallback for the tokens that arrive unsigned. */
+function isNegative(c: Catalyst): boolean {
+  if (c.direction) return c.direction === "down";
+  const t = c.label.toLowerCase();
   return NEG_TOKENS.some((n) => t.includes(n));
 }
 
-function CatalystRow({ token }: { token: string }) {
-  const neg = isNegative(token);
+function CatalystRow({ catalyst }: { catalyst: Catalyst }) {
+  const neg = isNegative(catalyst);
   return (
     <div className="flex items-center gap-2 py-0.5">
       <span
@@ -35,7 +27,7 @@ function CatalystRow({ token }: { token: string }) {
         aria-hidden="true"
       />
       <Zap size={12} className={neg ? "text-neg shrink-0" : "text-pos shrink-0"} />
-      <span className="font-mono text-[13px] text-foreground">{humanize(token)}</span>
+      <span className="text-data text-foreground">{catalyst.label}</span>
     </div>
   );
 }
@@ -67,31 +59,30 @@ function fmtMoney(n: number | null | undefined): string {
 }
 
 function BridgeCatalysts({ bridgeRow }: { bridgeRow: BridgeRow }) {
-  const tokens = splitCatalysts(bridgeRow.catalysts);
+  const tokens = parseCatalysts(bridgeRow.catalysts);
 
   return (
     <div className="space-y-3">
       {tokens.length > 0 ? (
         <div className="space-y-0">
-          {tokens.map((t) => (
-            <CatalystRow key={t} token={t} />
+          {tokens.map((c) => (
+            <CatalystRow key={c.label} catalyst={c} />
           ))}
         </div>
       ) : (
-        <p className="text-[12px] text-muted">No catalyst tokens today</p>
+        <p className="text-body text-muted">No catalyst tokens today</p>
       )}
 
       {/* Vote ticks */}
       <div className="flex items-center gap-3 border-t border-line pt-2 flex-wrap">
-        <span className="text-[11px] text-muted font-mono">votes</span>
+        <span className="text-micro text-muted">votes</span>
         {VOTE_LABELS.map(({ key, label }) => (
           <span
             key={key}
-            className="inline-flex items-center gap-1 font-mono text-[13px] tabular-nums"
-            title={label}
+            className="inline-flex items-center gap-1 text-data"
           >
             <VoteTick value={Number(bridgeRow[key])} />
-            <span className="text-[11px] text-muted">{label}</span>
+            <span className="text-micro text-muted">{label}</span>
           </span>
         ))}
       </div>
@@ -105,17 +96,12 @@ function OffBridgeCatalysts({ ticker }: { ticker: string }) {
   } = useTickerData(ticker);
 
   if (isLoading) {
-    return (
-      <div className="space-y-2">
-        <Skeleton width="80%" height={10} />
-        <Skeleton width="60%" height={10} />
-      </div>
-    );
+    return <Loading variant="lines" count={2} label="Loading fundamentals" />;
   }
 
   const offline = error != null || data == null || data.error != null;
   if (offline) {
-    return <p className="text-[12px] text-muted">No fundamental data available</p>;
+    return <p className="text-body text-muted">No fundamental data available</p>;
   }
 
   const fields: { label: string; value: string }[] = [];
@@ -127,14 +113,14 @@ function OffBridgeCatalysts({ ticker }: { ticker: string }) {
   if (data.short_pct_float != null) fields.push({ label: "short", value: fmtPct(data.short_pct_float) });
 
   if (fields.length === 0) {
-    return <p className="text-[12px] text-muted">No fundamental data available</p>;
+    return <p className="text-body text-muted">No fundamental data available</p>;
   }
 
   return (
-    <div className="flex flex-wrap gap-x-4 gap-y-1 font-mono text-[13px] tabular-nums">
+    <div className="flex flex-wrap gap-x-4 gap-y-1 text-data">
       {fields.map((f) => (
         <span key={f.label}>
-          <span className="text-muted text-[11px]">{f.label} </span>
+          <span className="text-muted text-micro">{f.label} </span>
           <span className="text-foreground">{f.value}</span>
         </span>
       ))}

@@ -41,7 +41,28 @@ describe("ContextStrip SYS pill", () => {
 
     render(<ContextStrip />);
 
-    expect(await screen.findByText(/bridge \d{1,2}:\d{2}/)).toBeInTheDocument();
-    expect(await screen.findByText(/quotes \d+s ago/)).toBeInTheDocument();
+    // Both freshness readouts now go through the shared `Stale` idiom, which
+    // prints provenance and age rather than a hand-rolled "bridge HH:MM" string.
+    const bridge = await screen.findByText("· bridge");
+    expect(bridge.parentElement!.textContent).toMatch(/as of \d{1,2}:\d{2} · \d+m ago/);
+
+    const quotes = await screen.findByText("· quotes");
+    expect(quotes.parentElement!.textContent).toMatch(/as of \d{1,2}:\d{2} · \d+s ago/);
+  });
+});
+
+describe("ContextStrip market clock", () => {
+  it("states the exchange time, not just which session it is", async () => {
+    mockFetchJson({ "/api/status": { aggregate: "ok", services: [], bridgeTime: null } });
+    render(<ContextStrip />);
+    const clock = await screen.findByText(/^\d{2}:\d{2} ET$/);
+    // Same wall clock the session chip is derived from, so the two never disagree.
+    const et = new Date().toLocaleTimeString("en-US", {
+      timeZone: "America/New_York",
+      hour: "2-digit",
+      minute: "2-digit",
+      hourCycle: "h23",
+    });
+    expect(clock).toHaveTextContent(`${et} ET`);
   });
 });

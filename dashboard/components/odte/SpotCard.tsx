@@ -16,11 +16,11 @@ export default function SpotCard({ symbol, spot, zeroGamma }: SpotCardProps) {
   return (
     <CompanionCard symbol={symbol} title="Spot" loading={false} empty={empty}>
       <div className="space-y-1">
-        <div className="flex justify-between font-mono text-[11px] tabular-nums">
+        <div className="flex justify-between text-data">
           <span className="text-muted">{companionSymbol(symbol)}</span>
-          <span className="text-foreground text-[16px]">{spot?.toFixed(2)}</span>
+          <span className="font-semibold text-foreground">{spot?.toFixed(2)}</span>
         </div>
-        <div className="flex justify-between font-mono text-[11px] tabular-nums">
+        <div className="flex justify-between text-data">
           <span className="text-muted">dist to zero-gamma</span>
           <span className="text-foreground">{pctFrom(spot, zeroGamma)}</span>
         </div>

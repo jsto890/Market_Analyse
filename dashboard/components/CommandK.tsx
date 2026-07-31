@@ -238,7 +238,7 @@ export default function CommandK() {
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center border-b border-line px-3 py-2 gap-2">
-          <span className="text-muted text-[13px]">⌘K</span>
+          <span className="text-muted text-body">⌘K</span>
           <input
             ref={inputRef}
             type="text"
@@ -246,7 +246,7 @@ export default function CommandK() {
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder="Search ticker…"
-            className="flex-1 bg-transparent text-[13px] text-foreground placeholder:text-muted outline-none font-mono"
+            className="flex-1 bg-transparent text-body text-foreground placeholder:text-muted outline-none font-mono"
             autoComplete="off"
             autoCorrect="off"
             spellCheck={false}
@@ -258,7 +258,7 @@ export default function CommandK() {
             {results.map((item, i) => (
               <li
                 key={`${item.source}-${item.ticker}`}
-                className={`flex items-center justify-between px-3 py-2 cursor-pointer text-[13px] ${
+                className={`flex items-center justify-between px-3 py-2 cursor-pointer text-body ${
                   i === selectedIdx ? "bg-accent/10 text-foreground" : "text-foreground/70 hover:bg-elevated"
                 }`}
                 onMouseEnter={() => setSelectedIdx(i)}
@@ -267,9 +267,9 @@ export default function CommandK() {
                 <span className="font-mono font-medium">
                   {item.source === "action" ? item.label : item.ticker}
                 </span>
-                <span className="flex items-center gap-1.5 text-[11px]">
+                <span className="flex items-center gap-1.5">
                   {item.source === "bridge" && item.group && (
-                    <span className="text-muted uppercase tracking-wide">{GROUP_LABEL[item.group as keyof typeof GROUP_LABEL]}</span>
+                    <span className="eyebrow">{GROUP_LABEL[item.group as keyof typeof GROUP_LABEL]}</span>
                   )}
                   {item.source === "bridge" && item.tier && (
                     <Badge variant="tier" value={item.tier} />
@@ -288,7 +288,7 @@ export default function CommandK() {
         )}
 
         {query.length > 0 && results.length === 0 && (
-          <div className="px-3 py-3 text-[13px] text-muted">No matches</div>
+          <div className="px-3 py-3 text-body text-muted">No matches</div>
         )}
       </div>
     </div>

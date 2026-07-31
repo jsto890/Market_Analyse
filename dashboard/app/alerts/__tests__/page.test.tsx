@@ -2,6 +2,9 @@ import { describe, it, expect, vi } from "vitest";
 import { render, screen, userEvent } from "@/test/render";
 import { mockFetchJson } from "@/test/fetchMock";
 import UndoToastProvider from "@/components/ui/UndoToastProvider";
+
+vi.mock("next/navigation", () => ({ useSearchParams: () => new URLSearchParams("") }));
+
 import AlertsPage from "../page";
 
 function baseMocks(overrides: Record<string, unknown> = {}) {
@@ -63,6 +66,22 @@ describe("AlertsPage channel status (AL-02)", () => {
     const user = userEvent.setup();
     await user.click(screen.getByRole("button", { name: "Send test" }));
     expect(await screen.findByText(/Test alert sent/)).toBeInTheDocument();
+    expect(screen.queryByText(/sent nowhere else/)).not.toBeInTheDocument();
+  });
+
+  it("says what happens when no channel is configured, and where to configure one", async () => {
+    mockFetchJson({
+      ...baseMocks(),
+      "/api/argus/alerts/channels": { email: false, telegram: false, webhook: false },
+    });
+    render(
+      <UndoToastProvider>
+        <AlertsPage />
+      </UndoToastProvider>
+    );
+    expect(await screen.findByText(/fires are recorded below and sent nowhere else/)).toBeInTheDocument();
+    expect(screen.getByText("TELEGRAM_BOT_TOKEN")).toBeInTheDocument();
+    expect(screen.getByText("argus/.env")).toBeInTheDocument();
   });
 });
 
@@ -95,11 +114,11 @@ describe("AlertsPage delete undo (AL-04)", () => {
         <AlertsPage />
       </UndoToastProvider>
     );
-    await screen.findByText("NVDA → Verdict flips to LONG");
+    await screen.findByText("verdict flips to LONG");
     await user.click(screen.getByRole("button", { name: "Delete rule" }));
     expect(await screen.findByText("Removed NVDA verdict alert")).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Undo" }));
-    expect(await screen.findByText("NVDA → Verdict flips to LONG")).toBeInTheDocument();
+    expect(await screen.findByText("verdict flips to LONG")).toBeInTheDocument();
   });
 });
 
@@ -115,22 +134,42 @@ describe("AlertsPage evaluate-now result (AL-05)", () => {
         <AlertsPage />
       </UndoToastProvider>
     );
-    await screen.findByText("NVDA → Verdict flips to LONG");
+    await screen.findByText("verdict flips to LONG");
     await user.click(screen.getByRole("button", { name: "Evaluate now" }));
     expect(await screen.findByText(/Evaluated 1 rule · 0 fired/)).toBeInTheDocument();
   });
 });
 
-describe("AlertsPage condition phrasing (AL-06)", () => {
-  it("uses the same condition phrase in the chip and the row summary", async () => {
+describe("AlertsPage rule rows read as one sentence (AL-06)", () => {
+  it("states the condition once, with the symbol as a link to the ticker", async () => {
     mockFetchJson(baseMocks());
     render(
       <UndoToastProvider>
         <AlertsPage />
       </UndoToastProvider>
     );
-    expect(await screen.findByText("Verdict flips to")).toBeInTheDocument();
-    expect(screen.getByText("NVDA → Verdict flips to LONG")).toBeInTheDocument();
+    expect(await screen.findByText("verdict flips to LONG")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "NVDA" })).toHaveAttribute("href", "/t/NVDA");
+    // The kind chip said the same words a second time.
+    expect(screen.getAllByText(/verdict flips to/)).toHaveLength(2); // row + builder option
+  });
+});
+
+describe("AlertsPage rule builder is a sentence (AL-09)", () => {
+  it("reads 'Alert me when [symbol] [condition] [target]' in one line", async () => {
+    mockFetchJson(baseMocks());
+    const user = userEvent.setup();
+    render(
+      <UndoToastProvider>
+        <AlertsPage />
+      </UndoToastProvider>
+    );
+    expect(await screen.findByText("Alert me when")).toBeInTheDocument();
+    expect(screen.getByLabelText("Symbol")).toHaveAttribute("placeholder", "NVDA");
+    expect(screen.getByLabelText("Verdict")).toBeInTheDocument();
+    await user.selectOptions(screen.getByLabelText("Condition"), "earnings");
+    expect(screen.getByLabelText("Days")).toBeInTheDocument();
+    expect(screen.getByText("days")).toBeInTheDocument();
   });
 });
 
@@ -140,7 +179,7 @@ describe("AlertsPage log grouping + timezone label (AL-07)", () => {
     mockFetchJson({
       ...baseMocks(),
       "/api/argus/alerts/log?limit=30": {
-        items: [{ id: 1, ts, title: "NVDA verdict → LONG", body: "score 0.8" }],
+        items: [{ id: 1, ts, title: "NVDA verdict → LONG", body: "score 0.8", payload: { rule_id: 1, kind: "verdict", symbol: "NVDA" } }],
       },
     });
     render(
@@ -169,5 +208,45 @@ describe("AlertsPage form primitives (AL-08)", () => {
     const symbolInput = await screen.findByPlaceholderText("NVDA");
     expect(symbolInput.className).toContain("h-8");
     expect(symbolInput.className).not.toContain("h-9");
+  });
+});
+
+describe("AlertsPage fire filter + rule link (AL-10)", () => {
+  const ts = "2026-07-28T14:00:00Z";
+  const fires = {
+    "/api/argus/alerts/log?limit=30": {
+      items: [
+        { id: 2, ts, title: "AMD verdict → LONG", body: "score 0.6", payload: { rule_id: 9, symbol: "AMD" } },
+        { id: 1, ts, title: "NVDA verdict → LONG", body: "score 0.8", payload: { rule_id: 1, symbol: "NVDA" } },
+      ],
+    },
+  };
+
+  it("filters the stream to one symbol and counts what it kept", async () => {
+    mockFetchJson({ ...baseMocks(), ...fires });
+    const user = userEvent.setup();
+    render(
+      <UndoToastProvider>
+        <AlertsPage />
+      </UndoToastProvider>
+    );
+    await screen.findByText("AMD verdict → LONG");
+    expect(screen.getByText("Showing latest 30")).toBeInTheDocument();
+    await user.selectOptions(screen.getByLabelText("Filter fires by symbol"), "NVDA");
+    expect(screen.queryByText("AMD verdict → LONG")).not.toBeInTheDocument();
+    expect(screen.getByText("1 of 2")).toBeInTheDocument();
+  });
+
+  it("links a fire back to its rule, and only when that rule still exists", async () => {
+    mockFetchJson({ ...baseMocks(), ...fires });
+    render(
+      <UndoToastProvider>
+        <AlertsPage />
+      </UndoToastProvider>
+    );
+    // Rule 1 is in the fixture; rule 9 was deleted, so its fire gets no link.
+    const links = await screen.findAllByRole("link", { name: "View rule" });
+    expect(links).toHaveLength(1);
+    expect(links[0]).toHaveAttribute("href", "#rule-1");
   });
 });

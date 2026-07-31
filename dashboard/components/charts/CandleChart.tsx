@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useRef, useState, useCallback } from "react";
 import type { IChartApi, ISeriesApi, IPriceLine, UTCTimestamp } from "lightweight-charts";
-import EmptyState from "@/components/ui/EmptyState";
+import Empty from "@/components/ui/Empty";
 import Toggle from "@/components/ui/Toggle";
 import { visibleRangeFor, type ChartPeriod as Period } from "@/lib/chart-range";
 
@@ -436,7 +436,7 @@ export default function CandleChart({
   }, [levels, syncPriceLines]);
 
   if (initialBars.length === 0) {
-    return <EmptyState message="no chart data" />;
+    return <Empty message="No price history for this ticker." />;
   }
 
   return (
@@ -453,7 +453,7 @@ export default function CandleChart({
               aria-checked={activePeriod === p}
               onClick={() => applyPeriod(p)}
               className={[
-                "px-2 py-0.5 rounded text-[11px] font-medium transition-colors",
+                "px-2 py-0.5 rounded text-micro font-medium transition-colors",
                 activePeriod === p
                   ? "bg-accent text-foreground"
                   : "bg-elevated text-muted hover:text-foreground",
@@ -464,7 +464,7 @@ export default function CandleChart({
           ))}
         </div>
 
-        <span className="text-line text-[11px]">|</span>
+        <span className="text-line text-micro">|</span>
 
         {/* EMA chips */}
         {(["e20", "e50", "e200"] as const).map((key) => (
@@ -476,7 +476,7 @@ export default function CandleChart({
               setEmas((prev) => ({ ...prev, [key]: !prev[key] }))
             }
             className={[
-              "flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px] font-medium border border-line bg-elevated transition-colors",
+              "flex items-center gap-1.5 px-2 py-0.5 rounded text-micro font-medium border border-line bg-elevated transition-colors",
               emas[key] ? "text-foreground" : "text-muted hover:text-foreground",
             ].join(" ")}
           >
@@ -488,18 +488,18 @@ export default function CandleChart({
           </button>
         ))}
 
-        <span className="text-line text-[11px]">|</span>
+        <span className="text-line text-micro">|</span>
 
         {/* Log toggle */}
         <div className="flex items-center gap-1.5">
           <Toggle checked={logScale} onChange={setLogScale} label="Logarithmic Y-axis" />
-          <span className="text-[11px] font-medium text-muted">log</span>
+          <span className="text-micro font-medium text-muted">log</span>
         </div>
       </div>
 
       {/* OHLC legend */}
       {ohlc && (
-        <div className="mb-1 flex flex-wrap gap-3 px-0.5 font-mono text-[11px] tabular-nums text-muted">
+        <div className="mb-1 flex flex-wrap gap-3 px-0.5 text-data text-muted">
           <span>{ohlc.date}</span>
           <span>O <span className="text-foreground">{ohlc.open.toFixed(2)}</span></span>
           <span>H <span className="text-foreground">{ohlc.high.toFixed(2)}</span></span>
@@ -517,7 +517,7 @@ export default function CandleChart({
       {/* Chart canvas */}
       <div className="relative w-full">
         <div ref={containerRef} className="w-full" />
-        <span className="pointer-events-none absolute bottom-1 left-2 font-mono text-[11px] text-muted">
+        <span className="pointer-events-none absolute bottom-1 left-2 font-mono text-micro text-muted">
           Vol
         </span>
       </div>

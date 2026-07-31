@@ -57,7 +57,7 @@ describe("Collapsible", () => {
     expect(await screen.findByRole("button", { name: "Persisted", expanded: true })).toBeInTheDocument();
   });
 
-  it("disables the trigger and shows disabledReason as a title tooltip when disabled", async () => {
+  it("disables the trigger and renders disabledReason as visible text when disabled", async () => {
     render(
       <Collapsible trigger="Locked" disabled disabledReason="No detail available yet">
         <div>body</div>
@@ -65,7 +65,11 @@ describe("Collapsible", () => {
     );
     const trigger = screen.getByRole("button", { name: "Locked" });
     expect(trigger).toBeDisabled();
-    expect(trigger).toHaveAttribute("title", "No detail available yet");
+    expect(trigger).not.toHaveAttribute("title");
+    expect(screen.getByText("No detail available yet")).toBeInTheDocument();
+    expect(trigger.getAttribute("aria-describedby")).toBe(
+      screen.getByText("No detail available yet").id
+    );
   });
 
   it("does not toggle when disabled", async () => {

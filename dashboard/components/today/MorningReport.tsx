@@ -1,46 +1,170 @@
 "use client";
 
 import Link from "next/link";
-import Collapsible from "@/components/ui/Collapsible";
-import { useMorningReport, plain, type MorningEvent, type DayAheadEarning } from "@/lib/report";
+import Loading from "@/components/ui/Loading";
+import Failed from "@/components/ui/Failed";
+import Stale from "@/components/ui/Stale";
+import {
+  groupNewsByTicker,
+  parseGexLine,
+  useMorningReport,
+  plain,
+  type MorningReport as Report,
+} from "@/lib/report";
+import { NEUTRAL_BAND, signed, toneClass, toneLabel, useMacroTiles } from "@/lib/macro";
 
-function SessionTag({ session }: { session: "BMO" | "AMC" | "—" }) {
-  if (session === "—") return null;
-  const cls =
-    session === "BMO"
-      ? "border-warn/50 text-warn bg-warn/10" // before open
-      : "border-accent/50 text-accent bg-accent/10"; // after close
-  return (
-    <span className={`ml-1 rounded border px-1 py-px text-[11px] font-medium ${cls}`}>
-      {session}
-    </span>
-  );
-}
-
-function EarningsRow({ e }: { e: DayAheadEarning }) {
-  return (
-    <li>
-      <span className={e.watchlist ? "text-accent" : "text-foreground/80"}>
-        {e.ticker ?? e.event}
-      </span>
-      <SessionTag session={e.session} />
-    </li>
-  );
-}
+/** Futures the tape tile leads with; the rail carries the full strip. */
+const TAPE_SYMBOLS = ["ES=F", "NQ=F", "^VIX"];
 
 function FutureChip({ symbol, change_pct }: { symbol: string; change_pct: number }) {
-  const tone = change_pct > 0.02 ? "text-accent" : change_pct < -0.02 ? "text-warn" : "text-muted";
+  const tone = change_pct > 0.02 ? "text-pos" : change_pct < -0.02 ? "text-neg" : "text-muted";
   return (
-    <span className="font-mono text-[11px] whitespace-nowrap">
+    <span className="whitespace-nowrap text-data">
       <span className="text-muted">{symbol.replace("=F", "").replace("^", "")}</span>{" "}
-      <span className={tone}>{change_pct >= 0 ? "+" : ""}{change_pct.toFixed(2)}%</span>
+      <span className={tone}>
+        {change_pct >= 0 ? "+" : ""}
+        {change_pct.toFixed(2)}%
+      </span>
     </span>
   );
 }
 
-function eventLine(e: MorningEvent): string {
-  const t = e.time_et ? ` ${e.time_et}` : "";
-  return `${e.date.slice(5)}${t} · ${e.event}`;
+/**
+ * One of the three masthead reads. `href` turns the whole tile into the way
+ * through to the page that owns the number — the positioning read used to be
+ * the most actionable line in the brief and the faintest thing on the page.
+ */
+function Tile({
+  label,
+  href,
+  linkLabel,
+  headline,
+  detail,
+  children,
+}: {
+  label: string;
+  href?: string;
+  linkLabel?: string;
+  headline?: React.ReactNode;
+  detail?: React.ReactNode;
+  children?: React.ReactNode;
+}) {
+  return (
+    <div className="flex min-w-0 flex-col gap-1 rounded-md border border-line bg-raised px-3 py-2.5">
+      <div className="flex items-baseline justify-between gap-2">
+        <span className="eyebrow">{label}</span>
+        {href && (
+          <Link href={href} className="text-body text-muted hover:text-accent">
+            {linkLabel} ›
+          </Link>
+        )}
+      </div>
+      {headline && <div className="text-title text-foreground">{headline}</div>}
+      {children}
+      {detail && <p className="text-body text-2">{detail}</p>}
+    </div>
+  );
+}
+
+/** Wide enough that a quote-to-quote wobble doesn't read as a direction. */
+const TAPE_FLAT_PCT = 0.15;
+
+/** The tape tile reads verdict → figures → read like its two neighbours, so
+ *  the verdict has to come from the quotes rather than a stored word. Futures
+ *  bid with vol offered is the only pairing that says risk-on; when the two
+ *  disagree the tape hasn't settled on a direction yet. */
+function tapeRead(quotes: { symbol: string; change_pct: number }[]) {
+  const es = quotes.find((q) => q.symbol === "ES=F");
+  if (!es) return null;
+  const dir = es.change_pct > TAPE_FLAT_PCT ? 1 : es.change_pct < -TAPE_FLAT_PCT ? -1 : 0;
+  if (dir === 0) {
+    return {
+      verdict: "flat",
+      read: `S&P futures inside ±${TAPE_FLAT_PCT}% — the open is priced as a non-event.`,
+    };
+  }
+  const vix = quotes.find((q) => q.symbol === "^VIX");
+  if (!vix) {
+    return dir > 0
+      ? {
+          verdict: "bid",
+          read: "S&P futures up into the open, with no vol quote to confirm it.",
+        }
+      : {
+          verdict: "offered",
+          read: "S&P futures down into the open, with no vol quote to confirm it.",
+        };
+  }
+  if (dir > 0 && vix.change_pct < 0) {
+    return {
+      verdict: "risk-on",
+      read: "Futures bid and vol offered — the tape leans into the open.",
+    };
+  }
+  if (dir < 0 && vix.change_pct > 0) {
+    return {
+      verdict: "risk-off",
+      read: "Futures offered and vol bid — pressure into the open.",
+    };
+  }
+  return {
+    verdict: "mixed",
+    read: "Futures and vol disagree — the direction isn’t settled yet.",
+  };
+}
+
+/** US news tone with its one-day move — a score with no delta says nothing
+ *  about whether the mood is turning. `1d` is the only window `/macro/tiles`
+ *  and `/macro/series` both serve. */
+function ToneTile({ data }: { data: Report }) {
+  const { data: tiles } = useMacroTiles("1d");
+  const us = tiles?.tiles?.find((t) => t.scope === "us");
+  const score = us?.score ?? data.macro?.us_1d ?? null;
+  const delta = us?.delta_1d ?? null;
+
+  if (score === null) {
+    return (
+      <Tile label="Tone" href="/macro" linkLabel="macro" detail={plain(data.tone)}>
+        <span className="text-body text-muted">no gauge</span>
+      </Tile>
+    );
+  }
+
+  const neutral = Math.abs(score) <= NEUTRAL_BAND;
+  const glob = data.macro?.global_1d ?? null;
+  // An arrow beside +0.00 asserts a direction the printed figure doesn't have,
+  // so the direction has to come off the rounded value, not the raw one.
+  const shown = delta === null ? null : Number(signed(delta));
+  return (
+    <Tile
+      label="Tone"
+      href="/macro"
+      linkLabel="macro"
+      headline={<span className={toneClass(score)}>{toneLabel(score)}</span>}
+      detail={
+        neutral
+          ? `Inside the ±${NEUTRAL_BAND.toFixed(2)} neutral band — no directional read.`
+          : plain(data.tone)
+      }
+    >
+      <div className="flex flex-wrap items-baseline gap-x-2 text-data">
+        <span className="text-muted">US</span>
+        <span className={toneClass(score)}>{signed(score)}</span>
+        {shown !== null && (
+          <span className={shown > 0 ? "text-pos" : shown < 0 ? "text-neg" : "text-muted"}>
+            {signed(delta!)}
+            {shown > 0 ? " ▲" : shown < 0 ? " ▼" : ""} 1d
+          </span>
+        )}
+        {glob !== null && (
+          <>
+            <span className="text-muted">· global</span>
+            <span className={toneClass(glob)}>{signed(glob)}</span>
+          </>
+        )}
+      </div>
+    </Tile>
+  );
 }
 
 export function MorningReport() {
@@ -48,108 +172,100 @@ export function MorningReport() {
 
   if (isLoading) {
     return (
-      <section
-        className="mb-5 rounded-md border border-line bg-elevated p-4"
-        aria-label="Loading Morning Brief"
-      >
-        <div className="h-4 w-32 animate-pulse rounded bg-raised mb-3" />
-        <div className="h-3 w-full animate-pulse rounded bg-raised mb-2" />
-        <div className="h-3 w-2/3 animate-pulse rounded bg-raised" />
+      <section className="rounded-md border border-line bg-elevated p-4">
+        <Loading variant="lines" count={3} label="Loading Morning Brief" />
       </section>
     );
   }
 
   if (error) {
     return (
-      <section className="mb-5 rounded-md border border-line bg-elevated p-4">
-        <p className="text-[12px] text-muted">
-          Couldn't load the morning brief. It refreshes every 5 minutes — try reloading.
-        </p>
-      </section>
+      <Failed
+        title="Couldn’t load the morning brief"
+        message="It refreshes every 5 minutes — try reloading."
+      />
     );
   }
 
   if (!data) return null;
 
+  const news = groupNewsByTicker(data.day_ahead?.watchlist_news ?? []).slice(0, 5);
+  const synthesis = data.day_ahead?.synthesis;
+  const gex = parseGexLine(data.day_ahead?.gex_line);
+  const futures = data.futures;
+  const lead = TAPE_SYMBOLS.map((s) => futures.find((f) => f.symbol === s)).filter(
+    (f): f is { symbol: string; change_pct: number } => !!f,
+  );
+  const tape = lead.length > 0 ? lead : futures.slice(0, 3);
+  const tapeVerdict = tapeRead(futures);
+
   return (
-    <Collapsible
-      className="mb-5 rounded-md border border-line bg-elevated p-4"
-      persistKey="morning-report"
-      defaultOpen
-      trigger={
-        <div className="flex flex-1 items-baseline justify-between">
-          <h2 className="tick text-[13px] font-semibold text-foreground">Morning Brief</h2>
-          <span className="text-[11px] font-mono text-muted">
-            {data.weekday} {data.date}
-          </span>
-        </div>
-      }
-    >
-      {data.day_ahead && data.day_ahead.synthesis !== "Quiet slate." && (
-        <p className="text-xs text-foreground leading-relaxed mb-1 font-medium" id="day-ahead">
-          {data.day_ahead.synthesis}
-        </p>
+    <section className="flex flex-col gap-3 rounded-md border border-line bg-elevated p-4">
+      <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+        <h2 className="tick text-title text-foreground">Morning brief</h2>
+        <span className="flex items-baseline gap-2 text-data text-muted">
+          {data.weekday} {data.date}
+          <Stale asOf={data.generated_at} variant="line" />
+        </span>
+      </div>
+
+      {synthesis && synthesis !== "Quiet slate." && (
+        <p className="text-headline text-foreground">{synthesis}</p>
       )}
-      {data.day_ahead?.gex_line && (
-        <p className="text-[11px] font-mono text-muted leading-relaxed mb-1">
-          {data.day_ahead.gex_line}
-        </p>
-      )}
-      <p className="text-xs text-foreground/90 leading-relaxed mb-2">{plain(data.tone)}</p>
-      {data.day_ahead && data.day_ahead.watchlist_news.length > 0 && (
-        <div className="flex flex-wrap gap-1.5 mb-2">
-          {data.day_ahead.watchlist_news.slice(0, 5).map((n, i) => (
+
+      <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+        <Tile label="Tape" headline={tapeVerdict?.verdict} detail={tapeVerdict?.read}>
+          {tape.length > 0 ? (
+            <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+              {tape.map((f) => (
+                <FutureChip key={f.symbol} symbol={f.symbol} change_pct={f.change_pct} />
+              ))}
+            </div>
+          ) : (
+            <span className="text-body text-muted">no quotes</span>
+          )}
+        </Tile>
+
+        {gex ? (
+          <Tile
+            label="Positioning"
+            href="/options/gamma"
+            linkLabel="gamma"
+            headline={gex.verdict}
+            detail={gex.read}
+          >
+            <span className="text-data text-foreground">{gex.figures}</span>
+          </Tile>
+        ) : (
+          <Tile label="Positioning" href="/options/gamma" linkLabel="gamma">
+            <span className="text-body text-muted">no gamma snapshot today</span>
+          </Tile>
+        )}
+
+        <ToneTile data={data} />
+      </div>
+
+      {news.length > 0 && (
+        <div className="flex flex-col gap-1">
+          {news.map((n) => (
             <Link
-              key={i}
+              key={n.ticker}
               href={`/t/${n.ticker}`}
-              title={n.headline}
-              className="text-[11px] font-mono border border-line rounded px-1.5 py-px text-accent hover:bg-elevated"
+              className="flex items-baseline gap-2 text-body text-2 hover:text-accent"
             >
-              ${n.ticker} news
+              <span className="w-12 shrink-0 text-data text-accent">${n.ticker}</span>
+              <span className="min-w-0 flex-1">{n.headline}</span>
+              {n.extra > 0 && (
+                <span className="shrink-0 text-data text-muted">+{n.extra} more</span>
+              )}
             </Link>
           ))}
         </div>
       )}
 
-      <div className="grid sm:grid-cols-2 gap-x-6 gap-y-1">
-        {data.macro_events.length > 0 && (
-          <div>
-            <div className="text-[11px] uppercase tracking-wide text-muted mb-0.5">What to expect</div>
-            <ul className="text-[11px] font-mono text-foreground/80 space-y-0.5">
-              {data.macro_events.slice(0, 4).map((e, i) => (
-                <li key={i}>
-                  <span className={e.importance === "high" ? "text-warn" : "text-muted"}>•</span> {eventLine(e)}
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
-        {data.day_ahead && (data.day_ahead.earnings_today.length > 0 || data.day_ahead.earnings_tomorrow.length > 0) ? (
-          <div>
-            <div className="text-[11px] uppercase tracking-wide text-muted mb-0.5">Earnings</div>
-            <ul className="text-[11px] font-mono space-y-0.5">
-              {data.day_ahead.earnings_today.slice(0, 3).map((e, i) => (
-                <EarningsRow key={`t${i}`} e={e} />
-              ))}
-              {data.day_ahead.earnings_tomorrow.slice(0, 2).map((e, i) => (
-                <li key={`m${i}`} className="text-muted">
-                  tmrw · {e.ticker ?? e.event}
-                  <SessionTag session={e.session} />
-                </li>
-              ))}
-            </ul>
-          </div>
-        ) : data.earnings.length > 0 ? (
-          <div>
-            <div className="text-[11px] uppercase tracking-wide text-muted mb-0.5">Earnings</div>
-            <ul className="text-[11px] font-mono text-foreground/80 space-y-0.5">
-              {data.earnings.slice(0, 4).map((e, i) => (
-                <li key={i}>{e.date.slice(5)} · {e.ticker ?? e.event}</li>
-              ))}
-            </ul>
-          </div>
-        ) : null}
-      </div>
-    </Collapsible>
+      <Link href="/brief" className="text-body text-muted hover:text-accent">
+        Full brief ›
+      </Link>
+    </section>
   );
 }

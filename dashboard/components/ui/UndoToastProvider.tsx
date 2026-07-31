@@ -17,6 +17,9 @@ export interface UndoActionArgs {
 
 interface UndoContextValue {
   run: (args: UndoActionArgs) => void;
+  /** A notice with nothing to reverse — same transient surface, no Undo button.
+   *  For one-time events that would otherwise become permanent page furniture. */
+  notify: (label: string, windowMs?: number) => void;
 }
 
 const UndoContext = createContext<UndoContextValue | null>(null);
@@ -30,7 +33,7 @@ export function useUndoAction(): UndoContextValue {
 interface ToastState {
   id: number;
   label: string;
-  undo: () => void;
+  undo?: () => void;
 }
 
 export default function UndoToastProvider({ children }: { children: ReactNode }) {
@@ -45,22 +48,30 @@ export default function UndoToastProvider({ children }: { children: ReactNode })
     setTimeout(() => setToast((t) => (t?.id === id ? null : t)), windowMs);
   }, []);
 
+  const notify = useCallback((label: string, windowMs = 6000) => {
+    const id = ++nextId.current;
+    setToast({ id, label });
+    setTimeout(() => setToast((t) => (t?.id === id ? null : t)), windowMs);
+  }, []);
+
   return (
-    <UndoContext.Provider value={{ run }}>
+    <UndoContext.Provider value={{ run, notify }}>
       {children}
       {toast && (
-        <div className="fixed bottom-4 left-1/2 z-[100] -translate-x-1/2 flex items-center gap-3 rounded-md border border-line bg-elevated px-3 py-2 text-[13px] text-foreground shadow-lg">
+        <div className="fixed bottom-4 left-1/2 z-[100] -translate-x-1/2 flex items-center gap-3 rounded-md border border-line bg-elevated px-3 py-2 text-body text-foreground shadow-lg">
           <span>{toast.label}</span>
-          <button
-            type="button"
-            onClick={() => {
-              toast.undo();
-              setToast(null);
-            }}
-            className="font-medium text-accent hover:underline"
-          >
-            Undo
-          </button>
+          {toast.undo && (
+            <button
+              type="button"
+              onClick={() => {
+                toast.undo?.();
+                setToast(null);
+              }}
+              className="font-medium text-accent hover:underline"
+            >
+              Undo
+            </button>
+          )}
         </div>
       )}
     </UndoContext.Provider>

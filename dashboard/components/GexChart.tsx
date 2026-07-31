@@ -11,6 +11,7 @@ import {
   ReferenceLine,
 } from "recharts";
 import Panel from "@/components/ui/Panel";
+import Empty from "@/components/ui/Empty";
 
 export interface GexDataPoint {
   strike: number;
@@ -34,7 +35,7 @@ function GexTooltip({ active, payload }: { active?: boolean; payload?: { payload
   if (!active || !payload || payload.length === 0) return null;
   const point = payload[0].payload;
   return (
-    <div className="bg-elevated border border-line rounded px-3 py-2 text-[11px] font-mono shadow-lg">
+    <div className="bg-elevated border border-line rounded px-3 py-2 text-data shadow-lg">
       <p className="text-foreground">strike {point.strike.toFixed(0)}</p>
       <p className={point.gex >= 0 ? "text-pos" : "text-neg"}>
         GEX {point.gex >= 0 ? "+" : ""}
@@ -47,9 +48,9 @@ function GexTooltip({ active, payload }: { active?: boolean; payload?: { payload
 export default function GexChart({ data, spotStrike, zeroGammaStrike }: GexChartProps) {
   if (data.length === 0) {
     return (
-      <div className="flex items-center justify-center h-[220px] rounded border border-line bg-surface text-muted text-[11px]">
-        No GEX data
-      </div>
+      <Panel title="GEX profile">
+        <Empty message="No GEX data in this snapshot." />
+      </Panel>
     );
   }
 

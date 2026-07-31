@@ -114,6 +114,10 @@ export interface OptionsFlowData {
 export interface FundamentalsData {
   symbol: string;
   name?: string | null;
+  sector?: string | null;
+  industry?: string | null;
+  volume?: number | null;
+  avg_volume?: number | null;
   pe_ratio?: number | null;
   eps_ttm?: number | null;
   revenue_ttm?: number | null;
