@@ -8,6 +8,18 @@ export const signalHistory = (t: string) =>
     )
     .all(t.toUpperCase());
 
+/** Most recent report date per ticker, for a whole watchlist in one query. */
+export const lastSignalDates = (tickers: string[]) => {
+  if (tickers.length === 0) return [] as { ticker: string; last_date: string }[];
+  const holes = tickers.map(() => "?").join(",");
+  return getDb()
+    .prepare(
+      `SELECT ticker, MAX(date) AS last_date
+         FROM signals WHERE ticker IN (${holes}) GROUP BY ticker`
+    )
+    .all(...tickers.map((t) => t.toUpperCase())) as { ticker: string; last_date: string }[];
+};
+
 export const reportDates = () =>
   getDb()
     .prepare(`SELECT DISTINCT date FROM signals ORDER BY date DESC`)

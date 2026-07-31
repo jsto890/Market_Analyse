@@ -18,8 +18,8 @@ function baseMocks() {
   };
 }
 
-describe("WatchlistClient row navigation (WL-06)", () => {
-  it("pinned row has no anchor tag; clicking calls router.push", async () => {
+describe("WatchlistClient pinned cards (WL-06)", () => {
+  it("opens a pinned name from the card's own ticker link", async () => {
     mockFetchJson({
       "/api/watchlist": { watchlist: [{ ticker: "NVDA", pinned_at: "2026-07-01", price_at_pin: 120 }] },
       "/api/bridge": { signals: [] },
@@ -27,18 +27,65 @@ describe("WatchlistClient row navigation (WL-06)", () => {
       "/api/signals/dates": [],
     });
     render(<WatchlistClient medianDaysToPeak={12} />);
-    const cell = await screen.findByText("NVDA");
-    expect(cell.closest("a")).toBeNull();
+    const link = await screen.findByRole("link", { name: "NVDA" });
+    expect(link).toHaveAttribute("href", "/t/NVDA");
+    // Cards, not rows — the pinned list has no table to sort or click through.
+    expect(screen.queryByRole("columnheader", { name: "Since pin" })).not.toBeInTheDocument();
+  });
 
+  it("prices the whole pinned list from one batch request", async () => {
+    mockFetchJson({
+      "/api/watchlist": {
+        watchlist: [
+          { ticker: "NVDA", pinned_at: "2026-07-01", price_at_pin: 100 },
+          { ticker: "AMD", pinned_at: "2026-07-02", price_at_pin: 100 },
+        ],
+      },
+      "/api/bridge": { signals: [] },
+      "/api/signals/recent?days=14": [],
+      "/api/signals/dates": [],
+      "/api/watchlist/enrich?tickers=NVDA,AMD&signals=1": {
+        NVDA: { last: 110, w5: null, m21: null, lastSignal: "2026-07-30" },
+        AMD: { last: 90, w5: null, m21: null, lastSignal: null },
+      },
+    });
+    render(<WatchlistClient medianDaysToPeak={12} />);
+    expect(await screen.findByText("+10.0%")).toBeInTheDocument();
+    expect(screen.getByText("-10.0%")).toBeInTheDocument();
+    expect(screen.getByText("Last on a report 2026-07-30")).toBeInTheDocument();
+  });
+
+  it("filters the grid from the summary strip's own counts", async () => {
+    mockFetchJson({
+      "/api/watchlist": {
+        watchlist: [
+          { ticker: "NVDA", pinned_at: "2026-07-01", price_at_pin: 100 },
+          { ticker: "AMD", pinned_at: "2026-07-02", price_at_pin: 100 },
+        ],
+      },
+      "/api/bridge": { signals: [] },
+      "/api/signals/recent?days=14": [],
+      "/api/signals/dates": [],
+      "/api/watchlist/enrich?tickers=NVDA,AMD&signals=1": {
+        NVDA: { last: 110, w5: null, m21: null, lastSignal: null },
+        AMD: { last: 90, w5: null, m21: null, lastSignal: null },
+      },
+    });
     const user = userEvent.setup();
-    await user.click(cell.closest("tr")!);
+    render(<WatchlistClient medianDaysToPeak={12} />);
+    await screen.findByText("+10.0%");
 
-    expect(push).toHaveBeenCalledWith("/t/NVDA");
+    await user.click(screen.getByRole("button", { name: /down since pin/ }));
+    expect(screen.queryByRole("link", { name: "NVDA" })).not.toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "AMD" })).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: /pinned/ }));
+    expect(screen.getByRole("link", { name: "NVDA" })).toBeInTheDocument();
   });
 });
 
-describe("WatchlistClient recent picks age formatting", () => {
-  it("renders the Age column through format.relativeAge with a unit suffix", async () => {
+describe("WatchlistClient recent picks window progress", () => {
+  it("reads the pick's age against the cohort's median days to peak", async () => {
     const eightDaysAgo = new Date(Date.now() - 8 * 24 * 3600 * 1000).toISOString().slice(0, 10);
 
     mockFetchJson({
@@ -54,14 +101,30 @@ describe("WatchlistClient recent picks age formatting", () => {
         },
       ],
       "/api/signals/dates": [{ date: eightDaysAgo }],
-      "/api/argus/history/MSFT?period=6mo": {
-        bars: [{ ts: eightDaysAgo, close: 300 }],
-      },
+      "/api/watchlist/enrich?tickers=MSFT": { MSFT: { last: 300, w5: null, m21: null } },
     });
 
     render(<WatchlistClient medianDaysToPeak={12} />);
 
-    expect(await screen.findByText(/^\d+d$/)).toBeInTheDocument();
+    expect(await screen.findByText("8d / ~12d")).toBeInTheDocument();
+    expect(screen.queryByRole("columnheader", { name: "Age" })).not.toBeInTheDocument();
+  });
+
+  it("says a pick is past the window rather than showing a full bar", async () => {
+    const longAgo = new Date(Date.now() - 13 * 24 * 3600 * 1000).toISOString().slice(0, 10);
+
+    mockFetchJson({
+      "/api/watchlist": { watchlist: [] },
+      "/api/bridge": { signals: [] },
+      "/api/signals/recent?days=14": [
+        { ticker: "MSFT", first_date: longAgo, first_group: "aligned", entry_at_flag: 300, last_date: longAgo },
+      ],
+      "/api/signals/dates": [{ date: longAgo }],
+    });
+
+    render(<WatchlistClient medianDaysToPeak={7} />);
+
+    expect(await screen.findByText("past ~7d")).toBeInTheDocument();
   });
 });
 
@@ -84,12 +147,17 @@ describe("WatchlistClient unpin undo (WL-01)", () => {
 });
 
 describe("WatchlistClient reserved column widths (WL-02)", () => {
-  it("Now/Since pin header cells fixed width so late-arriving data can't reflow columns", async () => {
-    mockFetchJson(baseMocks());
+  it("Now/Since flag header cells fixed width so late-arriving data can't reflow columns", async () => {
+    mockFetchJson({
+      ...baseMocks(),
+      "/api/signals/recent?days=14": [
+        { ticker: "AMD", first_date: "2026-07-15", first_group: "prime", entry_at_flag: 140, last_date: "2026-07-20" },
+      ],
+    });
     render(<WatchlistClient medianDaysToPeak={12} />);
-    await screen.findByText("NVDA");
+    await screen.findByText("AMD");
     const nowHeader = screen.getByRole("columnheader", { name: "Now" });
-    const sinceHeader = screen.getByRole("columnheader", { name: "Since pin" });
+    const sinceHeader = screen.getByRole("columnheader", { name: "Since flag" });
     expect(nowHeader).toHaveStyle({ width: "76px" });
     expect(sinceHeader).toHaveStyle({ width: "88px" });
   });
@@ -166,13 +234,12 @@ describe("WatchlistClient declarative headers (WL-05)", () => {
     await screen.findByText("AMD");
     expect(screen.getByRole("columnheader", { name: "In today's report" })).toBeInTheDocument();
     expect(screen.queryByRole("columnheader", { name: "Still in?" })).not.toBeInTheDocument();
-    expect(screen.getByRole("columnheader", { name: "Pin price" })).toBeInTheDocument();
     expect(screen.getByRole("columnheader", { name: "Flag price" })).toBeInTheDocument();
   });
 });
 
 describe("WatchlistClient legacy migration (WL-07)", () => {
-  it("migrates once, shows a result banner, and does not retry on next mount", async () => {
+  it("announces the migration once, then never mentions it again", async () => {
     resetLocalStorage();
     seedLocalStorage("argus_watchlist", [{ ticker: "TSLA" }]);
     mockFetchJson({
@@ -185,9 +252,11 @@ describe("WatchlistClient legacy migration (WL-07)", () => {
     expect(window.localStorage.getItem("dash:watchlist:migration-result")).not.toBeNull();
     unmount();
 
+    // A one-time event gets a transient toast, not page furniture that has to
+    // be dismissed on every later visit.
     render(<WatchlistClient medianDaysToPeak={12} />);
-    // second mount: banner still shows the stored result (until dismissed), but no new POST is made
-    expect(await screen.findByText(/Migrated 1 of 1 ticker/)).toBeInTheDocument();
+    await screen.findByPlaceholderText("Add ticker…");
+    expect(screen.queryByText(/Migrated 1 of 1 ticker/)).not.toBeInTheDocument();
   });
 });
 

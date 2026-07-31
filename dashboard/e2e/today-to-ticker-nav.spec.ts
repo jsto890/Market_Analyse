@@ -6,8 +6,12 @@ test("opening a ticker from a Today group table enables prev/next scoped to that
   // Off the href, not the cell text — the cell also carries the NEW marker.
   const href = await firstGroupPanel.locator("tbody tr").first().locator("a[href^='/t/']").first().getAttribute("href");
 
-  await firstGroupPanel.locator("tbody tr").first().click();
-  await expect(page).toHaveURL(new RegExp(`${href}$`, "i"));
+  // The row opens through a client handler, so the click only lands once the
+  // table has hydrated — retry until the URL moves rather than racing it.
+  await expect(async () => {
+    await firstGroupPanel.locator("tbody tr").first().click();
+    await expect(page).toHaveURL(new RegExp(`${href}$`, "i"), { timeout: 2000 });
+  }).toPass({ timeout: 15000 });
 
   const breadcrumb = page.getByRole("navigation", { name: "Ticker breadcrumb" });
   await expect(breadcrumb.getByText("Today")).toBeVisible();

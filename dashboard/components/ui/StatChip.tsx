@@ -7,6 +7,10 @@ interface StatChipProps {
   value: string | number;
   tone?: "pos" | "neg" | "warn" | "muted";
   tooltip?: string;
+  /** Makes the chip a filter: a count you can also act on, rather than a
+   *  read-out sitting next to controls that do the same thing. */
+  onClick?: () => void;
+  pressed?: boolean;
 }
 
 const TONE_CLASS: Record<string, string> = {
@@ -16,14 +20,24 @@ const TONE_CLASS: Record<string, string> = {
   muted: "text-muted",
 };
 
-export default function StatChip({ label, value, tone, tooltip }: StatChipProps) {
+export default function StatChip({ label, value, tone, tooltip, onClick, pressed }: StatChipProps) {
   const valueClass = tone ? TONE_CLASS[tone] : "text-foreground";
-
-  const inner = (
-    <span className="inline-flex items-center gap-1 rounded border border-line bg-surface px-2 py-0.5">
+  const box = `inline-flex items-center gap-1 rounded border px-2 py-0.5 ${
+    pressed ? "border-accent bg-accent/10" : "border-line bg-surface"
+  }`;
+  const body = (
+    <>
       <span className="text-micro text-muted">{label}</span>
       <span className={`text-data ${valueClass}`}>{value}</span>
-    </span>
+    </>
+  );
+
+  const inner = onClick ? (
+    <button type="button" onClick={onClick} aria-pressed={pressed} className={`${box} hover:border-line-strong`}>
+      {body}
+    </button>
+  ) : (
+    <span className={box}>{body}</span>
   );
 
   if (!tooltip) return inner;
