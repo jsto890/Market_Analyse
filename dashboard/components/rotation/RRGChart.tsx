@@ -12,12 +12,65 @@ import {
   ReferenceArea,
   Tooltip,
 } from "recharts";
+import Link from "next/link";
+import { useState } from "react";
 import Panel from "@/components/ui/Panel";
 import Empty from "@/components/ui/Empty";
 import type { RotationRow } from "@/components/today/RotationPanel";
 import { QUADRANT_COLOR, deriveQuadrant, splitDegenerate } from "@/lib/rotation";
 import { CHART_HEIGHT, CHART_AXIS_STYLE } from "@/lib/chartConventions";
-import { QUADRANT_LABEL } from "@/lib/labels";
+import { QUADRANT_GLOSS, QUADRANT_LABEL } from "@/lib/labels";
+
+/** Tickers on today's list, keyed by the industry the bridge assigned them —
+ *  the same vocabulary the rotation rows use. */
+export type SectorNames = Record<string, { ticker: string; action_label?: string }[]>;
+
+type QuadrantKey = keyof typeof QUADRANT_LABEL;
+
+/**
+ * The quadrant word plus what it means, drawn into the corner it names. A
+ * legend under the chart would print all four words a second time, which is the
+ * duplication this overhaul is removing everywhere else — so the gloss goes
+ * where the word already is (RO-10). recharts hands a label element the area's
+ * own `viewBox`, which is what positions it in the right corner.
+ */
+function QuadrantLabel({
+  quadrant, color, corner, viewBox,
+}: {
+  quadrant: QuadrantKey;
+  color: string;
+  corner: "TopRight" | "TopLeft" | "BottomRight" | "BottomLeft";
+  viewBox?: { x?: number; y?: number; width?: number; height?: number };
+}) {
+  const { x = 0, y = 0, width = 0, height = 0 } = viewBox ?? {};
+  const right = corner.endsWith("Right");
+  const bottom = corner.startsWith("Bottom");
+  const tx = right ? x + width - 6 : x + 6;
+  const ty = bottom ? y + height - 16 : y + 14;
+  return (
+    <g>
+      <text x={tx} y={ty} textAnchor={right ? "end" : "start"} fontSize={11} fill={color}>
+        {QUADRANT_LABEL[quadrant]}
+      </text>
+      {/* SVG text does not wrap, and the quadrants are as lopsided as the data
+          — a tight cluster on one side of 100 leaves its quadrant ~120px wide.
+          The gloss is anchored to the outer corner, so a narrow quadrant lets it
+          reach a little into the empty middle rather than dropping it; only a
+          sliver gets the bare word. */}
+      {width > 100 && (
+        <text
+          x={tx}
+          y={ty + 12}
+          textAnchor={right ? "end" : "start"}
+          fontSize={10}
+          fill={CHART_AXIS_STYLE.tick}
+        >
+          {QUADRANT_GLOSS[quadrant]}
+        </text>
+      )}
+    </g>
+  );
+}
 
 interface TooltipPayloadItem {
   payload: RotationRow & { quadrantKey: string };
@@ -54,7 +107,16 @@ function RRGTooltip({ active, payload }: { active?: boolean; payload?: TooltipPa
   );
 }
 
-export default function RRGChart({ rows }: { rows: RotationRow[] }) {
+export default function RRGChart({
+  rows,
+  namesBySector,
+}: {
+  rows: RotationRow[];
+  /** Omitted when the signals file could not be read — the picked-names line
+   *  then never renders, rather than claiming every sector is empty. */
+  namesBySector?: SectorNames;
+}) {
+  const [selected, setSelected] = useState<string | null>(null);
   if (!rows.length) return null;
 
   const { plotted, hidden } = splitDegenerate(rows);
@@ -85,6 +147,9 @@ export default function RRGChart({ rows }: { rows: RotationRow[] }) {
     rrgIndex: i + 1,
   }));
 
+  const selectedRow = data.find((r) => r.industry === selected) ?? null;
+  const picked = selectedRow ? (namesBySector?.[selectedRow.industry] ?? []) : [];
+
   return (
     <Panel
       title="Relative Rotation Graph"
@@ -107,7 +172,7 @@ export default function RRGChart({ rows }: { rows: RotationRow[] }) {
               fill="var(--green)"
               fillOpacity={0.08}
               stroke="none"
-              label={{ value: "Leading", position: "insideTopRight", fill: "var(--green)", fontSize: 11 }}
+              label={<QuadrantLabel quadrant="leading" color="var(--green)" corner="TopRight" />}
             />
             <ReferenceArea
               x1={xDomain[0]}
@@ -117,7 +182,7 @@ export default function RRGChart({ rows }: { rows: RotationRow[] }) {
               fill="var(--teal)"
               fillOpacity={0.08}
               stroke="none"
-              label={{ value: "Improving", position: "insideTopLeft", fill: "var(--teal)", fontSize: 11 }}
+              label={<QuadrantLabel quadrant="improving" color="var(--teal)" corner="TopLeft" />}
             />
             <ReferenceArea
               x1={100}
@@ -127,7 +192,7 @@ export default function RRGChart({ rows }: { rows: RotationRow[] }) {
               fill="var(--amber)"
               fillOpacity={0.08}
               stroke="none"
-              label={{ value: "Weakening", position: "insideBottomRight", fill: "var(--amber)", fontSize: 11 }}
+              label={<QuadrantLabel quadrant="weakening" color="var(--amber)" corner="BottomRight" />}
             />
             <ReferenceArea
               x1={xDomain[0]}
@@ -137,7 +202,7 @@ export default function RRGChart({ rows }: { rows: RotationRow[] }) {
               fill="var(--red)"
               fillOpacity={0.08}
               stroke="none"
-              label={{ value: "Lagging", position: "insideBottomLeft", fill: "var(--red)", fontSize: 11 }}
+              label={<QuadrantLabel quadrant="lagging" color="var(--red)" corner="BottomLeft" />}
             />
 
             <CartesianGrid stroke={CHART_AXIS_STYLE.grid} strokeDasharray="3 3" />
@@ -177,8 +242,17 @@ export default function RRGChart({ rows }: { rows: RotationRow[] }) {
                 // give it a bg halo so overlaps stay readable.
                 const right = p.payload.rs_ratio >= 100;
                 const up = p.payload.rs_mom >= 100;
+                const isSelected = selected === p.payload.industry;
                 return (
-                  <g>
+                  <g
+                    onClick={() =>
+                      setSelected(isSelected ? null : (p.payload as RotationRow).industry)
+                    }
+                    style={{ cursor: "pointer" }}
+                  >
+                    {isSelected && (
+                      <circle cx={p.cx} cy={p.cy} r={8} fill="none" stroke={color} strokeWidth={1.5} />
+                    )}
                     <circle cx={p.cx} cy={p.cy} r={4} fill={color} stroke="var(--bg)" strokeWidth={1} />
                     {/* Index only — the name goes in the keyed legend below.
                      * Naming just the uncrowded points was both inconsistent
@@ -212,17 +286,49 @@ export default function RRGChart({ rows }: { rows: RotationRow[] }) {
        * cluster near the origin stays identifiable without hovering. */}
       <ul className="mt-3 grid grid-cols-2 gap-x-5 gap-y-1 px-1 text-body md:grid-cols-3">
         {data.map((r) => (
-          <li key={r.industry} className="flex min-w-0 items-center gap-1.5">
-            <span
-              aria-hidden
-              className="h-1.5 w-1.5 flex-shrink-0 rounded-full"
-              style={{ background: QUADRANT_COLOR[r.quadrantKey] ?? "var(--accent)" }}
-            />
-            <span className="w-5 flex-shrink-0 text-right text-data text-muted">{r.rrgIndex}</span>
-            <span className="truncate text-muted">{r.industry}</span>
+          <li key={r.industry} className="flex min-w-0">
+            {/* The legend is also the picker: a scatter dot is a 4px target,
+             *  and the sector's name is here rather than there (RO-11). */}
+            <button
+              type="button"
+              onClick={() => setSelected(selected === r.industry ? null : r.industry)}
+              aria-pressed={selected === r.industry}
+              className={`flex min-w-0 items-center gap-1.5 rounded px-1 text-left hover:text-foreground ${
+                selected === r.industry ? "text-foreground" : "text-muted"
+              }`}
+            >
+              <span
+                aria-hidden
+                className="h-1.5 w-1.5 flex-shrink-0 rounded-full"
+                style={{ background: QUADRANT_COLOR[r.quadrantKey] ?? "var(--accent)" }}
+              />
+              <span className="w-5 flex-shrink-0 text-right text-data text-muted">{r.rrgIndex}</span>
+              <span className="truncate">{r.industry}</span>
+            </button>
           </li>
         ))}
       </ul>
+      {selectedRow && namesBySector && (
+        <div className="mt-2 flex flex-wrap items-baseline gap-x-2 gap-y-1 border-t border-line px-1 pt-2 text-body">
+          <span className="eyebrow">{selectedRow.industry} · on today&rsquo;s list</span>
+          {picked.length > 0 ? (
+            picked.map((n) => (
+              <Link
+                key={n.ticker}
+                href={`/t/${n.ticker}`}
+                className="rounded border border-line px-1.5 py-px font-mono text-micro text-accent hover:bg-elevated"
+              >
+                {n.ticker}
+              </Link>
+            ))
+          ) : (
+            <span className="text-muted">
+              Nothing from this sector made today&rsquo;s list — the rotation is there, the setups
+              are not.
+            </span>
+          )}
+        </div>
+      )}
       {hidden.length > 0 && (
         <p className="mt-2 px-1 text-body text-muted">
           Hidden (flat/no data): {hidden.map((r) => r.industry).join(", ")}

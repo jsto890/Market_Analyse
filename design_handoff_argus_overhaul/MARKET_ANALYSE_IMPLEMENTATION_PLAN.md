@@ -218,6 +218,8 @@ Keep `/odte/*` as redirects for one release.
 - Label the lookback control; stop the silent `scope → "global"` reset on window change.
 - Bottom band: names driving the scope, your exposure, next catalyst.
 
+> **Chart-point drill-down has no feed (verified 2026-07-31).** `/api/macro/contributors` takes `(scope, window, limit)` only and `/api/news` takes `(after, limit, latest)` — neither accepts an instant or a range, so there is no way to ask which headlines were inside the lookback at the moment you clicked. A click would return the panel already open below it. Needs an `at=` parameter on `contributors` before the affordance is real; the tile path is done.
+
 ### 4.2 Rotation `[3b]`
 **Files:** `app/rotation/page.tsx`, `components/rotation/RRGChart.tsx`
 
@@ -226,6 +228,10 @@ Keep `/odte/*` as redirects for one release.
 - **Sector names, not ETF tickers**, on the dots — with a legend mapping name → ETF.
 - Click a sector → the names you hold in it, from the signals data already loaded on `/`.
 - Cross-link to `/macro` — sentiment by sector and rotation by sector are the same question asked twice.
+
+> **The name → ETF legend has no feed (verified 2026-07-31).** The rotation job emits yfinance *industry* groups — "Semiconductor Equipment & Materials", "Uranium", "Quantum Computing" — not sector ETFs, and no ETF symbol appears anywhere in `rotation_latest.json`. There is nothing to map a name to. The dots-carry-names half is already settled the other way: an abbreviated industry name still ellipsised on the dot, so it named nothing the keyed legend didn't name in full.
+
+> **Logged, not built: the RRG legend and the rotation table name all 12 sectors twice**, ~100px apart on the same scroll — the §3.2 duplication class again. The legend exists only because the dots carry an index instead of a name. The fix is to make the table the legend: put the RRG index in the table's first column, drop the standalone legend, and move sector selection onto the table row. Needs selection state lifted above both components. (Found while building §4.2.)
 
 > **Prerequisite — trails are blocked (verified 2026-07-31).** `reports/rotation_latest.json` is a flat 12-row snapshot overwritten daily: no dated retention, no prior position, so there is nothing to draw a trail *from*. There is also no rotation route in the API at all — `app/rotation/page.tsx` reads the file straight off disk. Before any trail work: dated retention or a history table, **plus** an actual endpoint. The endpoint is worth doing regardless of trails. Phase 3's sector heat strip (§3.1) needs only the current snapshot and is not blocked by this.
 
@@ -273,6 +279,7 @@ Keep the controls and states as they are — abort, cancel, cached/fresh, re-run
 - Rails collapsible with persistence. On 1440 they consume ~460px of a 1240px content budget, which is why the ladder runs full-bleed and masks its own overflow.
 - News rail: group by hour, mark breaking, tag which watchlist names each item touches.
 - **The news rail and the ticker page's News card are the same content twice**, ~1400px apart — the duplication class §3.2 removed from the sub-nav. Decide which one owns it: the rail is cross-cutting and always present, the card is scoped to the ticker. Whichever loses stops rendering; it doesn't get a shorter version. (Found while auditing §3.2.)
+- **Same class, second instance: the left rail's `MACRO 1D` block restates the `/macro` scope tiles** — GLOBAL, US and each sector at the same scores, in the same order, ~900px to the left of the tiles themselves. A rail that summarises the page you are already on is a repetition; suppress the rail block on `/macro`, or resolve it the same way as the news pair. (Found while building §4.1.)
 - `ContextStrip` gets one job: market clock, session phase, global data freshness.
 
 ### 4.8 Learn

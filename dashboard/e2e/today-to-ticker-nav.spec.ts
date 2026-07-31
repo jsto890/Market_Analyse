@@ -3,10 +3,11 @@ import { test, expect } from "@playwright/test";
 test("opening a ticker from a Today group table enables prev/next scoped to that group", async ({ page }) => {
   await page.goto("/");
   const firstGroupPanel = page.locator("table").first();
-  const firstRowTicker = await firstGroupPanel.locator("tbody tr").first().locator("td").first().innerText();
+  // Off the href, not the cell text — the cell also carries the NEW marker.
+  const href = await firstGroupPanel.locator("tbody tr").first().locator("a[href^='/t/']").first().getAttribute("href");
 
   await firstGroupPanel.locator("tbody tr").first().click();
-  await expect(page).toHaveURL(new RegExp(`/t/${firstRowTicker.trim()}$`, "i"));
+  await expect(page).toHaveURL(new RegExp(`${href}$`, "i"));
 
   const breadcrumb = page.getByRole("navigation", { name: "Ticker breadcrumb" });
   await expect(breadcrumb.getByText("Today")).toBeVisible();

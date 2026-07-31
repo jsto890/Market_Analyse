@@ -15,9 +15,7 @@ function ageOf(ts: string): string {
 }
 
 /**
- * The headlines behind the selected gauge, ranked by weighted share — and the
- * tickers they name, which is the only path from a sector score to something
- * tradeable (MAC-09, MAC-12).
+ * The headlines behind the selected gauge, ranked by weighted share (MAC-09).
  */
 export default function Contributors({ scope, window }: { scope: string; window: string }) {
   const { data, error, isLoading } = useMacroContributors(scope, window);
@@ -73,20 +71,9 @@ export default function Contributors({ scope, window }: { scope: string; window:
               </li>
             ))}
           </ul>
-          {data.tickers.length > 0 && (
-            <div className="flex flex-wrap items-center gap-1.5 border-t border-line px-3 py-2">
-              <span className="eyebrow">names driving this scope</span>
-              {data.tickers.map((t) => (
-                <Link
-                  key={t.ticker}
-                  href={`/t/${t.ticker}`}
-                  className="rounded border border-line px-1.5 py-px font-mono text-micro text-accent hover:bg-elevated"
-                >
-                  {t.ticker} <span className="text-muted">×{t.n}</span>
-                </Link>
-              ))}
-            </div>
-          )}
+        {/* The names driving the scope moved to ScopeBand, which sets them
+            beside your holdings and the next dated event — one band, not a
+            ticker strip stranded at the foot of the headline list. */}
         </>
       )}
     </Panel>

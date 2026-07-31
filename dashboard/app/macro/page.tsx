@@ -7,6 +7,7 @@ import { useSearchParams } from "next/navigation";
 import {
   NEUTRAL_BAND,
   WINDOW_META,
+  byMovement,
   scopeLabel,
   signed,
   toneClass,
@@ -17,6 +18,7 @@ import {
 } from "@/lib/macro";
 import { MacroChart, type SpxBar } from "@/components/macro/MacroChart";
 import Contributors from "@/components/macro/Contributors";
+import ScopeBand from "@/components/macro/ScopeBand";
 import ScopeTile from "@/components/macro/ScopeTile";
 import Collapsible from "@/components/ui/Collapsible";
 import Empty from "@/components/ui/Empty";
@@ -135,7 +137,7 @@ function MacroPageInner() {
 
   const gauges = (data?.gauges ?? []).filter((g) => g.window === win);
   const anyData = (data?.gauges ?? []).length > 0;
-  const rows = tiles?.tiles ?? [];
+  const rows = byMovement(tiles?.tiles ?? []);
   const current = rows.find((t) => t.scope === scope);
 
   function pickWindow(w: string) {
@@ -161,9 +163,16 @@ function MacroPageInner() {
         title="Macro Sentiment"
         subtitle="FinBERT-scored news, recency-weighted by scope. −1 bearish · +1 bullish."
         actions={
-          <Link href="/calendar" className="text-body text-muted hover:text-accent">
-            Event calendar ›
-          </Link>
+          <span className="flex flex-wrap gap-x-4 text-body text-muted">
+            {/* Tone by sector and price strength by sector are the same question
+                read off two different feeds. */}
+            <Link href="/rotation" className="hover:text-accent">
+              Sector rotation ›
+            </Link>
+            <Link href="/calendar" className="hover:text-accent">
+              Event calendar ›
+            </Link>
+          </span>
         }
       />
 
@@ -245,6 +254,7 @@ function MacroPageInner() {
             <MacroChart points={series?.points ?? []} spx={hist?.bars ?? []} />
           </Page.Section>
           <Contributors scope={scope} window={win} />
+          <ScopeBand scope={scope} window={win} />
         </>
       ) : (
         <Empty message="No macro data yet — the aggregator runs every 20 min." />

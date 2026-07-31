@@ -29,6 +29,28 @@ export interface MacroTile {
   delta_1h: number | null; delta_1d: number | null; spark: number[];
 }
 
+/** Scopes that aggregate the others, in the order they read. */
+const AGGREGATE_SCOPES = ["global", "us"];
+
+/**
+ * Aggregates first, then sectors by how far they moved (MAC-07). GLOBAL and US
+ * are the whole tape — ranking them against one sector by magnitude buries the
+ * market-wide read behind whichever family had a loud morning. Below them the
+ * order is |Δ| descending, so the band that actually shifted is the first one
+ * you reach. 1d is the change the tiles lead on; 1h only stands in when the
+ * store has no day-old point yet.
+ */
+export function byMovement(tiles: MacroTile[]): MacroTile[] {
+  const rank = (t: MacroTile) => {
+    const i = AGGREGATE_SCOPES.indexOf(t.scope);
+    return i < 0 ? AGGREGATE_SCOPES.length : i;
+  };
+  const moved = (t: MacroTile) => Math.abs(t.delta_1d ?? t.delta_1h ?? 0);
+  return [...tiles].sort(
+    (a, b) => rank(a) - rank(b) || moved(b) - moved(a) || a.scope.localeCompare(b.scope)
+  );
+}
+
 export function useMacroTiles(window: string) {
   return useSWR<{ window: string; tiles: MacroTile[] }>(
     `/api/argus/macro/tiles?window=${window}&points=20`,

@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { render, screen } from "@/test/render";
+import userEvent from "@testing-library/user-event";
 import RRGChart from "../RRGChart";
 import { CHART_HEIGHT } from "@/lib/chartConventions";
 import type { RotationRow } from "@/components/today/RotationPanel";
@@ -35,6 +36,45 @@ describe("RRGChart hidden sectors (RO-06)", () => {
   it("shows no hidden-sectors line when every row plots", () => {
     render(<RRGChart rows={[rows[0]]} />);
     expect(screen.queryByText(/Hidden \(flat\/no data\)/)).not.toBeInTheDocument();
+  });
+});
+
+describe("RRGChart sector picker (RO-11)", () => {
+  const names = { Energy: [{ ticker: "XOM" }, { ticker: "CVX" }] };
+
+  it("presses the picked legend button and releases it on a second click", async () => {
+    const user = userEvent.setup();
+    render(<RRGChart rows={rows} namesBySector={names} />);
+    const energy = screen.getByRole("button", { name: /Energy/ });
+    expect(energy).toHaveAttribute("aria-pressed", "false");
+    await user.click(energy);
+    expect(energy).toHaveAttribute("aria-pressed", "true");
+    await user.click(energy);
+    expect(energy).toHaveAttribute("aria-pressed", "false");
+  });
+
+  it("names the picked sector's candidates, each linked to its ticker page", async () => {
+    const user = userEvent.setup();
+    render(<RRGChart rows={rows} namesBySector={names} />);
+    await user.click(screen.getByRole("button", { name: /Energy/ }));
+    expect(screen.getByText(/Energy · on today/)).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "XOM" })).toHaveAttribute("href", "/t/XOM");
+    expect(screen.getByRole("link", { name: "CVX" })).toHaveAttribute("href", "/t/CVX");
+  });
+
+  it("says the sector produced no candidates rather than showing an empty row", async () => {
+    const user = userEvent.setup();
+    render(<RRGChart rows={rows} namesBySector={names} />);
+    await user.click(screen.getByRole("button", { name: /Utilities/ }));
+    expect(screen.getByText(/Nothing from this sector made today/)).toBeInTheDocument();
+  });
+
+  it("renders no names band at all when the signals file could not be read", async () => {
+    const user = userEvent.setup();
+    render(<RRGChart rows={rows} />);
+    await user.click(screen.getByRole("button", { name: /Energy/ }));
+    expect(screen.queryByText(/on today/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Nothing from this sector/)).not.toBeInTheDocument();
   });
 });
 

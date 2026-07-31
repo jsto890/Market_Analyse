@@ -31,6 +31,19 @@ export const QUADRANT_LABEL: Record<"leading" | "weakening" | "lagging" | "impro
 };
 
 /**
+ * What each quadrant word means, in the two axes it is built from: RS-Ratio is
+ * strength against the benchmark, RS-Momentum is whether that strength is
+ * building or draining. The words alone are jargon — "Weakening" sits on the
+ * strong half of the chart, which reads backwards until you know that.
+ */
+export const QUADRANT_GLOSS: Record<"leading" | "weakening" | "lagging" | "improving", string> = {
+  leading: "strong and still gaining",
+  improving: "weak, momentum turning up",
+  weakening: "strong, momentum rolling over",
+  lagging: "weak and still falling",
+};
+
+/**
  * Combo code decode (TK-07). Ground truth: `argus/argus/action_card/builder.py`,
  * `_combo_string()` builds a 5-character string, one char per vote family, in
  * fixed order: ma_trend, breakout, squeeze, momentum_osc, weekly_structure.
