@@ -2,9 +2,9 @@ import fs from "fs";
 import path from "path";
 import RotationPanel, { type RotationRow } from "@/components/today/RotationPanel";
 import RRGChart from "@/components/rotation/RRGChart";
-import PageHeader from "@/components/ui/PageHeader";
-import { dualClock } from "@/lib/tz-display";
-import PageShell from "@/components/PageShell";
+import Failed from "@/components/ui/Failed";
+import Stale from "@/components/ui/Stale";
+import Page from "@/components/ui/Page";
 
 export const dynamic = "force-dynamic";
 
@@ -38,13 +38,12 @@ function loadRotationMtime(): Date | null {
 export default function RotationPage() {
   const rotation = loadRotation();
   const mtime = loadRotationMtime();
-  const clock = mtime ? dualClock(mtime) : null;
 
   return (
-    <PageShell width="wide">
-      <PageHeader
+    <Page width="wide">
+      <Page.Header
         title="Sector Rotation"
-        subtitle={clock ? `Updated ${clock.primary} · ${clock.secondary}` : undefined}
+        status={<Stale asOf={mtime} source="run_daily" staleAfterMins={1440} />}
       />
       {rotation ? (
         <>
@@ -52,10 +51,11 @@ export default function RotationPage() {
           <RotationPanel rows={rotation} defaultOpen collapsible={false} />
         </>
       ) : (
-        <div className="rounded-lg border border-warn/50 bg-warn/10 px-4 py-2.5 text-body text-warn">
-          No rotation data — run_daily may have failed
-        </div>
+        <Failed
+          title="No rotation data"
+          message="rotation_latest.json hasn't been written — the run_daily rotation job may have failed."
+        />
       )}
-    </PageShell>
+    </Page>
   );
 }

@@ -23,8 +23,15 @@ describe("VerdictCard", () => {
     render(<VerdictCard title="Flow" verdict={null} loading={false} />);
     const trigger = screen.getByRole("button", { name: /flow/i });
     expect(trigger).toBeDisabled();
-    expect(trigger).toHaveAttribute(
-      "title",
+    // The reason is printed beside the trigger and wired via aria-describedby —
+    // a `title` would be mouse-only, which this overhaul bans.
+    expect(trigger).not.toHaveAttribute("title");
+    expect(
+      screen.getByText("No detail available until the verdict finishes loading")
+    ).toBeInTheDocument();
+    const describedBy = trigger.getAttribute("aria-describedby");
+    expect(describedBy).toBeTruthy();
+    expect(document.getElementById(describedBy!)).toHaveTextContent(
       "No detail available until the verdict finishes loading"
     );
   });

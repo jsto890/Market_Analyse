@@ -2,6 +2,9 @@
 
 import useSWR from "swr";
 import Panel from "@/components/ui/Panel";
+import Empty from "@/components/ui/Empty";
+import Failed from "@/components/ui/Failed";
+import Loading from "@/components/ui/Loading";
 import { relTime } from "@/lib/news";
 
 interface TickerNewsItem {
@@ -32,14 +35,25 @@ export default function NewsCard({ ticker }: { ticker: string }) {
     { shouldRetryOnError: false }
   );
 
-  if (error || !data) return null;
+  if (error)
+    return (
+      <Panel title="News">
+        <Failed title="News feed unavailable" message="The headline feed didn’t answer." />
+      </Panel>
+    );
+  if (!data)
+    return (
+      <Panel title="News">
+        <Loading variant="lines" count={4} label="Loading news" />
+      </Panel>
+    );
 
   const items = data.items.slice(0, 8);
 
   return (
     <Panel title="News">
       {items.length === 0 ? (
-        <p className="text-dense text-muted">No recent news</p>
+        <Empty title="No recent news" message={`Nothing filed for ${ticker} in the feed window.`} />
       ) : (
         <div className="space-y-2">
           {items.map((item, i) => {
@@ -62,7 +76,7 @@ export default function NewsCard({ ticker }: { ticker: string }) {
                   <span className="text-body text-foreground">{item.headline}</span>
                 )}
                 {subLine && (
-                  <p className="text-micro text-muted">{subLine}</p>
+                  <p className="text-data text-muted">{subLine}</p>
                 )}
               </div>
             );

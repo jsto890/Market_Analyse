@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Panel from "@/components/ui/Panel";
 import InfoTip from "@/components/ui/InfoTip";
+import Empty from "@/components/ui/Empty";
 import { price, greek } from "@/lib/format";
 import { rankMvc } from "@/lib/optionsAnalytics";
 import type { StrikeLevel } from "@/lib/optionsLive";
@@ -26,7 +27,7 @@ export default function MvcCard({
       subtitle="greeks per dollar of premium"
       actions={
         <>
-          <label className="flex items-center gap-1 font-mono text-micro text-muted">
+          <label className="flex items-center gap-1 text-body text-muted">
             <input
               type="checkbox"
               checked={liquidOnly}
@@ -40,14 +41,16 @@ export default function MvcCard({
       }
     >
       {rows.length === 0 ? (
-        <p className="font-mono text-micro text-muted">
-          {levels.length === 0
-            ? "no greeks in this snapshot — turn the live ladder on"
-            : "nothing clears the spread and liquidity filters right now"}
-        </p>
+        <Empty
+          message={
+            levels.length === 0
+              ? "No greeks in this snapshot — turn the live ladder on."
+              : "Nothing clears the spread and liquidity filters right now."
+          }
+        />
       ) : (
         <div className="overflow-x-auto">
-          <table className="w-full font-mono text-micro tabular-nums">
+          <table className="w-full text-data">
             <thead>
               <tr className="text-micro uppercase tracking-[0.06em] text-muted">
                 <th className="px-2 py-1 text-left font-normal">contract</th>
@@ -63,11 +66,11 @@ export default function MvcCard({
                 <tr key={`${r.side}-${r.strike}`} className="border-t border-line/50">
                   <td className="px-2 py-1">
                     <span className="text-foreground">{r.strike.toFixed(0)}</span>{" "}
-                    <span className={r.side === "call" ? "text-pos" : "text-neg"}>
+                    <span className={r.side === "call" ? "text-call" : "text-put"}>
                       {r.side === "call" ? "C" : "P"}
                     </span>
                     {spot != null && (
-                      <span className="ml-1 text-micro text-muted-2">
+                      <span className="ml-1 text-muted">
                         {r.strike > spot ? "+" : ""}
                         {(((r.strike - spot) / spot) * 100).toFixed(1)}%
                       </span>
@@ -79,14 +82,14 @@ export default function MvcCard({
                   <td className="px-2 py-1 text-right text-neg">
                     {r.thetaPerDollar != null ? `${(r.thetaPerDollar * 100).toFixed(1)}%` : "—"}
                   </td>
-                  <td className="px-2 py-1 text-left text-muted-2">{r.reason}</td>
+                  <td className="px-2 py-1 text-left text-muted">{r.reason}</td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
       )}
-      <p className="mt-2 text-micro leading-relaxed text-muted-2">
+      <p className="mt-2 text-body leading-relaxed text-2">
         Γ/$ is how much convexity a dollar of premium buys; Θ/$ is the share of that premium the
         position gives back each day if nothing moves. High on both means a fast, expensive clock.
         {rows[0]?.gamma != null && (

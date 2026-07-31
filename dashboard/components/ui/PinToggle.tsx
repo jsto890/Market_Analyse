@@ -61,7 +61,7 @@ export default function PinToggle({ symbol, variant = "chip", className }: PinTo
       <button
         type="button"
         onClick={toggle}
-        className={["text-dense underline-offset-2 hover:underline", pinned ? "text-warn" : "text-muted", className ?? ""].join(" ")}
+        className={["text-body underline-offset-2 hover:underline", pinned ? "text-warn" : "text-muted", className ?? ""].join(" ")}
         aria-pressed={pinned}
       >
         {pinned ? "Unpin" : "Pin"}

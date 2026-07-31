@@ -136,18 +136,33 @@ describe("OptionsLadderPage — controls (OPT-01, OPT-05)", () => {
   });
 
   it("jumps to the nearest listed strike", async () => {
-    const scrollIntoView = vi.fn();
-    window.HTMLElement.prototype.scrollIntoView = scrollIntoView;
-    const user = userEvent.setup();
-    render(<OptionsLadderPage />);
-    await screen.findByText("call IV");
-    await waitFor(() => expect(scrollIntoView).toHaveBeenCalled());
-    const afterMount = scrollIntoView.mock.calls.length;
+    // Centring writes scrollTop on the ladder's own scroll box. It must not use
+    // scrollIntoView, which scrolls every ancestor and takes the sticky column
+    // header off the top of the page with it.
+    const original = Object.getOwnPropertyDescriptor(window.HTMLElement.prototype, "scrollTop");
+    const boxes: Element[] = [];
+    Object.defineProperty(window.HTMLElement.prototype, "scrollTop", {
+      configurable: true,
+      get: () => 0,
+      set(this: HTMLElement) {
+        boxes.push(this);
+      },
+    });
+    try {
+      const user = userEvent.setup();
+      render(<OptionsLadderPage />);
+      await screen.findByText("call IV");
+      await waitFor(() => expect(boxes.length).toBeGreaterThan(0));
+      const afterMount = boxes.length;
 
-    await user.type(screen.getByLabelText("Jump"), "566");
-    await user.click(screen.getByRole("button", { name: "Go" }));
+      await user.type(screen.getByLabelText("Jump"), "566");
+      await user.click(screen.getByRole("button", { name: "Go" }));
 
-    expect(scrollIntoView.mock.calls.length).toBe(afterMount + 1);
+      expect(boxes.length).toBe(afterMount + 1);
+      expect(boxes.every((el) => el.hasAttribute("data-ladder-scroll"))).toBe(true);
+    } finally {
+      if (original) Object.defineProperty(window.HTMLElement.prototype, "scrollTop", original);
+    }
   });
 
   it("still offers Center on spot, in both modes", async () => {

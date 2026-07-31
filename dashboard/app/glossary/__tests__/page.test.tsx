@@ -21,6 +21,6 @@ describe("GlossaryPage", () => {
 
   it("links back to Today", () => {
     render(<GlossaryPage />);
-    expect(screen.getByText("← Today")).toHaveAttribute("href", "/");
+    expect(screen.getByRole("link", { name: "Today" })).toHaveAttribute("href", "/");
   });
 });

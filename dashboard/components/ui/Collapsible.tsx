@@ -68,16 +68,23 @@ export default function Collapsible({
         type="button"
         onClick={toggle}
         disabled={disabled}
-        title={disabled ? disabledReason : undefined}
         aria-expanded={open}
         aria-controls={id}
+        aria-describedby={disabled ? `${id}-reason` : undefined}
         className={[
           "flex w-full items-center gap-2 text-left disabled:opacity-50 disabled:cursor-not-allowed",
           triggerClassName ?? "",
         ].join(" ")}
       >
         <span className="min-w-0 flex-1">{trigger}</span>
-        {!disabled && (
+        {disabled ? (
+          // aria-hidden keeps the trigger's accessible name as `trigger` alone
+          // (name-from-content would otherwise absorb the reason); the
+          // aria-describedby above still reads it, as the old `title` did.
+          <span id={`${id}-reason`} aria-hidden="true" className="ml-auto shrink-0 text-body text-3">
+            {disabledReason}
+          </span>
+        ) : (
           <ChevronDown
             size={14}
             className="ml-auto shrink-0 text-muted transition-transform duration-200"

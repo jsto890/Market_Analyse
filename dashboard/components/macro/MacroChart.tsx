@@ -56,7 +56,7 @@ export function MacroChart({ points, spx }: { points: MacroPoint[]; spx: SpxBar[
       // left edge, directly over the price-scale ticks. The legend row above the
       // chart already names both series.
       const macro = chart.addLineSeries({
-        color: tokens.accent, priceScaleId: "left", lineWidth: 2,
+        color: tokens.model, priceScaleId: "left", lineWidth: 2,
       });
       const macroData = clean(points.map((p) => ({ time: toSec(p.ts), value: p.score })));
       macro.setData(macroData as never);

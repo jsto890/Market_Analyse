@@ -41,7 +41,12 @@ describe("ContextStrip SYS pill", () => {
 
     render(<ContextStrip />);
 
-    expect(await screen.findByText(/bridge \d{1,2}:\d{2}/)).toBeInTheDocument();
-    expect(await screen.findByText(/quotes \d+s ago/)).toBeInTheDocument();
+    // Both freshness readouts now go through the shared `Stale` idiom, which
+    // prints provenance and age rather than a hand-rolled "bridge HH:MM" string.
+    const bridge = await screen.findByText("· bridge");
+    expect(bridge.parentElement!.textContent).toMatch(/as of \d{1,2}:\d{2} · \d+m ago/);
+
+    const quotes = await screen.findByText("· quotes");
+    expect(quotes.parentElement!.textContent).toMatch(/as of \d{1,2}:\d{2} · \d+s ago/);
   });
 });

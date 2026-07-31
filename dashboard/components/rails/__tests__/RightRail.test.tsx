@@ -58,25 +58,25 @@ beforeEach(() => {
 });
 
 describe("RightRail error vs empty states (RR-01)", () => {
-  it("renders the error state with an amber icon, distinct from the muted empty state", () => {
+  it("renders the error state as an alert with an amber icon", () => {
     vi.mocked(newsLib.useNewsFeed).mockReturnValue({
       data: undefined, error: new Error("500"),
     } as any);
     render(<RightRail />);
-    const offline = screen.getByText("news feed offline");
-    expect(offline.className).toContain("text-warn");
-    expect(offline.querySelector("svg")).not.toBeNull();
+    const alert = screen.getByRole("alert");
+    expect(alert).toHaveTextContent("News feed offline");
+    expect(alert.querySelector("svg")).not.toBeNull();
     expect(screen.getByText("offline")).toHaveClass("text-warn");
   });
 
-  it("renders the empty state without an icon and without the warn tone", () => {
+  it("renders the empty state without the alert role and without the warn tone", () => {
     vi.mocked(newsLib.useNewsFeed).mockReturnValue({
       data: { items: [] }, error: undefined,
     } as any);
     render(<RightRail />);
-    const empty = screen.getByText(/no news yet/);
+    const empty = screen.getByText(/No news yet/);
     expect(empty.className).not.toContain("text-warn");
-    expect(empty.querySelector("svg")).toBeNull();
+    expect(screen.queryByRole("alert")).toBeNull();
   });
 });
 
@@ -177,8 +177,8 @@ describe("NewsRow whale source (RR-04)", () => {
   });
 });
 
-describe("NewsRow headline title attribute (RR-05)", () => {
-  it("gives the clamped headline a title attribute with the full text, url or not", () => {
+describe("NewsRow headline is never truncated (RR-05)", () => {
+  it("wraps the full headline instead of clamping it behind a hover-only title", () => {
     vi.mocked(watchlistLib.useWatchlistTickers).mockReturnValue(new Set());
     const longHeadline = "A very long headline that would be clamped at three lines in the 260px rail";
     vi.mocked(newsLib.useNewsFeed).mockReturnValue({
@@ -191,8 +191,10 @@ describe("NewsRow headline title attribute (RR-05)", () => {
       error: undefined,
     } as any);
     render(<RightRail />);
-    expect(screen.getByText(longHeadline)).toHaveAttribute("title", longHeadline);
-    expect(screen.getByText("linked " + longHeadline)).toHaveAttribute("title", "linked " + longHeadline);
+    for (const el of [screen.getByText(longHeadline), screen.getByText("linked " + longHeadline)]) {
+      expect(el).not.toHaveAttribute("title");
+      expect(el.className).not.toContain("line-clamp");
+    }
   });
 });
 

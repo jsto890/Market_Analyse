@@ -16,6 +16,8 @@ import Sparkline from "@/components/ui/Sparkline";
 import Select from "@/components/ui/Select";
 import Input from "@/components/ui/Input";
 import InfoTip from "@/components/ui/InfoTip";
+import Gloss from "@/components/ui/Gloss";
+import Loading from "@/components/ui/Loading";
 import Button from "@/components/ui/Button";
 import { setTickerNav } from "@/lib/tickerNav";
 
@@ -102,7 +104,7 @@ function TickerCell({ row, isNew }: { row: BridgeRow; isNew: boolean }) {
     <Link
       href={`/t/${row.ticker}`}
       onClick={(e) => e.stopPropagation()}
-      className="font-mono font-medium text-accent hover:underline"
+      className="text-data font-medium text-accent hover:underline"
     >
       {row.ticker}
       {isNew && <sup className="ml-0.5 text-micro font-semibold text-warn">NEW</sup>}
@@ -122,12 +124,12 @@ function LegBars({ s, t, f }: { s: number; t: number; f: number }) {
 
 function Ret({ v }: { v: number | null }) {
   if (v === null || !Number.isFinite(v)) {
-    return <span className="font-mono tabular-nums text-muted">—</span>;
+    return <span className="text-data text-muted">—</span>;
   }
   const sign = v >= 0 ? "+" : "";
   return (
     <span
-      className={`inline-block rounded px-1.5 py-0.5 font-mono tabular-nums ${
+      className={`inline-block rounded px-1.5 py-0.5 text-data ${
         v >= 0 ? "text-pos" : "text-neg"
       }`}
       style={{ backgroundColor: heatBg(v) }}
@@ -236,7 +238,7 @@ function ExpandedRow({ row }: { row: BridgeRow }) {
     row.earnings_in_days <= 10;
 
   return (
-    <div className="space-y-1.5 py-3 font-mono text-body text-muted">
+    <div className="space-y-1.5 py-3 text-data text-muted">
       <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
         <span className="inline-flex items-center gap-1">
           Conviction <ConvictionDot value={row.conviction} />
@@ -272,11 +274,13 @@ function ExpandedRow({ row }: { row: BridgeRow }) {
       </div>
       <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
         <span className="inline-flex items-center gap-1">
-          comb {fmtScore(row.combined_score)}{" "}
-          <InfoTip content="magnitude does not predict returns (r≈0)" label="What does comb mean?" />
+          <Gloss term="comb">magnitude does not predict returns (r≈0)</Gloss>{" "}
+          <span className="text-model">{fmtScore(row.combined_score)}</span>
         </span>
         <span className="text-muted">·</span>
-        <span>quality {fmtNum(row.quality_score, 1)}</span>
+        <span>
+          quality <span className="text-model">{fmtNum(row.quality_score, 1)}</span>
+        </span>
         <span className="text-muted">·</span>
         <span>n_eff {fmtNum(row.n_eff, 1)}</span>
         <span className="text-muted">·</span>
@@ -297,7 +301,7 @@ function ExpandedRow({ row }: { row: BridgeRow }) {
           ) : bars ? (
             <Sparkline values={bars} />
           ) : (
-            <span className="inline-block h-[32px] w-[120px] animate-pulse rounded bg-elevated" />
+            <Loading variant="lines" count={1} label="Loading chart" className="w-[120px]" />
           )}
         </span>
         <span>{row.mentions} mentions</span>
@@ -370,7 +374,7 @@ function columnsFor(newSet: Set<string>): Column<BridgeRow>[] {
         <span className="inline-flex items-center gap-1">
           Sent · Tech · Fund
           <InfoTip
-            content="The three legs of the signal — Sentiment (X chatter), Technical (indicator ensemble), Fundamental (catalyst/valuation). Fuller green bars are stronger; all three lit = aligned."
+            content="The three legs of the signal — Sentiment (X chatter), Technical (indicator ensemble), Fundamental (catalyst/valuation). Fuller bars are stronger; all three lit = aligned."
             label="What is Sent · Tech · Fund?"
           />
         </span>
@@ -502,7 +506,7 @@ export default function SignalGroups({
             type="button"
             onClick={() => update({ hcOnly: !active.hcOnly })}
             aria-pressed={active.hcOnly}
-            className={`inline-flex h-8 items-center gap-1 rounded border px-2.5 text-dense font-medium transition-colors ${
+            className={`inline-flex h-8 items-center gap-1 rounded border px-2.5 text-body font-medium transition-colors ${
               active.hcOnly
                 ? "border-accent bg-accent-dim text-accent"
                 : "border-line bg-raised text-muted hover:text-foreground"
@@ -551,7 +555,7 @@ export default function SignalGroups({
             : `${g.title}  (${shown})`;
         return (
           <Panel key={g.key} title={title} subtitle={g.rationale}>
-            {sorted[g.key].length > 0 && <p className="mb-2 border-b border-line pb-2 text-dense text-muted">{CAVEAT_LINE}</p>}
+            {sorted[g.key].length > 0 && <p className="mb-2 border-b border-line pb-2 text-body text-2">{CAVEAT_LINE}</p>}
             <GroupTable
               rows={sorted[g.key]}
               newSet={newSet}
@@ -569,7 +573,7 @@ export default function SignalGroups({
         defaultOpen={false}
         persistKey="today-other"
       >
-        {sorted.other.length > 0 && <p className="mb-2 border-b border-line pb-2 text-dense text-muted">{CAVEAT_LINE}</p>}
+        {sorted.other.length > 0 && <p className="mb-2 border-b border-line pb-2 text-body text-2">{CAVEAT_LINE}</p>}
         <GroupTable
           rows={sorted.other}
           newSet={newSet}

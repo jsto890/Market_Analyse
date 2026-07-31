@@ -11,6 +11,7 @@ import DexChart from "@/components/odte/DexChart";
 import SkewCard from "@/components/odte/SkewCard";
 import DeltaBandsCard from "@/components/odte/DeltaBandsCard";
 import MvcCard from "@/components/odte/MvcCard";
+import Page from "@/components/ui/Page";
 
 export default function OptionsGammaPage() {
   const [activeSymbol] = useOdteSymbol();
@@ -38,9 +39,9 @@ export default function OptionsGammaPage() {
   const rr25 = levels.length > 0 ? deltaSkew(levels) : null;
 
   return (
-    <div className="space-y-3 px-[var(--page-x)] py-[var(--page-y)]">
+    <Page width="wide">
       {!live && (
-        <p className="rounded border border-line bg-elevated px-3 py-2 font-mono text-micro text-muted">
+        <p className="rounded border border-line bg-elevated px-3 py-2 text-body text-2">
           Delta bands, the DEX profile and the contract ranking need per-contract greeks — turn{" "}
           <b className="text-foreground">Live ladder</b> on in the header. Gamma and skew below are
           from today&apos;s snapshot.
@@ -66,6 +67,6 @@ export default function OptionsGammaPage() {
         <MvcCard levels={levels} spot={spot} />
         <GexCard symbol={activeSymbol} />
       </div>
-    </div>
+    </Page>
   );
 }

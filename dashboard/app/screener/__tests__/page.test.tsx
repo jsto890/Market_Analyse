@@ -86,7 +86,8 @@ describe("ScreenerPage verdict badge (SC-04)", () => {
     await user.click(screen.getByRole("button", { name: "Full universe" }));
     await screen.findByText("NVDA");
     const badge = screen.getByText("LONG");
-    expect(badge.className).toContain("bg-pos/15");
+    expect(badge.className).toContain("bg-model");
+    expect(badge.className).not.toMatch(/(bg|text)-(pos|neg)\b/);
   });
 });
 
@@ -139,8 +140,10 @@ describe("ScreenerPage header tooltips (SC-05)", () => {
     const user = userEvent.setup();
     await user.click(screen.getByRole("button", { name: "Full universe" }));
     await screen.findByText("NVDA");
-    for (const label of ["Long votes info", "Short votes info", "Wait votes info", "High conviction info", "Agreement info", "Risk:reward info"]) {
-      expect(screen.getByRole("button", { name: label })).toBeInTheDocument();
+    // Each header is a `Gloss` — the term itself is the visible trigger, so the
+    // accessible name is the term, not a separate sr-only info button.
+    for (const term of ["L", "S", "W", "Agree%", "HC", "R:R"]) {
+      expect(screen.getByRole("button", { name: term })).toBeInTheDocument();
     }
   });
 });

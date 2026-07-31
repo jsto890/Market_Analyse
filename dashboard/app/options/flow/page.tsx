@@ -11,6 +11,8 @@ import PcrCard from "@/components/odte/PcrCard";
 import UnusualCard from "@/components/odte/UnusualCard";
 import Panel from "@/components/ui/Panel";
 import InfoTip from "@/components/ui/InfoTip";
+import Empty from "@/components/ui/Empty";
+import Page from "@/components/ui/Page";
 import { compactNumber } from "@/lib/format";
 
 const jsonFetcher = (url: string) =>
@@ -62,9 +64,9 @@ export default function OptionsFlowPage() {
   const callShare = totalVol > 0 ? (callVol / totalVol) * 100 : null;
 
   return (
-    <div className="space-y-3 px-[var(--page-x)] py-[var(--page-y)]">
+    <Page width="wide">
       {verdict && (
-        <p className="rounded border border-line bg-elevated px-3 py-2 text-dense text-muted">
+        <p className="rounded border border-line bg-elevated px-3 py-2 text-body text-2">
           {verdict.sentence}
         </p>
       )}
@@ -81,26 +83,26 @@ export default function OptionsFlowPage() {
           }
         >
           {totalVol === 0 ? (
-            <p className="font-mono text-micro text-muted">no volume in this band yet</p>
+            <Empty message="No volume in this band yet." />
           ) : (
-            <div className="space-y-2 font-mono text-micro tabular-nums">
+            <div className="space-y-2 text-data">
               <div className="flex h-2 overflow-hidden rounded bg-raised">
-                <div className="bg-pos/60" style={{ width: `${callShare ?? 0}%` }} />
-                <div className="bg-neg/60" style={{ width: `${100 - (callShare ?? 0)}%` }} />
+                <div className="bg-call/60" style={{ width: `${callShare ?? 0}%` }} />
+                <div className="bg-put/60" style={{ width: `${100 - (callShare ?? 0)}%` }} />
               </div>
               <div className="flex justify-between">
-                <span className="text-pos">calls {compactNumber(callVol)}</span>
+                <span className="text-call">calls {compactNumber(callVol)}</span>
                 <span className="text-muted">
                   {callShare != null ? `${callShare.toFixed(0)}% of volume is calls` : ""}
                 </span>
-                <span className="text-neg">puts {compactNumber(putVol)}</span>
+                <span className="text-put">puts {compactNumber(putVol)}</span>
               </div>
               <div className="flex justify-between text-muted">
                 <span>call OI {compactNumber(callOi)}</span>
                 <span>put OI {compactNumber(putOi)}</span>
               </div>
               {busiest && (
-                <p className="text-muted-2">
+                <p className="text-body text-2">
                   Busiest strike {busiest.strike} on {compactNumber(busiest.vol)} contracts — where
                   today&apos;s argument is actually being had.
                 </p>
@@ -112,6 +114,6 @@ export default function OptionsFlowPage() {
         <PcrCard symbol={activeSymbol} />
         <UnusualCard symbol={activeSymbol} />
       </div>
-    </div>
+    </Page>
   );
 }

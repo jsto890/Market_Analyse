@@ -59,7 +59,7 @@ export default function SourcesTable({ rows, initialTicker }: SourcesTableProps)
   ];
 
   const accountColumns: Column<AccountAgg>[] = [
-    { key: "handle", header: "Account", render: (a) => <span className="font-mono text-dense">{a.handle}</span> },
+    { key: "handle", header: "Account", render: (a) => <span className="text-data">{a.handle}</span> },
     { key: "tickerCount", header: "Tickers today", align: "right", sortable: true, sortFn: (a, b) => a.tickerCount - b.tickerCount, render: (a) => a.tickerCount },
     {
       key: "tickers",
@@ -67,7 +67,7 @@ export default function SourcesTable({ rows, initialTicker }: SourcesTableProps)
       render: (a) => (
         <div className="flex flex-wrap gap-1">
           {a.tickers.map((t) => (
-            <Link key={t} href={`/t/${t}`} className="text-micro text-muted hover:text-accent">
+            <Link key={t} href={`/t/${t}`} className="text-data text-muted hover:text-accent">
               {t}
             </Link>
           ))}
@@ -86,7 +86,7 @@ export default function SourcesTable({ rows, initialTicker }: SourcesTableProps)
       />
 
       <section>
-        <h2 className="mb-2 text-body font-medium text-muted">Today's tickers ({tickerRows.length})</h2>
+        <h2 className="mb-2 text-title text-foreground">Today's tickers ({tickerRows.length})</h2>
         <DataTable
           columns={tickerColumns}
           rows={tickerRows}
@@ -97,7 +97,7 @@ export default function SourcesTable({ rows, initialTicker }: SourcesTableProps)
       </section>
 
       <section>
-        <h2 className="mb-2 text-body font-medium text-muted">Today's accounts ({accountRows.length})</h2>
+        <h2 className="mb-2 text-title text-foreground">Today's accounts ({accountRows.length})</h2>
         <DataTable
           columns={accountColumns}
           rows={accountRows}

@@ -14,7 +14,9 @@ export default function MicroBar({ value }: MicroBarProps) {
         style={{
           left: isPos ? "50%" : `${50 - pct}%`,
           width: `${pct}%`,
-          background: isPos ? "var(--green)" : "var(--red)",
+          // Sub-scores are model output — direction reads from which side of
+          // centre fills, never from P&L green/red.
+          background: "var(--model)",
         }}
       />
       <span

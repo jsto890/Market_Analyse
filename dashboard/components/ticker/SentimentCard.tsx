@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import Panel from "@/components/ui/Panel";
+import Empty from "@/components/ui/Empty";
 import CenterBar from "@/components/ui/CenterBar";
 import ConvictionDot from "@/components/ui/ConvictionDot";
 import { splitAccounts } from "@/lib/sources";
@@ -16,9 +17,10 @@ export default function SentimentCard({ bridgeRow, lastSeen }: SentimentCardProp
   if (!bridgeRow) {
     return (
       <Panel title="Sentiment">
-        <p className="text-dense text-muted">
-          No social signal today — last seen {lastSeen ?? "never"}
-        </p>
+        <Empty
+          title="No social signal today"
+          message={`Last seen ${lastSeen ?? "never"}.`}
+        />
       </Panel>
     );
   }
@@ -32,10 +34,10 @@ export default function SentimentCard({ bridgeRow, lastSeen }: SentimentCardProp
         {/* Score + stats line */}
         <div className="flex items-center gap-3 flex-wrap">
           <CenterBar value={sentiment_score} width={100} showValue />
-          <span className="font-mono text-body tabular-nums text-muted">
+          <span className="text-data text-muted">
             <span className="text-foreground">{mentions}</span> mentions
           </span>
-          <span className="font-mono text-body tabular-nums text-muted">
+          <span className="text-data text-muted">
             <span className="text-foreground">{accounts}</span> accounts
           </span>
           <ConvictionDot value={conviction as Conviction} />
@@ -48,7 +50,7 @@ export default function SentimentCard({ bridgeRow, lastSeen }: SentimentCardProp
               <Link
                 key={acct}
                 href={`/sources?ticker=${bridgeRow.ticker.toUpperCase()}`}
-                className="inline-flex items-center rounded border-l-2 border-l-accent border border-line bg-surface pl-1.5 pr-2 py-0.5 font-mono text-dense text-muted hover:text-accent hover:border-accent/40 transition-colors"
+                className="inline-flex items-center rounded border-l-2 border-l-accent border border-line bg-surface pl-1.5 pr-2 py-0.5 text-data text-muted hover:text-accent hover:border-accent/40 transition-colors"
               >
                 {acct}
               </Link>

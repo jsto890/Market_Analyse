@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import Panel from "@/components/ui/Panel";
-import Skeleton from "@/components/ui/Skeleton";
+import Loading from "@/components/ui/Loading";
+import Failed from "@/components/ui/Failed";
 import type { WrittenAnalysis } from "@/types/argus";
 
 type State =
@@ -47,35 +48,31 @@ export default function AiPanel({ ticker }: { ticker: string }) {
           <button
             type="button"
             onClick={generate}
-            className="font-mono text-dense text-accent border border-accent/40 rounded px-3 py-1 hover:bg-accent/10 transition-colors"
+            className="text-data text-accent border border-accent/40 rounded px-3 py-1 hover:bg-accent/10 transition-colors"
           >
             Generate analysis ~10s
           </button>
         )}
 
         {state.status === "loading" && (
-          <div className="space-y-2 py-1">
-            <p className="font-mono text-micro text-muted animate-pulse">
-              Writing analysis… ~10s
-            </p>
-            <Skeleton width="100%" height={10} />
-            <Skeleton width="100%" height={10} />
-            <Skeleton width="90%" height={10} />
-            <Skeleton width="95%" height={10} />
-            <Skeleton width="70%" height={10} />
-          </div>
+          <Loading variant="lines" count={5} label="Writing analysis… ~10s" />
         )}
 
         {state.status === "error" && (
           <div className="space-y-2">
-            <p className="font-mono text-dense text-neg">{state.message}</p>
-            <button
-              type="button"
-              onClick={() => setState({ status: "idle" })}
-              className="font-mono text-micro text-accent border border-accent/40 rounded px-2 py-0.5 hover:bg-accent/10 transition-colors"
-            >
-              Retry
-            </button>
+            <Failed
+              title="Analysis didn’t run"
+              message={state.message}
+              action={
+                <button
+                  type="button"
+                  onClick={() => setState({ status: "idle" })}
+                  className="text-data text-accent border border-accent/40 rounded px-2 py-0.5 hover:bg-accent/10 transition-colors"
+                >
+                  Retry
+                </button>
+              }
+            />
           </div>
         )}
 
@@ -85,7 +82,7 @@ export default function AiPanel({ ticker }: { ticker: string }) {
               <button
                 type="button"
                 onClick={generate}
-                className="font-mono text-micro text-accent border border-accent/40 rounded px-2 py-0.5 hover:bg-accent/10 transition-colors"
+                className="text-data text-accent border border-accent/40 rounded px-2 py-0.5 hover:bg-accent/10 transition-colors"
               >
                 Regenerate
               </button>
@@ -96,12 +93,12 @@ export default function AiPanel({ ticker }: { ticker: string }) {
                   setCopied(true);
                   setTimeout(() => setCopied(false), 1500);
                 }}
-                className="font-mono text-micro text-muted border border-line rounded px-2 py-0.5 hover:text-foreground hover:border-accent/40 transition-colors"
+                className="text-data text-muted border border-line rounded px-2 py-0.5 hover:text-foreground hover:border-accent/40 transition-colors"
               >
                 {copied ? "Copied" : "Copy"}
               </button>
             </div>
-            <div className="space-y-2 font-mono text-dense text-foreground leading-relaxed">
+            <div className="space-y-2 text-body text-foreground leading-relaxed">
               {reportParagraphs(state.report).map((p, i) => (
                 <p key={i}>{p}</p>
               ))}

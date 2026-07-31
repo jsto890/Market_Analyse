@@ -1,10 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { AlertTriangle } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useNewsFeed, relTime, sortNewsByTs, type NewsItem } from "@/lib/news";
 import { useWatchlistTickers } from "@/lib/watchlist";
+import Loading from "@/components/ui/Loading";
+import Empty from "@/components/ui/Empty";
+import Failed from "@/components/ui/Failed";
 
 const LS_KEY = "rail-right-collapsed";
 
@@ -96,7 +98,7 @@ export function RightRail() {
         </button>
         {/* Rotated "NEWS" label per spec §6.2 */}
         <span
-          className="text-micro font-mono font-medium uppercase tracking-[0.12em] text-muted mt-4"
+          className="eyebrow tracking-[0.12em] mt-4"
           style={{ writingMode: "vertical-rl", transform: "rotate(180deg)" }}
         >
           NEWS
@@ -122,9 +124,7 @@ export function RightRail() {
         >
           <span className="text-body leading-none select-none">›</span>
         </button>
-        <span className="mr-auto text-micro font-medium uppercase tracking-[0.08em] text-muted font-mono leading-none">
-          News
-        </span>
+        <span className="mr-auto eyebrow leading-none">News</span>
         <NewsFeedHeader />
       </div>
 
@@ -184,7 +184,7 @@ function NewsFeedHeader() {
   if (error) return <span className="text-micro text-warn leading-none">offline</span>;
   if (!data) return <span className="text-micro text-muted opacity-40 leading-none">…</span>;
   return (
-    <span className="text-micro text-muted leading-none">
+    <span className="text-data text-muted leading-none">
       {data.items.length}
     </span>
   );
@@ -197,22 +197,16 @@ function NewsFeedBody({ filter }: { filter: "all" | "mine" }) {
 
   if (error) {
     return (
-      <p className="flex items-center gap-1.5 text-micro text-warn px-3 pt-3 leading-relaxed">
-        <AlertTriangle size={12} strokeWidth={2} className="flex-shrink-0" />
-        news feed offline
-      </p>
+      <Failed
+        title="News feed offline"
+        message="The ingest service isn’t responding."
+        className="m-3"
+      />
     );
   }
 
   if (!data) {
-    // Loading skeleton
-    return (
-      <div className="px-3 pt-4 flex flex-col gap-3">
-        <div className="h-3 bg-elevated rounded animate-pulse" style={{ width: "70%" }} />
-        <div className="h-3 bg-elevated rounded animate-pulse" style={{ width: "55%" }} />
-        <div className="h-3 bg-elevated rounded animate-pulse" style={{ width: "80%" }} />
-      </div>
-    );
+    return <Loading variant="lines" count={3} label="Loading news" className="px-3 pt-4" />;
   }
 
   const sorted = sortNewsByTs(data.items);
@@ -222,11 +216,13 @@ function NewsFeedBody({ filter }: { filter: "all" | "mine" }) {
 
   if (items.length === 0) {
     return (
-      <p className="text-micro text-muted opacity-70 px-3 pt-3 leading-relaxed">
-        {filter === "mine"
-          ? "no news for your watchlist tickers yet"
-          : "no news yet — feed starts when the ingest service runs"}
-      </p>
+      <Empty
+        message={
+          filter === "mine"
+            ? "No news yet for the tickers on your watchlist."
+            : "No news yet — the feed starts when the ingest service runs."
+        }
+      />
     );
   }
 
@@ -262,16 +258,16 @@ function NewsRow({ item }: { item: NewsItem }) {
             BREAKING
           </span>
         )}
-        <span className="text-micro text-muted leading-none">
+        <span className="text-data text-muted leading-none">
           {relTime(item.ts)}
         </span>
-        <span className="text-micro text-muted uppercase leading-none">
+        <span className="eyebrow leading-none">
           {shortSource(item.source)}
         </span>
         {item.ticker && (
           <Link
             href={`/t/${item.ticker}`}
-            className="text-micro text-accent leading-none ml-auto -my-1.5 py-1.5 px-1"
+            className="text-data text-accent leading-none ml-auto -my-1.5 py-1.5 px-1"
           >
             {item.ticker}
           </Link>
@@ -284,13 +280,12 @@ function NewsRow({ item }: { item: NewsItem }) {
           href={item.url}
           target="_blank"
           rel="noreferrer"
-          title={item.headline}
-          className="text-dense text-foreground leading-snug line-clamp-3 block"
+          className="text-body text-foreground leading-snug block"
         >
           {item.headline}
         </a>
       ) : (
-        <p title={item.headline} className="text-dense text-foreground leading-snug line-clamp-3">
+        <p className="text-body text-foreground leading-snug">
           {item.headline}
         </p>
       )}

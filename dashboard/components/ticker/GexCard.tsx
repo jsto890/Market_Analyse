@@ -23,7 +23,7 @@ export default function GexCard({ ticker }: { ticker: string }) {
   if (error) return null; // 404 = no levels yet (first close snapshot pending) — card simply absent
   if (!data) return null;
   const row = (label: string, v: number | null) => (
-    <div className="flex justify-between font-mono text-dense tabular-nums">
+    <div className="flex justify-between text-data">
       <span className="text-muted">{label}</span>
       <span className="text-foreground">{v !== null ? v.toFixed(2) : "—"}</span>
     </div>
@@ -34,7 +34,7 @@ export default function GexCard({ ticker }: { ticker: string }) {
         {row("zero gamma", data.zero_gamma)}
         {row("call wall", data.call_wall)}
         {row("put wall", data.put_wall)}
-        <p className="font-mono text-micro text-muted pt-1 border-t border-line">
+        <p className="text-body text-2 pt-1 border-t border-line">
           {data.caveat} · {data.date}
         </p>
       </div>

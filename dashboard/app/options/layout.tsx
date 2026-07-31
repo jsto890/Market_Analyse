@@ -37,12 +37,15 @@ function OptionsChrome({ children }: { children: React.ReactNode }) {
   const badge = odteBadge(error ? null : data);
 
   return (
-    <main className="flex h-full flex-col">
-      <div className="flex flex-wrap items-center gap-x-3 gap-y-2 border-b border-line px-[var(--page-x)] py-2">
+    <div className="flex h-full flex-col">
+      {/* Chrome, not content: `h-full` on the column makes every child
+       * shrinkable by default, which squeezed these two rows and clipped their
+       * text once the type scale grew. */}
+      <div className="flex shrink-0 flex-wrap items-center gap-x-3 gap-y-2 border-b border-line px-[var(--page-x)] py-2">
         <h1 className="text-body font-semibold">
           Options · {activeSymbol}
           {isProxied(activeSymbol) && (
-            <span className="ml-1.5 font-mono text-micro font-normal text-muted">
+            <span className="ml-1.5 text-data font-normal text-muted">
               (via {companionSymbol(activeSymbol)})
             </span>
           )}
@@ -53,10 +56,10 @@ function OptionsChrome({ children }: { children: React.ReactNode }) {
         {/* One live control for every tab, with its name and its state both in
            text — the bare switch said neither (OPT-03). */}
         <div className="ml-auto flex items-center gap-1.5">
-          <span className="font-mono text-micro text-muted">Live ladder</span>
+          <span className="eyebrow">Live ladder</span>
           <Toggle checked={live} onChange={setLive} label="Live ladder" />
           <span
-            className={`w-6 font-mono text-micro ${live ? "text-teal" : "text-muted-2"}`}
+            className={`w-6 text-data ${live ? "text-teal" : "text-muted"}`}
             aria-hidden
           >
             {live ? "on" : "off"}
@@ -74,7 +77,7 @@ function OptionsChrome({ children }: { children: React.ReactNode }) {
 
       <nav
         aria-label="Options sections"
-        className="flex gap-4 overflow-x-auto border-b border-line px-[var(--page-x)] py-1.5"
+        className="flex shrink-0 gap-4 overflow-x-auto border-b border-line px-[var(--page-x)] py-1.5"
       >
         {OPTIONS_TABS.map((t) => {
           const active = t.href === "/options" ? pathname === "/options" : pathname.startsWith(t.href);
@@ -83,7 +86,7 @@ function OptionsChrome({ children }: { children: React.ReactNode }) {
               key={t.href}
               href={t.href}
               aria-current={active ? "page" : undefined}
-              className={`shrink-0 whitespace-nowrap border-b-2 pb-1 text-dense font-medium transition-colors ${
+              className={`shrink-0 whitespace-nowrap border-b-2 pb-1 text-body font-medium transition-colors ${
                 active
                   ? "border-accent text-foreground"
                   : "border-transparent text-muted hover:text-foreground"
@@ -95,7 +98,7 @@ function OptionsChrome({ children }: { children: React.ReactNode }) {
         })}
         {/* The active tab's blurb, inline — a native title per tab put the
          * explanation behind a hover on a link, reachable by mouse only. */}
-        <span className="self-center text-micro text-muted-2">
+        <span className="self-center text-body text-2">
           {OPTIONS_TABS.find((t) =>
             t.href === "/options" ? pathname === "/options" : pathname.startsWith(t.href)
           )?.blurb}
@@ -103,6 +106,6 @@ function OptionsChrome({ children }: { children: React.ReactNode }) {
       </nav>
 
       {children}
-    </main>
+    </div>
   );
 }

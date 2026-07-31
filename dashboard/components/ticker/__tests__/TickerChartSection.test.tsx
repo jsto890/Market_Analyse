@@ -37,7 +37,7 @@ describe("TickerChartSection", () => {
         markers={[]}
       />
     );
-    expect(screen.getByText(/No historical bars available/)).toBeInTheDocument();
+    expect(screen.getByText("No price history")).toBeInTheDocument();
     expect(screen.queryByText("Retry")).toBeNull();
   });
 

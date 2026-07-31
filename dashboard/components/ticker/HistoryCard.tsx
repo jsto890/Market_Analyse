@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Panel from "@/components/ui/Panel";
+import Empty from "@/components/ui/Empty";
 
 interface SignalRow {
   date: string;
@@ -33,7 +34,10 @@ export default function HistoryCard({ rows, lastClose }: HistoryCardProps) {
   if (rows.length === 0) {
     return (
       <Panel title="Signal History">
-        <p className="text-dense text-muted">No prior flags in the database</p>
+        <Empty
+          title="Never flagged"
+          message="This name has not appeared in a prior signal run."
+        />
       </Panel>
     );
   }
@@ -46,7 +50,7 @@ export default function HistoryCard({ rows, lastClose }: HistoryCardProps) {
   return (
     <Panel title="Signal History">
       <div className="space-y-2">
-        <table className="w-full font-mono text-dense tabular-nums border-collapse">
+        <table className="w-full text-data border-collapse">
           <thead>
             <tr className="text-left text-muted text-micro">
               <th className="pb-1 pr-3 font-medium">date</th>
@@ -83,7 +87,7 @@ export default function HistoryCard({ rows, lastClose }: HistoryCardProps) {
           <button
             type="button"
             onClick={() => setExpanded((v) => !v)}
-            className="font-mono text-micro text-accent hover:text-foreground transition-colors"
+            className="text-data text-accent hover:text-foreground transition-colors"
           >
             {expanded ? "Show fewer" : `+${older} older — show all`}
           </button>

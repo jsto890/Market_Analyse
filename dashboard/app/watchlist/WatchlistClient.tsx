@@ -7,9 +7,8 @@ import Panel from "@/components/ui/Panel";
 import DataTable, { Column } from "@/components/ui/DataTable";
 import StatChip from "@/components/ui/StatChip";
 import Badge from "@/components/ui/Badge";
-import EmptyState from "@/components/ui/EmptyState";
-import SkeletonTable from "@/components/ui/SkeletonTable";
-import PageHeader from "@/components/ui/PageHeader";
+import Empty from "@/components/ui/Empty";
+import Loading from "@/components/ui/Loading";
 import PinToggle from "@/components/ui/PinToggle";
 import Input from "@/components/ui/Input";
 import Button from "@/components/ui/Button";
@@ -17,7 +16,7 @@ import { heatBg } from "@/lib/heat";
 import { price, pct, relativeAge } from "@/lib/format";
 import { WATCHLIST_STATUS_LABEL } from "@/lib/labels";
 import { STATIC_KEYS } from "@/lib/storageKeys";
-import PageShell from "@/components/PageShell";
+import Page from "@/components/ui/Page";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -83,7 +82,7 @@ function fmtPct(v: number | null): React.ReactNode {
   const cls = v >= 0 ? "text-pos" : "text-neg";
   return (
     <span
-      className={`inline-block rounded px-1.5 py-0.5 tabular-nums ${cls}`}
+      className={`inline-block rounded px-1.5 py-0.5 text-data ${cls}`}
       style={{ backgroundColor: heatBg(v) }}
     >
       {pct(v, "percent")}
@@ -93,7 +92,7 @@ function fmtPct(v: number | null): React.ReactNode {
 
 function fmtPrice(v: number | null): React.ReactNode {
   if (v === null) return <span className="text-muted">—</span>;
-  return <span className="tabular-nums">{price(v)}</span>;
+  return <span className="text-data">{price(v)}</span>;
 }
 
 function fmtDate(v: string): React.ReactNode {
@@ -101,7 +100,7 @@ function fmtDate(v: string): React.ReactNode {
 }
 
 function fmtLoading(): React.ReactNode {
-  return <span className="text-muted text-dense">Loading…</span>;
+  return <Loading variant="lines" count={1} />;
 }
 
 const CONCURRENCY = 5;
@@ -273,13 +272,13 @@ function PinnedSection({
       key: "ticker",
       header: "Ticker",
       width: "80px",
-      render: (r) => <span className="font-mono font-medium">{r.ticker}</span>,
+      render: (r) => <span className="text-data font-medium">{r.ticker}</span>,
     },
     {
       key: "pinned_at",
       header: "Pinned",
       width: "84px",
-      render: (r) => <span className="text-muted text-dense">{fmtDate(r.pinned_at)}</span>,
+      render: (r) => <span className="text-data text-muted">{fmtDate(r.pinned_at)}</span>,
     },
     {
       key: "price_at_pin",
@@ -319,7 +318,7 @@ function PinnedSection({
       header: "Last signal",
       render: (r) =>
         r.lastSignal ? (
-          <span className="text-dense text-muted">{r.lastSignal}</span>
+          <span className="text-data text-muted">{r.lastSignal}</span>
         ) : (
           <span className="text-muted">—</span>
         ),
@@ -357,9 +356,9 @@ function PinnedSection({
         <Button onClick={handleAdd} disabled={adding || !addInput.trim()} loading={adding}>
           Pin
         </Button>
-        {confirmMsg && <span className="text-dense text-pos">{confirmMsg}</span>}
+        {confirmMsg && <span className="text-body text-pos">{confirmMsg}</span>}
         {addError && (
-          <span className="flex items-center gap-1.5 text-dense text-neg">
+          <span className="flex items-center gap-1.5 text-body text-neg">
             {addError}
             <button
               type="button"
@@ -402,7 +401,7 @@ function PinnedSection({
       )}
 
       {rows.length === 0 ? (
-        <EmptyState message="No pinned tickers yet — add one above" />
+        <Empty message="No pinned tickers yet — add one above" />
       ) : (
         <DataTable
           columns={columns}
@@ -470,7 +469,7 @@ function RecentPicksSection({ medianDaysToPeak }: { medianDaysToPeak: number }) 
       header: "Ticker",
       width: "80px",
       render: (r) => (
-        <span className={`font-mono font-medium ${r.stillIn === false ? "text-muted" : ""}`}>
+        <span className={`text-data font-medium ${r.stillIn === false ? "text-muted" : ""}`}>
           {r.ticker}
         </span>
       ),
@@ -478,12 +477,12 @@ function RecentPicksSection({ medianDaysToPeak }: { medianDaysToPeak: number }) 
     {
       key: "first_date",
       header: "First flagged",
-      render: (r) => <span className="text-dense text-muted">{r.first_date}</span>,
+      render: (r) => <span className="text-data text-muted">{r.first_date}</span>,
     },
     {
       key: "first_group",
       header: "Group",
-      render: (r) => <span className="font-mono text-dense text-muted">{r.first_group}</span>,
+      render: (r) => <span className="text-data text-muted">{r.first_group}</span>,
     },
     {
       key: "entry_at_flag",
@@ -511,7 +510,7 @@ function RecentPicksSection({ medianDaysToPeak }: { medianDaysToPeak: number }) 
       key: "ageSeconds",
       header: "Age",
       align: "right",
-      render: (r) => <span className="tabular-nums text-muted">{relativeAge(r.ageSeconds)}</span>,
+      render: (r) => <span className="text-data text-muted">{relativeAge(r.ageSeconds)}</span>,
     },
     {
       key: "stillIn",
@@ -519,9 +518,9 @@ function RecentPicksSection({ medianDaysToPeak }: { medianDaysToPeak: number }) 
       render: (r) => {
         if (r.stillIn === null) return <span className="text-muted">—</span>;
         return r.stillIn ? (
-          <span className="text-pos text-dense">{WATCHLIST_STATUS_LABEL.in}</span>
+          <span className="text-body text-model">{WATCHLIST_STATUS_LABEL.in}</span>
         ) : (
-          <span className="text-muted text-dense">{WATCHLIST_STATUS_LABEL.out}</span>
+          <span className="text-body text-muted">{WATCHLIST_STATUS_LABEL.out}</span>
         );
       },
     },
@@ -534,12 +533,13 @@ function RecentPicksSection({ medianDaysToPeak }: { medianDaysToPeak: number }) 
       persistKey="watchlist-recent"
     >
       {!recentData ? (
-        <SkeletonTable
+        <Loading
+          variant="rows"
           headers={["Ticker", "Flagged", "Group", "Flag price", "Now", "Since flag", "Age (d)", "In today's report"]}
-          rows={4}
+          count={4}
         />
       ) : rows.length === 0 ? (
-        <EmptyState message="No tickers first-flagged in the last 14 days" />
+        <Empty message="No tickers first-flagged in the last 14 days" />
       ) : (
         <DataTable
           columns={columns}
@@ -619,10 +619,10 @@ export default function WatchlistClient({
   }, []);
 
   return (
-    <PageShell width="standard">
-      <PageHeader title="Watchlist" subtitle="Pinned names + auto-flagged recent picks" />
+    <Page width="wide">
+      <Page.Header title="Watchlist" subtitle="Pinned names + auto-flagged recent picks" />
       {migrationResult && (
-        <div className="flex items-center gap-3 rounded border border-line bg-elevated px-3 py-2 text-dense text-muted">
+        <div className="flex items-center gap-3 rounded border border-line bg-elevated px-3 py-2 text-body text-2">
           <span>
             Migrated {migrationResult.ok} of {migrationResult.ok + migrationResult.failed} ticker
             {migrationResult.ok + migrationResult.failed === 1 ? "" : "s"} from your old watchlist
@@ -643,6 +643,6 @@ export default function WatchlistClient({
       )}
       <PinnedSection entries={entries} onAdded={mutate} />
       <RecentPicksSection medianDaysToPeak={medianDaysToPeak} />
-    </PageShell>
+    </Page>
   );
 }

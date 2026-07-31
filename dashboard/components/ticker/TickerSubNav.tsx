@@ -52,7 +52,7 @@ export default function TickerSubNav({ hasGamma = false }: { hasGamma?: boolean 
     <nav
       aria-label="Ticker page sections"
       // One slim bar, not a second full-height chrome layer under the app nav (TN-06).
-      className="sticky top-[var(--nav-h)] z-20 -mx-4 flex gap-3 overflow-x-auto border-b border-line bg-surface/95 px-4 py-1 backdrop-blur"
+      className="sticky top-[var(--nav-h)] z-20 -mx-[var(--page-x)] flex gap-3 overflow-x-auto border-b border-line bg-surface/95 px-[var(--page-x)] py-1 backdrop-blur"
     >
       {sections.map((s) => (
         <a
@@ -62,7 +62,7 @@ export default function TickerSubNav({ hasGamma = false }: { hasGamma?: boolean 
           // for the current page in a set of pages (TN-05).
           aria-current={activeId === s.id ? "location" : undefined}
           className={[
-            "shrink-0 whitespace-nowrap border-b-2 pb-0.5 text-micro uppercase tracking-wide transition-colors",
+            "shrink-0 whitespace-nowrap border-b-2 pb-0.5 text-micro uppercase transition-colors",
             activeId === s.id
               ? "border-accent text-foreground"
               : "border-transparent text-muted hover:text-foreground",

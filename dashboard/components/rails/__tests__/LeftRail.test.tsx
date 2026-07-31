@@ -52,10 +52,11 @@ describe("LeftRail width-based collapse (LR-01)", () => {
 });
 
 describe("LeftRail offline banner (LR-02)", () => {
-  it("renders QUOTE FEED OFFLINE exactly once, not once per block", () => {
+  it("renders the quote-feed failure exactly once, not once per block", () => {
     window.innerWidth = 1600;
     render(<LeftRail />);
-    expect(screen.getAllByText("QUOTE FEED OFFLINE")).toHaveLength(1);
+    expect(screen.getAllByText("Quote feed offline")).toHaveLength(1);
+    expect(screen.getAllByRole("alert")).toHaveLength(1);
   });
 });
 

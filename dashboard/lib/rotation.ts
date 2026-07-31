@@ -29,10 +29,6 @@ export function deriveQuadrant(row: QuadrantInput): string {
   return "lagging";
 }
 
-export function abbreviate(name: string, max = 10): string {
-  return name.length > max ? `${name.slice(0, max - 1)}…` : name;
-}
-
 /** Sectors whose relative-strength line is flat (constituent closes failed
  *  to load) come out exactly at 100/100 — meaningless points that pile up
  *  on the origin and collide. Split them out by name instead of just
@@ -47,26 +43,6 @@ export function splitDegenerate<T extends { rs_ratio: number; rs_mom: number }>(
     (degenerate ? hidden : plotted).push(r);
   }
   return { plotted, hidden };
-}
-
-/** Data-space (RS-Ratio/RS-Mom unit) nearest-neighbour distance per point.
- *  RRGChart's always-on point labels collide when two sectors plot within a
- *  few axis-units of each other (RO-07) — points closer than `threshold` to
- *  their nearest neighbour are flagged so the chart can suppress their
- *  label and rely on the (always-present) hover tooltip instead. */
-export function computeLabelCollisions<T extends { rs_ratio: number; rs_mom: number }>(
-  points: T[],
-  threshold = 1.5
-): boolean[] {
-  return points.map((p, i) => {
-    for (let j = 0; j < points.length; j++) {
-      if (j === i) continue;
-      const dx = p.rs_ratio - points[j].rs_ratio;
-      const dy = p.rs_mom - points[j].rs_mom;
-      if (Math.sqrt(dx * dx + dy * dy) < threshold) return true;
-    }
-    return false;
-  });
 }
 
 /** Same computation RotationPanel.tsx uses for its own Panel subtitle, extracted

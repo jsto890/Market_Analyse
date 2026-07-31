@@ -6,8 +6,8 @@ import { type UsMarketState } from "@/lib/market-clock";
 import { useMarketClock } from "@/lib/useMarketClock";
 import type { StatusPayload, DotState } from "@/lib/status";
 import { visibilityAwareInterval } from "@/lib/swr-visibility";
-import { dualClock } from "@/lib/tz-display";
 import { useRailQuotes } from "@/lib/rail-quotes";
+import Stale from "@/components/ui/Stale";
 
 const fetcher = (url: string) =>
   fetch(url).then((r) => {
@@ -41,21 +41,6 @@ function sessionChip(clock: { us: UsMarketState; futures: "open" | "closed" }): 
   return SESSION_CHIP[clock.us];
 }
 
-function freshnessLabel(bridgeTime: string | null, quotesUpdatedAt: number | null): string {
-  const parts: string[] = [];
-  if (bridgeTime) {
-    const d = new Date(bridgeTime);
-    if (!Number.isNaN(d.getTime())) {
-      parts.push(`bridge ${dualClock(d).primary}`);
-    }
-  }
-  if (quotesUpdatedAt !== null) {
-    const secs = Math.max(0, Math.round((Date.now() - quotesUpdatedAt) / 1000));
-    parts.push(`quotes ${secs}s ago`);
-  }
-  return parts.join(" · ");
-}
-
 export default function ContextStrip() {
   const clock = useMarketClock();
   const { data } = useSWR<StatusPayload>("/api/status", fetcher, {
@@ -65,7 +50,6 @@ export default function ContextStrip() {
   });
 
   const { updatedAt: quotesUpdatedAt } = useRailQuotes();
-  const freshness = freshnessLabel(data?.bridgeTime ?? null, quotesUpdatedAt);
 
   const aggregate: DotState = data?.aggregate ?? "idle";
 
@@ -91,7 +75,7 @@ export default function ContextStrip() {
           <Popover.Content
             side="bottom"
             sideOffset={4}
-            className="rounded bg-elevated border border-line px-2 py-1 text-dense text-muted shadow-lg z-50 min-w-[180px]"
+            className="rounded bg-elevated border border-line px-2 py-1 text-body text-muted shadow-lg z-50 min-w-[180px]"
           >
             {(data?.services ?? []).map((s) => (
               <div key={s.name} className="flex items-center gap-1.5 py-0.5">
@@ -105,8 +89,11 @@ export default function ContextStrip() {
         </Popover.Portal>
       </Popover.Root>
 
-      {freshness && (
-        <span className="text-muted text-micro font-mono select-none">{freshness}</span>
+      {data?.bridgeTime && (
+        <Stale asOf={data.bridgeTime} source="bridge" variant="line" expectStale className="select-none" />
+      )}
+      {quotesUpdatedAt !== null && (
+        <Stale asOf={quotesUpdatedAt} source="quotes" variant="line" className="select-none" />
       )}
     </div>
   );

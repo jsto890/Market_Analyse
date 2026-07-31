@@ -19,11 +19,10 @@ import { MacroChart, type SpxBar } from "@/components/macro/MacroChart";
 import Contributors from "@/components/macro/Contributors";
 import ScopeTile from "@/components/macro/ScopeTile";
 import Collapsible from "@/components/ui/Collapsible";
-import EmptyState from "@/components/ui/EmptyState";
-import PageHeader from "@/components/ui/PageHeader";
+import Empty from "@/components/ui/Empty";
 import { useLocalStorage } from "@/lib/useLocalStorage";
 import { STATIC_KEYS } from "@/lib/storageKeys";
-import PageShell from "@/components/PageShell";
+import Page from "@/components/ui/Page";
 
 const fetcher = (u: string) => fetch(u).then((r) => { if (!r.ok) throw new Error(`${r.status}`); return r.json(); });
 const WINDOWS = ["1h", "1d", "1w"];
@@ -34,10 +33,10 @@ function Methodology({ window }: { window: string }) {
   return (
     <Collapsible
       persistKey="macro-methodology"
-      className="mb-4 rounded-md border border-line bg-surface"
+      className="rounded-md border border-line bg-surface"
       triggerClassName="px-3 py-2"
       trigger={
-        <span className="text-dense font-medium text-foreground">
+        <span className="text-body font-medium text-foreground">
           How this score is computed
           <span className="ml-2 font-normal text-muted">
             model, sources, decay, and what a number means
@@ -45,26 +44,26 @@ function Methodology({ window }: { window: string }) {
         </span>
       }
     >
-      <dl className="grid gap-x-6 gap-y-2 border-t border-line px-3 py-3 text-dense leading-relaxed sm:grid-cols-2">
+      <dl className="grid gap-x-6 gap-y-2 border-t border-line px-3 py-3 text-body leading-relaxed sm:grid-cols-2">
         <div>
-          <dt className="font-mono text-micro uppercase tracking-wide text-muted">Model</dt>
-          <dd className="text-muted">
+          <dt className="eyebrow">Model</dt>
+          <dd className="text-2">
             FinBERT (ProsusAI/finbert), a sentiment classifier fine-tuned on financial text. Each
             headline scores −1 (bearish) to +1 (bullish) as P(positive) − P(negative). Headline text
             only — bodies are not scored.
           </dd>
         </div>
         <div>
-          <dt className="font-mono text-micro uppercase tracking-wide text-muted">Corpus</dt>
-          <dd className="text-muted">
+          <dt className="eyebrow">Corpus</dt>
+          <dd className="text-2">
             Every item in the news store: the Discord feeds, RSS pulls and whale-flow alerts that
             fill the news rail. Scored once on arrival by the aggregator, which runs every 20
             minutes — each chart point is one of those runs.
           </dd>
         </div>
         <div>
-          <dt className="font-mono text-micro uppercase tracking-wide text-muted">Lookback &amp; decay</dt>
-          <dd className="text-muted">
+          <dt className="eyebrow">Lookback &amp; decay</dt>
+          <dd className="text-2">
             The <span className="font-mono">{window}</span> gauge reads the {meta.lookback} only.
             Inside it, weight decays exponentially with age at a half-life of {meta.halfLife}, so a
             headline that old counts half as much as one arriving now. Nothing outside the lookback
@@ -72,8 +71,8 @@ function Methodology({ window }: { window: string }) {
           </dd>
         </div>
         <div>
-          <dt className="font-mono text-micro uppercase tracking-wide text-muted">Scopes</dt>
-          <dd className="text-muted">
+          <dt className="eyebrow">Scopes</dt>
+          <dd className="text-2">
             Every item lands in <span className="font-mono">GLOBAL</span>. It also lands in{" "}
             <span className="font-mono">US</span> if the headline hits a US-macro keyword (Fed, CPI,
             payrolls, yields, tariff…) or names a tracked ticker, and in{" "}
@@ -82,15 +81,22 @@ function Methodology({ window }: { window: string }) {
           </dd>
         </div>
         <div>
-          <dt className="font-mono text-micro uppercase tracking-wide text-muted">n =</dt>
-          <dd className="text-muted">
+          <dt className="eyebrow">n =</dt>
+          <dd className="text-2">
             Headlines inside the lookback for that scope, before decay weighting. A high score on
             n=3 is three headlines, not a consensus.
           </dd>
         </div>
         <div>
-          <dt className="font-mono text-micro uppercase tracking-wide text-muted">Reading a number</dt>
-          <dd className="text-muted">
+          <dt className="eyebrow">1h / 1d change</dt>
+          <dd className="text-2">
+            The move in this scope&rsquo;s score against one hour and one day ago. A dash means
+            there is not enough history stored yet to compute it.
+          </dd>
+        </div>
+        <div>
+          <dt className="eyebrow">Reading a number</dt>
+          <dd className="text-2">
             ±{NEUTRAL_BAND.toFixed(2)} is the neutral band — inside it the tone is treated as no
             signal, so +0.04 is <em>not</em> mild bullishness. Beyond it the score says the
             weighted balance of coverage leans one way; it does not forecast a return, and it is not
@@ -150,12 +156,12 @@ function MacroPageInner() {
   }, [tiles, scope, win]);
 
   return (
-    <PageShell width="wide">
-      <PageHeader
+    <Page width="wide">
+      <Page.Header
         title="Macro Sentiment"
         subtitle="FinBERT-scored news, recency-weighted by scope. −1 bearish · +1 bullish."
         actions={
-          <Link href="/calendar" className="text-dense text-muted hover:text-accent">
+          <Link href="/calendar" className="text-body text-muted hover:text-accent">
             Event calendar ›
           </Link>
         }
@@ -163,8 +169,8 @@ function MacroPageInner() {
 
       <Methodology window={win} />
 
-      <div className="mb-4 flex flex-wrap items-center gap-x-3 gap-y-2">
-        <span className="text-micro uppercase tracking-wide text-muted">Lookback</span>
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+        <span className="eyebrow">Lookback</span>
         <div className="flex gap-2">
           {WINDOWS.map((w) => (
             <button
@@ -179,19 +185,19 @@ function MacroPageInner() {
             </button>
           ))}
         </div>
-        <span className="text-micro text-muted-2">{meta.meaning}</span>
+        <span className="text-body text-2">{meta.meaning}</span>
       </div>
 
       {resetNotice && (
         <p
           role="status"
-          className="mb-3 rounded border border-warn/40 bg-warn/5 px-3 py-1.5 text-dense text-warn"
+          className="rounded border border-warn/40 bg-warn/5 px-3 py-1.5 text-body text-warn"
         >
           {resetNotice}
         </p>
       )}
 
-      <div className="mb-6 grid grid-cols-2 gap-2 sm:grid-cols-4">
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
         {rows.map((t) => (
           <ScopeTile
             key={t.scope}
@@ -213,37 +219,37 @@ function MacroPageInner() {
 
       {anyData ? (
         <>
-          <div className="mb-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-micro text-muted">
-            <span>
-              {scopeLabel(scope)} · {meta.label} lookback
-              {current && (
-                <span className={`ml-2 font-mono ${toneClass(current.score)}`}>
-                  {signed(current.score)} {toneLabel(current.score)}
-                </span>
-              )}
-            </span>
-            <span className="inline-flex items-center gap-1.5">
-              <span className="h-0.5 w-3 rounded-full bg-accent" />
-              Macro score (left)
-            </span>
-            <span className="inline-flex items-center gap-1.5">
-              <span className="h-0.5 w-3 rounded-full bg-muted" />
-              SPY close (right, {meta.benchmark.interval} bars)
-            </span>
-            <span className="inline-flex items-center gap-1.5">
-              <span className="h-px w-3 border-t border-dashed border-line-strong" />
-              ±{NEUTRAL_BAND.toFixed(2)} neutral band — inside it reads as no signal
-            </span>
-          </div>
-          <MacroChart points={series?.points ?? []} spx={hist?.bars ?? []} />
-          <div className="mt-4">
-            <Contributors scope={scope} window={win} />
-          </div>
+          <Page.Section>
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-body text-muted">
+              <span>
+                {scopeLabel(scope)} · {meta.label} lookback
+                {current && (
+                  <span className={`ml-2 text-data ${toneClass(current.score)}`}>
+                    {signed(current.score)} {toneLabel(current.score)}
+                  </span>
+                )}
+              </span>
+              <span className="inline-flex items-center gap-1.5">
+                <span className="h-0.5 w-3 rounded-full bg-model" />
+                Macro score (left)
+              </span>
+              <span className="inline-flex items-center gap-1.5">
+                <span className="h-0.5 w-3 rounded-full bg-muted" />
+                SPY close (right, {meta.benchmark.interval} bars)
+              </span>
+              <span className="inline-flex items-center gap-1.5">
+                <span className="h-px w-3 border-t border-dashed border-line-strong" />
+                ±{NEUTRAL_BAND.toFixed(2)} neutral band — inside it reads as no signal
+              </span>
+            </div>
+            <MacroChart points={series?.points ?? []} spx={hist?.bars ?? []} />
+          </Page.Section>
+          <Contributors scope={scope} window={win} />
         </>
       ) : (
-        <EmptyState message="No macro data yet — the aggregator runs every 20 min." />
+        <Empty message="No macro data yet — the aggregator runs every 20 min." />
       )}
-    </PageShell>
+    </Page>
   );
 }
 

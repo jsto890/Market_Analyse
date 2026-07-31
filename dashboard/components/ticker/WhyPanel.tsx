@@ -2,10 +2,10 @@
 
 import { useState, useId } from "react";
 import { ChevronDown, AlertTriangle } from "lucide-react";
-import * as Tooltip from "@radix-ui/react-tooltip";
 import Link from "next/link";
 import Panel from "@/components/ui/Panel";
-import Skeleton from "@/components/ui/Skeleton";
+import Failed from "@/components/ui/Failed";
+import Loading from "@/components/ui/Loading";
 import StatChip from "@/components/ui/StatChip";
 import CenterBar from "@/components/ui/CenterBar";
 import InfoTip from "@/components/ui/InfoTip";
@@ -21,31 +21,6 @@ const COMBO_NOTE: Record<string, string> = {
   LNNL: "chasing risk — oscillators confirm into extension (backtested negative)",
   LLNL: "chasing risk — everything confirming late (backtested ~flat)",
 };
-
-function InfoTooltip({ text }: { text: string }) {
-  return (
-    <Tooltip.Root>
-      <Tooltip.Trigger asChild>
-        <button
-          type="button"
-          className="text-muted text-micro font-mono leading-none cursor-default select-none align-middle"
-          aria-label="info"
-        >
-          i
-        </button>
-      </Tooltip.Trigger>
-      <Tooltip.Portal>
-        <Tooltip.Content
-          className="rounded bg-elevated px-2 py-1 text-dense text-muted shadow-lg border border-line z-50 max-w-[240px]"
-          sideOffset={4}
-        >
-          {text}
-          <Tooltip.Arrow className="fill-elevated" />
-        </Tooltip.Content>
-      </Tooltip.Portal>
-    </Tooltip.Root>
-  );
-}
 
 interface FamilyRowProps {
   family: string;
@@ -63,22 +38,18 @@ function FamilyRow({ family, longV, shortV, waitV, attribution }: FamilyRowProps
 
   return (
     <div className="flex items-center gap-2 py-0.5">
-      <span className="w-[90px] shrink-0 font-mono text-micro text-muted truncate">
+      <span className="w-[90px] shrink-0 truncate text-micro text-muted">
         {family}
       </span>
       <CenterBar value={net} width={80} />
-      <span className="font-mono text-micro text-foreground tabular-nums w-[28px] shrink-0">
+      <span className="w-[28px] shrink-0 text-micro tabular-nums text-foreground">
         {netStr}
       </span>
-      <span className="font-mono text-micro text-muted tabular-nums">
+      <span className="text-micro tabular-nums text-muted">
         {longV}/{total}
       </span>
       {attribution !== undefined && (
-        <span
-          className={`font-mono text-micro tabular-nums ml-auto shrink-0 ${
-            attribution >= 0 ? "text-pos" : "text-neg"
-          }`}
-        >
+        <span className="ml-auto shrink-0 text-micro tabular-nums text-model">
           LOO {attribution >= 0 ? "+" : ""}
           {attribution.toFixed(2)}
         </span>
@@ -95,31 +66,23 @@ interface VoteRowProps {
 }
 
 function VoteRow({ agent, direction, confidence, note }: VoteRowProps) {
-  const dirClass =
-    direction === "LONG"
-      ? "text-pos"
-      : direction === "SHORT"
-      ? "text-neg"
-      : "text-muted";
+  const dirClass = direction === "WAIT" ? "text-muted" : "text-model";
 
   return (
     <div className="flex items-baseline gap-2 py-px">
-      <span className="font-mono text-micro text-foreground truncate flex-1 min-w-0">
+      <span className="min-w-0 flex-1 truncate text-micro text-foreground">
         {agent}
       </span>
-      <span className={`font-mono text-micro shrink-0 ${dirClass}`}>
+      <span className={`shrink-0 text-micro ${dirClass}`}>
         {direction}
       </span>
-      <span className="font-mono text-micro text-muted tabular-nums shrink-0 w-[32px] text-right">
+      <span className="w-[32px] shrink-0 text-right text-micro tabular-nums text-muted">
         {(confidence * 100).toFixed(0)}%
       </span>
       {note && (
-        <span
-          className="font-mono text-micro text-muted truncate max-w-[240px] shrink-0"
-          title={note ?? undefined}
-        >
-          {note}
-        </span>
+        <InfoTip content={note} label={`${agent} rationale`}>
+          <span className="max-w-[240px] shrink-0 truncate text-micro text-muted">{note}</span>
+        </InfoTip>
       )}
     </div>
   );
@@ -154,10 +117,10 @@ function VoteSection({
 
   return (
     <div>
-      <p className={`font-mono text-micro tracking-wide mb-1 ${tone}`}>{title}</p>
+      <p className={`mb-1 text-micro ${tone}`}>{title}</p>
       {groups.map(([family, rows]) => (
         <div key={family} className="mb-1.5">
-          <p className="font-mono text-micro text-muted">{family}</p>
+          <p className="text-micro text-muted">{family}</p>
           {rows.map((v) => (
             <VoteRow
               key={v.agent}
@@ -185,18 +148,7 @@ export default function WhyPanel({ ticker }: { ticker: string }) {
   if (isLoading) {
     return (
       <Panel title="Why">
-        <div className="space-y-2 py-1">
-          <div className="flex items-center gap-2">
-            <Skeleton width={180} height={14} />
-            <Skeleton width={60} height={14} />
-          </div>
-          <p className="font-mono text-micro text-muted animate-pulse">
-            Running 70 agents… ~10s
-          </p>
-          <Skeleton width="100%" height={8} className="mt-2" />
-          <Skeleton width="100%" height={8} />
-          <Skeleton width="80%" height={8} />
-        </div>
+        <Loading variant="lines" count={5} label="Running 70 agents… ~10s" />
       </Panel>
     );
   }
@@ -207,30 +159,28 @@ export default function WhyPanel({ ticker }: { ticker: string }) {
     const retrying = timedOut && isValidating;
     return (
       <Panel title="Why">
-        <div className="space-y-2 py-1">
-          <p className={`font-mono text-dense ${timedOut ? "text-warn" : "text-neg"}`}>
-            {timedOut ? (
-              retrying ? (
-                "Scoring timed out — retrying…"
-              ) : (
-                "Scoring timed out — the ensemble is slow, not offline."
-              )
-            ) : (
-              <>
-                Argus API offline — <code className="text-muted">cd argus &amp;&amp; ./run.sh api</code>
-              </>
-            )}
-          </p>
-          {!retrying && (
-            <button
-              type="button"
-              onClick={() => mutate()}
-              className="font-mono text-micro text-accent border border-accent/40 rounded px-2 py-0.5 hover:bg-accent/10 transition-colors"
-            >
-              Retry
-            </button>
-          )}
-        </div>
+        <Failed
+          title={timedOut ? "Scoring timed out" : "Argus API offline"}
+          message={
+            timedOut
+              ? retrying
+                ? "The ensemble is slow, not offline. Retrying now."
+                : "The ensemble is slow, not offline. Retry, or read the rest of the page without it."
+              : "Nothing scored this name because the API is not answering."
+          }
+          detail={timedOut ? undefined : "cd argus && ./run.sh api"}
+          action={
+            !retrying ? (
+              <button
+                type="button"
+                onClick={() => mutate()}
+                className="rounded border border-accent/40 px-2 py-0.5 text-data text-accent transition-colors hover:bg-accent/10"
+              >
+                Retry
+              </button>
+            ) : undefined
+          }
+        />
       </Panel>
     );
   }
@@ -317,27 +267,17 @@ export default function WhyPanel({ ticker }: { ticker: string }) {
 
   const titleActions = (
     <div className="flex items-center gap-1.5 flex-wrap">
-      <span className="font-mono text-micro tabular-nums text-muted">
-        <span
-          className={
-            verdict === "LONG"
-              ? "text-pos"
-              : verdict === "SHORT"
-              ? "text-neg"
-              : "text-muted"
-          }
-        >
-          {verdict}
-        </span>{" "}
-        <span className="text-foreground">{score.toFixed(2)}</span>
+      <span className="text-data text-muted">
+        <span className={verdict === "WAIT" ? "text-muted" : "text-model"}>{verdict}</span>{" "}
+        <span className="text-model">{score.toFixed(2)}</span>
         {ciStr && (
           <span className="text-muted">{ciStr}</span>
         )}
         {" "}
-        <span className="text-foreground tabular-nums">{agrPct}%</span>
+        <span className="text-foreground">{agrPct}%</span>
       </span>
       {ciWide && (
-        <span className="inline-flex items-center rounded border border-warn/50 bg-warn/10 px-1.5 py-px font-mono text-micro text-warn">
+        <span className="inline-flex items-center rounded border border-warn/50 bg-warn/10 px-1.5 py-px text-micro text-warn">
           wide
         </span>
       )}
@@ -347,7 +287,7 @@ export default function WhyPanel({ ticker }: { ticker: string }) {
           content={
             timedOut ? "Scoring timed out — showing the last result." : "Refresh failed — showing the last result."
           }
-          className="inline-flex items-center rounded border border-muted/40 bg-muted/10 px-1.5 py-px font-mono text-micro text-muted"
+          className="inline-flex items-center rounded border border-muted/40 bg-muted/10 px-1.5 py-px text-micro text-muted"
         >
           stale
         </InfoTip>
@@ -356,13 +296,13 @@ export default function WhyPanel({ ticker }: { ticker: string }) {
   );
 
   return (
-    <Panel title="WHY" actions={titleActions}>
+    <Panel title="Why" actions={titleActions}>
       <div className="space-y-3">
         {/* Inflation warning */}
         {inflationAbove && (
           <div className="flex items-start gap-1.5 rounded border border-warn/40 bg-warn/5 px-3 py-2">
             <AlertTriangle size={12} className="text-warn mt-px shrink-0" />
-            <span className="font-mono text-micro text-warn leading-snug">
+            <span className="text-body leading-snug text-warn">
               High inflation gap — correlated consensus, discount this score.
             </span>
           </div>
@@ -371,14 +311,12 @@ export default function WhyPanel({ ticker }: { ticker: string }) {
         {/* Combo headline */}
         {combo && (
           <div className="space-y-1">
-            <span className="font-mono text-dense text-foreground">
+            <span className="text-data text-foreground">
               combo{" "}
               <span className="font-medium">{combo}</span>
             </span>
             {comboNote && (
-              <p className="font-mono text-micro text-muted leading-snug">
-                — {comboNote}
-              </p>
+              <p className="text-body leading-snug text-muted">— {comboNote}</p>
             )}
             <div className="flex flex-wrap gap-1.5">
               {COMBO_POSITION_LABEL.map(([family, gloss], i) => {
@@ -398,9 +336,9 @@ export default function WhyPanel({ ticker }: { ticker: string }) {
                       </>
                     }
                   >
-                    <span className="inline-flex items-center gap-1 rounded border border-line bg-surface px-1.5 py-0.5 font-mono text-micro text-muted">
+                    <span className="inline-flex items-center gap-1 rounded border border-line bg-surface px-1.5 py-0.5 text-micro text-muted">
                       {family}
-                      <span className={letter === "L" ? "text-pos" : letter === "S" ? "text-neg" : "text-muted"}>
+                      <span className={letter === "N" ? "text-muted" : "text-model"}>
                         {letter}
                       </span>
                     </span>
@@ -425,9 +363,7 @@ export default function WhyPanel({ ticker }: { ticker: string }) {
           {n_eff !== undefined && (
             <span className="inline-flex items-center gap-1 rounded border border-line bg-surface px-2 py-0.5">
               <span className="text-micro text-muted">n_eff</span>
-              <span className="font-mono text-body tabular-nums text-foreground">
-                {n_eff.toFixed(1)}
-              </span>
+              <span className="text-data text-foreground">{n_eff.toFixed(1)}</span>
               <InfoTip content="Higher is not better — high n_eff backtested worse" label="n_eff info" />
             </span>
           )}
@@ -446,10 +382,8 @@ export default function WhyPanel({ ticker }: { ticker: string }) {
         {meta_note && meta_note.trim().length > 0 && (
           <div className="flex items-start gap-1.5 rounded border border-warn/40 bg-warn/5 px-3 py-2">
             <AlertTriangle size={12} className="text-warn mt-px shrink-0" />
-            <span className="font-mono text-micro text-warn leading-snug">
-              Meta-analyst: {meta_note}
-            </span>
-            <span className="ml-1 font-mono text-micro text-muted shrink-0">
+            <span className="text-body leading-snug text-warn">Meta-analyst: {meta_note}</span>
+            <span className="ml-1 shrink-0 text-micro text-muted">
               advisory only
             </span>
           </div>
@@ -469,18 +403,18 @@ export default function WhyPanel({ ticker }: { ticker: string }) {
               className="text-muted transition-transform duration-150 shrink-0"
               style={{ transform: votesOpen ? "rotate(0deg)" : "rotate(-90deg)" }}
             />
-            <span className="font-mono text-micro text-muted">
+            <span className="text-data text-muted">
               agent votes (
-              <span className="text-pos">{agreedCount} agreed</span>
+              <span className="text-foreground">{agreedCount} agreed</span>
               {" · "}
-              <span className="text-neg">{dissentedCount} dissented</span>
+              <span className="text-foreground">{dissentedCount} dissented</span>
               )
             </span>
           </button>
 
           <div id={votesId} hidden={!votesOpen} className="mt-2 space-y-3">
-            <VoteSection title="Dissented" tone="text-neg" groups={groupVotesByFamily(dissentedVotes, familyOrder)} />
-            <VoteSection title="Agreed" tone="text-pos" groups={groupVotesByFamily(agreedVotes, familyOrder)} />
+            <VoteSection title="Dissented" tone="text-foreground" groups={groupVotesByFamily(dissentedVotes, familyOrder)} />
+            <VoteSection title="Agreed" tone="text-muted" groups={groupVotesByFamily(agreedVotes, familyOrder)} />
           </div>
         </div>
       </div>

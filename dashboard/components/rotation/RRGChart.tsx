@@ -13,6 +13,7 @@ import {
   Tooltip,
 } from "recharts";
 import Panel from "@/components/ui/Panel";
+import Empty from "@/components/ui/Empty";
 import type { RotationRow } from "@/components/today/RotationPanel";
 import { QUADRANT_COLOR, deriveQuadrant, splitDegenerate } from "@/lib/rotation";
 import { CHART_HEIGHT, CHART_AXIS_STYLE } from "@/lib/chartConventions";
@@ -26,26 +27,26 @@ function RRGTooltip({ active, payload }: { active?: boolean; payload?: TooltipPa
   if (!active || !payload?.length) return null;
   const row = payload[0].payload;
   return (
-    <div className="rounded border border-line bg-elevated px-2.5 py-1.5 text-dense shadow-lg">
-      <div className="font-medium text-text">{row.industry}</div>
+    <div className="rounded border border-line bg-elevated px-2.5 py-1.5 text-body shadow-lg">
+      <div className="font-medium text-foreground">{row.industry}</div>
       <div className="text-muted">
         {QUADRANT_LABEL[row.quadrantKey as keyof typeof QUADRANT_LABEL] ?? row.quadrantKey}
       </div>
       <div className="mt-1 grid grid-cols-2 gap-x-3 text-muted">
         <span>RS-Ratio</span>
-        <span className="text-right text-text">{row.rs_ratio.toFixed(2)}</span>
+        <span className="text-right text-data text-foreground">{row.rs_ratio.toFixed(2)}</span>
         <span>RS-Mom</span>
-        <span className="text-right text-text">{row.rs_mom.toFixed(2)}</span>
+        <span className="text-right text-data text-foreground">{row.rs_mom.toFixed(2)}</span>
         {row.r1w != null && (
           <>
             <span>1W</span>
-            <span className="text-right text-text">{row.r1w.toFixed(2)}%</span>
+            <span className="text-right text-data text-foreground">{row.r1w.toFixed(2)}%</span>
           </>
         )}
         {row.r1m != null && (
           <>
             <span>1M</span>
-            <span className="text-right text-text">{row.r1m.toFixed(2)}%</span>
+            <span className="text-right text-data text-foreground">{row.r1m.toFixed(2)}%</span>
           </>
         )}
       </div>
@@ -60,9 +61,7 @@ export default function RRGChart({ rows }: { rows: RotationRow[] }) {
   if (!plotted.length) {
     return (
       <Panel title="Relative Rotation Graph" subtitle="RS-Ratio vs RS-Momentum">
-        <p className="px-1 py-6 text-center text-body text-muted">
-          No sector data available — the rotation job returned no populated sectors.
-        </p>
+        <Empty message="No sector data available — the rotation job returned no populated sectors." />
       </Panel>
     );
   }
@@ -149,7 +148,7 @@ export default function RRGChart({ rows }: { rows: RotationRow[] }) {
               tickFormatter={(v: number) => v.toFixed(1)}
               tick={{ fill: CHART_AXIS_STYLE.tick, fontSize: 11 }}
               stroke={CHART_AXIS_STYLE.axisLine}
-              label={{ value: "RS-Ratio", position: "insideBottom", offset: -4, fill: CHART_AXIS_STYLE.tick, fontSize: 11 }}
+              label={{ value: "RS-Ratio", position: "insideBottom", offset: -4, fill: CHART_AXIS_STYLE.tick, fontSize: 13 }}
             />
             <YAxis
               type="number"
@@ -158,7 +157,7 @@ export default function RRGChart({ rows }: { rows: RotationRow[] }) {
               tickFormatter={(v: number) => v.toFixed(1)}
               tick={{ fill: CHART_AXIS_STYLE.tick, fontSize: 11 }}
               stroke={CHART_AXIS_STYLE.axisLine}
-              label={{ value: "RS-Momentum", angle: -90, position: "insideLeft", fill: CHART_AXIS_STYLE.tick, fontSize: 11 }}
+              label={{ value: "RS-Momentum", angle: -90, position: "insideLeft", fill: CHART_AXIS_STYLE.tick, fontSize: 13 }}
             />
             <ZAxis range={[80, 80]} />
             <ReferenceLine x={100} stroke={CHART_AXIS_STYLE.referenceLine} />
@@ -211,7 +210,7 @@ export default function RRGChart({ rows }: { rows: RotationRow[] }) {
       </div>
       {/* Keyed legend — every plotted sector is named exactly once, so a
        * cluster near the origin stays identifiable without hovering. */}
-      <ul className="mt-3 grid grid-cols-2 gap-x-5 gap-y-1 px-1 text-micro md:grid-cols-3">
+      <ul className="mt-3 grid grid-cols-2 gap-x-5 gap-y-1 px-1 text-body md:grid-cols-3">
         {data.map((r) => (
           <li key={r.industry} className="flex min-w-0 items-center gap-1.5">
             <span
@@ -219,13 +218,13 @@ export default function RRGChart({ rows }: { rows: RotationRow[] }) {
               className="h-1.5 w-1.5 flex-shrink-0 rounded-full"
               style={{ background: QUADRANT_COLOR[r.quadrantKey] ?? "var(--accent)" }}
             />
-            <span className="w-4 flex-shrink-0 text-right font-mono text-muted-2">{r.rrgIndex}</span>
+            <span className="w-5 flex-shrink-0 text-right text-data text-muted">{r.rrgIndex}</span>
             <span className="truncate text-muted">{r.industry}</span>
           </li>
         ))}
       </ul>
       {hidden.length > 0 && (
-        <p className="mt-2 px-1 text-micro text-muted">
+        <p className="mt-2 px-1 text-body text-muted">
           Hidden (flat/no data): {hidden.map((r) => r.industry).join(", ")}
         </p>
       )}

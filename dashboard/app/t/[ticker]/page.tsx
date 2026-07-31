@@ -18,7 +18,7 @@ import TickerNav from "@/components/ticker/TickerNav";
 import { loadBridgeSignals } from "@/lib/bridge";
 import { signalHistory } from "@/lib/signals";
 import { MEDIAN_PEAK_PCT, MEDIAN_DAYS_TO_PEAK } from "@/lib/perf-constants";
-import PageShell from "@/components/PageShell";
+import Page from "@/components/ui/Page";
 
 const INDEX_ETFS = ["SPY", "QQQ", "IWM", "DIA"];
 
@@ -93,7 +93,7 @@ export default async function TickerPage({
   }));
 
   return (
-    <PageShell width="wide">
+    <Page width="full">
       <TickerNav ticker={ticker} />
       {/* Header: server-rendered shell, client SWR for quote */}
       <section className="rounded-lg border border-line bg-surface">
@@ -164,6 +164,6 @@ export default async function TickerPage({
           </div>
         </div>
       </div>
-    </PageShell>
+    </Page>
   );
 }

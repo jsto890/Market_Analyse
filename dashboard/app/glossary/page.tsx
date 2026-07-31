@@ -1,4 +1,3 @@
-import Link from "next/link";
 import {
   HEADER_GLOSS,
   QUADRANT_LABEL,
@@ -12,7 +11,7 @@ import {
   WATCHLIST_STATUS_LABEL,
 } from "@/lib/labels";
 import { glossarySlug } from "@/lib/glossarySlug";
-import PageShell from "@/components/PageShell";
+import Page from "@/components/ui/Page";
 
 function GlossarySection({
   title,
@@ -26,9 +25,7 @@ function GlossarySection({
   if (entries.length === 0) return null;
   return (
     <section className="space-y-2">
-      <h2 className="font-mono text-body font-medium text-foreground uppercase tracking-wide">
-        {title}
-      </h2>
+      <h2 className="text-title text-foreground">{title}</h2>
       <dl className="space-y-2">
         {entries.map(([term, gloss]) => (
           <div
@@ -36,8 +33,8 @@ function GlossarySection({
             id={`${idPrefix}${glossarySlug(term)}`}
             className="scroll-mt-[calc(var(--nav-h)+12px)] border-b border-line pb-2"
           >
-            <dt className="font-mono text-body text-foreground">{term}</dt>
-            <dd className="text-body text-muted leading-relaxed">{gloss}</dd>
+            <dt className="text-data text-foreground">{term}</dt>
+            <dd className="text-body text-2 leading-relaxed">{gloss}</dd>
           </div>
         ))}
       </dl>
@@ -52,20 +49,12 @@ export default function GlossaryPage() {
   ]);
 
   return (
-    <PageShell width="reading">
-      <div className="space-y-1">
-        <Link
-          href="/"
-          className="font-mono text-dense text-muted hover:text-foreground transition-colors"
-        >
-          ← Today
-        </Link>
-        <h1 className="text-title font-medium text-foreground">Glossary</h1>
-        <p className="text-body text-muted leading-relaxed">
-          Every abbreviation, badge, and status value used across the dashboard, in one place —
-          the same text shown in each info-tip, reachable without a hover.
-        </p>
-      </div>
+    <Page width="prose">
+      <Page.Header
+        breadcrumb={[{ href: "/", label: "Today" }]}
+        title="Glossary"
+        subtitle="Every abbreviation, badge, and status value used across the dashboard, in one place — the same text shown in each info-tip, reachable without a hover."
+      />
       <GlossarySection title="Table headers" entries={Object.entries(HEADER_GLOSS)} />
       <GlossarySection title="Rotation quadrant" entries={Object.entries(QUADRANT_LABEL)} />
       <GlossarySection title="Combo decode — positions" entries={COMBO_POSITION_LABEL}
@@ -77,6 +66,6 @@ export default function GlossaryPage() {
       <GlossarySection title="Option greeks" entries={greekEntries} />
       <GlossarySection title="Portfolio edge" entries={Object.entries(PORTFOLIO_EDGE_LABEL)} />
       <GlossarySection title="Watchlist status" entries={Object.entries(WATCHLIST_STATUS_LABEL)} />
-    </PageShell>
+    </Page>
   );
 }

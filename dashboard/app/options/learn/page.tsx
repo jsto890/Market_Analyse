@@ -2,13 +2,14 @@
 
 import Link from "next/link";
 import Panel from "@/components/ui/Panel";
+import Page from "@/components/ui/Page";
 import { GREEK_LABEL } from "@/lib/labels";
 import type { GreekKind } from "@/lib/format";
 
 function Term({ term, children }: { term: string; children: React.ReactNode }) {
   return (
     <li className="flex flex-col gap-0.5 sm:flex-row sm:gap-3">
-      <span className="w-40 shrink-0 font-mono text-dense text-foreground">{term}</span>
+      <span className="w-40 shrink-0 text-data text-foreground">{term}</span>
       <span className="min-w-0 flex-1">{children}</span>
     </li>
   );
@@ -16,8 +17,8 @@ function Term({ term, children }: { term: string; children: React.ReactNode }) {
 
 export default function OptionsLearnPage() {
   return (
-    <div className="mx-auto w-full max-w-[720px] space-y-3 px-[var(--page-x)] py-[var(--page-y)] text-dense leading-relaxed text-muted">
-      <p className="text-muted-2">
+    <Page width="prose">
+      <p className="leading-relaxed text-2">
         Reference for every number on the{" "}
         <Link href="/options/ladder" className="text-teal hover:underline">
           ladder
@@ -34,7 +35,7 @@ export default function OptionsLearnPage() {
       </p>
 
       <Panel title="Markers on the ladder">
-        <ul className="space-y-1.5">
+        <ul className="space-y-1.5 leading-relaxed text-2">
           <Term term="SPOT / ATM">
             Current underlying price, and the strike nearest it. The ladder centres here on load.
           </Term>
@@ -56,10 +57,10 @@ export default function OptionsLearnPage() {
       </Panel>
 
       <Panel title="Classic ladder columns">
-        <p className="mb-2 text-muted-2">
+        <p className="mb-2 leading-relaxed text-2">
           Daily snapshot from the options chain — puts mirrored on the left, calls on the right.
         </p>
-        <ul className="space-y-1.5">
+        <ul className="space-y-1.5 leading-relaxed text-2">
           <Term term="OI / vol">
             Open interest (positions still open) and today&rsquo;s traded volume, per strike. Bars
             scale to the largest value in the visible ladder.
@@ -73,10 +74,10 @@ export default function OptionsLearnPage() {
       </Panel>
 
       <Panel title="Live ladder columns">
-        <p className="mb-2 text-muted-2">
+        <p className="mb-2 leading-relaxed text-2">
           Streamed from the broker while the live toggle is on — same strikes, quote-level detail.
         </p>
-        <ul className="space-y-1.5">
+        <ul className="space-y-1.5 leading-relaxed text-2">
           <Term term="Bid / Ask / Spread%">
             Top of book and the spread as a percentage of the mid. A wide spread is a real cost, not
             a rounding error.
@@ -97,7 +98,7 @@ export default function OptionsLearnPage() {
       </Panel>
 
       <Panel title="Derived levels">
-        <ul className="space-y-1.5">
+        <ul className="space-y-1.5 leading-relaxed text-2">
           <Term term="Max pain">
             The strike where the most option value expires worthless. A gravity story, not a
             forecast.
@@ -132,14 +133,14 @@ export default function OptionsLearnPage() {
       </Panel>
 
       <Panel title="Picking a strike">
-        <p>
+        <p className="leading-relaxed text-2">
           Start <b className="text-foreground">ATM</b> for delta, then let the walls frame the trade:
-          buy toward the wall in your direction (<b className="font-mono text-pos">CW</b> for calls,{" "}
-          <b className="font-mono text-neg">PW</b> for puts) as the magnet, and treat the opposite
+          buy toward the wall in your direction (<b className="font-mono text-call">CW</b> for calls,{" "}
+          <b className="font-mono text-put">PW</b> for puts) as the magnet, and treat the opposite
           wall as where the move likely stalls. Strikes beyond the expected move are low-probability
           lottery tickets — cheap, and usually expire worthless.
         </p>
       </Panel>
-    </div>
+    </Page>
   );
 }

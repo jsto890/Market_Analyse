@@ -103,7 +103,7 @@ describe("PortfolioPage edge badge + tooltip (PF-08)", () => {
     render(<PortfolioPage />);
     await screen.findByText("AAPL");
     const edgeBadge = screen.getByText("HOLD/ADD", { selector: "span.font-mono" });
-    expect(edgeBadge.className).toContain("bg-pos");
+    expect(edgeBadge.className).toContain("bg-model");
     expect(screen.getByRole("button", { name: /edge explanation/i })).toBeInTheDocument();
   });
 });

@@ -1,6 +1,8 @@
 import { isProxied } from "@/lib/odteCompanion";
 import type { OdteSymbol } from "@/lib/odte";
-import Skeleton from "@/components/ui/Skeleton";
+import Loading from "@/components/ui/Loading";
+import Empty from "@/components/ui/Empty";
+import Stale from "@/components/ui/Stale";
 
 interface CompanionCardProps {
   symbol: OdteSymbol;
@@ -25,25 +27,17 @@ export default function CompanionCard({
     <div className="bg-surface border border-line rounded p-3">
       <div className="flex items-center justify-between gap-2 mb-2">
         <div className="flex items-center gap-1.5">
-          <span className="text-micro uppercase tracking-[0.08em] text-muted font-mono">
-            {title}
-          </span>
+          <span className="eyebrow">{title}</span>
           {isProxied(symbol) && (
             <span className="text-micro bg-elevated px-1 rounded text-muted">PROXY</span>
           )}
         </div>
-        {asOf && (
-          <span className="text-micro text-muted font-mono tabular-nums">{asOf}</span>
-        )}
+        {asOf && <Stale asOf={asOf} variant="line" />}
       </div>
       {loading ? (
-        <div className="space-y-1.5" aria-hidden="true">
-          <Skeleton height={12} className="w-full" />
-          <Skeleton height={12} className="w-3/4" />
-          <Skeleton height={12} className="w-1/2" />
-        </div>
+        <Loading variant="lines" count={3} />
       ) : empty ? (
-        <p className="text-micro text-muted font-mono py-2">{emptyLabel}</p>
+        <Empty message={emptyLabel} />
       ) : (
         children
       )}

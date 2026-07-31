@@ -29,7 +29,7 @@ export default function DateStepper({ dates, current }: DateStepperProps) {
   }
 
   return (
-    <div className="flex items-center gap-2 font-mono text-dense text-muted">
+    <div className="flex items-center gap-2 text-data text-muted">
       <button
         type="button"
         aria-label="Previous"
@@ -39,7 +39,7 @@ export default function DateStepper({ dates, current }: DateStepperProps) {
       >
         <ChevronLeft size={14} />
       </button>
-      <span className="tabular-nums text-foreground">{activeDate}</span>
+      <span className="text-foreground">{activeDate}</span>
       {activeDate !== latest && <span className="text-warn">(viewing history)</span>}
       <button
         type="button"

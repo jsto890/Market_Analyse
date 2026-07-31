@@ -12,6 +12,11 @@ import GexChart from "@/components/GexChart";
 import MvcCard from "@/components/odte/MvcCard";
 import InfoTip from "@/components/ui/InfoTip";
 import Collapsible from "@/components/ui/Collapsible";
+import Page from "@/components/ui/Page";
+import Loading from "@/components/ui/Loading";
+import Failed from "@/components/ui/Failed";
+import Empty from "@/components/ui/Empty";
+import Stale from "@/components/ui/Stale";
 import { useLocalStorage } from "@/lib/useLocalStorage";
 import { STATIC_KEYS } from "@/lib/storageKeys";
 import { GREEK_LABEL } from "@/lib/labels";
@@ -20,6 +25,16 @@ import type { GreekKind } from "@/lib/format";
 
 const ALL_GREEKS: GreekKind[] = ["delta", "gamma", "theta", "vega", "rho"];
 const DEFAULT_GREEKS: GreekKind[] = ["delta", "gamma", "theta"];
+
+/** Centre a row inside its own scroll box and nowhere else. `scrollIntoView`
+ * scrolls every scrollable ancestor, so centring on spot also dragged the outer
+ * pane down — carrying the sticky column header off the top of the screen. */
+function centerRow(row: HTMLElement | null | undefined): void {
+  const box = row?.closest<HTMLElement>("[data-ladder-scroll]");
+  if (!row || !box) return;
+  const delta = row.getBoundingClientRect().top - box.getBoundingClientRect().top;
+  box.scrollTop += delta - (box.clientHeight - row.offsetHeight) / 2;
+}
 
 function fmtIv(iv: number | null | undefined): string {
   return iv != null ? `${(iv * 100).toFixed(1)}%` : "—";
@@ -70,16 +85,16 @@ const MARKER_MEANING: Array<{ code: string; tone: string; meaning: string }> = [
   { code: "ATM", tone: "text-warn", meaning: "at the money — strike nearest spot" },
   { code: "SPOT", tone: "text-warn", meaning: "current underlying price" },
   { code: "ZG", tone: "text-teal", meaning: "zero gamma — the dealer hedging flip" },
-  { code: "CW", tone: "text-pos", meaning: "call wall — heaviest dealer gamma above spot" },
-  { code: "PW", tone: "text-neg", meaning: "put wall — heaviest dealer gamma below spot" },
-  { code: "MSI-C", tone: "text-pos", meaning: "max strike interest, calls" },
-  { code: "MSI-P", tone: "text-neg", meaning: "max strike interest, puts" },
+  { code: "CW", tone: "text-call", meaning: "call wall — heaviest dealer gamma above spot" },
+  { code: "PW", tone: "text-put", meaning: "put wall — heaviest dealer gamma below spot" },
+  { code: "MSI-C", tone: "text-call", meaning: "max strike interest, calls" },
+  { code: "MSI-P", tone: "text-put", meaning: "max strike interest, puts" },
 ];
 
 function MarkerLegend({ codes }: { codes: string[] }) {
   const shown = MARKER_MEANING.filter((m) => codes.includes(m.code));
   return (
-    <dl className="flex flex-wrap items-baseline gap-x-4 gap-y-1 px-1 text-micro text-muted">
+    <dl className="flex flex-wrap items-baseline gap-x-4 gap-y-1 px-1 text-body text-muted">
       {shown.map((m) => (
         <div key={m.code} className="flex items-baseline gap-1.5">
           <dt className={`font-mono ${m.tone}`}>{m.code}</dt>
@@ -172,10 +187,10 @@ function LiveLadderRow({
         {level.strike.toFixed(0)}
         {isAtm && <Marker text="ATM" tone="text-warn" />}
         {isZg && <Marker text="ZG" tone="text-teal" />}
-        {isCallWall && <Marker text="CW" tone="text-pos" />}
-        {isPutWall && <Marker text="PW" tone="text-neg" />}
-        {isMsiCall && <Marker text="MSI-C" tone="text-pos" />}
-        {isMsiPut && <Marker text="MSI-P" tone="text-neg" />}
+        {isCallWall && <Marker text="CW" tone="text-call" />}
+        {isPutWall && <Marker text="PW" tone="text-put" />}
+        {isMsiCall && <Marker text="MSI-C" tone="text-call" />}
+        {isMsiPut && <Marker text="MSI-P" tone="text-put" />}
       </td>
       {side("call")}
       {side("put")}
@@ -185,7 +200,7 @@ function LiveLadderRow({
 
 function Lvl({ label, value, tip }: { label: string; value: string; tip?: string }) {
   return (
-    <span className="inline-flex items-center gap-1 font-mono">
+    <span className="inline-flex items-center gap-1 text-data">
       <span className="text-muted">{label}</span>
       <span className="text-foreground">{value}</span>
       {tip && <InfoTip label={`What ${label} means`} content={tip} />}
@@ -264,7 +279,7 @@ export default function OptionsLadderPage() {
   // is visible first instead of the lowest strike.
   const spotRowRef = useRef<HTMLTableRowElement | null>(null);
   const rowRefs = useRef(new Map<number, HTMLElement>());
-  const centerOnSpot = () => spotRowRef.current?.scrollIntoView({ block: "center" });
+  const centerOnSpot = () => centerRow(spotRowRef.current);
   useEffect(() => {
     // Only re-center on a symbol or expiry change (OD-06) — re-running this on
     // every `data.spot` tick repeatedly yanked the user's scroll position.
@@ -282,7 +297,7 @@ export default function OptionsLadderPage() {
     const nearest = strikes.reduce((best, s) =>
       Math.abs(s - target) < Math.abs(best - target) ? s : best
     );
-    rowRefs.current.get(nearest)?.scrollIntoView({ block: "center" });
+    centerRow(rowRefs.current.get(nearest));
     setFlashStrike(nearest);
     window.setTimeout(() => setFlashStrike((s) => (s === nearest ? null : s)), 1600);
   }
@@ -294,16 +309,28 @@ export default function OptionsLadderPage() {
   }
 
   return (
-    <>
+    <Page width="full" flush>
       <p role="status" aria-live="polite" className="sr-only">
         {showLive
           ? "Live ladder on — streaming quotes and greeks."
           : "Live ladder off — daily snapshot ladder."}
       </p>
 
-      {isLoading && !data && <p className="p-4 font-mono text-micro text-muted">loading ladder…</p>}
+      {isLoading && !data && (
+        <Loading
+          variant="rows"
+          label="Loading ladder"
+          headers={["strike", "put OI", "put vol", "put IV", "call IV", "call vol", "call OI", "GEX"]}
+          count={10}
+          className="mx-4"
+        />
+      )}
       {error && !data && (
-        <p className="p-4 font-mono text-micro text-muted">no data — source unavailable</p>
+        <Failed
+          title="Ladder unavailable"
+          message="The options snapshot did not load — the source is unreachable."
+          className="mx-4"
+        />
       )}
 
       {/* Controls — expiry, density, sort, jump. Shared by both ladders (I4);
@@ -316,14 +343,14 @@ export default function OptionsLadderPage() {
               key={e.expiry}
               onClick={() => setExpiry(e.expiry)}
               aria-pressed={i === idx}
-              className={`whitespace-nowrap rounded px-2 py-1 text-micro ${
+              className={`whitespace-nowrap rounded px-2 py-1 text-data ${
                 i === idx ? "bg-elevated text-foreground" : "text-muted hover:text-foreground"
               }`}
             >
               {e.expiry} · EM {e.expected_move_pct.toFixed(2)}%
             </button>
           ))}
-          {expiries.length === 0 && <span className="px-2 text-micro text-muted">—</span>}
+          {expiries.length === 0 && <span className="px-2 text-data text-muted">—</span>}
         </div>
 
         {/* Density (OPT-01) — the ladder used to be pinned at ±6% with no say. */}
@@ -334,7 +361,7 @@ export default function OptionsLadderPage() {
               key={d.key}
               onClick={() => setDensity(d.key as DensityKey)}
               aria-pressed={density === d.key}
-              className={`rounded px-2 py-1 text-micro ${
+              className={`rounded px-2 py-1 text-body ${
                 density === d.key ? "bg-elevated text-foreground" : "text-muted hover:text-foreground"
               }`}
             >
@@ -343,7 +370,7 @@ export default function OptionsLadderPage() {
           ))}
           {/* The selected option's blurb, inline — five native titles meant the
            * explanation was mouse-only and only for the option you hovered. */}
-          <span className="text-micro text-muted-2">
+          <span className="text-body text-2">
             {DENSITY_OPTIONS.find((d) => d.key === density)?.blurb}
           </span>
         </div>
@@ -352,7 +379,7 @@ export default function OptionsLadderPage() {
           <span className="eyebrow shrink-0">Sort</span>
           <button
             onClick={() => setDescending(!descending)}
-            className="rounded px-2 py-1 text-micro text-muted hover:text-foreground"
+            className="rounded px-2 py-1 text-body text-muted hover:text-foreground"
           >
             strike {descending ? "high → low" : "low → high"}
           </button>
@@ -371,11 +398,11 @@ export default function OptionsLadderPage() {
               if (e.key === "Enter") jumpToStrike();
             }}
             placeholder="strike"
-            className="w-20 rounded border border-line bg-raised px-2 py-1 font-mono text-micro text-foreground placeholder:text-muted-2"
+            className="w-20 rounded border border-line bg-raised px-2 py-1 text-data text-foreground placeholder:text-muted"
           />
           <button
             onClick={jumpToStrike}
-            className="rounded px-2 py-1 text-micro text-teal hover:underline"
+            className="rounded px-2 py-1 text-body text-teal hover:underline"
           >
             Go
           </button>
@@ -384,7 +411,7 @@ export default function OptionsLadderPage() {
         <button
           type="button"
           onClick={centerOnSpot}
-          className="ml-auto shrink-0 px-2 py-1 text-micro text-teal hover:underline"
+          className="ml-auto shrink-0 px-2 py-1 text-body text-teal hover:underline"
         >
           Center on spot
         </button>
@@ -397,7 +424,7 @@ export default function OptionsLadderPage() {
             <span className="eyebrow shrink-0">Greeks</span>
             {ALL_GREEKS.map((g) => (
               <span key={g} className="flex items-center gap-1">
-                <label className="flex items-center gap-1 font-mono text-micro text-muted">
+                <label className="flex items-center gap-1 text-body text-muted">
                   <input
                     type="checkbox"
                     checked={greekCols.includes(g)}
@@ -415,14 +442,15 @@ export default function OptionsLadderPage() {
           </div>
 
           {liveStatus === "connecting" && (
-            <div className="px-4 py-6 text-center text-micro text-muted">
-              Connecting to live session…
-            </div>
+            <Loading variant="block" label="Connecting to live session" className="mx-4" />
           )}
           {liveError && (
-            <div className="border-b border-line px-[var(--page-x)] py-2">
-              <p className="text-micro text-neg">{liveError}</p>
-            </div>
+            <Failed
+              title="Live session interrupted"
+              message="The live ladder poll failed — quotes and greeks below may be frozen."
+              detail={liveError}
+              className="mx-4"
+            />
           )}
 
           {liveLadder && (
@@ -442,22 +470,20 @@ export default function OptionsLadderPage() {
                   >
                     {isStale(consecutiveFailures) ? "STALE" : liveLadder.source}
                   </span>
-                  <span className="text-micro text-muted">
-                    {new Date(liveLadder.as_of).toLocaleTimeString()}
-                  </span>
+                  <Stale asOf={liveLadder.as_of} variant="line" source="IBKR" />
                   {liveLadder.stale_ms > 1500 && (
-                    <span className="text-micro text-warn">
+                    <span className="text-data text-warn">
                       {(liveLadder.stale_ms / 1000).toFixed(1)}s stale
                     </span>
                   )}
                 </div>
-                <span className="font-mono text-micro text-muted">
+                <span className="text-data text-muted">
                   {liveLevels.length} of {liveLadder.levels.length} strikes shown
                 </span>
               </div>
 
               {/* Levels — grouped by what each number answers (OPT-12, OPT-13). */}
-              <div className="flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-line px-[var(--page-x)] py-2 text-micro">
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-line px-[var(--page-x)] py-2">
                 <LevelGroup title="Pin">
                   <Lvl label="ATM" value={liveLadder.atm_strike.toFixed(0)} />
                   <Lvl
@@ -516,14 +542,17 @@ export default function OptionsLadderPage() {
               </p>
               <div aria-live="off">
                 <MarkerLegend codes={["ATM", "ZG", "CW", "PW", "MSI-C", "MSI-P"]} />
-                <div className="mt-1.5 flex-1 overflow-auto [mask-image:linear-gradient(to_right,black_calc(100%-16px),transparent)]">
+                <div
+                  data-ladder-scroll
+                  className="mt-1.5 flex-1 overflow-auto [mask-image:linear-gradient(to_right,black_calc(100%-16px),transparent)]"
+                >
                   {/* border-separate + backgrounds on the cells: a collapsed
                    * table paints no background on <thead>, so the sticky header
                    * was transparent and rows scrolled through it. One header
                    * row, not two — a two-row sticky header needs a hardcoded
                    * top offset on the second row, and the side is already
                    * carried by the c-/p- prefix and tone on every column. */}
-                  <table className="w-full border-separate border-spacing-0 text-micro tabular-nums">
+                  <table className="w-full border-separate border-spacing-0 text-data">
                     <thead>
                       <tr className="text-micro uppercase tracking-[0.06em]">
                         <th scope="col" className="sticky left-0 top-0 z-30 border-b border-line bg-elevated px-2 py-1 text-left font-semibold">
@@ -531,7 +560,7 @@ export default function OptionsLadderPage() {
                         </th>
                         {(["call", "put"] as const).map((side) => {
                           const p = side === "call" ? "c" : "p";
-                          const tone = side === "call" ? "text-pos" : "text-neg";
+                          const tone = side === "call" ? "text-call" : "text-put";
                           const hd = `sticky top-0 z-20 border-b border-line bg-elevated px-1 py-1 text-center font-normal ${tone}`;
                           return (
                             <Fragment key={side}>
@@ -610,7 +639,7 @@ export default function OptionsLadderPage() {
 
       {!showLive && data && (
         <>
-          <div className="flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-line px-[var(--page-x)] py-2 text-micro">
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-line px-[var(--page-x)] py-2">
             <LevelGroup title="Dealer gamma">
               <Lvl
                 label="zero-γ"
@@ -637,30 +666,33 @@ export default function OptionsLadderPage() {
           </div>
 
           <div className="flex-1 overflow-y-auto p-3">
-            <p className="mb-1.5 font-mono text-micro text-muted-2">
+            <p className="mb-1.5 text-body text-2">
               Click any row to copy its strike, both IVs and GEX. Greeks and quote-level detail need
               the live ladder — the switch is in the header.
             </p>
             <MarkerLegend codes={["SPOT", "ZG", "CW", "PW"]} />
-            <div className="mt-1.5 max-h-[70vh] overflow-x-auto overflow-y-auto rounded border border-line bg-surface">
+            <div
+              data-ladder-scroll
+              className="mt-1.5 max-h-[70vh] overflow-x-auto overflow-y-auto rounded border border-line bg-surface"
+            >
               {/* border-separate, not border-collapse: a collapsed table won't
                * paint backgrounds on <thead>/<tr>, so a sticky header let the
                * first data rows show through it. Backgrounds now sit on the
                * cells themselves. One header row, not two — the side is carried
                * by the put-/call- prefixes and their tone, so it stays legible
                * when the table is scrolled horizontally. */}
-              <table className="w-full border-separate border-spacing-0 font-mono text-micro tabular-nums">
+              <table className="w-full border-separate border-spacing-0 text-data">
                 <thead>
                   <tr className="text-micro uppercase tracking-[0.06em]">
-                    <th scope="col" className="sticky top-0 z-20 border-b border-line bg-surface px-2 py-1.5 text-right font-normal text-neg">put OI</th>
-                    <th scope="col" className="sticky top-0 z-20 border-b border-line bg-surface px-2 py-1.5 text-right font-normal text-neg">put vol</th>
-                    <th scope="col" className="sticky top-0 z-20 border-b border-line bg-surface px-2 py-1.5 text-right font-normal text-neg">put IV</th>
+                    <th scope="col" className="sticky top-0 z-20 border-b border-line bg-surface px-2 py-1.5 text-right font-normal text-put">put OI</th>
+                    <th scope="col" className="sticky top-0 z-20 border-b border-line bg-surface px-2 py-1.5 text-right font-normal text-put">put vol</th>
+                    <th scope="col" className="sticky top-0 z-20 border-b border-line bg-surface px-2 py-1.5 text-right font-normal text-put">put IV</th>
                     <th scope="col" className="sticky left-0 top-0 z-30 border-x border-b border-line bg-surface px-3 py-1.5 text-center font-semibold text-foreground">
                       strike
                     </th>
-                    <th scope="col" className="sticky top-0 z-20 border-b border-line bg-surface px-2 py-1.5 text-left font-normal text-pos">call IV</th>
-                    <th scope="col" className="sticky top-0 z-20 border-b border-line bg-surface px-2 py-1.5 text-left font-normal text-pos">call vol</th>
-                    <th scope="col" className="sticky top-0 z-20 border-b border-line bg-surface px-2 py-1.5 text-left font-normal text-pos">call OI</th>
+                    <th scope="col" className="sticky top-0 z-20 border-b border-line bg-surface px-2 py-1.5 text-left font-normal text-call">call IV</th>
+                    <th scope="col" className="sticky top-0 z-20 border-b border-line bg-surface px-2 py-1.5 text-left font-normal text-call">call vol</th>
+                    <th scope="col" className="sticky top-0 z-20 border-b border-line bg-surface px-2 py-1.5 text-left font-normal text-call">call OI</th>
                     <th scope="col" className="sticky top-0 z-20 border-b border-line bg-surface px-2 py-1.5 text-left font-normal text-muted">GEX</th>
                   </tr>
                 </thead>
@@ -707,8 +739,8 @@ export default function OptionsLadderPage() {
                           highlight ? "[&>td]:bg-elevated" : ""
                         } ${flashStrike === row.strike ? "[&>td]:bg-teal/10" : ""} ${leftBorder}`}
                       >
-                        <BarCell value={row.put?.oi} max={maxOi} side="put" tone="bg-neg/20" />
-                        <BarCell value={row.put?.vol} max={maxVol} side="put" tone="bg-neg/10" />
+                        <BarCell value={row.put?.oi} max={maxOi} side="put" tone="bg-put/20" />
+                        <BarCell value={row.put?.vol} max={maxVol} side="put" tone="bg-put/10" />
                         <td className="px-2 py-1 text-right text-muted">{fmtIv(row.put?.iv)}</td>
                         <td
                           className={`sticky left-0 z-10 border-x border-line px-3 py-1 text-center text-foreground ${strikeBg}`}
@@ -717,18 +749,18 @@ export default function OptionsLadderPage() {
                           {copiedStrike === row.strike ? (
                             <span className="ml-1 align-middle text-micro text-teal">Copied</span>
                           ) : (
-                            <span className="ml-1 align-middle text-micro text-muted-2 opacity-0 transition-opacity group-hover:opacity-100">
+                            <span className="ml-1 align-middle text-micro text-muted opacity-0 transition-opacity group-hover:opacity-100">
                               copy
                             </span>
                           )}
                           {isSpot && <Marker text="SPOT" tone="text-warn" />}
                           {isZg && <Marker text="ZG" tone="text-teal" />}
-                          {isCallWall && <Marker text="CW" tone="text-pos" />}
-                          {isPutWall && <Marker text="PW" tone="text-neg" />}
+                          {isCallWall && <Marker text="CW" tone="text-call" />}
+                          {isPutWall && <Marker text="PW" tone="text-put" />}
                         </td>
                         <td className="px-2 py-1 text-left text-muted">{fmtIv(row.call?.iv)}</td>
-                        <BarCell value={row.call?.vol} max={maxVol} side="call" tone="bg-pos/10" />
-                        <BarCell value={row.call?.oi} max={maxOi} side="call" tone="bg-pos/20" />
+                        <BarCell value={row.call?.vol} max={maxVol} side="call" tone="bg-call/10" />
+                        <BarCell value={row.call?.oi} max={maxOi} side="call" tone="bg-call/20" />
                         <td className="relative px-2 py-1 text-left">
                           <div
                             className={`absolute inset-y-[3px] rounded-sm ${
@@ -751,8 +783,8 @@ export default function OptionsLadderPage() {
                   })}
                   {rows.length === 0 && (
                     <tr>
-                      <td colSpan={8} className="py-4 text-center text-muted">
-                        no strikes in this density band — widen it above
+                      <td colSpan={8}>
+                        <Empty message="No strikes in this density band — widen it above." />
                       </td>
                     </tr>
                   )}
@@ -777,16 +809,16 @@ export default function OptionsLadderPage() {
         <Collapsible
           persistKey="strikes-how-to-read"
           trigger={
-            <span className="tick text-body font-semibold text-foreground">
+            <span className="tick text-title text-foreground">
               How to read this ladder
             </span>
           }
           className="rounded-md border border-line bg-elevated"
           triggerClassName="px-4 py-2.5"
         >
-          <div className="grid gap-x-8 gap-y-3 border-t border-line px-4 py-3 text-dense leading-relaxed text-muted sm:grid-cols-2">
+          <div className="grid gap-x-8 gap-y-3 border-t border-line px-4 py-3 text-body leading-relaxed text-2 sm:grid-cols-2">
             <div>
-              <p className="mb-1.5 text-micro font-semibold uppercase tracking-wide text-foreground">
+              <p className="mb-1.5 eyebrow font-semibold text-foreground">
                 Markers
               </p>
               <ul className="space-y-1">
@@ -800,8 +832,8 @@ export default function OptionsLadderPage() {
                   <b className="text-foreground">pin or dampen</b>.
                 </li>
                 <li>
-                  <b className="font-mono text-pos">CW</b> /{" "}
-                  <b className="font-mono text-neg">PW</b> — heaviest dealer gamma above / below
+                  <b className="font-mono text-call">CW</b> /{" "}
+                  <b className="font-mono text-put">PW</b> — heaviest dealer gamma above / below
                   spot: resistance and support.
                 </li>
                 <li>
@@ -811,7 +843,7 @@ export default function OptionsLadderPage() {
               </ul>
             </div>
             <div>
-              <p className="mb-1.5 text-micro font-semibold uppercase tracking-wide text-foreground">
+              <p className="mb-1.5 eyebrow font-semibold text-foreground">
                 Columns
               </p>
               <ul className="space-y-1">
@@ -848,6 +880,6 @@ export default function OptionsLadderPage() {
           </div>
         </Collapsible>
       </div>
-    </>
+    </Page>
   );
 }

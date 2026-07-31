@@ -80,8 +80,8 @@ export default function StrikeGuidance({ spot, zeroGamma, callWall, putWall, atm
   return (
     <section className="rounded-md border border-line bg-elevated">
       <div className="flex flex-wrap items-center gap-2 px-4 py-2.5">
-        <span className="tick text-body font-semibold text-foreground">Strike guidance</span>
-        <span className="text-micro text-muted">levels → what to actually trade</span>
+        <span className="tick text-title text-foreground">Strike guidance</span>
+        <span className="text-body text-3">levels → what to actually trade</span>
         <span
           className={`ml-auto inline-flex items-center gap-1 rounded border px-1.5 py-px font-mono text-micro ${
             live ? "border-teal/50 bg-teal/10 text-teal" : "border-line text-muted"
@@ -92,16 +92,16 @@ export default function StrikeGuidance({ spot, zeroGamma, callWall, putWall, atm
         </span>
       </div>
 
-      <p className="border-t border-line px-4 py-1.5 text-micro text-muted-2">
+      <p className="border-t border-line px-4 py-1.5 text-body text-muted">
         Advisory only, not financial advice — context for your own decision, not a signal to execute.
       </p>
 
-      <div className="space-y-3 border-t border-line px-4 py-3 text-dense leading-relaxed">
-        <p className="text-muted">
+      <div className="space-y-3 border-t border-line px-4 py-3 text-body leading-relaxed">
+        <p className="text-2">
           <span className="text-foreground">Regime:</span> spot{" "}
-          <span className="font-mono text-foreground">{n2(spot)}</span>{" "}
+          <span className="text-data text-foreground">{n2(spot)}</span>{" "}
           {negGamma == null ? "vs" : negGamma ? "sits below" : "sits above"} zero-gamma{" "}
-          <span className="font-mono text-foreground">{n2(zeroGamma)}</span>
+          <span className="text-data text-foreground">{n2(zeroGamma)}</span>
           {negGamma != null &&
             (negGamma ? (
               <>
@@ -118,10 +118,10 @@ export default function StrikeGuidance({ spot, zeroGamma, callWall, putWall, atm
               </>
             ))}
         </p>
-        <p className="text-muted">
+        <p className="text-2">
           <span className="text-foreground">Expected range today</span> (±
           {emPct == null ? "—" : emPct.toFixed(2)}%):{" "}
-          <span className="font-mono text-foreground">
+          <span className="text-data text-foreground">
             {n0(rangeLo)}–{n0(rangeHi)}
           </span>
           .
@@ -129,48 +129,44 @@ export default function StrikeGuidance({ spot, zeroGamma, callWall, putWall, atm
 
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
           <div className="rounded border border-pos/30 bg-pos/[0.06] px-3 py-2">
-            <p className="mb-1 text-micro font-semibold uppercase tracking-wide text-pos">
-              If bullish
-            </p>
-            <ul className="space-y-0.5 text-muted">
+            <p className="mb-1 eyebrow font-semibold text-pos">If bullish</p>
+            <ul className="space-y-0.5 text-2">
               <li>
-                Buy the <span className="font-mono text-foreground">{n0(callOtm)}</span> call (OTM) —
+                Buy the <span className="text-data text-foreground">{n0(callOtm)}</span> call (OTM) —
                 cheap gamma that pays if price runs.
               </li>
               <li>
-                Target: <span className="font-mono text-foreground">{n0(callWall)}</span> call wall
+                Target: <span className="text-data text-foreground">{n0(callWall)}</span> call wall
                 (resistance / magnet). ATM{" "}
-                <span className="font-mono text-foreground">{n0(atm)}</span> if you want more delta.
+                <span className="text-data text-foreground">{n0(atm)}</span> if you want more delta.
               </li>
               <li>
-                Above <span className="font-mono text-foreground">{n0(rangeHi)}</span> is a low-odds
+                Above <span className="text-data text-foreground">{n0(rangeHi)}</span> is a low-odds
                 stretch.
               </li>
             </ul>
           </div>
           <div className="rounded border border-neg/30 bg-neg/[0.06] px-3 py-2">
-            <p className="mb-1 text-micro font-semibold uppercase tracking-wide text-neg">
-              If bearish
-            </p>
-            <ul className="space-y-0.5 text-muted">
+            <p className="mb-1 eyebrow font-semibold text-neg">If bearish</p>
+            <ul className="space-y-0.5 text-2">
               <li>
-                Buy the <span className="font-mono text-foreground">{n0(putOtm)}</span> put (OTM) —
+                Buy the <span className="text-data text-foreground">{n0(putOtm)}</span> put (OTM) —
                 cheap gamma that pays if price drops.
               </li>
               <li>
-                Target: <span className="font-mono text-foreground">{n0(putWall)}</span> put wall
+                Target: <span className="text-data text-foreground">{n0(putWall)}</span> put wall
                 (support / magnet). ATM{" "}
-                <span className="font-mono text-foreground">{n0(atm)}</span> if you want more delta.
+                <span className="text-data text-foreground">{n0(atm)}</span> if you want more delta.
               </li>
               <li>
-                Below <span className="font-mono text-foreground">{n0(rangeLo)}</span> is a low-odds
+                Below <span className="text-data text-foreground">{n0(rangeLo)}</span> is a low-odds
                 stretch.
               </li>
             </ul>
           </div>
         </div>
 
-        <p className="text-micro text-muted-2">
+        <p className="text-body text-2">
           <span className="text-foreground">{PHASE_LABEL[phase]}:</span> {PHASE_NOTE[phase]}
         </p>
       </div>

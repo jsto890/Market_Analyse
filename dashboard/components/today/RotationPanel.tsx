@@ -4,6 +4,7 @@ import * as Tooltip from "@radix-ui/react-tooltip";
 import Panel from "@/components/ui/Panel";
 import DataTable, { type Column } from "@/components/ui/DataTable";
 import InfoTip from "@/components/ui/InfoTip";
+import Gloss from "@/components/ui/Gloss";
 import { QUADRANT_COLOR } from "@/lib/rotation";
 import { QUADRANT_LABEL, HEADER_GLOSS } from "@/lib/labels";
 
@@ -40,7 +41,7 @@ function QuadrantDot({ quadrant }: { quadrant: string }) {
       </Tooltip.Trigger>
       <Tooltip.Portal>
         <Tooltip.Content
-          className="rounded bg-elevated px-2 py-1 text-dense text-muted shadow-lg border border-line z-50"
+          className="rounded bg-elevated px-2 py-1 text-body text-2 shadow-lg border border-line z-50"
           sideOffset={4}
         >
           {label}
@@ -57,7 +58,7 @@ function DRank({ drank }: { drank: number | null }) {
     const sign = drank > 0 ? "+" : "";
     return (
       <InfoTip content={HEADER_GLOSS["Δrank"]}>
-        <span className="tabular-nums text-muted">
+        <span className="text-data text-muted">
           {sign}
           {drank}
         </span>
@@ -66,7 +67,7 @@ function DRank({ drank }: { drank: number | null }) {
   }
   const sign = drank > 0 ? "+" : "";
   return (
-    <span className={drank > 0 ? "text-pos" : "text-neg"}>
+    <span className="text-data text-model">
       {sign}
       {drank}
     </span>
@@ -95,9 +96,7 @@ const columns: Column<RotationRow>[] = [
         <span className="inline-flex items-center gap-1.5">
           {r.industry}
           <InfoTip content={HEADER_GLOSS.n}>
-            <span className="rounded border border-line px-1 text-micro uppercase tracking-wide text-muted">
-              thin
-            </span>
+            <span className="rounded border border-line px-1 eyebrow">thin</span>
           </InfoTip>
         </span>
       );
@@ -105,62 +104,38 @@ const columns: Column<RotationRow>[] = [
   },
   {
     key: "drank",
-    header: (
-      <InfoTip content={HEADER_GLOSS["Δrank"]}>
-        <span>Δrank</span>
-      </InfoTip>
-    ),
+    header: <Gloss term="Δrank" />,
     align: "center",
     render: (r) => <DRank drank={r.drank} />,
   },
   {
     key: "quadrant",
-    header: (
-      <InfoTip content={HEADER_GLOSS["◉"]}>
-        <span>◉</span>
-      </InfoTip>
-    ),
+    header: <Gloss term="◉" />,
     align: "center",
     render: (r) => <QuadrantDot quadrant={r.quadrant} />,
   },
   {
     key: "rs_ratio",
     align: "right",
-    header: (
-      <InfoTip content={HEADER_GLOSS["RS-Ratio"]}>
-        <span>RS-Ratio</span>
-      </InfoTip>
-    ),
+    header: <Gloss term="RS-Ratio" />,
     render: (r) => r.rs_ratio.toFixed(1),
   },
   {
     key: "rs_mom",
     align: "right",
-    header: (
-      <InfoTip content={HEADER_GLOSS["RS-Mom"]}>
-        <span>RS-Mom</span>
-      </InfoTip>
-    ),
+    header: <Gloss term="RS-Mom" />,
     render: (r) => r.rs_mom.toFixed(1),
   },
   {
     key: "breadth",
     align: "right",
-    header: (
-      <InfoTip content={HEADER_GLOSS.Breadth}>
-        <span>Breadth</span>
-      </InfoTip>
-    ),
+    header: <Gloss term="Breadth" />,
     render: (r) => (Number.isFinite(r.breadth) ? Math.round(r.breadth!) + "%" : "—"),
   },
   {
     key: "n",
     align: "right",
-    header: (
-      <InfoTip content={HEADER_GLOSS.n}>
-        <span>n</span>
-      </InfoTip>
-    ),
+    header: <Gloss term="n" />,
     render: (r) => r.n ?? "—",
   },
   { key: "r1w", align: "right", header: "1W", render: (r) => <Ret v={r.r1w} /> },

@@ -2,6 +2,10 @@
 
 import useSWR from "swr";
 import Panel from "@/components/ui/Panel";
+import Empty from "@/components/ui/Empty";
+import Failed from "@/components/ui/Failed";
+import InfoTip from "@/components/ui/InfoTip";
+import Loading from "@/components/ui/Loading";
 import type { OptionsFlowData } from "@/types/argus";
 import { usMarketState } from "@/lib/market-clock";
 
@@ -53,10 +57,8 @@ function UnusualTable({ rows, label }: { rows: unknown[]; label: string }) {
 
   return (
     <div>
-      <p className="text-micro font-medium text-muted uppercase tracking-wide mb-1.5">
-        {label}
-      </p>
-      <table className="w-full font-mono text-dense tabular-nums border-collapse">
+      <p className="eyebrow mb-1.5">{label}</p>
+      <table className="w-full text-data border-collapse">
         <thead>
           <tr className="text-left text-muted text-micro border-b border-line">
             {hasScores && <th className="pb-1 pr-3 font-medium">σ</th>}
@@ -81,8 +83,14 @@ function UnusualTable({ rows, label }: { rows: unknown[]; label: string }) {
             return (
               <tr key={i} className="border-t border-line">
                 {hasScores && (
-                  <td className="py-1 pr-3 text-muted" title={row.basis ? String(row.basis) : undefined}>
-                    {score !== null ? score.toFixed(1) : "—"}
+                  <td className="py-1 pr-3 text-muted">
+                    {score !== null && row.basis ? (
+                      <InfoTip content={String(row.basis)} label="How this score was reached">
+                        <span className="text-data text-muted">{score.toFixed(1)}</span>
+                      </InfoTip>
+                    ) : (
+                      score?.toFixed(1) ?? "—"
+                    )}
                   </td>
                 )}
                 <td className="py-1 pr-3 text-foreground">{String(row.strike ?? "—")}</td>
@@ -130,7 +138,7 @@ export default function OptionsPanel({ ticker }: { ticker: string }) {
   if (isLoading) {
     return (
       <Panel title="Options" collapsible defaultOpen persistKey="ticker-options">
-        <p className="font-mono text-dense text-muted">Loading…</p>
+        <Loading variant="rows" count={4} label="Loading options" />
       </Panel>
     );
   }
@@ -138,17 +146,19 @@ export default function OptionsPanel({ ticker }: { ticker: string }) {
   if (argusDown) {
     return (
       <Panel title="Options" collapsible defaultOpen={false} persistKey="ticker-options">
-        <div className="flex items-center gap-2 font-mono text-dense text-muted">
-          <span>Argus API offline</span>
-          <span>·</span>
-          <button
-            type="button"
-            onClick={() => void mutate()}
-            className="text-accent border border-accent/40 rounded px-2 py-0.5 hover:bg-accent/10 transition-colors"
-          >
-            Retry
-          </button>
-        </div>
+        <Failed
+          title="Options feed offline"
+          message="The Argus API didn’t answer, so the chain summary below is missing. Nothing else on this page depends on it."
+          action={
+            <button
+              type="button"
+              onClick={() => void mutate()}
+              className="rounded border border-accent/40 px-2 py-0.5 text-data text-accent transition-colors hover:bg-accent/10"
+            >
+              Retry
+            </button>
+          }
+        />
       </Panel>
     );
   }
@@ -156,9 +166,10 @@ export default function OptionsPanel({ ticker }: { ticker: string }) {
   if (noChain) {
     return (
       <Panel title="Options" collapsible defaultOpen={false} persistKey="ticker-options">
-        <p className="font-mono text-dense text-muted">
-          no options chain for {upper} (source: yfinance)
-        </p>
+        <Empty
+          title="No options chain"
+          message={`yfinance lists no tradeable contracts for ${upper}.`}
+        />
       </Panel>
     );
   }
@@ -175,7 +186,7 @@ export default function OptionsPanel({ ticker }: { ticker: string }) {
     >
       <div className="space-y-3">
         {/* Spot */}
-        <div className="font-mono text-body tabular-nums">
+        <div className="text-data">
           <span className="text-muted">spot </span>
           <span className="text-foreground">${data.spot.toFixed(2)}</span>
         </div>
@@ -186,7 +197,7 @@ export default function OptionsPanel({ ticker }: { ticker: string }) {
             {data.flags.map((flag) => (
               <span
                 key={flag}
-                className="inline-flex items-center rounded border border-warn/50 bg-warn/10 px-1.5 py-px font-mono text-micro text-warn"
+                className="inline-flex items-center rounded border border-warn/50 bg-warn/10 px-1.5 py-px text-micro text-warn"
               >
                 {flag}
               </span>
@@ -196,15 +207,13 @@ export default function OptionsPanel({ ticker }: { ticker: string }) {
 
         {/* P/C summary table */}
         <div>
-          <p className="text-micro font-medium text-muted uppercase tracking-wide mb-1.5">
-            P/C Summary
-          </p>
-          <table className="w-full font-mono text-dense tabular-nums border-collapse">
+          <p className="eyebrow mb-1.5">P/C Summary</p>
+          <table className="w-full text-data border-collapse">
           <thead>
             <tr className="text-left text-micro text-muted border-b border-line">
               <th className="pb-1 font-medium" />
-              <th className="pb-1 pr-4 font-medium text-right text-pos">Calls</th>
-              <th className="pb-1 font-medium text-right text-neg">Puts</th>
+              <th className="pb-1 pr-4 font-medium text-right text-call">Calls</th>
+              <th className="pb-1 font-medium text-right text-put">Puts</th>
             </tr>
           </thead>
           <tbody>
@@ -234,17 +243,15 @@ export default function OptionsPanel({ ticker }: { ticker: string }) {
 
         {/* IV row */}
         <div className="border-t border-line pt-2">
-          <p className="text-micro font-medium text-muted uppercase tracking-wide mb-1.5">
-            Implied Volatility
-          </p>
-          <div className="flex flex-wrap gap-4 font-mono text-dense tabular-nums">
+          <p className="eyebrow mb-1.5">Implied Volatility</p>
+          <div className="flex flex-wrap gap-4 text-data">
             <span>
               <span className="text-muted">ATM IV c </span>
-              <span className="text-pos">{fmtPct(data.iv_atm_call)}</span>
+              <span className="text-call">{fmtPct(data.iv_atm_call)}</span>
             </span>
             <span>
               <span className="text-muted">p </span>
-              <span className="text-neg">{fmtPct(data.iv_atm_put)}</span>
+              <span className="text-put">{fmtPct(data.iv_atm_put)}</span>
             </span>
             <span>
               <span className="text-muted">skew </span>
@@ -253,9 +260,9 @@ export default function OptionsPanel({ ticker }: { ticker: string }) {
                   data.iv_skew == null
                     ? "text-muted"
                     : data.iv_skew > 0
-                    ? "text-pos"
+                    ? "text-call"
                     : data.iv_skew < 0
-                    ? "text-neg"
+                    ? "text-put"
                     : "text-foreground"
                 }
               >
@@ -269,11 +276,11 @@ export default function OptionsPanel({ ticker }: { ticker: string }) {
 
         {/* Unusual activity */}
         {data.unusual_as_of ? (
-          <p className="font-mono text-micro text-muted border-t border-line pt-2">
+          <p className="border-t border-line pt-2 text-body text-muted">
             as of {data.unusual_as_of} close (US) — robust-score (beta), validation pending
           </p>
         ) : state === "closed" ? (
-          <p className="font-mono text-micro text-muted border-t border-line pt-2">
+          <p className="border-t border-line pt-2 text-body text-muted">
             unusual-activity lists rebuild from live volume during US hours; overnight
             recaps land with WS-1 snapshots
           </p>

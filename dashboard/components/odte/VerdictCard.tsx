@@ -2,7 +2,7 @@
 
 import type { ReactNode } from "react";
 import type { Verdict } from "@/lib/odte-verdicts";
-import Skeleton from "@/components/ui/Skeleton";
+import Loading from "@/components/ui/Loading";
 import Collapsible from "@/components/ui/Collapsible";
 
 const borderClass: Record<Verdict["status"], string> = {
@@ -34,18 +34,18 @@ export default function VerdictCard({
 
   const trigger = (
     <div className="min-w-0 flex-1">
-      <span className="text-micro uppercase tracking-[0.08em] text-muted font-mono">{title}</span>
+      <span className="eyebrow">{title}</span>
       {loading ? (
-        <Skeleton height={12} className="w-2/3 mt-1.5" />
+        <Loading variant="lines" count={1} className="mt-1.5" />
       ) : verdict ? (
-        <p className="text-micro font-mono mt-1 leading-snug">{verdict.sentence}</p>
+        <p className="text-body mt-1 leading-snug">{verdict.sentence}</p>
       ) : (
-        <p className="text-micro font-mono text-muted mt-1">no data — source unavailable</p>
+        <p className="text-body text-muted mt-1">no data — source unavailable</p>
       )}
       {!loading && verdict && stats.length > 0 && (
         <div className="flex flex-wrap gap-x-3 gap-y-1 mt-2">
           {stats.map((s) => (
-            <div key={s.label} className="font-mono text-micro tabular-nums">
+            <div key={s.label} className="text-data">
               <span className="text-muted">{s.label} </span>
               <span className="text-foreground">{s.value}</span>
             </div>
@@ -57,7 +57,7 @@ export default function VerdictCard({
 
   const body = (
     <div className="mt-3 pt-3 border-t border-line space-y-2">
-      {whyItMatters && <p className="text-micro text-muted italic">{whyItMatters}</p>}
+      {whyItMatters && <p className="text-body text-2 italic">{whyItMatters}</p>}
       {detail}
     </div>
   );

@@ -173,9 +173,8 @@ describe("MorningReport — content (MB-01..MB-09)", () => {
     const built = `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`;
     mockFetchJson({ "/api/argus/report/morning": { ...baseReport, generated_at: built } });
     render(<MorningReport />);
-    expect(
-      await screen.findByText((_, el) => el?.textContent === "built 6m ago", { selector: "span" })
-    ).toBeInTheDocument();
+    // Freshness now renders through the shared `Stale` line: "as of HH:MM · 6m ago".
+    expect(await screen.findByText(/6m ago/)).toBeInTheDocument();
   });
 
   it("offers a way out of the truncated card (MB-10)", async () => {

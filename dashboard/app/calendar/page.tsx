@@ -2,8 +2,9 @@
 
 import Link from "next/link";
 import { useMemo } from "react";
-import PageHeader from "@/components/ui/PageHeader";
-import EmptyState from "@/components/ui/EmptyState";
+import Empty from "@/components/ui/Empty";
+import Failed from "@/components/ui/Failed";
+import Loading from "@/components/ui/Loading";
 import EventRow from "@/components/calendar/EventRow";
 import {
   fullDayLabel,
@@ -15,7 +16,7 @@ import {
 import { useWatchlistTickers } from "@/lib/watchlist";
 import { useLocalStorage } from "@/lib/useLocalStorage";
 import { STATIC_KEYS } from "@/lib/storageKeys";
-import PageShell from "@/components/PageShell";
+import Page from "@/components/ui/Page";
 
 const HORIZONS = [30, 60] as const;
 const SHOW = [
@@ -38,7 +39,7 @@ function Segmented<T extends string | number>({
 }) {
   return (
     <div className="flex items-center gap-2">
-      <span className="text-micro uppercase tracking-wide text-muted">{label}</span>
+      <span className="eyebrow">{label}</span>
       <div className="flex overflow-hidden rounded border border-line">
         {options.map((o) => (
           <button
@@ -91,18 +92,18 @@ export default function CalendarPage() {
   const earningsCount = filtered.length - macroCount;
 
   return (
-    <PageShell width="standard">
-      <PageHeader
+    <Page width="wide">
+      <Page.Header
         title="Economic Calendar"
         subtitle={`Scheduled US macro releases and tracked-name earnings on one timeline — the next ${horizon} days, all times US Eastern with your local time alongside.`}
         actions={
-          <Link href="/macro" className="text-dense text-muted hover:text-accent">
+          <Link href="/macro" className="text-body text-muted hover:text-accent">
             Macro sentiment ›
           </Link>
         }
       />
 
-      <div className="mb-4 flex flex-wrap items-center gap-x-6 gap-y-2">
+      <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
         <Segmented
           label="Horizon"
           value={horizon}
@@ -110,25 +111,26 @@ export default function CalendarPage() {
           onChange={setHorizon}
         />
         <Segmented label="Show" value={show} options={SHOW} onChange={setShow} />
-        <span className="font-mono text-micro text-muted-2">
+        <span className="text-data text-muted">
           {macroCount} macro · {earningsCount} earnings
         </span>
       </div>
 
-      {isLoading && !data && (
-        <p className="font-mono text-micro text-muted">loading calendar…</p>
-      )}
+      {isLoading && !data && <Loading count={6} label="Loading calendar" />}
       {error && !data && (
-        <EmptyState message="Calendar unavailable — the Argus API isn't answering." />
+        <Failed
+          title="Calendar unavailable"
+          message="The Argus API isn't answering, so the schedule could not be loaded."
+        />
       )}
       {data && weeks.length === 0 && (
-        <EmptyState message={`Nothing scheduled in the next ${horizon} days for this filter.`} />
+        <Empty message={`Nothing scheduled in the next ${horizon} days for this filter.`} />
       )}
 
       <div className="space-y-6">
         {weeks.map((week) => (
           <section key={week.start}>
-            <h2 className="tick mb-2 text-body font-semibold text-foreground">{week.label}</h2>
+            <h2 className="tick mb-2 text-title text-foreground">{week.label}</h2>
             <div className="space-y-3">
               {byDay(week.events).map(([date, evs]) => (
                 <div key={date} className="overflow-hidden rounded-md border border-line bg-surface">
@@ -138,16 +140,16 @@ export default function CalendarPage() {
                     }`}
                   >
                     <span
-                      className={`text-dense font-medium ${
+                      className={`text-body font-medium ${
                         date === today ? "text-accent" : "text-foreground"
                       }`}
                     >
                       {fullDayLabel(date)}
                     </span>
                     {date === today && (
-                      <span className="font-mono text-micro text-accent">today</span>
+                      <span className="text-micro text-accent">today</span>
                     )}
-                    <span className="ml-auto font-mono text-micro text-muted-2">
+                    <span className="ml-auto text-data text-muted">
                       {evs.length} {evs.length === 1 ? "event" : "events"}
                     </span>
                   </div>
@@ -165,13 +167,13 @@ export default function CalendarPage() {
         ))}
       </div>
 
-      <p className="mt-6 border-t border-line pt-3 text-micro leading-relaxed text-muted-2">
+      <p className="border-t border-line pt-3 text-body leading-relaxed text-2">
         Release dates come from the OMB/OIRA principal-federal-economic-indicator schedule and the
         Federal Reserve FOMC calendar; earnings dates are refreshed daily for tracked names and can
         move. Consensus, prior and actual figures are not ingested yet — they need a paid feed, so
         the calendar answers <em>what is scheduled and what it transmits into</em>, not{" "}
         <em>what the number printed</em>.
       </p>
-    </PageShell>
+    </Page>
   );
 }

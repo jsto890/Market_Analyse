@@ -2,6 +2,9 @@
 
 import Link from "next/link";
 import Panel from "@/components/ui/Panel";
+import Empty from "@/components/ui/Empty";
+import Failed from "@/components/ui/Failed";
+import Loading from "@/components/ui/Loading";
 import { relativeAge } from "@/lib/format";
 import { scopeLabel, signed, toneClass, useMacroContributors } from "@/lib/macro";
 
@@ -22,38 +25,42 @@ export default function Contributors({ scope, window }: { scope: string; window:
   return (
     <Panel title={`What moved ${scopeLabel(scope)}`}>
       {isLoading && !data && (
-        <p className="px-3 py-2 font-mono text-micro text-muted">loading contributors…</p>
+        <Loading className="px-3 py-2" count={4} label="Loading contributors" />
       )}
-      {error && <p className="px-3 py-2 font-mono text-micro text-muted">contributors unavailable</p>}
+      {error && (
+        <Failed
+          className="m-3"
+          title="Contributors unavailable"
+          message="The Argus API isn't answering, so the headlines behind this gauge could not be listed."
+        />
+      )}
       {data && data.items.length === 0 && (
-        <p className="px-3 py-2 text-dense text-muted">
-          No scored headlines rolled into this scope during the lookback.
-        </p>
+        <Empty message="No scored headlines rolled into this scope during the lookback." />
       )}
       {data && data.items.length > 0 && (
         <>
-          <p className="px-3 pb-1 pt-2 text-micro text-muted-2">
+          <p className="px-3 pb-1 pt-2 text-body text-2">
             {data.n} scored {data.n === 1 ? "headline" : "headlines"} · share is each item&rsquo;s
             weight after recency decay, so score × share sums to the gauge.
           </p>
           <ul className="divide-y divide-line">
             {data.items.map((c, i) => (
               <li key={`${c.ts}-${i}`} className="flex items-baseline gap-2 px-3 py-1.5">
-                <span className={`w-10 shrink-0 font-mono text-micro tabular-nums ${toneClass(c.score)}`}>
+                <span className={`w-12 shrink-0 text-data ${toneClass(c.score)}`}>
                   {signed(c.score)}
                 </span>
-                <span className="w-10 shrink-0 font-mono text-micro tabular-nums text-muted-2">
+                <span className="w-10 shrink-0 text-data text-muted">
                   {(c.share * 100).toFixed(0)}%
                 </span>
                 {c.ticker && (
                   <Link
                     href={`/t/${c.ticker}`}
-                    className="shrink-0 font-mono text-micro text-accent hover:underline"
+                    className="shrink-0 text-data text-accent hover:underline"
                   >
                     {c.ticker}
                   </Link>
                 )}
-                <span className="min-w-0 flex-1 truncate text-dense text-foreground" title={c.headline}>
+                <span className="min-w-0 flex-1 text-body text-foreground">
                   {c.url ? (
                     <a href={c.url} target="_blank" rel="noreferrer" className="hover:text-accent">
                       {c.headline}
@@ -62,20 +69,20 @@ export default function Contributors({ scope, window }: { scope: string; window:
                     c.headline
                   )}
                 </span>
-                <span className="shrink-0 font-mono text-micro text-muted-2">{ageOf(c.ts)}</span>
+                <span className="shrink-0 text-data text-muted">{ageOf(c.ts)}</span>
               </li>
             ))}
           </ul>
           {data.tickers.length > 0 && (
             <div className="flex flex-wrap items-center gap-1.5 border-t border-line px-3 py-2">
-              <span className="font-mono text-micro text-muted">names driving this scope</span>
+              <span className="eyebrow">names driving this scope</span>
               {data.tickers.map((t) => (
                 <Link
                   key={t.ticker}
                   href={`/t/${t.ticker}`}
                   className="rounded border border-line px-1.5 py-px font-mono text-micro text-accent hover:bg-elevated"
                 >
-                  {t.ticker} <span className="text-muted-2">×{t.n}</span>
+                  {t.ticker} <span className="text-muted">×{t.n}</span>
                 </Link>
               ))}
             </div>

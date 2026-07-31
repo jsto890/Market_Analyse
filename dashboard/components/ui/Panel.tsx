@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useId, ReactNode } from "react";
 import { ChevronDown } from "lucide-react";
+import ReadThis from "./ReadThis";
 
 interface PanelProps {
   title: ReactNode;
@@ -12,6 +13,9 @@ interface PanelProps {
   defaultOpen?: boolean;
   persistKey?: string;
   actions?: ReactNode;
+  /** One sentence at the **foot** of the panel: what it's for, and what would
+   * make you act. Pass the sentence — `ReadThis` supplies the label and rule. */
+  readThis?: ReactNode;
   children: ReactNode;
 }
 
@@ -23,6 +27,7 @@ export default function Panel({
   defaultOpen = false,
   persistKey,
   actions,
+  readThis,
   children,
 }: PanelProps) {
   const id = useId();
@@ -62,13 +67,13 @@ export default function Panel({
 
   const Title = (
     <>
-      <span className="tick truncate text-body font-semibold text-foreground">{title}</span>
+      <span className="tick truncate text-title text-foreground">{title}</span>
       {count !== undefined && (
         <span className="rounded bg-elevated px-1.5 py-px font-mono text-micro tabular-nums text-muted">
           {count}
         </span>
       )}
-      {subtitle && <span className="truncate text-dense text-muted">{subtitle}</span>}
+      {subtitle && <span className="truncate text-body text-3">{subtitle}</span>}
     </>
   );
 
@@ -104,6 +109,7 @@ export default function Panel({
       >
         <div className="overflow-hidden">
           <div className="border-t border-line px-4 py-3">{children}</div>
+          {readThis && <ReadThis>{readThis}</ReadThis>}
         </div>
       </div>
     </section>

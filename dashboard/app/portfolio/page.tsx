@@ -1,10 +1,10 @@
 "use client";
-import PageHeader from "@/components/ui/PageHeader";
 import DataTable, { Column } from "@/components/ui/DataTable";
 import Badge from "@/components/ui/Badge";
 import StatChip from "@/components/ui/StatChip";
 import InfoTip from "@/components/ui/InfoTip";
-import EmptyState from "@/components/ui/EmptyState";
+import Empty from "@/components/ui/Empty";
+import Loading from "@/components/ui/Loading";
 import Button from "@/components/ui/Button";
 import { PlugZap, Briefcase } from "lucide-react";
 import { signedCurrency, price as fmtPrice } from "@/lib/format";
@@ -13,7 +13,7 @@ import { PORTFOLIO_EDGE_LABEL } from "@/lib/labels";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import useSWR from "swr";
-import PageShell from "@/components/PageShell";
+import Page from "@/components/ui/Page";
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
@@ -67,7 +67,7 @@ export default function PortfolioPage() {
     {
       key: "symbol",
       header: "Symbol",
-      render: (r) => <span className="font-mono font-semibold text-foreground">{r.symbol}</span>,
+      render: (r) => <span className="text-data font-semibold text-foreground">{r.symbol}</span>,
     },
     {
       key: "position",
@@ -76,14 +76,14 @@ export default function PortfolioPage() {
       render: (r) => {
         if (r.position == null) return <span className="text-muted">—</span>;
         const cls = r.position > 0 ? "text-pos" : r.position < 0 ? "text-neg" : "text-muted";
-        return <span className={cls}>{r.position}</span>;
+        return <span className={`text-data ${cls}`}>{r.position}</span>;
       },
     },
     {
       key: "avg_cost",
       header: "Avg Cost",
       align: "right",
-      render: (r) => <span className="text-foreground">{r.avg_cost == null ? "—" : `$${r.avg_cost.toFixed(2)}`}</span>,
+      render: (r) => <span className="text-data text-foreground">{r.avg_cost == null ? "—" : `$${r.avg_cost.toFixed(2)}`}</span>,
     },
     {
       key: "verdict",
@@ -95,7 +95,7 @@ export default function PortfolioPage() {
       header: "Score",
       align: "right",
       render: (r) => (
-        <span className={r.score == null ? "text-muted" : r.score > 0 ? "text-pos" : r.score < 0 ? "text-neg" : "text-muted"}>
+        <span className={`text-data ${r.score == null ? "text-muted" : "text-model"}`}>
           {r.score == null ? "—" : r.score.toFixed(2)}
         </span>
       ),
@@ -120,7 +120,7 @@ export default function PortfolioPage() {
       key: "market_value",
       header: "Mkt Value",
       align: "right",
-      render: (r) => <span className="text-foreground">{fmtPrice(r.market_value ?? null)}</span>,
+      render: (r) => <span className="text-data text-foreground">{fmtPrice(r.market_value ?? null)}</span>,
     },
     {
       key: "unrealized_pnl",
@@ -129,14 +129,14 @@ export default function PortfolioPage() {
       render: (r) => {
         if (r.unrealized_pnl == null) return <span className="text-muted">—</span>;
         const cls = r.unrealized_pnl >= 0 ? "text-pos" : "text-neg";
-        return <span className={cls}>{signedCurrency(r.unrealized_pnl)}</span>;
+        return <span className={`text-data ${cls}`}>{signedCurrency(r.unrealized_pnl)}</span>;
       },
     },
   ];
 
   return (
-    <PageShell width="standard">
-        <PageHeader title="Portfolio" subtitle="TWS · port 7496 · live" />
+    <Page width="wide">
+        <Page.Header title="Portfolio" subtitle="TWS · port 7496 · live" />
 
         {account && (
           <div className="flex flex-wrap gap-2">
@@ -146,13 +146,19 @@ export default function PortfolioPage() {
           </div>
         )}
 
-        {isLoading && <p className="text-micro font-mono text-muted">Loading…</p>}
+        {isLoading && (
+          <Loading
+            variant="rows"
+            headers={["Symbol", "Position", "Avg Cost", "Argus", "Score", "Edge", "Mkt Value", "Unrl. P&L"]}
+            count={5}
+          />
+        )}
 
         {/* Offline with nothing to fall back on: one honest empty state that
          * fills the column, instead of a banner stacked on a ghost table
          * header listing columns that will never have rows. */}
         {!isLoading && offline && pinned.length === 0 && (
-          <EmptyState
+          <Empty
             fill
             icon={<PlugZap size={26} strokeWidth={1.5} />}
             title="IBKR Gateway offline"
@@ -169,19 +175,19 @@ export default function PortfolioPage() {
           <div className="space-y-4">
             <div className="flex flex-wrap items-center gap-3 rounded border border-line bg-surface px-4 py-2.5">
               <p className="text-body font-semibold text-foreground">IBKR Gateway Offline</p>
-              <p className="text-micro text-muted">
+              <p className="text-body text-2">
                 Connect TWS on port 7496 (live) to see positions.
               </p>
               <button
                 onClick={() => void mutate()}
-                className="ml-auto text-micro bg-elevated hover:bg-raised border border-line text-foreground px-3 py-1 rounded transition-colors"
+                className="ml-auto text-body bg-elevated hover:bg-raised border border-line text-foreground px-3 py-1 rounded transition-colors"
               >
                 Retry
               </button>
             </div>
 
             <div className="space-y-2">
-              <p className="text-micro font-mono text-warn/80">
+              <p className="text-body text-warn/80">
                 TWS is offline — showing your pinned watchlist instead of live positions ({pinned.length}).
               </p>
               <div className="bg-surface border border-line rounded p-2 overflow-x-auto">
@@ -190,11 +196,11 @@ export default function PortfolioPage() {
                     {pinned.map((p) => (
                       <tr key={p.ticker} className="border-b border-[var(--elevated)] last:border-0">
                         <td className="py-1.5 px-2">
-                          <Link href={`/t/${p.ticker}`} className="font-mono text-accent hover:underline">
+                          <Link href={`/t/${p.ticker}`} className="text-data text-accent hover:underline">
                             {p.ticker}
                           </Link>
                         </td>
-                        <td className="py-1.5 px-2 text-right text-micro text-muted font-mono">
+                        <td className="py-1.5 px-2 text-right text-data text-muted">
                           pinned {new Date(p.pinned_at).toLocaleDateString()}
                         </td>
                       </tr>
@@ -207,7 +213,7 @@ export default function PortfolioPage() {
         )}
 
         {!isLoading && isEmpty && (
-          <EmptyState
+          <Empty
             fill
             icon={<Briefcase size={26} strokeWidth={1.5} />}
             title="No open positions"
@@ -223,11 +229,11 @@ export default function PortfolioPage() {
         {!isLoading && !offline && positions.length > 0 && (
           <>
             <div className="flex items-center gap-3">
-              <p className="text-micro text-muted font-mono">
+              <p className="text-data text-muted">
                 {positions.length} position{positions.length !== 1 ? "s" : ""}
               </p>
               {liveOffline && (
-                <span className="text-micro font-mono text-warn/80">
+                <span className="text-body text-warn/80">
                   Price-only preview from your pinned watchlist — TWS positions unavailable
                 </span>
               )}
@@ -243,7 +249,6 @@ export default function PortfolioPage() {
             </div>
           </>
         )}
-      </PageShell>
-    
+    </Page>
   );
 }

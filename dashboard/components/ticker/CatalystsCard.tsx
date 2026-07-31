@@ -2,7 +2,7 @@
 
 import { Zap } from "lucide-react";
 import Panel from "@/components/ui/Panel";
-import Skeleton from "@/components/ui/Skeleton";
+import Loading from "@/components/ui/Loading";
 import type { BridgeRow } from "@/types/bridge";
 import { useTickerData } from "@/lib/useTickerData";
 
@@ -35,7 +35,7 @@ function CatalystRow({ token }: { token: string }) {
         aria-hidden="true"
       />
       <Zap size={12} className={neg ? "text-neg shrink-0" : "text-pos shrink-0"} />
-      <span className="font-mono text-body text-foreground">{humanize(token)}</span>
+      <span className="text-data text-foreground">{humanize(token)}</span>
     </div>
   );
 }
@@ -78,16 +78,16 @@ function BridgeCatalysts({ bridgeRow }: { bridgeRow: BridgeRow }) {
           ))}
         </div>
       ) : (
-        <p className="text-dense text-muted">No catalyst tokens today</p>
+        <p className="text-body text-muted">No catalyst tokens today</p>
       )}
 
       {/* Vote ticks */}
       <div className="flex items-center gap-3 border-t border-line pt-2 flex-wrap">
-        <span className="text-micro text-muted font-mono">votes</span>
+        <span className="text-micro text-muted">votes</span>
         {VOTE_LABELS.map(({ key, label }) => (
           <span
             key={key}
-            className="inline-flex items-center gap-1 font-mono text-body tabular-nums"
+            className="inline-flex items-center gap-1 text-data"
           >
             <VoteTick value={Number(bridgeRow[key])} />
             <span className="text-micro text-muted">{label}</span>
@@ -104,17 +104,12 @@ function OffBridgeCatalysts({ ticker }: { ticker: string }) {
   } = useTickerData(ticker);
 
   if (isLoading) {
-    return (
-      <div className="space-y-2">
-        <Skeleton width="80%" height={10} />
-        <Skeleton width="60%" height={10} />
-      </div>
-    );
+    return <Loading variant="lines" count={2} label="Loading fundamentals" />;
   }
 
   const offline = error != null || data == null || data.error != null;
   if (offline) {
-    return <p className="text-dense text-muted">No fundamental data available</p>;
+    return <p className="text-body text-muted">No fundamental data available</p>;
   }
 
   const fields: { label: string; value: string }[] = [];
@@ -126,11 +121,11 @@ function OffBridgeCatalysts({ ticker }: { ticker: string }) {
   if (data.short_pct_float != null) fields.push({ label: "short", value: fmtPct(data.short_pct_float) });
 
   if (fields.length === 0) {
-    return <p className="text-dense text-muted">No fundamental data available</p>;
+    return <p className="text-body text-muted">No fundamental data available</p>;
   }
 
   return (
-    <div className="flex flex-wrap gap-x-4 gap-y-1 font-mono text-body tabular-nums">
+    <div className="flex flex-wrap gap-x-4 gap-y-1 text-data">
       {fields.map((f) => (
         <span key={f.label}>
           <span className="text-muted text-micro">{f.label} </span>

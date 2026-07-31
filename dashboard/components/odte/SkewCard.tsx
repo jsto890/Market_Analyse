@@ -12,6 +12,7 @@ import {
 } from "recharts";
 import Panel from "@/components/ui/Panel";
 import InfoTip from "@/components/ui/InfoTip";
+import Empty from "@/components/ui/Empty";
 import { atmSkew, ivSkewProfile, type SkewPoint } from "@/lib/optionsAnalytics";
 
 const SKEW_TIP =
@@ -25,12 +26,12 @@ function SkewTooltip({ active, payload }: { active?: boolean; payload?: { payloa
   if (!active || !payload || payload.length === 0) return null;
   const p = payload[0].payload;
   return (
-    <div className="rounded border border-line bg-elevated px-3 py-2 font-mono text-micro shadow-lg">
+    <div className="rounded border border-line bg-elevated px-3 py-2 text-data shadow-lg">
       <p className="text-foreground">strike {p.strike.toFixed(0)}</p>
-      <p className="text-pos">call IV {fmtPct(p.callIv)}</p>
-      <p className="text-neg">put IV {fmtPct(p.putIv)}</p>
+      <p className="text-call">call IV {fmtPct(p.callIv)}</p>
+      <p className="text-put">put IV {fmtPct(p.putIv)}</p>
       {p.skew != null && (
-        <p className={p.skew >= 0 ? "text-neg" : "text-pos"}>
+        <p className={p.skew >= 0 ? "text-put" : "text-call"}>
           skew {p.skew >= 0 ? "+" : ""}
           {(p.skew * 100).toFixed(1)} vol pts
         </p>
@@ -55,9 +56,9 @@ export default function SkewCard({
     atm == null
       ? null
       : atm > 0.015
-        ? { text: "puts bid — protection is being paid for", tone: "text-neg" }
+        ? { text: "puts bid — protection is being paid for", tone: "text-put" }
         : atm < -0.015
-          ? { text: "calls bid — upside is being chased", tone: "text-pos" }
+          ? { text: "calls bid — upside is being chased", tone: "text-call" }
           : { text: "balanced — neither wing is being paid up for", tone: "text-muted" };
 
   return (
@@ -67,7 +68,7 @@ export default function SkewCard({
       actions={<InfoTip label="How to read the skew curve" content={SKEW_TIP} />}
     >
       {points.length === 0 ? (
-        <p className="font-mono text-micro text-muted">no implied vols in this snapshot</p>
+        <Empty message="No implied vols in this snapshot." />
       ) : (
         <>
           <ResponsiveContainer width="100%" height={200}>
@@ -85,7 +86,7 @@ export default function SkewCard({
               <Line
                 type="monotone"
                 dataKey="callIv"
-                stroke="var(--green)"
+                stroke="var(--call)"
                 dot={false}
                 strokeWidth={1.5}
                 connectNulls
@@ -94,7 +95,7 @@ export default function SkewCard({
               <Line
                 type="monotone"
                 dataKey="putIv"
-                stroke="var(--red)"
+                stroke="var(--put)"
                 dot={false}
                 strokeWidth={1.5}
                 strokeDasharray="4 2"
@@ -103,7 +104,7 @@ export default function SkewCard({
               />
             </LineChart>
           </ResponsiveContainer>
-          <p className="mt-2 flex flex-wrap gap-x-4 font-mono text-micro">
+          <p className="mt-2 flex flex-wrap gap-x-4 text-data">
             <span>
               <span className="text-muted">ATM skew </span>
               <span className={verdict?.tone ?? "text-muted"}>
@@ -113,13 +114,13 @@ export default function SkewCard({
             {deltaSkew25 != null && (
               <span>
                 <span className="text-muted">25Δ risk reversal </span>
-                <span className={deltaSkew25 >= 0 ? "text-neg" : "text-pos"}>
+                <span className={deltaSkew25 >= 0 ? "text-put" : "text-call"}>
                   {deltaSkew25 >= 0 ? "+" : ""}
                   {(deltaSkew25 * 100).toFixed(1)} vol pts
                 </span>
               </span>
             )}
-            <span className="text-muted-2">solid = calls · dashed = puts</span>
+            <span className="text-muted">solid = calls · dashed = puts</span>
           </p>
         </>
       )}

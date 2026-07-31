@@ -23,14 +23,10 @@ function Consensus({ ev }: { ev: CalEvent }) {
   ];
   const present = cells.filter(([, v]) => v != null && v !== "");
   if (present.length === 0) {
-    return (
-      <span className="font-mono text-micro text-muted-2">
-        consensus · prior not tracked
-      </span>
-    );
+    return <span className="text-body text-muted">consensus · prior not tracked</span>;
   }
   return (
-    <span className="flex flex-wrap items-center gap-x-3 font-mono text-micro">
+    <span className="flex flex-wrap items-center gap-x-3 text-data">
       {present.map(([label, value]) => (
         <span key={label}>
           <span className="text-muted">{label} </span>
@@ -43,7 +39,7 @@ function Consensus({ ev }: { ev: CalEvent }) {
 
 function Chain({ label, text, tone }: { label: string; text: string; tone: string }) {
   return (
-    <p className="text-dense leading-relaxed text-muted">
+    <p className="text-body leading-relaxed text-2">
       <span className={`font-mono text-micro font-semibold ${tone}`}>{label}</span>{" "}
       {text}
     </p>
@@ -77,19 +73,19 @@ export default function EventRow({
         ) : (
           name
         )}
-        {earnings && <span className="ml-1.5 text-dense text-muted">earnings</span>}
+        {earnings && <span className="ml-1.5 text-body text-muted">earnings</span>}
       </span>
       {isWatchlist && (
         <span className="shrink-0 rounded border border-accent/50 bg-accent/10 px-1 py-px font-mono text-micro text-accent">
           watchlist
         </span>
       )}
-      <span className="shrink-0 font-mono text-micro text-muted-2">
+      <span className="shrink-0 text-body text-muted">
         {CATEGORY_LABEL[ev.category] ?? ev.category}
       </span>
-      <span className="ml-auto shrink-0 font-mono text-micro tabular-nums text-muted">
+      <span className="ml-auto shrink-0 text-data text-muted">
         {ev.time_et ? `${ev.time_et} ET` : "time TBA"}
-        {local && <span className="text-muted-2"> · {local}</span>}
+        {local && <span> · {local}</span>}
       </span>
     </div>
   );
@@ -104,13 +100,11 @@ export default function EventRow({
         <Consensus ev={ev} />
         {meta ? (
           <>
-            <p className="text-dense leading-relaxed text-foreground/90">
-              <span className="font-mono text-micro font-semibold text-muted">MEASURES</span>{" "}
-              {meta.measures}
+            <p className="text-body leading-relaxed text-2">
+              <span className="eyebrow font-semibold">MEASURES</span> {meta.measures}
             </p>
-            <p className="text-dense leading-relaxed text-muted">
-              <span className="font-mono text-micro font-semibold text-muted">WHY NOW</span>{" "}
-              {meta.whyNow}
+            <p className="text-body leading-relaxed text-2">
+              <span className="eyebrow font-semibold">WHY NOW</span> {meta.whyNow}
             </p>
             <Chain label="BEAT" text={meta.beat} tone="text-pos" />
             <Chain label="MISS" text={meta.miss} tone="text-neg" />
@@ -136,7 +130,7 @@ export default function EventRow({
             </div>
           </>
         ) : (
-          <p className="text-dense text-muted">
+          <p className="text-body text-2">
             No transmission note written for this release yet — it is shown for scheduling only.
           </p>
         )}

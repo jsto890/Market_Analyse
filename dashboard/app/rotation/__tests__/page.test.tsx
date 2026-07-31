@@ -18,7 +18,8 @@ describe("RotationPage header (RO-08)", () => {
     render(<RotationPage />);
 
     expect(screen.getByText("Sector Rotation")).toBeInTheDocument();
-    expect(screen.getByText(/Updated/)).toBeInTheDocument();
+    expect(screen.getByText(/as of/)).toBeInTheDocument();
+    expect(screen.getByText(/run_daily/)).toBeInTheDocument();
   });
 
   it("shows the warn banner and no timestamp when the rotation file is missing", () => {
@@ -32,7 +33,8 @@ describe("RotationPage header (RO-08)", () => {
     render(<RotationPage />);
 
     expect(screen.getByText("Sector Rotation")).toBeInTheDocument();
-    expect(screen.queryByText(/Updated/)).not.toBeInTheDocument();
-    expect(screen.getByText("No rotation data — run_daily may have failed")).toBeInTheDocument();
+    expect(screen.getByText("no timestamp")).toBeInTheDocument();
+    expect(screen.getByText("No rotation data")).toBeInTheDocument();
+    expect(screen.getByText(/run_daily rotation job may have failed/)).toBeInTheDocument();
   });
 });

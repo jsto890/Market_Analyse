@@ -1,6 +1,5 @@
 "use client";
-import PageHeader from "@/components/ui/PageHeader";
-import SkeletonTable from "@/components/ui/SkeletonTable";
+import Loading from "@/components/ui/Loading";
 
 import { useRef, useState } from "react";
 import { Search, ArrowRight, Loader2, Filter } from "lucide-react";
@@ -11,18 +10,13 @@ import Input from "@/components/ui/Input";
 import Button from "@/components/ui/Button";
 import Badge from "@/components/ui/Badge";
 import PinToggle from "@/components/ui/PinToggle";
-import InfoTip from "@/components/ui/InfoTip";
-import EmptyState from "@/components/ui/EmptyState";
-import { HEADER_GLOSS } from "@/lib/labels";
+import Gloss from "@/components/ui/Gloss";
+import Empty from "@/components/ui/Empty";
+import Failed from "@/components/ui/Failed";
+import Stale from "@/components/ui/Stale";
 import { pctWhole, pct } from "@/lib/format";
 import { STATIC_KEYS } from "@/lib/storageKeys";
-import PageShell from "@/components/PageShell";
-
-function scoreColor(s: number): string {
-  if (s >= 0.7) return "text-pos";
-  if (s >= 0.5) return "text-warn";
-  return "text-muted";
-}
+import Page from "@/components/ui/Page";
 
 type ApiResponse =
   | { results: ScreenerResult[]; as_of?: string; cached?: boolean }
@@ -66,7 +60,7 @@ export default function ScreenerPage() {
       key: "symbol",
       header: "Ticker",
       render: (r) => (
-        <span className="font-mono font-semibold text-foreground">{r.symbol}</span>
+        <span className="text-data font-semibold text-foreground">{r.symbol}</span>
       ),
     },
     {
@@ -80,54 +74,52 @@ export default function ScreenerPage() {
       align: "right",
       sortable: true,
       sortFn: (a, b) => a.score - b.score,
-      render: (r) => (
-        <span className={`font-mono ${scoreColor(r.score)}`}>{r.score.toFixed(3)}</span>
-      ),
+      render: (r) => <span className="text-data text-model">{r.score.toFixed(3)}</span>,
     },
     {
       key: "long_votes",
-      header: <InfoTip content={HEADER_GLOSS.L} label="Long votes info">L</InfoTip>,
+      header: <Gloss term="L" />,
       align: "right",
-      render: (r) => <span className="text-pos">{r.long_votes}</span>,
+      render: (r) => <span className="text-data text-model">{r.long_votes}</span>,
     },
     {
       key: "short_votes",
-      header: <InfoTip content={HEADER_GLOSS.S} label="Short votes info">S</InfoTip>,
+      header: <Gloss term="S" />,
       align: "right",
-      render: (r) => <span className="text-neg">{r.short_votes}</span>,
+      render: (r) => <span className="text-data text-model">{r.short_votes}</span>,
     },
     {
       key: "wait_votes",
-      header: <InfoTip content={HEADER_GLOSS.W} label="Wait votes info">W</InfoTip>,
+      header: <Gloss term="W" />,
       align: "right",
-      render: (r) => <span className="text-warn">{r.wait_votes}</span>,
+      render: (r) => <span className="text-data text-model">{r.wait_votes}</span>,
     },
     {
       key: "agreement_pct",
-      header: <InfoTip content={HEADER_GLOSS["Agree%"]} label="Agreement info">Agree%</InfoTip>,
+      header: <Gloss term="Agree%" />,
       align: "right",
       sortable: true,
       sortFn: (a, b) => a.agreement_pct - b.agreement_pct,
-      render: (r) => <span className="text-foreground">{pctWhole(r.agreement_pct, "percent")}</span>,
+      render: (r) => <span className="text-data text-model">{pctWhole(r.agreement_pct, "percent")}</span>,
     },
     {
       key: "high_conviction",
-      header: <InfoTip content={HEADER_GLOSS.HC} label="High conviction info">HC</InfoTip>,
+      header: <Gloss term="HC" />,
       align: "center",
       render: (r) =>
         r.high_conviction ? (
-          <span className="text-warn font-bold">HC</span>
+          <span className="text-body font-bold text-model">HC</span>
         ) : (
           <span className="text-muted">—</span>
         ),
     },
     {
       key: "risk_reward",
-      header: <InfoTip content={HEADER_GLOSS["R:R"]} label="Risk:reward info">R:R</InfoTip>,
+      header: <Gloss term="R:R" />,
       align: "right",
       sortable: true,
       sortFn: (a, b) => a.risk_reward - b.risk_reward,
-      render: (r) => <span className="text-foreground">{r.risk_reward.toFixed(1)}</span>,
+      render: (r) => <span className="text-data text-foreground">{r.risk_reward.toFixed(1)}</span>,
     },
     {
       key: "ret_1d",
@@ -136,7 +128,7 @@ export default function ScreenerPage() {
       sortable: true,
       sortFn: (a, b) => (a.ret_1d ?? -Infinity) - (b.ret_1d ?? -Infinity),
       render: (r) => (
-        <span className={r.ret_1d === null ? "text-muted" : r.ret_1d >= 0 ? "text-pos" : "text-neg"}>
+        <span className={`text-data ${r.ret_1d === null ? "text-muted" : r.ret_1d >= 0 ? "text-pos" : "text-neg"}`}>
           {pct(r.ret_1d, "fraction")}
         </span>
       ),
@@ -148,7 +140,7 @@ export default function ScreenerPage() {
       sortable: true,
       sortFn: (a, b) => (a.ret_5d ?? -Infinity) - (b.ret_5d ?? -Infinity),
       render: (r) => (
-        <span className={r.ret_5d === null ? "text-muted" : r.ret_5d >= 0 ? "text-pos" : "text-neg"}>
+        <span className={`text-data ${r.ret_5d === null ? "text-muted" : r.ret_5d >= 0 ? "text-pos" : "text-neg"}`}>
           {pct(r.ret_5d, "fraction")}
         </span>
       ),
@@ -226,8 +218,8 @@ export default function ScreenerPage() {
   }
 
   return (
-    <PageShell width="standard">
-        <PageHeader title="Screener" subtitle="Agent-ranked long candidates" />
+    <Page width="wide">
+        <Page.Header title="Screener" subtitle="Agent-ranked long candidates" />
 
         {/* Controls */}
         <div className="flex flex-wrap items-center gap-2 rounded-md border border-line bg-elevated px-3 py-2.5">
@@ -240,7 +232,7 @@ export default function ScreenerPage() {
             placeholder="Filter tickers — AAPL, TSLA, NVDA…"
             className="w-64"
           />
-          <label className="flex items-center gap-1.5 text-micro text-muted">
+          <label className="flex items-center gap-1.5 text-body text-muted">
             Min score
             <Input
               type="number"
@@ -277,22 +269,24 @@ export default function ScreenerPage() {
 
         {/* States */}
         {loading && (
-          <p className="flex items-center gap-1.5 text-micro font-mono text-muted">
+          <p className="flex items-center gap-1.5 text-body text-2">
             <Loader2 size={12} className="animate-spin" /> Running agent ensemble… (10–30s)
             <Button variant="ghost" size="sm" onClick={handleCancel}>Cancel</Button>
           </p>
         )}
 
         {error && (
-          <div className="rounded-md border border-neg/50 bg-neg/10 px-3 py-2 text-body text-neg">
-            {error}
-          </div>
+          <Failed
+            title="Screener didn’t run"
+            message="Nothing was scored. Adjust the filters above and run again."
+            detail={error}
+          />
         )}
 
         {!loading && !error && results === null && (
           <div className="rounded-md border border-dashed border-line bg-elevated/40 px-6 py-8 text-center">
-            <p className="text-body text-foreground">Rank long candidates with the agent ensemble</p>
-            <p className="mx-auto mt-1.5 max-w-md text-micro text-muted">
+            <p className="text-title text-foreground">Rank long candidates with the agent ensemble</p>
+            <p className="mx-auto mt-1.5 max-w-md text-body text-2">
               Enter tickers to score a shortlist, or run the full universe. Sort any column, click
               a row to open the ticker, and pin candidates to your watchlist.
             </p>
@@ -300,23 +294,20 @@ export default function ScreenerPage() {
         )}
 
         {loading && (
-          <SkeletonTable
+          <Loading
+            variant="rows"
             headers={["Ticker", "Verdict", "Score", "Agree%", "R:R", "1d%", "5d%"]}
-            rows={6}
+            count={6}
           />
         )}
 
         {!loading && !error && results !== null && (
           <>
-            <div className="flex flex-wrap items-center gap-2 text-micro font-mono text-muted">
+            <div className="flex flex-wrap items-center gap-2 text-body text-muted">
               <span>
                 {results.length} signal{results.length !== 1 ? "s" : ""} found
               </span>
-              {asOf && (
-                <span className="text-muted/70">
-                  · {cached ? "cached" : "fresh"} {new Date(asOf).toLocaleString()}
-                </span>
-              )}
+              {asOf && <Stale asOf={asOf} source={cached ? "cached" : "fresh"} variant="line" />}
               {asOf && (
                 <Button
                   variant="ghost"
@@ -329,7 +320,7 @@ export default function ScreenerPage() {
               )}
             </div>
             {results.length === 0 ? (
-              <EmptyState
+              <Empty
                 fill
                 icon={<Filter size={26} strokeWidth={1.5} />}
                 title="No signals above threshold"
@@ -348,7 +339,6 @@ export default function ScreenerPage() {
             )}
           </>
         )}
-      </PageShell>
-    
+    </Page>
   );
 }

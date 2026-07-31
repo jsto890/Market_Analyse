@@ -73,7 +73,7 @@ function CopyButton({ ticker }: { ticker: string }) {
           () => {}
         );
       }}
-      className="rounded border border-line px-1.5 py-0.5 font-mono text-micro text-muted transition-colors hover:border-line-strong hover:text-foreground"
+      className="rounded border border-line px-1.5 py-0.5 text-micro text-muted transition-colors hover:border-line-strong hover:text-foreground"
     >
       {done ? "Copied" : "Copy"}
     </button>
@@ -145,23 +145,24 @@ export default function Header({
     <div className="px-4 py-3.5">
       {/* Row 1 — identity and price. Three type sizes, not five (TH-06). */}
       <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1.5">
-        <span className="font-mono text-display font-semibold leading-none tabular-nums text-foreground">
-          {ticker}
-        </span>
+        <span className="text-display leading-none text-foreground">{ticker}</span>
 
-        <span className="font-mono text-title leading-none tabular-nums text-foreground">
+        <span className="text-title font-mono tabular-nums leading-none text-foreground">
           {mark !== null ? mark.toFixed(2) : "—"}
         </span>
         {changePct !== null && (
-          <span className={`font-mono text-body tabular-nums ${posNeg}`}>
+          <span className={`text-data ${posNeg}`}>
             {changePct >= 0 ? "+" : ""}
             {changePct.toFixed(2)}%
           </span>
         )}
         {markBasis && (
-          <span className="font-mono text-micro text-muted-2" title="Basis for the price shown and for every % on this page">
-            {markBasis}
-          </span>
+          <InfoTip
+            content="The basis for the price shown here and for every percentage on this page."
+            label="Price basis"
+          >
+            <span className="text-micro text-muted-2">{markBasis}</span>
+          </InfoTip>
         )}
 
         {bridgeRow && (
@@ -184,7 +185,7 @@ export default function Header({
               // The glossary used to sit under the header as body copy on every
               // ticker; it belongs on the chip it explains (TH-01).
               <InfoTip content={HC_TOOLTIP} label="What HC means">
-                <span className="inline-flex items-center rounded border border-accent/50 bg-accent/10 px-1.5 py-px font-mono text-micro text-accent">
+                <span className="inline-flex items-center rounded border border-model/50 bg-model/10 px-1.5 py-px text-micro text-model">
                   HC
                 </span>
               </InfoTip>
@@ -198,13 +199,13 @@ export default function Header({
           <CopyButton ticker={ticker} />
           <Link
             href={`/alerts?symbol=${ticker}`}
-            className="rounded border border-line px-1.5 py-0.5 font-mono text-micro text-muted transition-colors hover:border-line-strong hover:text-foreground"
+            className="rounded border border-line px-1.5 py-0.5 text-micro text-muted transition-colors hover:border-line-strong hover:text-foreground"
           >
             Alert
           </Link>
           <Link
             href="#options"
-            className="rounded border border-line px-1.5 py-0.5 font-mono text-micro text-muted transition-colors hover:border-line-strong hover:text-foreground"
+            className="rounded border border-line px-1.5 py-0.5 text-micro text-muted transition-colors hover:border-line-strong hover:text-foreground"
           >
             Options ↓
           </Link>
@@ -212,12 +213,8 @@ export default function Header({
       </div>
 
       {/* Row 2 — identity context (TH-08) */}
-      <p className="mt-2 flex flex-wrap items-center gap-x-2.5 gap-y-1 font-mono text-micro text-muted">
-        {companyName && (
-          <span className="max-w-[280px] truncate text-muted" title={companyName}>
-            {companyName}
-          </span>
-        )}
+      <p className="mt-2 flex flex-wrap items-center gap-x-2.5 gap-y-1 text-data text-muted">
+        {companyName && <span className="max-w-[280px] truncate text-muted">{companyName}</span>}
         {fundamentals?.sector && <Meta>{fundamentals.sector}</Meta>}
         {fundamentals?.industry && (
           <Meta>
@@ -261,11 +258,9 @@ export default function Header({
 
       {/* Row 3 — this call, then the cohort it belongs to. Two claims, two lines (TH-05, TH-09). */}
       {cs && (
-        <div className="mt-2 border-t border-line pt-2 font-mono text-dense tabular-nums">
+        <div className="mt-2 border-t border-line pt-2 text-data">
           <p className="text-foreground/85">
-            <span className="mr-2 inline-block w-[62px] text-micro uppercase tracking-wide text-muted-2">
-              This call
-            </span>
+            <span className="mr-2 inline-block w-[78px] whitespace-nowrap text-micro text-muted-2">This call</span>
             called {cs.dateLabel}
             {entry !== null ? ` @ ${entry.toFixed(2)}` : ""}
             {cs.pct !== null && mark !== null ? (
@@ -280,9 +275,7 @@ export default function Header({
             ) : null}
           </p>
           <p className="text-muted">
-            <span className="mr-2 inline-block w-[62px] text-micro uppercase tracking-wide text-muted-2">
-              Cohort
-            </span>
+            <span className="mr-2 inline-block w-[78px] whitespace-nowrap text-micro text-muted-2">Cohort</span>
             median pick peaks +{medianPeakPct}% @ ~{medianDaysToPeak}d — a base rate for calls like
             this one, not a target for this one.
           </p>

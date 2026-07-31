@@ -6,6 +6,9 @@
 export interface ChartTokens {
   bg: string; text: string; muted: string; line: string; lineStrong: string;
   green: string; red: string; accent: string; amber: string; teal: string;
+  /** Model output (scores, conviction) — never --accent, which means
+   *  "interactive", and never green/red, which mean money direction. */
+  model: string;
 }
 
 /** globals.css `:root` literal values — used only if a custom property
@@ -15,7 +18,7 @@ export interface ChartTokens {
 const FALLBACK: ChartTokens = {
   bg: "#06090f", text: "#eef1f6", muted: "#7d8698", line: "#1e2634",
   lineStrong: "#2c3648", green: "#3fb950", red: "#f85149",
-  accent: "#4c8dff", amber: "#d29922", teal: "#2dd4bf",
+  accent: "#4c8dff", amber: "#d29922", teal: "#2dd4bf", model: "#9d7cf5",
 };
 
 function readVar(style: CSSStyleDeclaration, name: string, fallback: string): string {
@@ -40,6 +43,7 @@ export function resolveChartTokens(el: HTMLElement = document.documentElement): 
     accent: readVar(style, "--accent", FALLBACK.accent),
     amber: readVar(style, "--amber", FALLBACK.amber),
     teal: readVar(style, "--teal", FALLBACK.teal),
+    model: readVar(style, "--model", FALLBACK.model),
   };
 }
 

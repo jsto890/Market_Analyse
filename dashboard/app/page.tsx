@@ -13,7 +13,9 @@ import DateStepper from "@/components/today/DateStepper";
 import Link from "next/link";
 import { type RotationRow } from "@/components/today/RotationPanel";
 import { MorningReport } from "@/components/today/MorningReport";
-import PageShell from "@/components/PageShell";
+import Page from "@/components/ui/Page";
+import Failed from "@/components/ui/Failed";
+import Stale from "@/components/ui/Stale";
 
 export const dynamic = "force-dynamic";
 
@@ -128,7 +130,7 @@ export default async function Home({
   ).sort();
 
   return (
-    <PageShell width="standard">
+    <Page width="wide">
       <div className="flex items-center justify-between">
         <MorningReport />
       </div>
@@ -136,13 +138,18 @@ export default async function Home({
       {(() => {
         const status = statusMessage({ rows, viewingHistory, stale, generatedAt: meta.generated_at });
         if (!status) return null;
-        const tone =
-          status.level === "error"
-            ? "border-neg/50 bg-neg/10 text-neg"
-            : "border-warn/50 bg-warn/10 text-warn";
+        if (status.level === "error") {
+          return (
+            <Failed
+              title="No bridge data"
+              message="run_daily may have failed — no signals were produced for today."
+            />
+          );
+        }
         return (
-          <div role="status" className={`rounded-md border px-4 py-2.5 text-body ${tone}`}>
-            {status.text}
+          <div role="status" className="flex flex-wrap items-center gap-2">
+            <Stale asOf={meta.generated_at} source="bridge" />
+            <span className="text-body text-2">run_daily may have failed.</span>
           </div>
         );
       })()}
@@ -159,6 +166,6 @@ export default async function Home({
           {rotationSummary(rotation)}
         </Link>
       )}
-    </PageShell>
+    </Page>
   );
 }

@@ -49,8 +49,8 @@ export default function HelpOverlay() {
         className="bg-elevated border border-line rounded-lg p-5 w-72 shadow-xl"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="text-body font-medium text-foreground mb-3">Keyboard shortcuts</div>
-        <table className="w-full text-dense border-collapse">
+        <div className="text-title text-foreground mb-3">Keyboard shortcuts</div>
+        <table className="w-full text-body border-collapse">
           <tbody>
             {KEYS.map(({ key, desc }) => (
               <tr key={key} className="border-b border-line/40 last:border-0">
@@ -60,8 +60,8 @@ export default function HelpOverlay() {
             ))}
           </tbody>
         </table>
-        <div className="text-body font-medium text-foreground mt-4 mb-2">FX session legend</div>
-        <table className="w-full text-dense border-collapse">
+        <div className="text-title text-foreground mt-4 mb-2">FX session legend</div>
+        <table className="w-full text-body border-collapse">
           <tbody>
             {[
               { key: "ASIA", desc: "00:00 – 09:00 UTC" },

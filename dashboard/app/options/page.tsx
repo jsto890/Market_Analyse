@@ -19,6 +19,7 @@ import PcrCard from "@/components/odte/PcrCard";
 import SpotCard from "@/components/odte/SpotCard";
 import StrikeGuidance from "@/components/odte/StrikeGuidance";
 import VerdictCard from "@/components/odte/VerdictCard";
+import Page from "@/components/ui/Page";
 
 const jsonFetcher = (url: string) =>
   fetch(url).then((r) => {
@@ -95,8 +96,8 @@ export default function OptionsOverviewPage() {
       : null;
 
   return (
-    <>
-      <section className="grid grid-cols-1 gap-3 px-[var(--page-x)] py-[var(--page-y)] md:grid-cols-2 xl:grid-cols-4">
+    <Page width="wide">
+      <section className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
         <VerdictCard
           title="Spot / Regime"
           verdict={spotVerdict}
@@ -121,7 +122,7 @@ export default function OptionsOverviewPage() {
           loading={ladderLoading}
           whyItMatters="Put/call IV skew shows whether hedging or speculative demand dominates near the money."
           detail={
-            <div className="space-y-1 font-mono text-micro tabular-nums">
+            <div className="space-y-1 text-data">
               <div className="flex justify-between">
                 <span className="text-muted">ATM strike</span>
                 <span className="text-foreground">{atmRow?.strike ?? "—"}</span>
@@ -164,7 +165,7 @@ export default function OptionsOverviewPage() {
         />
       </section>
 
-      <section className="flex flex-wrap items-center gap-4 border-y border-line px-4 py-2 font-mono text-micro tabular-nums">
+      <section className="flex flex-wrap items-center gap-4 border-y border-line px-4 py-2 text-data">
         <span>
           <span className="text-muted">net GEX </span>
           <span className={(totalGex ?? 0) >= 0 ? "text-pos" : "text-neg"}>{fmtGex(totalGex)}</span>
@@ -188,16 +189,14 @@ export default function OptionsOverviewPage() {
         </Link>
       </section>
 
-      <div className="p-3">
-        <StrikeGuidance
-          spot={spot}
-          zeroGamma={zeroGamma}
-          callWall={callWall}
-          putWall={putWall}
-          atm={atmRow?.strike ?? null}
-          emPct={firstExpiry?.expected_move_pct ?? null}
-        />
-      </div>
-    </>
+      <StrikeGuidance
+        spot={spot}
+        zeroGamma={zeroGamma}
+        callWall={callWall}
+        putWall={putWall}
+        atm={atmRow?.strike ?? null}
+        emPct={firstExpiry?.expected_move_pct ?? null}
+      />
+    </Page>
   );
 }

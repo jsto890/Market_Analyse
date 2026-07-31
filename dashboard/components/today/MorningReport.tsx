@@ -2,8 +2,10 @@
 
 import Link from "next/link";
 import Collapsible from "@/components/ui/Collapsible";
+import Loading from "@/components/ui/Loading";
+import Failed from "@/components/ui/Failed";
+import Stale from "@/components/ui/Stale";
 import {
-  asOf,
   groupNewsByTicker,
   nearTermEvents,
   useMorningReport,
@@ -22,8 +24,8 @@ function SessionTag({ session }: { session: "BMO" | "AMC" | "—" }) {
     session === "BMO"
       ? "border-warn/50 text-warn bg-warn/10"
       : session === "AMC"
-        ? "border-accent/50 text-accent bg-accent/10"
-        : "border-line text-muted-2 bg-raised";
+        ? "border-line-strong text-foreground bg-raised"
+        : "border-line text-muted bg-raised";
   return (
     <span className={`ml-1 rounded border px-1 py-px text-micro font-medium ${cls}`}>
       {session === "—" ? "time TBA" : session}
@@ -34,10 +36,12 @@ function SessionTag({ session }: { session: "BMO" | "AMC" | "—" }) {
 function EarningsRow({ e, when }: { e: DayAheadEarning; when: string }) {
   return (
     <li className="flex items-baseline gap-1.5">
-      <span className="w-12 shrink-0 font-mono text-micro text-muted-2">{when}</span>
-      <span className={e.watchlist ? "text-accent" : "text-foreground/80"}>{e.ticker ?? e.event}</span>
+      <span className="w-12 shrink-0 text-data text-muted">{when}</span>
+      <span className={e.watchlist ? "text-data font-medium text-foreground" : "text-data text-2"}>
+        {e.ticker ?? e.event}
+      </span>
       <SessionTag session={e.session} />
-      {e.watchlist && <span className="font-mono text-micro text-accent">watchlist</span>}
+      {e.watchlist && <span className="eyebrow">watchlist</span>}
     </li>
   );
 }
@@ -45,7 +49,7 @@ function EarningsRow({ e, when }: { e: DayAheadEarning; when: string }) {
 function FutureChip({ symbol, change_pct }: { symbol: string; change_pct: number }) {
   const tone = change_pct > 0.02 ? "text-pos" : change_pct < -0.02 ? "text-neg" : "text-muted";
   return (
-    <span className="whitespace-nowrap font-mono text-micro">
+    <span className="whitespace-nowrap text-data">
       <span className="text-muted">{symbol.replace("=F", "").replace("^", "")}</span>{" "}
       <span className={tone}>
         {change_pct >= 0 ? "+" : ""}
@@ -64,9 +68,9 @@ function eventLine(e: MorningEvent, today: string): string {
 function Role({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <p className="mb-1 flex gap-2 text-body leading-relaxed">
-      <span className="w-[68px] shrink-0 font-mono text-micro uppercase tracking-wide text-muted-2">
-        {label}
-      </span>
+      {/* Wide enough for "Positioning" once the micro role uppercases it — a
+       * shrink-0 box narrower than its own text overflows onto the sentence. */}
+      <span className="w-[88px] shrink-0 eyebrow">{label}</span>
       <span className="min-w-0 flex-1 text-foreground">{children}</span>
     </p>
   );
@@ -77,7 +81,7 @@ function ToneLine({ data }: { data: Report }) {
   const us = data.macro?.us_1d ?? null;
   const glob = data.macro?.global_1d ?? null;
   if (us === null && glob === null) {
-    return <span className="text-muted">{plain(data.tone)}</span>;
+    return <span className="text-2">{plain(data.tone)}</span>;
   }
   const same = us !== null && glob !== null && Math.abs(us - glob) < 0.01;
   const bothNeutral =
@@ -86,15 +90,15 @@ function ToneLine({ data }: { data: Report }) {
   return (
     <span>
       {bothNeutral ? (
-        <span className="text-muted">
+        <span className="text-2">
           News tone is inside the ±{NEUTRAL_BAND.toFixed(2)} neutral band {same ? "" : "on both scopes "}
           — no directional read
-          {us !== null && <span className="ml-1 font-mono text-muted-2">({fmt(us)})</span>}.
+          {us !== null && <span className="ml-1 text-data text-muted">({fmt(us)})</span>}.
         </span>
       ) : same ? (
         <span>
           US and global news tone both read{" "}
-          <span className={`font-mono ${toneClass(us!)}`}>
+          <span className={`text-data ${toneClass(us!)}`}>
             {toneLabel(us!)} {fmt(us!)}
           </span>
           .
@@ -103,13 +107,13 @@ function ToneLine({ data }: { data: Report }) {
         <span>
           US{" "}
           {us !== null && (
-            <span className={`font-mono ${toneClass(us)}`}>
+            <span className={`text-data ${toneClass(us)}`}>
               {toneLabel(us)} {fmt(us)}
             </span>
           )}{" "}
           · global{" "}
           {glob !== null && (
-            <span className={`font-mono ${toneClass(glob)}`}>
+            <span className={`text-data ${toneClass(glob)}`}>
               {toneLabel(glob)} {fmt(glob)}
             </span>
           )}
@@ -128,30 +132,23 @@ export function MorningReport() {
 
   if (isLoading) {
     return (
-      <section
-        className="mb-5 rounded-md border border-line bg-elevated p-4"
-        aria-label="Loading Morning Brief"
-      >
-        <div className="mb-3 h-4 w-32 animate-pulse rounded bg-raised" />
-        <div className="mb-2 h-3 w-full animate-pulse rounded bg-raised" />
-        <div className="h-3 w-2/3 animate-pulse rounded bg-raised" />
+      <section className="rounded-md border border-line bg-elevated p-4">
+        <Loading variant="lines" count={3} label="Loading Morning Brief" />
       </section>
     );
   }
 
   if (error) {
     return (
-      <section className="mb-5 rounded-md border border-line bg-elevated p-4">
-        <p className="text-dense text-muted">
-          Couldn&rsquo;t load the morning brief. It refreshes every 5 minutes — try reloading.
-        </p>
-      </section>
+      <Failed
+        title="Couldn’t load the morning brief"
+        message="It refreshes every 5 minutes — try reloading."
+      />
     );
   }
 
   if (!data) return null;
 
-  const stamp = asOf(data.generated_at);
   const news = groupNewsByTicker(data.day_ahead?.watchlist_news ?? []).slice(0, 5);
   const near = nearTermEvents(data.macro_events, data.date);
   const laterCount = data.macro_events.length - near.length;
@@ -161,15 +158,15 @@ export function MorningReport() {
 
   return (
     <Collapsible
-      className="mb-5 rounded-md border border-line bg-elevated p-4"
+      className="rounded-md border border-line bg-elevated p-4"
       persistKey="morning-report"
       defaultOpen
       trigger={
-        <div className="flex flex-1 items-baseline justify-between">
-          <h2 className="tick text-body font-semibold text-foreground">Morning Brief</h2>
-          <span className="font-mono text-micro text-muted">
+        <div className="flex flex-1 items-baseline justify-between gap-3">
+          <h2 className="tick text-title text-foreground">Morning Brief</h2>
+          <span className="flex items-baseline gap-2 text-data text-muted">
             {data.weekday} {data.date}
-            {stamp && <span className="ml-2 text-muted-2">built {stamp}</span>}
+            <Stale asOf={data.generated_at} variant="line" />
           </span>
         </div>
       }
@@ -181,7 +178,7 @@ export function MorningReport() {
         {data.day_ahead?.gex_line && (
           <Role label="Positioning">
             {/* the most actionable line in the brief — no longer the faintest (MB-04) */}
-            <span className="font-mono text-foreground">{data.day_ahead.gex_line}</span>
+            <span className="text-data text-foreground">{data.day_ahead.gex_line}</span>
           </Role>
         )}
         <Role label="Tone">
@@ -203,14 +200,12 @@ export function MorningReport() {
             <Link
               key={n.ticker}
               href={`/t/${n.ticker}`}
-              className="flex items-baseline gap-2 text-dense text-foreground/90 hover:text-accent"
+              className="flex items-baseline gap-2 text-body text-2 hover:text-accent"
             >
-              <span className="w-12 shrink-0 font-mono text-micro text-accent">${n.ticker}</span>
-              <span className="min-w-0 flex-1 truncate" title={n.headline}>
-                {n.headline}
-              </span>
+              <span className="w-12 shrink-0 text-data text-accent">${n.ticker}</span>
+              <span className="min-w-0 flex-1">{n.headline}</span>
               {n.extra > 0 && (
-                <span className="shrink-0 font-mono text-micro text-muted-2">+{n.extra} more</span>
+                <span className="shrink-0 text-data text-muted">+{n.extra} more</span>
               )}
             </Link>
           ))}
@@ -219,11 +214,9 @@ export function MorningReport() {
 
       <div className="grid gap-x-6 gap-y-3 sm:grid-cols-2">
         <div>
-          <div className="mb-0.5 text-micro uppercase tracking-wide text-muted">
-            Macro — today &amp; tomorrow
-          </div>
+          <div className="mb-0.5 eyebrow">Macro — today &amp; tomorrow</div>
           {near.length > 0 ? (
-            <ul className="space-y-0.5 font-mono text-micro text-foreground/80">
+            <ul className="space-y-0.5 text-body text-2">
               {near.map((e, i) => (
                 <li key={i}>
                   <span className={e.importance === "high" ? "text-warn" : "text-muted"}>•</span>{" "}
@@ -232,17 +225,17 @@ export function MorningReport() {
               ))}
             </ul>
           ) : (
-            <p className="font-mono text-micro text-muted-2">nothing scheduled</p>
+            <p className="text-body text-muted">nothing scheduled</p>
           )}
-          <Link href="/calendar" className="mt-0.5 inline-block font-mono text-micro text-muted hover:text-accent">
+          <Link href="/calendar" className="mt-0.5 inline-block text-body text-muted hover:text-accent">
             {laterCount > 0 ? `+${laterCount} later this week · calendar ›` : "calendar ›"}
           </Link>
         </div>
 
         <div>
-          <div className="mb-0.5 text-micro uppercase tracking-wide text-muted">Earnings</div>
+          <div className="mb-0.5 eyebrow">Earnings</div>
           {hasDayAheadEarnings ? (
-            <ul className="space-y-0.5 font-mono text-micro">
+            <ul className="space-y-0.5">
               {earningsToday.slice(0, 3).map((e, i) => (
                 <EarningsRow key={`t${i}`} e={e} when="today" />
               ))}
@@ -251,23 +244,23 @@ export function MorningReport() {
               ))}
             </ul>
           ) : data.earnings.length > 0 ? (
-            <ul className="space-y-0.5 font-mono text-micro text-foreground/80">
+            <ul className="space-y-0.5 text-data text-2">
               {data.earnings.slice(0, 4).map((e, i) => (
                 <li key={i} className="flex items-baseline gap-1.5">
-                  <span className="w-12 shrink-0 text-muted-2">{e.date.slice(5)}</span>
+                  <span className="w-12 shrink-0 text-muted">{e.date.slice(5)}</span>
                   <span>{e.ticker ?? e.event}</span>
                 </li>
               ))}
             </ul>
           ) : (
-            <p className="font-mono text-micro text-muted-2">none in the next 7 days</p>
+            <p className="text-body text-muted">none in the next 7 days</p>
           )}
         </div>
       </div>
 
       <Link
         href="/brief"
-        className="mt-3 inline-block font-mono text-micro text-muted hover:text-accent"
+        className="mt-3 inline-block text-body text-muted hover:text-accent"
       >
         Full brief ›
       </Link>

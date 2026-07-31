@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useRef, useState, useCallback } from "react";
 import type { IChartApi, ISeriesApi, IPriceLine, UTCTimestamp } from "lightweight-charts";
-import EmptyState from "@/components/ui/EmptyState";
+import Empty from "@/components/ui/Empty";
 import Toggle from "@/components/ui/Toggle";
 import { visibleRangeFor, type ChartPeriod as Period } from "@/lib/chart-range";
 
@@ -436,7 +436,7 @@ export default function CandleChart({
   }, [levels, syncPriceLines]);
 
   if (initialBars.length === 0) {
-    return <EmptyState message="no chart data" />;
+    return <Empty message="No price history for this ticker." />;
   }
 
   return (
@@ -499,7 +499,7 @@ export default function CandleChart({
 
       {/* OHLC legend */}
       {ohlc && (
-        <div className="mb-1 flex flex-wrap gap-3 px-0.5 font-mono text-micro tabular-nums text-muted">
+        <div className="mb-1 flex flex-wrap gap-3 px-0.5 text-data text-muted">
           <span>{ohlc.date}</span>
           <span>O <span className="text-foreground">{ohlc.open.toFixed(2)}</span></span>
           <span>H <span className="text-foreground">{ohlc.high.toFixed(2)}</span></span>

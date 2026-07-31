@@ -50,10 +50,11 @@ describe("Header badge row (TK-04)", () => {
     expect(screen.queryByText("Avoid")).not.toBeInTheDocument();
   });
 
-  it("renders the tier as display copy, keeping the raw enum in the title (TH-02)", () => {
+  it("renders the tier as display copy, keeping the raw enum on data-value (TH-02)", () => {
     render(<Header ticker="NVDA" bridgeRow={bridgeRow({ action_label: "STANDARD_LONG" })} signalHistory={[]} lastClose={null} />);
     const badge = screen.getByText("Standard long");
-    expect(badge).toHaveAttribute("title", "STANDARD_LONG");
+    expect(badge).toHaveAttribute("data-value", "STANDARD_LONG");
+    expect(badge).not.toHaveAttribute("title");
     expect(screen.queryByText("STANDARD_LONG")).not.toBeInTheDocument();
   });
 });

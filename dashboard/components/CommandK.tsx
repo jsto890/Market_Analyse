@@ -267,9 +267,9 @@ export default function CommandK() {
                 <span className="font-mono font-medium">
                   {item.source === "action" ? item.label : item.ticker}
                 </span>
-                <span className="flex items-center gap-1.5 text-micro">
+                <span className="flex items-center gap-1.5">
                   {item.source === "bridge" && item.group && (
-                    <span className="text-muted uppercase tracking-wide">{GROUP_LABEL[item.group as keyof typeof GROUP_LABEL]}</span>
+                    <span className="eyebrow">{GROUP_LABEL[item.group as keyof typeof GROUP_LABEL]}</span>
                   )}
                   {item.source === "bridge" && item.tier && (
                     <Badge variant="tier" value={item.tier} />

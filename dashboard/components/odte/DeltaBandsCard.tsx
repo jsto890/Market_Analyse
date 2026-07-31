@@ -2,17 +2,18 @@
 
 import Panel from "@/components/ui/Panel";
 import InfoTip from "@/components/ui/InfoTip";
+import Empty from "@/components/ui/Empty";
 import { deltaBands, type DeltaBandRow } from "@/lib/optionsAnalytics";
 import type { StrikeLevel } from "@/lib/optionsLive";
 
 function Cell({ strike, delta }: { strike: number | null; delta: number | null }) {
   return (
-    <td className="px-2 py-1 text-right tabular-nums">
+    <td className="px-2 py-1 text-right">
       {strike != null ? (
         <>
           <span className="text-foreground">{strike.toFixed(0)}</span>
           {delta != null && (
-            <span className="ml-1 text-micro text-muted-2">{Math.abs(delta).toFixed(2)}Δ</span>
+            <span className="ml-1 text-muted">{Math.abs(delta).toFixed(2)}Δ</span>
           )}
         </>
       ) : (
@@ -37,16 +38,14 @@ export default function DeltaBandsCard({ levels }: { levels: StrikeLevel[] }) {
       }
     >
       {!hasAny ? (
-        <p className="font-mono text-micro text-muted">
-          no greeks in this snapshot — turn the live ladder on
-        </p>
+        <Empty message="No greeks in this snapshot — turn the live ladder on." />
       ) : (
-        <table className="w-full font-mono text-micro">
+        <table className="w-full text-data">
           <thead>
             <tr className="text-micro uppercase tracking-[0.06em] text-muted">
               <th className="px-2 py-1 text-left font-normal">band</th>
-              <th className="px-2 py-1 text-right font-normal text-pos">call</th>
-              <th className="px-2 py-1 text-right font-normal text-neg">put</th>
+              <th className="px-2 py-1 text-right font-normal text-call">call</th>
+              <th className="px-2 py-1 text-right font-normal text-put">put</th>
               <th className="px-2 py-1 text-right font-normal">IV c / p</th>
             </tr>
           </thead>
@@ -56,7 +55,7 @@ export default function DeltaBandsCard({ levels }: { levels: StrikeLevel[] }) {
                 <td className="px-2 py-1 text-foreground">{Math.round(r.target * 100)}Δ</td>
                 <Cell strike={r.callStrike} delta={r.callDelta} />
                 <Cell strike={r.putStrike} delta={r.putDelta} />
-                <td className="px-2 py-1 text-right tabular-nums text-muted">
+                <td className="px-2 py-1 text-right text-muted">
                   {r.callIv != null ? `${(r.callIv * 100).toFixed(0)}%` : "—"} /{" "}
                   {r.putIv != null ? `${(r.putIv * 100).toFixed(0)}%` : "—"}
                 </td>
@@ -65,7 +64,7 @@ export default function DeltaBandsCard({ levels }: { levels: StrikeLevel[] }) {
           </tbody>
         </table>
       )}
-      <p className="mt-2 text-micro leading-relaxed text-muted-2">
+      <p className="mt-2 text-body leading-relaxed text-2">
         50Δ is the coin flip and carries the most gamma; 16Δ is the tail the market prices at about
         one in six. Delta is a hedging ratio, not a promise.
       </p>

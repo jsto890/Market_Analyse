@@ -9,6 +9,7 @@ import { forexSessions } from "@/lib/forex-session";
 import { useMacro } from "@/lib/macro";
 import { useCalendar } from "@/lib/calendar";
 import InfoTip from "@/components/ui/InfoTip";
+import Failed from "@/components/ui/Failed";
 import { QuoteRow } from "./QuoteRow";
 import { MacroGauges } from "./MacroGauges";
 import { EconCalendar } from "./EconCalendar";
@@ -60,9 +61,7 @@ function Block({ label, badge, children, separator }: BlockProps) {
     <div className={separator ? "border-t border-line-strong pt-0.5" : undefined}>
       {/* Block header §4.3 / §8.2 */}
       <div className="h-[24px] flex items-center justify-between px-3">
-        <span className="text-micro font-medium uppercase tracking-[0.08em] text-muted font-mono leading-none">
-          {label}
-        </span>
+        <span className="eyebrow leading-none">{label}</span>
         {badge}
       </div>
       {children}
@@ -101,7 +100,7 @@ function MiniItem({ symbol, changePct }: MiniItemProps) {
 
   return (
     <div className="w-full flex flex-col items-center py-1.5 gap-0.5 hover:bg-elevated cursor-default">
-      <span className="text-micro font-mono text-muted leading-none uppercase">{label}</span>
+      <span className="eyebrow leading-none">{label}</span>
       <span className={`text-micro font-mono font-medium tabular-nums leading-none ${pctCls}`}>
         {pctStr}
       </span>
@@ -127,13 +126,8 @@ function HiddenBlockGlyphs() {
   const macroLabel = globalGauge
     ? `Macro: ${globalGauge.score >= 0 ? "+" : ""}${globalGauge.score.toFixed(2)}`
     : "Macro: —";
-  const macroClass = !globalGauge
-    ? "bg-muted"
-    : globalGauge.score > 0.05
-    ? "bg-pos"
-    : globalGauge.score < -0.05
-    ? "bg-neg"
-    : "bg-muted";
+  // Macro sentiment is model output, so it takes --model, never P&L green/red.
+  const macroClass = globalGauge && Math.abs(globalGauge.score) > 0.05 ? "bg-model" : "bg-muted";
 
   const { data: calData } = useCalendar(1);
   const nextEvent = calData?.events?.[0];
@@ -267,9 +261,11 @@ export function LeftRail() {
     >
       <div className="pt-1 flex-1 min-h-0 overflow-y-auto">
         {error && (
-          <div className="mx-3 mt-1 mb-0.5 px-2 py-1.5 rounded border border-warn/30 bg-warn/10 text-warn text-micro font-mono leading-snug">
-            QUOTE FEED OFFLINE
-          </div>
+          <Failed
+            title="Quote feed offline"
+            message="Futures, index and FX quotes are unavailable."
+            className="mx-3 mt-1 mb-0.5"
+          />
         )}
 
         {/* FUTURES block — no badge */}

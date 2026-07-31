@@ -12,6 +12,11 @@ import path from "node:path";
  * wrapped so a stale selector logs a warning instead of aborting the run.
  */
 
+// A capture is three navigations, each paying settle()'s 2.5s beat on top of a
+// cold dev-server compile. The config's 30s default is an assertion budget, not
+// a capture budget — under it the *last* shot of a test is the one that dies.
+test.describe.configure({ timeout: 120_000 });
+
 const OUT = path.join(process.cwd(), "screens");
 fs.mkdirSync(OUT, { recursive: true });
 
@@ -355,4 +360,106 @@ test("audit: console errors, computed layout, contrast inputs", async ({ page })
   fs.writeFileSync(path.join(OUT, "_audit.json"), JSON.stringify(report, null, 2));
   console.log(`\n  ✓ screens/_audit.json`);
   expect(Object.keys(report).length).toBe(ROUTES.length);
+});
+
+// ── 4. Phase 1 substrate contract ────────────────────────────────────────────
+//
+// Unlike the captures above, these are assertions: the substrate is the thing
+// every later phase builds on, so a regression here has to fail the run rather
+// than show up as a pixel a human might not look at.
+
+/** Six type roles + ReadThis's 12px, plus headroom for SVG chart ticks. */
+const MAX_FONT_SIZES = 8;
+/** prose 880 / wide 1240 / full fluid. */
+const MAX_CONTENT_WIDTHS = 3;
+
+test("contract: Phase 1 substrate holds on every route", async ({ page }) => {
+  test.setTimeout(180_000);
+  await page.setViewportSize(LAPTOP);
+
+  const fontSizes = new Set<string>();
+  const contentWidths = new Set<number>();
+  const violations: string[] = [];
+
+  for (const route of ROUTES) {
+    await page.goto(route.path);
+    await settle(page, 1500);
+
+    const m = await page.evaluate(() => {
+      const main = document.querySelector("#main");
+      const page_ = main?.querySelector("main") ?? (main?.firstElementChild as HTMLElement | null);
+
+      const sizes = new Set<string>();
+      document.querySelectorAll<HTMLElement>("#main *").forEach((el) => {
+        // Only elements that own rendered text — a wrapper inherits its size.
+        const own = Array.from(el.childNodes).some(
+          (n) => n.nodeType === Node.TEXT_NODE && n.textContent?.trim(),
+        );
+        if (own) sizes.add(getComputedStyle(el).fontSize);
+      });
+
+      // A trigger nobody can see or point at. sr-only text is fine as an
+      // accessible *name*; it is not fine as the whole affordance.
+      //
+      // Zero client rects means the element is not laid out at all — a collapsed
+      // disclosure or a `hidden` panel. That is a legitimate state, not a
+      // vanished affordance, so only *rendered* zero-area triggers count.
+      const invisibleTriggers = Array.from(
+        document.querySelectorAll<HTMLElement>("#main button, #main a, #main [role='button']"),
+      ).filter((el) => {
+        if (el.getClientRects().length === 0) return false;
+        const r = el.getBoundingClientRect();
+        return r.width < 2 || r.height < 2;
+      }).length;
+
+      // A full viewport nested inside RailShell's own viewport-height scroller.
+      const viewportTall = Array.from(document.querySelectorAll<HTMLElement>("#main *")).filter(
+        (el) => {
+          const mh = getComputedStyle(el).minHeight;
+          return mh.endsWith("px") && parseFloat(mh) >= window.innerHeight * 0.9;
+        },
+      ).length;
+
+      return {
+        contentWidth: page_ ? Math.round(page_.getBoundingClientRect().width) : null,
+        pageWidthAttr: page_?.getAttribute("data-page-width") ?? null,
+        fontSizes: Array.from(sizes),
+        titleAttrs: document.querySelectorAll("#main [title]").length,
+        invisibleTriggers,
+        viewportTall,
+      };
+    });
+
+    m.fontSizes.forEach((s) => fontSizes.add(s));
+    if (m.contentWidth !== null) contentWidths.add(m.contentWidth);
+
+    if (!m.pageWidthAttr) violations.push(`${route.path}: not rendered inside <Page>`);
+    if (m.titleAttrs) violations.push(`${route.path}: ${m.titleAttrs} title= attribute(s)`);
+    if (m.invisibleTriggers)
+      violations.push(`${route.path}: ${m.invisibleTriggers} zero-area trigger(s)`);
+    if (m.viewportTall)
+      violations.push(`${route.path}: ${m.viewportTall} element(s) min-height ≥ viewport`);
+  }
+
+  fs.writeFileSync(
+    path.join(OUT, "_contract.json"),
+    JSON.stringify(
+      {
+        fontSizes: Array.from(fontSizes).sort((a, b) => parseFloat(a) - parseFloat(b)),
+        contentWidths: Array.from(contentWidths).sort((a, b) => a - b),
+        violations,
+      },
+      null,
+      2,
+    ),
+  );
+
+  expect(violations, violations.join("\n")).toEqual([]);
+  expect(fontSizes.size, `font sizes: ${Array.from(fontSizes).join(", ")}`).toBeLessThanOrEqual(
+    MAX_FONT_SIZES,
+  );
+  expect(
+    contentWidths.size,
+    `content widths: ${Array.from(contentWidths).join(", ")}`,
+  ).toBeLessThanOrEqual(MAX_CONTENT_WIDTHS);
 });

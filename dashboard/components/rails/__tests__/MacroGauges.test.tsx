@@ -10,12 +10,14 @@ vi.mock("@/lib/macro", async (importOriginal) => {
 });
 
 describe("MacroGauges (LR-07, LR-06)", () => {
-  it("renders a positive gauge with the green bg-pos fill, not bg-accent", () => {
+  it("fills the gauge bar with bg-model — a sentiment score is model output, not P&L", () => {
     vi.mocked(macroLib.useMacro).mockReturnValue({
       data: { gauges: [{ scope: "global", window: "1d", score: 0.3, n: 12, ts: "2026-07-28T00:00:00Z" }] },
     } as ReturnType<typeof macroLib.useMacro>);
     render(<MacroGauges window="1d" />);
-    expect(document.querySelector(".bg-pos")).not.toBeNull();
+    expect(document.querySelector(".bg-model")).not.toBeNull();
+    expect(document.querySelector(".bg-pos")).toBeNull();
+    expect(document.querySelector(".bg-neg")).toBeNull();
     expect(document.querySelector(".bg-accent")).toBeNull();
   });
 
@@ -25,12 +27,12 @@ describe("MacroGauges (LR-07, LR-06)", () => {
     expect(document.querySelector(".border-line-strong")).not.toBeNull();
   });
 
-  it("renders the building… empty state with a token color, not opacity-60", () => {
+  it("shows the shared Loading idiom while no gauge has been built yet", () => {
     vi.mocked(macroLib.useMacro).mockReturnValue({ data: { gauges: [] } } as any);
     render(<MacroGauges window="1d" />);
-    const empty = screen.getByText("building…");
-    expect(empty.className).toContain("text-muted-2");
-    expect(empty.className).not.toContain("opacity-60");
+    const status = screen.getByRole("status");
+    expect(status).toHaveAttribute("aria-label", "Building macro gauges");
+    expect(status.className).not.toContain("opacity-60");
   });
 });
 

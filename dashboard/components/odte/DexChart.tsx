@@ -13,6 +13,7 @@ import {
 } from "recharts";
 import Panel from "@/components/ui/Panel";
 import InfoTip from "@/components/ui/InfoTip";
+import Empty from "@/components/ui/Empty";
 import { dexProfile, type DexPoint } from "@/lib/optionsAnalytics";
 import type { StrikeLevel } from "@/lib/optionsLive";
 
@@ -31,7 +32,7 @@ function DexTooltip({ active, payload }: { active?: boolean; payload?: { payload
   if (!active || !payload || payload.length === 0) return null;
   const p = payload[0].payload;
   return (
-    <div className="rounded border border-line bg-elevated px-3 py-2 font-mono text-micro shadow-lg">
+    <div className="rounded border border-line bg-elevated px-3 py-2 text-data shadow-lg">
       <p className="text-foreground">strike {p.strike.toFixed(0)}</p>
       <p className={p.dex >= 0 ? "text-pos" : "text-neg"}>at strike {fmtAxis(p.dex)}</p>
       <p className="text-muted">cumulative {fmtAxis(p.cumulative)}</p>
@@ -59,9 +60,7 @@ export default function DexChart({
       actions={<InfoTip label="What the DEX profile shows" content={DEX_TIP} />}
     >
       {points.length === 0 ? (
-        <p className="font-mono text-micro text-muted">
-          no greeks in this snapshot — turn the live ladder on
-        </p>
+        <Empty message="No greeks in this snapshot — turn the live ladder on." />
       ) : (
         <>
           <ResponsiveContainer width="100%" height={220}>
@@ -86,12 +85,10 @@ export default function DexChart({
               />
             </ComposedChart>
           </ResponsiveContainer>
-          <p className="mt-2 font-mono text-micro text-muted">
+          <p className="mt-2 text-data text-muted">
             net dealer delta{" "}
             <span className={total >= 0 ? "text-pos" : "text-neg"}>{fmtAxis(total)}</span>
-            <span className="ml-2 text-muted-2">
-              teal = dealers flat · amber = spot
-            </span>
+            <span className="ml-2 text-muted">teal = dealers flat · amber = spot</span>
           </p>
         </>
       )}

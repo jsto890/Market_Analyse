@@ -13,8 +13,8 @@ const fetcher = (url: string) =>
 
 function sideColor(side: string): string {
   const s = side.toUpperCase();
-  if (s.startsWith("C")) return "text-pos";
-  if (s.startsWith("P")) return "text-neg";
+  if (s.startsWith("C")) return "text-call";
+  if (s.startsWith("P")) return "text-put";
   return "text-foreground";
 }
 
@@ -36,9 +36,9 @@ export default function UnusualCard({ symbol }: { symbol: OdteSymbol }) {
       empty={empty}
     >
       {data && (
-        <div className="font-mono text-micro space-y-1">
+        <div className="text-data space-y-1">
           {data.rows.slice(0, 5).map((row, i) => (
-            <div key={`${row.contract}-${i}`} className="flex justify-between gap-2 tabular-nums">
+            <div key={`${row.contract}-${i}`} className="flex justify-between gap-2">
               <span className="truncate text-foreground">{row.contract}</span>
               <span className="flex gap-2 flex-shrink-0">
                 <span className={sideColor(row.side)}>{row.side}</span>

@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback, useMemo, KeyboardEvent, Fragment, type ReactNode } from "react";
 import { ChevronUp, ChevronDown, ChevronRight } from "lucide-react";
-import EmptyState from "@/components/ui/EmptyState";
+import Empty from "@/components/ui/Empty";
 
 export interface Column<T> {
   key: string;
@@ -222,7 +222,7 @@ export default function DataTable<T>({
                   scope="col"
                   style={{ width: col.width }}
                   className={[
-                    "sticky top-0 z-20 bg-surface px-3 py-2 font-medium text-muted border-b border-line whitespace-nowrap",
+                    "sticky top-0 z-20 bg-surface px-[16px] py-[8px] eyebrow border-b border-line whitespace-nowrap",
                     alignClass(col.align),
                     ci === 0
                       ? "sticky left-0 z-30 border-r border-line"
@@ -257,7 +257,7 @@ export default function DataTable<T>({
                   colSpan={columns.length + (expandedRender ? 1 : 0)}
                   className="border-b border-line bg-surface"
                 >
-                  <EmptyState message={emptyMessage} action={emptyAction} />
+                  <Empty message={emptyMessage} action={emptyAction} />
                 </td>
               </tr>
             )}
@@ -296,9 +296,9 @@ export default function DataTable<T>({
                       <td
                         key={col.key}
                         className={[
-                          "px-3 py-2 border-b border-line",
+                          "px-[16px] py-[8px] border-b border-line",
                           alignClass(col.align),
-                          col.align === "right" ? "tabular-nums" : "",
+                          col.align === "right" ? "text-data" : "",
                           ci === 0
                             ? `sticky left-0 ${stickyBg} border-r border-line`
                             : "",

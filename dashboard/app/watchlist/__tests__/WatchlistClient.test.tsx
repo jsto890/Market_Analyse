@@ -192,7 +192,7 @@ describe("WatchlistClient legacy migration (WL-07)", () => {
 });
 
 describe("WatchlistClient loading vocabulary (WL-08)", () => {
-  it("renders SkeletonTable, not plain Loading text, while recent picks are in flight", async () => {
+  it("renders a Loading rows skeleton, not plain Loading text, while recent picks are in flight", async () => {
     // mockFetchJson's object form JSON.stringifies each value, so a function
     // value here would not actually hang — stub fetch directly, delegating
     // every other URL to the classic mock, so only recent-picks stays pending.

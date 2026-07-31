@@ -43,14 +43,14 @@ describe("EconCalendar (LR-09, A11Y-03, MAC-01, MAC-04)", () => {
     expect(high.className).not.toEqual(medium.className);
   });
 
-  it("renders time_et at the 11px floor with a token color, not a 9/10px opacity fade", () => {
+  it("renders time_et on the numeric role with a token color, not a 9/10px opacity fade", () => {
     vi.mocked(calendarLib.useCalendar).mockReturnValue({
       data: { today: "2026-07-29", days: 7, events: [mkEvent(1, "low")] },
     } as ReturnType<typeof calendarLib.useCalendar>);
     render(<EconCalendar days={7} max={6} />);
     const time = screen.getByText("08:30");
-    expect(time.className).toContain("text-micro");
-    expect(time.className).toContain("text-muted-2");
+    expect(time.className).toContain("text-data");
+    expect(time.className).toContain("text-muted");
     expect(time.className).not.toContain("opacity-60");
           });
 });

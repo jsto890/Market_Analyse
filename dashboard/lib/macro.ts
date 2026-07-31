@@ -87,10 +87,10 @@ export function scopeLabel(scope: string): string {
   return scope.startsWith("sector:") ? scope.slice(7) : scope.toUpperCase();
 }
 
-/** −1..1 → tone class. Green above the neutral band, red below, muted inside. */
+/** −1..1 → tone class. FinBERT news tone is model output, so it reads on
+ * --model, not P&L green/red; `toneLabel` carries the direction as a word. */
 export function toneClass(score: number): string {
-  if (score > NEUTRAL_BAND) return "text-pos";
-  if (score < -NEUTRAL_BAND) return "text-neg";
+  if (Math.abs(score) > NEUTRAL_BAND) return "text-model";
   return "text-muted";
 }
 
