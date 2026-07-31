@@ -1068,7 +1068,7 @@ export default function OptionsLadderPage() {
             <p className="sm:col-span-2">
               Start <b className="text-foreground">ATM</b> for delta, then let the walls frame the
               trade. Strikes beyond the expected move are low-probability lottery tickets.{" "}
-              <Link href="/options/learn" className="text-teal hover:underline">
+              <Link href="/learn/options" className="text-teal hover:underline">
                 Full reference →
               </Link>
             </p>

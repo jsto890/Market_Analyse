@@ -51,7 +51,7 @@ export default function GlossaryPage() {
   return (
     <Page width="prose">
       <Page.Header
-        breadcrumb={[{ href: "/", label: "Today" }]}
+        breadcrumb={[{ href: "/learn", label: "Learn" }]}
         title="Glossary"
         subtitle="Every abbreviation, badge, and status value used across the dashboard, in one place — the same text shown in each info-tip, reachable without a hover."
       />

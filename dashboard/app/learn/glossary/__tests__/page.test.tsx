@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { render, screen, within } from "@/test/render";
-import GlossaryPage from "@/app/glossary/page";
+import GlossaryPage from "@/app/learn/glossary/page";
 
 describe("GlossaryPage", () => {
   it("renders a HEADER_GLOSS term with an anchor id matching glossarySlug()", () => {
@@ -19,8 +19,8 @@ describe("GlossaryPage", () => {
     expect(within(lettersSection).getByText("L")).toBeInTheDocument();
   });
 
-  it("links back to Today", () => {
+  it("links back to the Learn index", () => {
     render(<GlossaryPage />);
-    expect(screen.getByRole("link", { name: "Today" })).toHaveAttribute("href", "/");
+    expect(screen.getByRole("link", { name: "Learn" })).toHaveAttribute("href", "/learn");
   });
 });

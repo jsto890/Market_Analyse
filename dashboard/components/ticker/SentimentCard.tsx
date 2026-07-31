@@ -65,7 +65,7 @@ export default function SentimentCard({ bridgeRow, lastSeen }: SentimentCardProp
             {chips.map((acct) => (
               <Link
                 key={acct}
-                href={`/sources?ticker=${bridgeRow.ticker.toUpperCase()}`}
+                href={`/learn/data?ticker=${bridgeRow.ticker.toUpperCase()}`}
                 className="inline-flex items-center rounded border-l-2 border-l-accent border border-line bg-surface pl-1.5 pr-2 py-0.5 text-data text-muted hover:text-accent hover:border-accent/40 transition-colors"
               >
                 {acct}

@@ -248,7 +248,7 @@ describe("OptionsLadderPage — classic ladder", () => {
     await user.click(screen.getByRole("button", { name: /how to read this ladder/i }));
     expect(screen.getByRole("link", { name: /full reference/i })).toHaveAttribute(
       "href",
-      "/options/learn"
+      "/learn/options"
     );
   });
 });

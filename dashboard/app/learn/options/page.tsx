@@ -18,6 +18,12 @@ function Term({ term, children }: { term: string; children: React.ReactNode }) {
 export default function OptionsLearnPage() {
   return (
     <Page width="prose">
+      {/* The page used to sit inside the options chrome, which supplied the
+          heading; standing on its own under /learn it has to say what it is. */}
+      <Page.Header
+        breadcrumb={[{ href: "/learn", label: "Learn" }]}
+        title="Reading the options pages"
+      />
       <p className="leading-relaxed text-2">
         Reference for every number on the{" "}
         <Link href="/options/ladder" className="text-teal hover:underline">

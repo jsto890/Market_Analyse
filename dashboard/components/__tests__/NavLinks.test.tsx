@@ -18,15 +18,16 @@ describe("NavLinks", () => {
     expect(screen.getByRole("link", { name: "Today" })).not.toHaveAttribute("aria-current");
   });
 
-  it("splits the nine links into daily loop / context / your book, in that order", () => {
+  it("splits the links into daily loop / context / your book / learn, in that order", () => {
     const { container } = render(<NavLinks />);
     const order = Array.from(container.querySelectorAll("a")).map((a) => a.textContent);
     expect(order).toEqual([
       "Today", "Watchlist", "Screener",
       "Options", "Rotation", "Macro", "Calendar",
       "Portfolio", "Alerts",
+      "Learn",
     ]);
-    // Two rules for three groups — separators between, never on the outside.
-    expect(container.querySelectorAll("span[aria-hidden].w-px")).toHaveLength(2);
+    // Three rules for four groups — separators between, never on the outside.
+    expect(container.querySelectorAll("span[aria-hidden].w-px")).toHaveLength(3);
   });
 });

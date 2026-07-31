@@ -285,7 +285,16 @@ Keep the controls and states as they are — abort, cancel, cached/fresh, re-run
 ### 4.8 Learn
 **New:** `/learn/glossary` (move `/glossary`), `/learn/options`, `/learn/data` (absorb `/sources`)
 
-All three are currently orphans reachable only by URL.
+~~All three are currently orphans reachable only by URL.~~ Two of them were.
+`/options/learn` was linked from the options tab bar (`OPTIONS_TABS` in
+`lib/optionsUi.tsx`) and from the ladder's "Full reference →". Moving it under
+`/learn` and re-pointing both links keeps one copy; leaving a second copy at
+`/learn/options` would have been the duplication this overhaul exists to remove.
+
+Shipped: the three `git mv`s, a `/learn` index (the nav needs a destination, and
+the three pages are siblings, not one page with two annexes), a fourth nav group,
+`308` redirects from all three old URLs, and a feed-by-feed table on `/learn/data`
+read off the serving code path — not off the pipeline's description of itself.
 
 ---
 

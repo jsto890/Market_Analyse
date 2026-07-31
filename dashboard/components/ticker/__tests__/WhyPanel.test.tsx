@@ -90,6 +90,6 @@ describe("WhyPanel (TK-05/06/07)", () => {
     const trigger = (await screen.findByText("ma_trend")).closest("button");
     await user.hover(trigger as HTMLElement);
     const links = await screen.findAllByText("Glossary ↗");
-    expect(links[0]).toHaveAttribute("href", "/glossary#ma-trend");
+    expect(links[0]).toHaveAttribute("href", "/learn/glossary#ma-trend");
   });
 });

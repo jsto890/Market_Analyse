@@ -14,7 +14,7 @@ export const OPTIONS_TABS = [
   { href: "/options/gamma", label: "Gamma", blurb: "Dealer positioning across strikes" },
   { href: "/options/flow", label: "Flow", blurb: "Where today's volume is going" },
   { href: "/options/greeks", label: "Greeks", blurb: "Aggregate dealer exposure, strike by strike" },
-  { href: "/options/learn", label: "Learn", blurb: "How to read all of the above" },
+  { href: "/learn/options", label: "Learn", blurb: "How to read all of the above" },
 ] as const;
 
 export interface OptionsUiState {

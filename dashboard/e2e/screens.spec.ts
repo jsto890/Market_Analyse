@@ -97,7 +97,6 @@ const ROUTES: { path: string; name: string }[] = [
   { path: "/options/gamma", name: "options-gamma" },
   { path: "/options/flow", name: "options-flow" },
   { path: "/options/greeks", name: "options-greeks" },
-  { path: "/options/learn", name: "options-learn" },
   { path: "/calendar", name: "calendar" },
   { path: "/watchlist", name: "watchlist" },
   { path: "/screener", name: "screener" },
@@ -106,8 +105,10 @@ const ROUTES: { path: string; name: string }[] = [
   { path: "/rotation", name: "rotation" },
   { path: "/macro", name: "macro" },
   { path: "/brief", name: "brief" },
-  { path: "/glossary", name: "glossary" },
-  { path: "/sources", name: "sources" },
+  { path: "/learn", name: "learn" },
+  { path: "/learn/glossary", name: "learn-glossary" },
+  { path: "/learn/options", name: "learn-options" },
+  { path: "/learn/data", name: "learn-data" },
 ];
 
 // ── 1. Every route, both viewports, viewport-height + unrolled full page ─────

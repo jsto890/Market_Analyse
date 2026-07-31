@@ -5,8 +5,8 @@ test("/macro is reachable", async ({ page }) => {
   expect(res?.status()).toBe(200);
 });
 
-test("/sources is reachable", async ({ page }) => {
-  const res = await page.goto("/sources");
+test("/learn/data is reachable", async ({ page }) => {
+  const res = await page.goto("/learn/data");
   expect(res?.status()).toBe(200);
 });
 

@@ -328,7 +328,7 @@ export default function WhyPanel({ ticker }: { ticker: string }) {
                       <>
                         {gloss} {COMBO_LETTER_LABEL[letter]}.{" "}
                         <Link
-                          href={`/glossary#${glossarySlug(family)}`}
+                          href={`/learn/glossary#${glossarySlug(family)}`}
                           className="underline decoration-dotted text-accent"
                         >
                           Glossary ↗

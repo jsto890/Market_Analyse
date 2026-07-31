@@ -6,8 +6,8 @@ import { usePathname } from "next/navigation";
 /**
  * Nine equal-weight links in one row made you read the whole list to find any
  * of them. They are not equals: three are the daily loop, four are the context
- * you consult while deciding, two are your own book. Same links, same order —
- * a rule between the groups is the entire change.
+ * you consult while deciding, two are your own book, and one explains the rest.
+ * Same links, same order — a rule between the groups is the entire change.
  */
 const GROUPS = [
   [
@@ -25,6 +25,7 @@ const GROUPS = [
     { href: "/portfolio", label: "Portfolio" },
     { href: "/alerts", label: "Alerts" },
   ],
+  [{ href: "/learn", label: "Learn" }],
 ] as const;
 
 export default function NavLinks() {
