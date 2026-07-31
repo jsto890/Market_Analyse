@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import type { MacroPoint } from "@/lib/macro";
+import { NEUTRAL_BAND, type MacroPoint } from "@/lib/macro";
 import { CHART_HEIGHT, resolveChartTokens } from "@/lib/chartConventions";
 
 export interface SpxBar { ts: string; Close: number }
@@ -42,14 +42,34 @@ export function MacroChart({ points, spx }: { points: MacroPoint[]; spx: SpxBar[
       const macro = chart.addLineSeries({
         color: tokens.accent, priceScaleId: "left", lineWidth: 2, title: "macro",
       });
-      macro.setData(clean(points.map((p) => ({ time: toSec(p.ts), value: p.score }))) as never);
+      const macroData = clean(points.map((p) => ({ time: toSec(p.ts), value: p.score })));
+      macro.setData(macroData as never);
+
+      // The ±0.05 neutral band was applied invisibly in toneClass — draw it
+      // so a +0.04 reading is visibly inside the band, not just muted (MAC-06).
+      for (const level of [NEUTRAL_BAND, 0, -NEUTRAL_BAND]) {
+        macro.createPriceLine({
+          price: level,
+          color: level === 0 ? tokens.lineStrong : tokens.line,
+          lineWidth: 1,
+          lineStyle: 2,
+          axisLabelVisible: level !== 0,
+          title: level === 0 ? "" : `${level > 0 ? "+" : ""}${level.toFixed(2)} neutral edge`,
+        });
+      }
 
       if (spx.length) {
         const spy = chart.addLineSeries({
           color: tokens.muted, priceScaleId: "right", lineWidth: 1, title: "SPY",
           priceLineVisible: false, lastValueVisible: false,
         });
-        spy.setData(clean(spx.map((b) => ({ time: toSec(b.ts), value: b.Close }))) as never);
+        // Clip the benchmark to the sentiment span — otherwise a longer bar
+        // history compresses the macro line into the right edge.
+        const from = macroData.length ? macroData[0].time : -Infinity;
+        const to = macroData.length ? macroData[macroData.length - 1].time : Infinity;
+        const bars = clean(spx.map((b) => ({ time: toSec(b.ts), value: b.Close })))
+          .filter((b) => b.time >= from && b.time <= to);
+        spy.setData((bars.length ? bars : []) as never);
       }
 
       chart.timeScale().fitContent();

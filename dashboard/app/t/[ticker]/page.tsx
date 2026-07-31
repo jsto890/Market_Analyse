@@ -19,6 +19,8 @@ import { loadBridgeSignals } from "@/lib/bridge";
 import { signalHistory } from "@/lib/signals";
 import { MEDIAN_PEAK_PCT, MEDIAN_DAYS_TO_PEAK } from "@/lib/perf-constants";
 
+const INDEX_ETFS = ["SPY", "QQQ", "IWM", "DIA"];
+
 type HistoryResult =
   | { status: "ok"; bars: Bar[] }
   | { status: "timeout" }
@@ -105,14 +107,15 @@ export default async function TickerPage({
         <CatalystStrip ticker={ticker} />
       </section>
 
-      <TickerSubNav />
+      <TickerSubNav hasGamma={INDEX_ETFS.includes(ticker.toUpperCase())} />
 
-      {/* Two-column layout */}
+      {/* Two-column layout. No `order` overrides: below 1100px the columns stack
+          in document order, so reading order, tab order and the sub-nav agree (TN-03). */}
       <div className="grid grid-cols-[62fr_38fr] gap-4 max-[1100px]:grid-cols-1">
         {/* Left: chart + options */}
-        <div className="space-y-4 max-[1100px]:order-2">
-          <div className="min-h-[420px] 2xl:min-h-[560px]">
-            <Panel title="Chart">
+        <div className="space-y-4">
+          <div id="chart" className="min-h-[420px] scroll-mt-[calc(var(--nav-h)+34px)] 2xl:min-h-[560px]">
+            <Panel title="Price & signals">
               <TickerChartSection
                 ticker={ticker}
                 bridgeRow={bridgeRow}
@@ -125,33 +128,37 @@ export default async function TickerPage({
               <ChartInfoStrip ticker={ticker} bars={bars} />
             </Panel>
           </div>
-          <OptionsPanel ticker={ticker} />
-          {["SPY", "QQQ", "IWM", "DIA"].includes(ticker.toUpperCase()) && (
-            <GexCard ticker={ticker} />
+          <div id="options" className="scroll-mt-[calc(var(--nav-h)+34px)]">
+            <OptionsPanel ticker={ticker} />
+          </div>
+          {INDEX_ETFS.includes(ticker.toUpperCase()) && (
+            <div id="gamma" className="scroll-mt-[calc(var(--nav-h)+34px)]">
+              <GexCard ticker={ticker} />
+            </div>
           )}
         </div>
 
         {/* Right: Levels → Why → Catalysts → Sentiment → History → AI */}
-        <div className="space-y-4 max-[1100px]:order-1">
-          <div id="levels" className="scroll-mt-[calc(var(--nav-h)+44px)]">
+        <div className="space-y-4">
+          <div id="levels" className="scroll-mt-[calc(var(--nav-h)+34px)]">
             {bridgeRow && <LevelsCard ticker={ticker} bridgeRow={bridgeRow} />}
           </div>
-          <div id="why" className="scroll-mt-[calc(var(--nav-h)+44px)]">
+          <div id="why" className="scroll-mt-[calc(var(--nav-h)+34px)]">
             <WhyPanel ticker={ticker} />
           </div>
-          <div id="catalysts" className="scroll-mt-[calc(var(--nav-h)+44px)]">
+          <div id="catalysts" className="scroll-mt-[calc(var(--nav-h)+34px)]">
             <CatalystsCard ticker={ticker} bridgeRow={bridgeRow} />
           </div>
-          <div id="news" className="scroll-mt-[calc(var(--nav-h)+44px)]">
+          <div id="news" className="scroll-mt-[calc(var(--nav-h)+34px)]">
             <NewsCard ticker={ticker} />
           </div>
-          <div id="sentiment" className="scroll-mt-[calc(var(--nav-h)+44px)]">
+          <div id="sentiment" className="scroll-mt-[calc(var(--nav-h)+34px)]">
             <SentimentCard bridgeRow={bridgeRow} lastSeen={lastSeen} />
           </div>
-          <div id="history" className="scroll-mt-[calc(var(--nav-h)+44px)]">
+          <div id="history" className="scroll-mt-[calc(var(--nav-h)+34px)]">
             <HistoryCard rows={history} lastClose={lastClose} />
           </div>
-          <div id="ai" className="scroll-mt-[calc(var(--nav-h)+44px)]">
+          <div id="ai" className="scroll-mt-[calc(var(--nav-h)+34px)]">
             <AiPanel ticker={ticker} />
           </div>
         </div>

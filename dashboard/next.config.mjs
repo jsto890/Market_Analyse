@@ -6,8 +6,6 @@ const nextConfig = {
   async redirects() {
     return [
       { source: "/action/:ticker", destination: "/t/:ticker", permanent: true },
-      { source: "/options/:ticker", destination: "/t/:ticker", permanent: true },
-      { source: "/options", destination: "/", permanent: true },
       { source: "/agents", destination: "/", permanent: true },
       { source: "/accounts", destination: "/", permanent: true },
     ];

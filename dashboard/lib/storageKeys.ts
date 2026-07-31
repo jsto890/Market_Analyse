@@ -16,6 +16,11 @@ export const STATIC_KEYS = {
   screenerLastResult: "dash:screener:last-result",
   odteLiveMode: "dash:odte:live-mode",
   odteExpiry: "dash:odte:expiry",
+  odteDensity: "dash:odte:density",
+  odteGreekCols: "dash:odte:greek-cols",
+  calendarHorizon: "dash:calendar:horizon",
+  calendarShow: "dash:calendar:show",
+  macroWindow: "dash:macro:window",
 } as const;
 
 /**

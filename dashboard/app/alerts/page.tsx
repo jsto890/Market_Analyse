@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import useSWR from "swr";
 import { Bell, Trash2, Play } from "lucide-react";
 import PageHeader from "@/components/ui/PageHeader";
@@ -64,6 +65,16 @@ function ruleSummary(r: Rule): string {
 }
 
 export default function AlertsPage() {
+  return (
+    <Suspense fallback={null}>
+      <AlertsBody />
+    </Suspense>
+  );
+}
+
+function AlertsBody() {
+  // /alerts?symbol=NVDA — the ticker header's "Alert" action prefills the form.
+  const prefill = useSearchParams().get("symbol")?.toUpperCase() ?? "";
   const { data: rulesData, mutate: mutateRules } = useSWR<{ rules: Rule[] }>(
     "/api/argus/alerts/rules",
     fetcher,
@@ -78,7 +89,7 @@ export default function AlertsPage() {
   const { run } = useUndoAction();
 
   const [kind, setKind] = useState("verdict");
-  const [symbol, setSymbol] = useState("");
+  const [symbol, setSymbol] = useState(prefill);
   const [target, setTarget] = useState("LONG");
   const [days, setDays] = useState("3");
   const [level, setLevel] = useState("");

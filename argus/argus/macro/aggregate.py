@@ -49,6 +49,88 @@ def compute_aggregates(items: list[dict], now: datetime) -> list[dict]:
     return out
 
 
+def contributors(items: list[dict], now: datetime, window: str,
+                 scope: str, limit: int = 20) -> dict:
+    """The articles behind one (scope, window) score, ranked by influence.
+
+    Same decay as compute_aggregates, so `share` sums to 1 across every item in
+    the window and each item's `score` × `weight` reconstructs the gauge."""
+    secs = WINDOWS[window]
+    half_life = secs / 2.0
+    scored: list[dict] = []
+    wsum = 0.0
+    for it in items:
+        ts = it.get("ts")
+        if ts is None or scope not in it.get("scopes", ()):
+            continue
+        age = (now - ts).total_seconds()
+        if age < 0 or age > secs:
+            continue
+        w = math.exp(-age / half_life)
+        wsum += w
+        scored.append({
+            "headline": it.get("headline"),
+            "ticker": it.get("ticker"),
+            "source": it.get("source"),
+            "url": it.get("url"),
+            "ts": ts.isoformat(timespec="seconds"),
+            "score": round(float(it["score"]), 4),
+            "weight": round(w, 4),
+            "_w": w,
+        })
+    for row in scored:
+        row["share"] = round(row.pop("_w") / wsum, 4) if wsum > 0 else 0.0
+    # Rank by how much the item moves the gauge, not by raw sentiment.
+    scored.sort(key=lambda r: abs(r["score"] * r["share"]), reverse=True)
+    tickers: dict[str, int] = {}
+    for row in scored:
+        if row["ticker"]:
+            tickers[row["ticker"]] = tickers.get(row["ticker"], 0) + 1
+    top_tickers = sorted(tickers.items(), key=lambda kv: kv[1], reverse=True)[:12]
+    return {
+        "scope": scope,
+        "window": window,
+        "n": len(scored),
+        "score": round(sum(r["score"] * r["share"] for r in scored), 4) if wsum > 0 else 0.0,
+        "items": scored[:limit],
+        "tickers": [{"ticker": t, "n": c} for t, c in top_tickers],
+    }
+
+
+def tile_stats(rows: list[dict], now: datetime, spark_points: int = 20) -> list[dict]:
+    """Per-scope latest score plus change over the last hour/day and a sparkline.
+
+    `rows` are chronological (scope, ts, score, n) snapshots for one window."""
+    by_scope: dict[str, list[dict]] = {}
+    for r in rows:
+        by_scope.setdefault(r["scope"], []).append(dict(r))
+    out: list[dict] = []
+    for scope, series in by_scope.items():
+        series.sort(key=lambda r: str(r["ts"]))
+        latest = series[-1]
+
+        def _delta(seconds: int):
+            cutoff = now - timedelta(seconds=seconds)
+            older = [s for s in series if (_parse_ts(s["ts"]) or now) <= cutoff]
+            if not older:
+                return None
+            return round(latest["score"] - older[-1]["score"], 4)
+
+        out.append({
+            "scope": scope,
+            "score": latest["score"],
+            "n": latest["n"],
+            "ts": latest["ts"],
+            "delta_1h": _delta(3600),
+            "delta_1d": _delta(86400),
+            "spark": [s["score"] for s in series[-spark_points:]],
+        })
+    # Biggest movers first; scopes with no comparable history sink to the bottom.
+    out.sort(key=lambda t: abs(t["delta_1d"] if t["delta_1d"] is not None else
+                               (t["delta_1h"] or 0.0)), reverse=True)
+    return out
+
+
 def _parse_ts(raw):
     if not raw:
         return None

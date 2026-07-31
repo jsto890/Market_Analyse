@@ -2,6 +2,9 @@ import { describe, it, expect, vi } from "vitest";
 import { render, screen, userEvent } from "@/test/render";
 import { mockFetchJson } from "@/test/fetchMock";
 import UndoToastProvider from "@/components/ui/UndoToastProvider";
+
+vi.mock("next/navigation", () => ({ useSearchParams: () => new URLSearchParams("") }));
+
 import AlertsPage from "../page";
 
 function baseMocks(overrides: Record<string, unknown> = {}) {

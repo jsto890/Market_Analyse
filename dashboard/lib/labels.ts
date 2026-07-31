@@ -55,7 +55,7 @@ export const COMBO_LETTER_LABEL: Record<"L" | "S" | "N", string> = {
   N: "Mixed / no dominant side",
 };
 
-/** Options ladder header codes (OL-13/OD-06). Ground truth: `app/odte/strikes/page.tsx`'s "How to read this ladder" copy. */
+/** Options ladder header codes (OL-13/OD-06). Ground truth: `app/options/learn/page.tsx`. */
 export const LADDER_CODE_LABEL: Record<"SPOT" | "ZG" | "CW" | "PW", string> = {
   SPOT: "Current underlying price — the ladder auto-scrolls to keep this centered.",
   ZG: "Zero-gamma flip — below it dealers are typically short gamma (moves amplify); above it, long gamma (moves dampen).",

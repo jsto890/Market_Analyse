@@ -39,7 +39,8 @@ export default function CatalystStrip({ ticker }: { ticker: string }) {
       </span>
     );
   }
-  if (data.next_earnings) parts.push(<span key="ne">next earnings {fmtDate(data.next_earnings)}</span>);
+  // next_earnings deliberately omitted — the header owns the earnings countdown,
+  // off this same endpoint, so the two can't disagree (TH-03).
   const a = data.analyst[0];
   if (a) parts.push(<span key="an">{a.firm} {a.action === "up" ? "↑" : a.action === "down" ? "↓" : "→"} {a.to} {fmtDate(a.date)}</span>);
   if (parts.length === 0) return null;

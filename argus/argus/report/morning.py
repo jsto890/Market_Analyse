@@ -44,6 +44,11 @@ def _day_ahead_earnings(rows: list[dict], watchlist: set[str]) -> list[dict]:
     return sorted(out, key=lambda e: not e["watchlist"])  # stable: watchlist first
 
 
+def _sym(symbol: str) -> str:
+    """Display form of a futures/index symbol: "ES=F" -> "ES", "^VIX" -> "VIX"."""
+    return symbol.replace("=F", "").replace("^", "")
+
+
 def _synthesis(futures: list[dict], today_events: list[dict],
                earn_today: list[dict], watchlist: set[str]) -> str:
     parts = []
@@ -54,7 +59,7 @@ def _synthesis(futures: list[dict], today_events: list[dict],
         lag = min(by, key=lambda s: by[s])
         led = max(by, key=lambda s: by[s])
         if led != lag and by[led] - by[lag] >= 0.3:
-            parts.append(f"{lag.replace('=F', '')} lagging")
+            parts.append(f"{_sym(lag)} lagging")
     high = [e for e in today_events if e["importance"] == "high"]
     if high:
         e = high[0]
@@ -82,10 +87,11 @@ def gex_line(spot: float | None, zero_gamma: float | None,
 def build_report(now: datetime, gauges: list[dict], events: list[dict],
                  headlines: list[dict], futures: list[dict],
                  watchlist: set[str] | None = None,
-                 gex: dict | None = None) -> dict:
+                 gex: dict | None = None, limit: int = 6) -> dict:
     """Pure assembler. gauges = macro_sentiment rows; events = econ_calendar rows
     (chronological); headlines = news rows (any order); futures = [{symbol,change_pct}];
-    watchlist = tickers whose earnings rank first in day_ahead."""
+    watchlist = tickers whose earnings rank first in day_ahead. `limit` caps the
+    list sections — the brief card shows 6, the full-brief page asks for more."""
     watchlist = {t.upper() for t in (watchlist or set())}
     g = {(x["scope"], x["window"]): x for x in gauges}
     us, glob = g.get(("us", "1d")), g.get(("global", "1d"))
@@ -112,13 +118,16 @@ def build_report(now: datetime, gauges: list[dict], events: list[dict],
         "day_ahead": day_ahead,
         "date": today,
         "weekday": now.strftime("%A"),
+        # The card refreshes every 5 minutes but only printed the date, so a
+        # stale render was indistinguishable from a fresh one.
+        "generated_at": now.isoformat(timespec="seconds"),
         "tone": _tone_sentence(us, glob, today_events),
         "macro": {"us_1d": us, "global_1d": glob},
         "futures": futures,
         "today_events": today_events,
-        "macro_events": macro_events[:6],
-        "earnings": earnings[:6],
-        "headlines": headlines[:6],
+        "macro_events": macro_events[:limit],
+        "earnings": earnings[:limit],
+        "headlines": headlines[:limit],
     }
 
 
@@ -156,8 +165,11 @@ def render_markdown(r: dict) -> str:
     return "\n".join(lines).rstrip() + "\n"
 
 
-def generate(conn=None, now: datetime | None = None) -> dict:
-    """Orchestration: read our stores + rail, assemble the report dict."""
+def generate(conn=None, now: datetime | None = None, limit: int = 6,
+             days: int = 7) -> dict:
+    """Orchestration: read our stores + rail, assemble the report dict.
+
+    `limit`/`days` widen it for the full-brief page; the card uses the defaults."""
     from ..db import get_conn
     from ..macro.schema import ensure_macro_schema
     from ..macro.store import latest_macro
@@ -174,13 +186,13 @@ def generate(conn=None, now: datetime | None = None) -> dict:
         ensure_calendar_schema(conn)
         ensure_news_schema(conn)
         gauges = [dict(r) for r in latest_macro(conn)]
-        events = [dict(r) for r in calendar_upcoming(conn, now.strftime("%Y-%m-%d"), 7)]
+        events = [dict(r) for r in calendar_upcoming(conn, now.strftime("%Y-%m-%d"), days)]
         # newest headlines first
-        headlines = [dict(r) for r in reversed(fetch_latest(conn, 8))]
+        headlines = [dict(r) for r in reversed(fetch_latest(conn, max(8, limit)))]
         futures = _futures_snapshot()
         return build_report(now, gauges, events, headlines, futures,
                             watchlist=_watchlist_tickers(),
-                            gex=_gex_snapshot(conn))
+                            gex=_gex_snapshot(conn), limit=limit)
     finally:
         if own:
             conn.close()

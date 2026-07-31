@@ -26,12 +26,27 @@ const EDGE: Record<string, string> = {
   ERROR: "bg-neg/15 text-neg",
 };
 
+/** Display copy for the raw enums. Dense tables keep the enum; prose surfaces
+ *  (the ticker header) pass `label={BADGE_LABEL[value]}` (TH-02). */
+export const BADGE_LABEL: Record<string, string> = {
+  PRIME_LONG: "Prime long",
+  BREAKOUT_LONG: "Breakout long",
+  STANDARD_LONG: "Standard long",
+  WATCH: "Watch",
+  AVOID: "Avoid",
+  WAIT: "Wait",
+  LONG: "Long",
+  SHORT: "Short",
+};
+
 interface BadgeProps {
   variant: "tier" | "verdict" | "style" | "flag" | "edge";
   value: string;
+  /** Visible text when the raw enum is too terse to read as copy. Defaults to `value`. */
+  label?: string;
 }
 
-export default function Badge({ variant, value }: BadgeProps) {
+export default function Badge({ variant, value, label }: BadgeProps) {
   let cls = "";
 
   if (variant === "tier") {
@@ -48,9 +63,10 @@ export default function Badge({ variant, value }: BadgeProps) {
 
   return (
     <span
+      title={label && label !== value ? value : undefined}
       className={`inline-flex cursor-default select-none items-center rounded px-1.5 py-px font-mono text-[11px] tabular-nums leading-tight ${cls}`}
     >
-      {value}
+      {label ?? value}
     </span>
   );
 }
