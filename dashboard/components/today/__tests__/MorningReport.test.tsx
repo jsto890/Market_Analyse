@@ -136,7 +136,7 @@ describe("MorningReport — content (MB-01..MB-09)", () => {
     expect(screen.getByRole("link", { name: /why/ })).toHaveAttribute("href", "/macro");
   });
 
-  it("says the session is unconfirmed rather than rendering an anonymous row (MB-07)", async () => {
+  it("omits the session chip entirely when no feed carries one (MB-07)", async () => {
     mockFetchJson({
       "/api/argus/report/morning": {
         ...baseReport,
@@ -150,7 +150,11 @@ describe("MorningReport — content (MB-01..MB-09)", () => {
       },
     });
     render(<MorningReport />);
-    expect(await screen.findByText("time TBA")).toBeInTheDocument();
+    // Every earnings row is session "—", so a chip saying so printed on all of
+    // them and distinguished nothing. The row still names its ticker.
+    expect(await screen.findByText("AAPL")).toBeInTheDocument();
+    expect(screen.queryByText("time TBA")).not.toBeInTheDocument();
+    expect(screen.queryByText("—")).not.toBeInTheDocument();
   });
 
   it("renders futures as chips with the raw symbol suffixes stripped (MB-08)", async () => {

@@ -58,8 +58,12 @@ export default function EventRow({
      sentences. The chevron is Collapsible's own 20px slot. */
   const header = (
     <div className="flex min-w-0 flex-1 items-center gap-2.5">
+      {/* The track holds its width whether or not there is a time, so the
+          columns still line up. A field with no feed renders nothing — no
+          earnings row has ever carried a time, so "TBA" printed on all of
+          them and said only that the row was an earnings row. */}
       <span className="w-[62px] shrink-0 text-data leading-tight text-muted">
-        {ev.time_et ? `${ev.time_et} ET` : <span className="text-3">TBA</span>}
+        {ev.time_et && `${ev.time_et} ET`}
         {local && <span className="block text-micro text-3">{local}</span>}
       </span>
       <span
@@ -74,7 +78,7 @@ export default function EventRow({
         {earnings && ev.ticker ? <span className="font-mono">{ev.ticker}</span> : name}
         {earnings && (
           <span className="ml-1.5 text-body text-muted">
-            earnings{session ? ` · ${session}` : " · session TBA"}
+            earnings{session && ` · ${session}`}
           </span>
         )}
         {isWatchlist && (

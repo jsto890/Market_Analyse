@@ -44,7 +44,8 @@ function EventList({ events, today }: { events: MorningEvent[]; today: string })
             {eventShortName(e.event, e.category, e.ticker)}
           </span>
           <span className="text-data text-muted">
-            {e.time_et ? `${e.time_et} ET` : "time TBA"} · {CATEGORY_LABEL[e.category] ?? e.category}
+            {e.time_et && `${e.time_et} ET · `}
+            {CATEGORY_LABEL[e.category] ?? e.category}
           </span>
         </li>
       ))}

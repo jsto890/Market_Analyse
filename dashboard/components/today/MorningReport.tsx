@@ -18,8 +18,10 @@ import { NEUTRAL_BAND, toneClass, toneLabel } from "@/lib/macro";
 import { eventShortName } from "@/lib/eventMeta";
 
 function SessionTag({ session }: { session: "BMO" | "AMC" | "—" }) {
-  // "—" used to render nothing, leaving a row with no date, time or session at
-  // all — say the session is unconfirmed instead (MB-07).
+  // No earnings row carries a time, so "—" is every row that has not been
+  // hand-sessioned. A field with no feed renders nothing rather than a chip
+  // that says so on all of them; the row still names its ticker and day.
+  if (session === "—") return null;
   const cls =
     session === "BMO"
       ? "border-warn/50 text-warn bg-warn/10"
@@ -28,7 +30,7 @@ function SessionTag({ session }: { session: "BMO" | "AMC" | "—" }) {
         : "border-line text-muted bg-raised";
   return (
     <span className={`ml-1 rounded border px-1 py-px text-micro font-medium ${cls}`}>
-      {session === "—" ? "time TBA" : session}
+      {session}
     </span>
   );
 }

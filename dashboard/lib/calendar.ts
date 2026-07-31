@@ -165,7 +165,7 @@ export function groupBySpine(events: CalEvent[], today: string): CalWeek[] {
  * Before the open, after the close, or in session — the half of an earnings
  * date that decides which session the gap lands in. Null when the feed sends no
  * time, which is currently every row: the Argus earnings seed carries a date
- * only, so this reads "session TBA" until a timed feed lands.
+ * only, so callers render nothing at all until a timed feed lands.
  */
 export function earningsSession(timeEt: string | null): "BMO" | "AMC" | "intraday" | null {
   if (!timeEt) return null;
