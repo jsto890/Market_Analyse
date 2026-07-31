@@ -3,62 +3,55 @@
     "status": 200,
     "consoleErrors": [],
     "metrics": {
-      "scrollHeight": 1278,
+      "scrollHeight": 1260,
       "clientHeight": 674,
-      "contentWidth": 1040,
-      "contentPadding": "20px 24px 20px 24px",
+      "contentWidth": 1048.5,
+      "contentPadding": "24px 24px 24px 24px",
       "tables": 2,
-      "rows": 31,
+      "rows": 38,
       "fontSizes": {
-        "13px": 537,
-        "11px": 158,
-        "12px": 30,
-        "15px": 1
+        "13px": 687,
+        "11px": 122,
+        "15px": 7
       },
       "invisibleTips": 9,
-      "titleAttrs": 3
+      "titleAttrs": 0
     }
   },
   "/t/AAPL": {
     "status": 200,
     "consoleErrors": [],
     "metrics": {
-      "scrollHeight": 2504,
+      "scrollHeight": 2768,
       "clientHeight": 674,
       "contentWidth": 1048.5,
-      "contentPadding": "20px 24px 20px 24px",
+      "contentPadding": "24px 24px 24px 24px",
       "tables": 5,
       "rows": 24,
       "fontSizes": {
-        "11px": 485,
-        "13px": 398,
-        "12px": 243,
-        "15px": 1,
-        "24px": 1,
-        "18px": 1
+        "13px": 763,
+        "11px": 411,
+        "15px": 11,
+        "28px": 1
       },
       "invisibleTips": 7,
-      "titleAttrs": 38
+      "titleAttrs": 0
     }
   },
   "/odte": {
     "status": 200,
-    "consoleErrors": [
-      "Failed to fetch RSC payload for http://127.0.0.1:3100/t/AAPL. Falling back to browser navigation. TypeError: Failed to fetch\n    at fetchServerResponse (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/router-reducer/fetch-server-response.js:59:27)\n    at fastRefreshReducerImpl (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/router-reducer/reducers/fast-refresh-reducer.js:33:67)\n    at clientReducer (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/router-reducer/router-reducer.js:41:67)\n    at Object.action (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/shared/lib/router/action-queue.js:150:55)\n    at runAction (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/shared/lib/router/action-queue.js:56:38)\n    at dispatchAction (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/shared/lib/router/action-queue.js:113:9)\n    at Object.dispatch (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/shared/lib/router/action-queue.js:145:40)\n    at eval (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/use-reducer-with-devtools.js:130:21)\n    at eval (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/app-router.js:304:25)\n    at startTransition (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react/cjs/react.development.js:2597:25)\n    at Object.fastRefresh (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/app-router.js:303:48)\n    at eval (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/react-dev-overlay/app/hot-reloader-client.js:277:28)\n    at startTransition (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react/cjs/react.development.js:2597:25)\n    at processMessage (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/react-dev-overlay/app/hot-reloader-client.js:276:44)\n    at WebSocket.handler (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/react-dev-overlay/app/hot-reloader-client.js:395:17)"
-    ],
+    "consoleErrors": [],
     "metrics": {
-      "scrollHeight": 674,
+      "scrollHeight": 754,
       "clientHeight": 674,
       "contentWidth": 1048.5,
       "contentPadding": "0px 0px 0px 0px",
       "tables": 0,
       "rows": 0,
       "fontSizes": {
-        "11px": 196,
-        "13px": 137,
-        "12px": 49,
-        "15px": 2,
-        "18px": 1
+        "13px": 352,
+        "11px": 61,
+        "15px": 2
       },
       "invisibleTips": 8,
       "titleAttrs": 0
@@ -68,17 +61,16 @@
     "status": 200,
     "consoleErrors": [],
     "metrics": {
-      "scrollHeight": 674,
+      "scrollHeight": 1252,
       "clientHeight": 674,
       "contentWidth": 1048.5,
       "contentPadding": "0px 0px 0px 0px",
       "tables": 1,
-      "rows": 89,
+      "rows": 41,
       "fontSizes": {
-        "11px": 1606,
-        "13px": 122,
-        "12px": 57,
-        "15px": 1
+        "13px": 902,
+        "11px": 130,
+        "15px": 3
       },
       "invisibleTips": 9,
       "titleAttrs": 0
@@ -88,18 +80,16 @@
     "status": 200,
     "consoleErrors": [],
     "metrics": {
-      "scrollHeight": 674,
+      "scrollHeight": 754,
       "clientHeight": 674,
       "contentWidth": 1048.5,
       "contentPadding": "0px 0px 0px 0px",
       "tables": 0,
       "rows": 0,
       "fontSizes": {
-        "11px": 196,
-        "13px": 137,
-        "12px": 49,
-        "15px": 2,
-        "18px": 1
+        "13px": 352,
+        "11px": 61,
+        "15px": 2
       },
       "invisibleTips": 8,
       "titleAttrs": 0
@@ -109,17 +99,16 @@
     "status": 200,
     "consoleErrors": [],
     "metrics": {
-      "scrollHeight": 674,
+      "scrollHeight": 1252,
       "clientHeight": 674,
       "contentWidth": 1048.5,
       "contentPadding": "0px 0px 0px 0px",
       "tables": 1,
-      "rows": 89,
+      "rows": 41,
       "fontSizes": {
-        "11px": 1606,
-        "13px": 122,
-        "12px": 57,
-        "15px": 1
+        "13px": 902,
+        "11px": 130,
+        "15px": 3
       },
       "invisibleTips": 9,
       "titleAttrs": 0
@@ -129,17 +118,16 @@
     "status": 200,
     "consoleErrors": [],
     "metrics": {
-      "scrollHeight": 865,
+      "scrollHeight": 1066,
       "clientHeight": 674,
       "contentWidth": 1048.5,
       "contentPadding": "0px 0px 0px 0px",
       "tables": 0,
       "rows": 0,
       "fontSizes": {
-        "13px": 158,
-        "11px": 157,
-        "12px": 23,
-        "15px": 1
+        "13px": 266,
+        "11px": 90,
+        "15px": 6
       },
       "invisibleTips": 8,
       "titleAttrs": 0
@@ -149,18 +137,35 @@
     "status": 200,
     "consoleErrors": [],
     "metrics": {
-      "scrollHeight": 674,
+      "scrollHeight": 754,
       "clientHeight": 674,
       "contentWidth": 1048.5,
       "contentPadding": "0px 0px 0px 0px",
       "tables": 0,
       "rows": 0,
       "fontSizes": {
-        "11px": 134,
-        "13px": 98,
-        "12px": 22,
-        "15px": 1,
-        "18px": 1
+        "13px": 228,
+        "11px": 51,
+        "15px": 2
+      },
+      "invisibleTips": 8,
+      "titleAttrs": 0
+    }
+  },
+  "/options/greeks": {
+    "status": 200,
+    "consoleErrors": [],
+    "metrics": {
+      "scrollHeight": 754,
+      "clientHeight": 674,
+      "contentWidth": 1048.5,
+      "contentPadding": "0px 0px 0px 0px",
+      "tables": 0,
+      "rows": 0,
+      "fontSizes": {
+        "13px": 161,
+        "11px": 47,
+        "15px": 1
       },
       "invisibleTips": 8,
       "titleAttrs": 0
@@ -170,17 +175,16 @@
     "status": 200,
     "consoleErrors": [],
     "metrics": {
-      "scrollHeight": 1416,
+      "scrollHeight": 1492,
       "clientHeight": 674,
       "contentWidth": 1048.5,
       "contentPadding": "0px 0px 0px 0px",
       "tables": 0,
       "rows": 0,
       "fontSizes": {
-        "12px": 136,
-        "11px": 88,
-        "13px": 87,
-        "15px": 1
+        "13px": 274,
+        "11px": 47,
+        "15px": 6
       },
       "invisibleTips": 8,
       "titleAttrs": 0
@@ -190,41 +194,37 @@
     "status": 200,
     "consoleErrors": [],
     "metrics": {
-      "scrollHeight": 1025,
+      "scrollHeight": 2318,
       "clientHeight": 674,
-      "contentWidth": 1040,
-      "contentPadding": "20px 24px 20px 24px",
+      "contentWidth": 1048.5,
+      "contentPadding": "24px 24px 24px 24px",
       "tables": 0,
       "rows": 0,
       "fontSizes": {
-        "11px": 232,
-        "13px": 200,
-        "12px": 66,
-        "15px": 1,
-        "18px": 1
+        "13px": 869,
+        "11px": 451,
+        "15px": 4,
+        "20px": 1
       },
-      "invisibleTips": 7,
+      "invisibleTips": 38,
       "titleAttrs": 0
     }
   },
   "/watchlist": {
     "status": 200,
-    "consoleErrors": [
-      "Failed to fetch RSC payload for http://127.0.0.1:3100/calendar. Falling back to browser navigation. TypeError: Failed to fetch\n    at fetchServerResponse (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/router-reducer/fetch-server-response.js:59:27)\n    at fastRefreshReducerImpl (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/router-reducer/reducers/fast-refresh-reducer.js:33:67)\n    at clientReducer (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/router-reducer/router-reducer.js:41:67)\n    at Object.action (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/shared/lib/router/action-queue.js:150:55)\n    at runAction (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/shared/lib/router/action-queue.js:56:38)\n    at dispatchAction (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/shared/lib/router/action-queue.js:113:9)\n    at Object.dispatch (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/shared/lib/router/action-queue.js:145:40)\n    at eval (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/use-reducer-with-devtools.js:130:21)\n    at eval (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/app-router.js:304:25)\n    at startTransition (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react/cjs/react.development.js:2597:25)\n    at Object.fastRefresh (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/app-router.js:303:48)\n    at eval (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/react-dev-overlay/app/hot-reloader-client.js:277:28)\n    at startTransition (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react/cjs/react.development.js:2597:25)\n    at processMessage (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/react-dev-overlay/app/hot-reloader-client.js:276:44)\n    at WebSocket.handler (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/react-dev-overlay/app/hot-reloader-client.js:395:17)"
-    ],
+    "consoleErrors": [],
     "metrics": {
-      "scrollHeight": 1542,
+      "scrollHeight": 1706,
       "clientHeight": 674,
-      "contentWidth": 1040,
-      "contentPadding": "20px 24px 20px 24px",
+      "contentWidth": 1048.5,
+      "contentPadding": "24px 24px 24px 24px",
       "tables": 2,
-      "rows": 31,
+      "rows": 32,
       "fontSizes": {
-        "13px": 581,
-        "12px": 110,
-        "11px": 77,
-        "15px": 1,
-        "18px": 1
+        "13px": 715,
+        "11px": 80,
+        "15px": 3,
+        "20px": 1
       },
       "invisibleTips": 7,
       "titleAttrs": 0
@@ -236,16 +236,15 @@
     "metrics": {
       "scrollHeight": 674,
       "clientHeight": 674,
-      "contentWidth": 1040,
-      "contentPadding": "20px 24px 20px 24px",
+      "contentWidth": 1048.5,
+      "contentPadding": "24px 24px 24px 24px",
       "tables": 0,
       "rows": 0,
       "fontSizes": {
-        "13px": 80,
-        "11px": 76,
-        "12px": 16,
-        "15px": 1,
-        "18px": 1
+        "13px": 140,
+        "11px": 43,
+        "15px": 2,
+        "20px": 1
       },
       "invisibleTips": 7,
       "titleAttrs": 0
@@ -257,16 +256,15 @@
     "metrics": {
       "scrollHeight": 674,
       "clientHeight": 674,
-      "contentWidth": 1040,
+      "contentWidth": 1048.5,
       "contentPadding": "24px 24px 24px 24px",
       "tables": 1,
       "rows": 1,
       "fontSizes": {
-        "13px": 91,
-        "11px": 81,
-        "12px": 16,
+        "13px": 154,
+        "11px": 46,
         "15px": 1,
-        "18px": 1
+        "20px": 1
       },
       "invisibleTips": 7,
       "titleAttrs": 0
@@ -276,18 +274,17 @@
     "status": 200,
     "consoleErrors": [],
     "metrics": {
-      "scrollHeight": 792,
+      "scrollHeight": 838,
       "clientHeight": 674,
-      "contentWidth": 1040,
+      "contentWidth": 880,
       "contentPadding": "24px 24px 24px 24px",
       "tables": 0,
       "rows": 0,
       "fontSizes": {
-        "13px": 99,
-        "11px": 75,
-        "12px": 26,
-        "15px": 3,
-        "18px": 1
+        "13px": 166,
+        "11px": 43,
+        "15px": 6,
+        "20px": 1
       },
       "invisibleTips": 7,
       "titleAttrs": 0
@@ -295,22 +292,19 @@
   },
   "/rotation": {
     "status": 200,
-    "consoleErrors": [
-      "Failed to fetch RSC payload for http://127.0.0.1:3100/alerts. Falling back to browser navigation. TypeError: Failed to fetch\n    at fetchServerResponse (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/router-reducer/fetch-server-response.js:59:27)\n    at fastRefreshReducerImpl (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/router-reducer/reducers/fast-refresh-reducer.js:33:67)\n    at clientReducer (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/router-reducer/router-reducer.js:41:67)\n    at Object.action (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/shared/lib/router/action-queue.js:150:55)\n    at runAction (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/shared/lib/router/action-queue.js:56:38)\n    at dispatchAction (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/shared/lib/router/action-queue.js:113:9)\n    at Object.dispatch (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/shared/lib/router/action-queue.js:145:40)\n    at eval (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/use-reducer-with-devtools.js:130:21)\n    at eval (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/app-router.js:304:25)\n    at startTransition (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react/cjs/react.development.js:2597:25)\n    at Object.fastRefresh (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/app-router.js:303:48)\n    at eval (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/react-dev-overlay/app/hot-reloader-client.js:277:28)\n    at startTransition (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react/cjs/react.development.js:2597:25)\n    at processMessage (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/react-dev-overlay/app/hot-reloader-client.js:276:44)\n    at WebSocket.handler (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/react-dev-overlay/app/hot-reloader-client.js:395:17)"
-    ],
+    "consoleErrors": [],
     "metrics": {
-      "scrollHeight": 1082,
+      "scrollHeight": 1143,
       "clientHeight": 674,
       "contentWidth": 1048.5,
       "contentPadding": "24px 24px 24px 24px",
       "tables": 1,
       "rows": 12,
       "fontSizes": {
-        "13px": 360,
-        "11px": 156,
-        "12px": 18,
-        "15px": 1,
-        "18px": 1
+        "13px": 434,
+        "11px": 117,
+        "15px": 3,
+        "20px": 1
       },
       "invisibleTips": 7,
       "titleAttrs": 0
@@ -320,41 +314,37 @@
     "status": 200,
     "consoleErrors": [],
     "metrics": {
-      "scrollHeight": 812,
+      "scrollHeight": 1005,
       "clientHeight": 674,
       "contentWidth": 1048.5,
       "contentPadding": "24px 24px 24px 24px",
       "tables": 1,
       "rows": 0,
       "fontSizes": {
-        "11px": 109,
-        "13px": 106,
-        "12px": 38,
-        "15px": 1,
-        "18px": 1
+        "13px": 245,
+        "11px": 67,
+        "15px": 2,
+        "20px": 1
       },
       "invisibleTips": 7,
-      "titleAttrs": 3
+      "titleAttrs": 0
     }
   },
   "/brief": {
     "status": 200,
-    "consoleErrors": [
-      "Failed to fetch RSC payload for http://127.0.0.1:3100/macro. Falling back to browser navigation. TypeError: network error"
-    ],
+    "consoleErrors": [],
     "metrics": {
-      "scrollHeight": 1952,
+      "scrollHeight": 2263,
       "clientHeight": 674,
-      "contentWidth": 720,
+      "contentWidth": 880,
       "contentPadding": "24px 24px 24px 24px",
       "tables": 0,
       "rows": 0,
       "fontSizes": {
-        "13px": 178,
-        "11px": 144,
-        "12px": 141,
-        "15px": 1,
-        "18px": 1
+        "13px": 436,
+        "11px": 70,
+        "15px": 6,
+        "20px": 1
       },
       "invisibleTips": 7,
       "titleAttrs": 0
@@ -362,22 +352,19 @@
   },
   "/glossary": {
     "status": 200,
-    "consoleErrors": [
-      "Failed to fetch RSC payload for http://127.0.0.1:3100/brief. Falling back to browser navigation. TypeError: Failed to fetch\n    at fetchServerResponse (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/router-reducer/fetch-server-response.js:59:27)\n    at fastRefreshReducerImpl (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/router-reducer/reducers/fast-refresh-reducer.js:33:67)\n    at clientReducer (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/router-reducer/router-reducer.js:41:67)\n    at Object.action (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/shared/lib/router/action-queue.js:150:55)\n    at runAction (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/shared/lib/router/action-queue.js:56:38)\n    at dispatchAction (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/shared/lib/router/action-queue.js:113:9)\n    at Object.dispatch (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/shared/lib/router/action-queue.js:145:40)\n    at eval (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/use-reducer-with-devtools.js:130:21)\n    at eval (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/app-router.js:304:25)\n    at startTransition (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react/cjs/react.development.js:2597:25)\n    at Object.fastRefresh (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/app-router.js:303:48)\n    at eval (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/react-dev-overlay/app/hot-reloader-client.js:277:28)\n    at startTransition (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react/cjs/react.development.js:2597:25)\n    at processMessage (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/react-dev-overlay/app/hot-reloader-client.js:276:44)\n    at WebSocket.handler (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/react-dev-overlay/app/hot-reloader-client.js:395:17)"
-    ],
+    "consoleErrors": [],
     "metrics": {
-      "scrollHeight": 3718,
+      "scrollHeight": 3629,
       "clientHeight": 674,
-      "contentWidth": 720,
+      "contentWidth": 880,
       "contentPadding": "24px 24px 24px 24px",
       "tables": 0,
       "rows": 0,
       "fontSizes": {
-        "13px": 279,
-        "11px": 74,
-        "12px": 16,
-        "15px": 1,
-        "18px": 1
+        "13px": 328,
+        "11px": 46,
+        "15px": 11,
+        "20px": 1
       },
       "invisibleTips": 7,
       "titleAttrs": 0
@@ -385,22 +372,19 @@
   },
   "/sources": {
     "status": 200,
-    "consoleErrors": [
-      "Failed to fetch RSC payload for http://127.0.0.1:3100/glossary. Falling back to browser navigation. TypeError: Failed to fetch\n    at fetchServerResponse (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/router-reducer/fetch-server-response.js:59:27)\n    at fastRefreshReducerImpl (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/router-reducer/reducers/fast-refresh-reducer.js:33:67)\n    at clientReducer (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/router-reducer/router-reducer.js:41:67)\n    at Object.action (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/shared/lib/router/action-queue.js:150:55)\n    at runAction (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/shared/lib/router/action-queue.js:56:38)\n    at dispatchAction (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/shared/lib/router/action-queue.js:113:9)\n    at Object.dispatch (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/shared/lib/router/action-queue.js:145:40)\n    at eval (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/use-reducer-with-devtools.js:130:21)\n    at eval (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/app-router.js:304:25)\n    at startTransition (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react/cjs/react.development.js:2597:25)\n    at Object.fastRefresh (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/app-router.js:303:48)\n    at eval (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/react-dev-overlay/app/hot-reloader-client.js:277:28)\n    at startTransition (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react/cjs/react.development.js:2597:25)\n    at processMessage (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/react-dev-overlay/app/hot-reloader-client.js:276:44)\n    at WebSocket.handler (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/react-dev-overlay/app/hot-reloader-client.js:395:17)"
-    ],
+    "consoleErrors": [],
     "metrics": {
-      "scrollHeight": 4724,
+      "scrollHeight": 7522,
       "clientHeight": 674,
-      "contentWidth": 1040,
+      "contentWidth": 1048.5,
       "contentPadding": "24px 24px 24px 24px",
       "tables": 2,
-      "rows": 118,
+      "rows": 169,
       "fontSizes": {
-        "13px": 791,
-        "11px": 436,
-        "12px": 103,
-        "15px": 1,
-        "18px": 1
+        "13px": 1465,
+        "11px": 282,
+        "15px": 3,
+        "20px": 1
       },
       "invisibleTips": 7,
       "titleAttrs": 0
