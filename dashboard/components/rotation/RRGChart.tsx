@@ -18,6 +18,7 @@ import Empty from "@/components/ui/Empty";
 import type { RotationRow } from "@/components/today/RotationPanel";
 import { QUADRANT_COLOR, deriveQuadrant, splitDegenerate, rrgIndexByIndustry } from "@/lib/rotation";
 import { HeldChips } from "@/lib/positions";
+import type { TrailPoint } from "@/lib/rotationTrails";
 import { CHART_HEIGHT, CHART_AXIS_STYLE } from "@/lib/chartConventions";
 import { QUADRANT_GLOSS, QUADRANT_LABEL } from "@/lib/labels";
 
@@ -113,6 +114,7 @@ export default function RRGChart({
   held,
   selected = null,
   onSelect,
+  trails,
 }: {
   rows: RotationRow[];
   /** Omitted when the signals file could not be read — the picked-names line
@@ -126,6 +128,10 @@ export default function RRGChart({
    *  chart's legend and picking in either place has to move the other. */
   selected?: string | null;
   onSelect?: (industry: string | null) => void;
+  /** Where each sector has been, one point a week, oldest first. Absent for a
+   *  sector whose history is shorter than two weeks — the rotation job started
+   *  keeping coordinates on 2026-08-01, so the tails grow in from there. */
+  trails?: Record<string, TrailPoint[]>;
 }) {
   if (!rows.length) return null;
 
@@ -138,8 +144,12 @@ export default function RRGChart({
     );
   }
 
-  const ratios = plotted.map((r) => r.rs_ratio);
-  const moms = plotted.map((r) => r.rs_mom);
+  // Trails are part of the extent: a domain drawn from today's dots alone
+  // clips the weeks that led to them, which is the half the trail is for.
+  const trailPoints = plotted.flatMap((r) => trails?.[r.industry] ?? []);
+  const trailWeeks = Math.max(0, ...plotted.map((r) => trails?.[r.industry]?.length ?? 0));
+  const ratios = [...plotted, ...trailPoints].map((r) => r.rs_ratio);
+  const moms = [...plotted, ...trailPoints].map((r) => r.rs_mom);
   const minR = Math.min(...ratios, 100);
   const maxR = Math.max(...ratios, 100);
   const minM = Math.min(...moms, 100);
@@ -168,8 +178,10 @@ export default function RRGChart({
     <Panel
       title="Relative Rotation Graph"
       subtitle={`RS-Ratio vs RS-Momentum · ${plotted.length} sectors${
-        hidden.length > 0 ? ` · ${hidden.length} hidden (no data)` : ""
-      }`}
+        // Silent until the history is deep enough to draw one, so the subtitle
+        // never announces a tail that is not on the chart.
+        trailWeeks > 1 ? ` · ${trailWeeks}-week tails` : ""
+      }${hidden.length > 0 ? ` · ${hidden.length} hidden (no data)` : ""}`}
     >
       <div
         role="img"
@@ -243,6 +255,35 @@ export default function RRGChart({
             <ReferenceLine y={100} stroke={CHART_AXIS_STYLE.referenceLine} />
 
             <Tooltip content={<RRGTooltip />} cursor={{ strokeDasharray: "3 3" }} />
+
+            {/* Tails first, so a dot is never drawn under its own history. A
+                sector that has not been recorded twice yet contributes none. */}
+            {data.map((r) => {
+              const trail = trails?.[r.industry];
+              if (!trail?.length) return null;
+              const color = QUADRANT_COLOR[r.quadrantKey] ?? "var(--accent)";
+              const isSelected = selected === r.industry;
+              return (
+                <Scatter
+                  key={`trail-${r.industry}`}
+                  data={trail}
+                  isAnimationActive={false}
+                  tooltipType="none"
+                  legendType="none"
+                  line={{ stroke: color, strokeWidth: isSelected ? 1.75 : 1 }}
+                  lineJointType="monotoneX"
+                  fill={color}
+                  // Twelve tails at full strength would be the loudest thing on
+                  // the chart; the current positions are what it is about.
+                  opacity={isSelected ? 0.85 : selected ? 0.1 : 0.3}
+                  shape={(props: unknown) => {
+                    const p = props as { cx?: number; cy?: number };
+                    if (p.cx == null || p.cy == null) return <g />;
+                    return <circle cx={p.cx} cy={p.cy} r={1.75} fill={color} />;
+                  }}
+                />
+              );
+            })}
 
             <Scatter
               data={data}

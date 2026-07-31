@@ -8,6 +8,7 @@ import Failed from "@/components/ui/Failed";
 import Stale from "@/components/ui/Stale";
 import Page from "@/components/ui/Page";
 import { loadBridgeSignals } from "@/lib/bridge";
+import { buildTrails, type TrailHistory } from "@/lib/rotationTrails";
 
 export const dynamic = "force-dynamic";
 
@@ -50,6 +51,21 @@ function loadNamesBySector(): SectorNames | undefined {
   }
 }
 
+/**
+ * Where each sector has been. The rotation job began keeping RS coordinates on
+ * 2026-08-01, so the file is short at first and the chart simply draws fewer
+ * tails — nothing renders a sector's history until there are two weeks of it.
+ */
+function loadTrailHistory(): TrailHistory | undefined {
+  try {
+    return JSON.parse(
+      fs.readFileSync(path.join(reportsDir(), "rotation_history.json"), "utf-8")
+    ) as TrailHistory;
+  } catch {
+    return undefined;
+  }
+}
+
 function loadRotationMtime(): Date | null {
   try {
     return fs.statSync(rotationPath()).mtime;
@@ -62,6 +78,9 @@ export default function RotationPage() {
   const rotation = loadRotation();
   const mtime = loadRotationMtime();
   const namesBySector = loadNamesBySector();
+  const trails = rotation
+    ? buildTrails(loadTrailHistory(), rotation.map((r) => r.industry))
+    : {};
 
   return (
     <Page width="wide">
@@ -77,7 +96,7 @@ export default function RotationPage() {
         }
       />
       {rotation ? (
-        <RotationView rows={rotation} namesBySector={namesBySector} />
+        <RotationView rows={rotation} namesBySector={namesBySector} trails={trails} />
       ) : (
         <Failed
           title="No rotation data"
