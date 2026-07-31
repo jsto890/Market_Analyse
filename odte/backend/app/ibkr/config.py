@@ -7,7 +7,7 @@ import os
 @dataclass(frozen=True)
 class IBKRConfig:
     host: str = "127.0.0.1"
-    paper_port: int = 4002
+    paper_port: int = 4003
     live_port: int = 4001
     client_id: int = 19
     timeout_seconds: int = 30
@@ -18,7 +18,7 @@ class IBKRConfig:
     def from_env(cls) -> "IBKRConfig":
         return cls(
             host=os.getenv("IBKR_HOST", "127.0.0.1"),
-            paper_port=int(os.getenv("IBKR_PAPER_PORT", "4002")),
+            paper_port=int(os.getenv("IBKR_PAPER_PORT", "4003")),
             live_port=int(os.getenv("IBKR_LIVE_PORT", "4001")),
             client_id=int(os.getenv("IBKR_CLIENT_ID", "19")),
             timeout_seconds=int(os.getenv("IBKR_TIMEOUT_SECONDS", "30")),

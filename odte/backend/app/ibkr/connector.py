@@ -388,7 +388,7 @@ class IBKRConnector:
 
     def _candidate_ports(self, paper: bool) -> list[int]:
         configured = self.config.paper_port if paper else self.config.live_port
-        defaults = (4002, 7497) if paper else (4001, 7496)
+        defaults = (4003, 7497) if paper else (4001, 7496)
         ports = [configured, *defaults]
         deduped: list[int] = []
         for port in ports:

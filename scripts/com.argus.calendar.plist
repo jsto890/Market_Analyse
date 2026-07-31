@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key><string>com.argus.calendar</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>/bin/zsh</string>
+        <string>/Users/josephstorey/Market_Analyse/scripts/job_wrapper.sh</string>
+        <string>calendar-refresh</string>
+        <string>/Users/josephstorey/Market_Analyse/argus/.venv/bin/python</string>
+        <string>-m</string><string>argus.calendar.refresh</string>
+    </array>
+    <key>WorkingDirectory</key><string>/Users/josephstorey/Market_Analyse/argus</string>
+    <key>StartCalendarInterval</key>
+    <dict><key>Hour</key><integer>6</integer><key>Minute</key><integer>30</integer></dict>
+    <key>RunAtLoad</key><true/>
+    <key>StandardOutPath</key><string>/tmp/argus-calendar.log</string>
+    <key>StandardErrorPath</key><string>/tmp/argus-calendar.err</string>
+</dict>
+</plist>

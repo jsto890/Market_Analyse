@@ -7,7 +7,7 @@ from app.schemas import DesktopSettings, DesktopSettingsUpdate
 
 LEGACY_TWS_PAPER_PORT = 7497
 LEGACY_TWS_LIVE_PORT = 7496
-GATEWAY_PAPER_PORT = 4002
+GATEWAY_PAPER_PORT = 4003
 GATEWAY_LIVE_PORT = 4001
 
 

@@ -157,7 +157,7 @@ class DesktopSettings(BaseModel):
     connect_paper: bool = False
     client_id: int = Field(default=19, ge=0)
     host: str = "127.0.0.1"
-    paper_port: int = Field(default=4002, ge=1, le=65535)
+    paper_port: int = Field(default=4003, ge=1, le=65535)
     live_port: int = Field(default=4001, ge=1, le=65535)
 
 

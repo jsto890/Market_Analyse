@@ -4,7 +4,7 @@ from dataclasses import dataclass
 @dataclass
 class LiveConfig:
     """Configuration for live IBKR options ladder."""
-    ibkr_port: int = 4002  # IBKR Gateway live port; fallback to 4001
+    ibkr_port: int = 4003  # IBKR Gateway paper port
     ibkr_clientId: int = 10  # Unique ID for this connection
     tick_cadence_ms: int = 500  # Coalesce ticks; 500ms = ~2 updates/sec
     strike_window_side: int = 20  # Strikes per side (total window 40+1 ATM)

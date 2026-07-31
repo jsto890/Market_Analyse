@@ -55,7 +55,7 @@ def test_desktop_settings_defaults_and_update(tmp_path):
         assert defaults.status_code == 200
         assert defaults.json()["connect_paper"] is False
         assert defaults.json()["client_id"] == 19
-        assert defaults.json()["paper_port"] == 4002
+        assert defaults.json()["paper_port"] == 4003
         assert defaults.json()["live_port"] == 4001
 
         response = client.post(
@@ -64,7 +64,7 @@ def test_desktop_settings_defaults_and_update(tmp_path):
                 "connect_paper": False,
                 "client_id": 77,
                 "host": "127.0.0.1",
-                "paper_port": 4002,
+                "paper_port": 4003,
                 "live_port": 4001,
             },
         )
@@ -100,11 +100,11 @@ def test_desktop_settings_migrates_legacy_tws_default_ports(tmp_path):
     with TestClient(app) as client:
         defaults = client.get("/desktop/settings")
         assert defaults.status_code == 200
-        assert defaults.json()["paper_port"] == 4002
+        assert defaults.json()["paper_port"] == 4003
         assert defaults.json()["live_port"] == 4001
 
     migrated = json.loads(settings_path.read_text())
-    assert migrated["paper_port"] == 4002
+    assert migrated["paper_port"] == 4003
     assert migrated["live_port"] == 4001
 
 

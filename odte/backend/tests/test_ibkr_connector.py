@@ -62,13 +62,13 @@ def test_ib_insync_can_instantiate_client():
 
 @pytest.mark.skipif(
     os.getenv("ENABLE_IB_GATEWAY_TESTS") != "1",
-    reason="requires running IB Gateway/TWS at 127.0.0.1:4002",
+    reason="requires running IB Gateway/TWS at 127.0.0.1:4003",
 )
 def test_ib_insync_live_connection():
     ib = ib_insync.IB()
     client_id = int(os.getenv("IBKR_CLIENT_ID", "19"))
     try:
-        ib.connect("127.0.0.1", 4002, clientId=client_id)
+        ib.connect("127.0.0.1", 4003, clientId=client_id)
         assert ib.isConnected()
         assert ib.client.serverVersion() > 0
     finally:
@@ -168,7 +168,7 @@ def test_connector_retries_when_connect_raises_cancelled_error_for_in_use_client
 
 def test_connector_falls_back_to_tws_live_port_when_gateway_live_port_is_refused():
     connector = IBKRConnector(
-        IBKRConfig(read_only=False, client_id=19, host="127.0.0.1", live_port=4001, paper_port=4002)
+        IBKRConfig(read_only=False, client_id=19, host="127.0.0.1", live_port=4001, paper_port=4003)
     )
     fake_ib = FakeIB(refused_ports={4001})
     connector.ib = fake_ib  # type: ignore[assignment]
