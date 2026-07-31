@@ -122,7 +122,10 @@ def build_report(now: datetime, gauges: list[dict], events: list[dict],
         # stale render was indistinguishable from a fresh one.
         "generated_at": now.isoformat(timespec="seconds"),
         "tone": _tone_sentence(us, glob, today_events),
-        "macro": {"us_1d": us, "global_1d": glob},
+        "macro": {
+            "us_1d": us["score"] if us else None,
+            "global_1d": glob["score"] if glob else None,
+        },
         "futures": futures,
         "today_events": today_events,
         "macro_events": macro_events[:limit],

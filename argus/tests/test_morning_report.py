@@ -44,6 +44,8 @@ def test_build_report_splits_and_filters():
     assert "FOMC rate decision" in [e["event"] for e in r["macro_events"]]
     assert all(e["category"] != "earnings" for e in r["macro_events"])
     assert len(r["today_events"]) == 1                  # only the 06-17 FOMC
+    # The dashboard gauges call .toFixed on these — scores, not gauge rows.
+    assert r["macro"] == {"us_1d": 0.12, "global_1d": 0.03}
 
 
 def test_render_markdown_has_sections():
