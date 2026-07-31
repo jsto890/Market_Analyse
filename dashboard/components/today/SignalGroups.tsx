@@ -9,7 +9,7 @@ import { tierSort } from "@/lib/groups";
 import DataTable, { Column } from "@/components/ui/DataTable";
 import Empty from "@/components/ui/Empty";
 import ReadThis from "@/components/ui/ReadThis";
-import PinToggle from "@/components/ui/PinToggle";
+import ActionBar from "@/components/ui/ActionBar";
 import { heatBg } from "@/lib/heat";
 import Badge, { BADGE_LABEL } from "@/components/ui/Badge";
 import ConvictionDot from "@/components/ui/ConvictionDot";
@@ -393,7 +393,7 @@ function SignalCard({
       </div>
 
       <div className="flex flex-wrap items-center gap-3">
-        <PinToggle symbol={row.ticker} />
+        <ActionBar symbol={row.ticker} />
         <Link
           href={`/t/${row.ticker}`}
           onClick={onOpen}

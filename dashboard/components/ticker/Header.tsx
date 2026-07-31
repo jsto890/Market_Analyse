@@ -1,13 +1,11 @@
 "use client";
 
-import { useState } from "react";
-import Link from "next/link";
 import useSWR from "swr";
 import Badge, { BADGE_LABEL } from "@/components/ui/Badge";
 import ConvictionDot from "@/components/ui/ConvictionDot";
 import Gloss from "@/components/ui/Gloss";
 import InfoTip from "@/components/ui/InfoTip";
-import PinToggle from "@/components/ui/PinToggle";
+import ActionBar from "@/components/ui/ActionBar";
 import type { BridgeRow, Conviction } from "@/types/bridge";
 import { calledSince } from "@/lib/called-since";
 import { compactNumber } from "@/lib/format";
@@ -81,27 +79,6 @@ function cohortRead(pct: number, days: number, peakPct: number, peakDays: number
 function Zone({ divide = true, children }: { divide?: boolean; children: React.ReactNode }) {
   return (
     <div className={`min-w-0 ${divide ? "border-l border-line pl-5" : ""}`}>{children}</div>
-  );
-}
-
-function CopyButton({ ticker }: { ticker: string }) {
-  const [done, setDone] = useState(false);
-  return (
-    <button
-      type="button"
-      onClick={() => {
-        navigator.clipboard?.writeText(ticker).then(
-          () => {
-            setDone(true);
-            setTimeout(() => setDone(false), 1200);
-          },
-          () => {}
-        );
-      }}
-      className="rounded border border-line px-1.5 py-0.5 text-micro text-muted transition-colors hover:border-line-strong hover:text-foreground"
-    >
-      {done ? "Copied" : "Copy"}
-    </button>
   );
 }
 
@@ -287,31 +264,9 @@ export default function Header({
           </Zone>
         )}
 
-        {/* Actions (TH-07) */}
-        <div className="ml-auto flex items-center gap-1.5">
-          <PinToggle symbol={ticker} />
-          <CopyButton ticker={ticker} />
-          <Link
-            href={`/alerts?symbol=${ticker}`}
-            className="rounded border border-line px-1.5 py-0.5 text-micro text-muted transition-colors hover:border-line-strong hover:text-foreground"
-          >
-            Alert
-          </Link>
-          <Link
-            href="#options"
-            className="rounded border border-line px-1.5 py-0.5 text-micro text-muted transition-colors hover:border-line-strong hover:text-foreground"
-          >
-            Options ↓
-          </Link>
-          {/* The screener is the only surface that scores several names side by
-              side, so Compare opens it seeded with this one. */}
-          <Link
-            href={`/screener?symbols=${ticker}`}
-            className="rounded border border-line px-1.5 py-0.5 text-micro text-muted transition-colors hover:border-line-strong hover:text-foreground"
-          >
-            Compare
-          </Link>
-        </div>
+        {/* Actions (TH-07). The options block is on this page, so that one is a
+            jump rather than a navigation. */}
+        <ActionBar symbol={ticker} optionsHref="#options" className="ml-auto" />
       </div>
 
       {/* This call, the cohort it belongs to, and the comparison between them —

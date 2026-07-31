@@ -11,6 +11,7 @@ import Input from "@/components/ui/Input";
 import Button from "@/components/ui/Button";
 import Badge from "@/components/ui/Badge";
 import PinToggle from "@/components/ui/PinToggle";
+import ActionBar from "@/components/ui/ActionBar";
 import Gloss from "@/components/ui/Gloss";
 import Empty from "@/components/ui/Empty";
 import Failed from "@/components/ui/Failed";
@@ -59,9 +60,6 @@ function ResultCard({ r }: { r: ScreenerResult }) {
         </Link>
         <Badge variant="verdict" value={r.verdict} />
         {r.high_conviction && <span className="text-micro font-bold text-model">HC</span>}
-        <span className="ml-auto">
-          <PinToggle symbol={r.symbol} variant="chip" />
-        </span>
       </div>
 
       <div className="mt-1.5 flex items-baseline gap-2">
@@ -96,6 +94,9 @@ function ResultCard({ r }: { r: ScreenerResult }) {
           </span>
         </div>
       </div>
+
+      {/* No Compare: this page is the comparison. */}
+      <ActionBar symbol={r.symbol} actions={["pin", "alert", "options", "copy"]} className="mt-2" />
     </div>
   );
 }

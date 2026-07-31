@@ -180,12 +180,12 @@ describe("Header earnings and identity (TH-03, TH-08)", () => {
   it("carries five verbs, each with a destination (TH-07)", () => {
     render(<Header ticker="NVDA" bridgeRow={bridgeRow()} signalHistory={[]} lastClose={null} />);
     expect(screen.getByRole("link", { name: "Alert" })).toHaveAttribute("href", "/alerts?symbol=NVDA");
-    expect(screen.getByRole("link", { name: "Options ↓" })).toHaveAttribute("href", "#options");
+    expect(screen.getByRole("link", { name: "Options" })).toHaveAttribute("href", "#options");
     expect(screen.getByRole("link", { name: "Compare" })).toHaveAttribute(
       "href",
       "/screener?symbols=NVDA"
     );
-    expect(screen.getByRole("button", { name: "Copy" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Copy NVDA" })).toBeInTheDocument();
   });
 
   it("prices the day off the same bar as the close, not off a second feed", () => {

@@ -4,6 +4,7 @@ import StatChip from "@/components/ui/StatChip";
 import Empty from "@/components/ui/Empty";
 import Loading from "@/components/ui/Loading";
 import Button from "@/components/ui/Button";
+import ActionBar from "@/components/ui/ActionBar";
 import { PlugZap, Briefcase, AlertTriangle } from "lucide-react";
 import { signedCurrency, price as fmtPrice, pctWhole } from "@/lib/format";
 import { PORTFOLIO_EDGE_LABEL } from "@/lib/labels";
@@ -96,6 +97,7 @@ function PositionCard({ r }: { r: PositionRow }) {
           <p className="mt-1 text-body text-2">{PORTFOLIO_EDGE_LABEL[r.edge]}</p>
         </div>
       )}
+      <ActionBar symbol={r.symbol} className="mt-2" />
     </div>
   );
 }

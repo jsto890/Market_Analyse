@@ -10,7 +10,7 @@ import StatChip from "@/components/ui/StatChip";
 import Badge from "@/components/ui/Badge";
 import Empty from "@/components/ui/Empty";
 import Loading from "@/components/ui/Loading";
-import PinToggle from "@/components/ui/PinToggle";
+import ActionBar from "@/components/ui/ActionBar";
 import Input from "@/components/ui/Input";
 import Button from "@/components/ui/Button";
 import { useUndoAction } from "@/components/ui/UndoToastProvider";
@@ -123,9 +123,6 @@ function PinnedCard({ r }: { r: PinnedRowEnriched }) {
           {r.ticker}
         </Link>
         {r.todayBadge && <Badge variant="tier" value={r.todayBadge} />}
-        <span className="ml-auto">
-          <PinToggle symbol={r.ticker} variant="text" />
-        </span>
       </div>
       <div className="mt-1.5 flex items-baseline gap-2">
         {r.sincePin === undefined ? fmtLoading() : fmtPct(r.sincePin)}
@@ -142,6 +139,7 @@ function PinnedCard({ r }: { r: PinnedRowEnriched }) {
       {r.lastSignal && (
         <p className="mt-1.5 text-body text-muted">Last on a report {r.lastSignal}</p>
       )}
+      <ActionBar symbol={r.ticker} className="mt-2" />
     </div>
   );
 }

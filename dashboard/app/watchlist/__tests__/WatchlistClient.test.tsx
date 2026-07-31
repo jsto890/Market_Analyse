@@ -139,7 +139,7 @@ describe("WatchlistClient unpin undo (WL-01)", () => {
     render(<WatchlistClient medianDaysToPeak={12} />);
     await screen.findByText("NVDA");
     const user = userEvent.setup();
-    await user.click(screen.getByRole("button", { name: "Unpin" }));
+    await user.click(screen.getByRole("button", { name: "Unpin NVDA" }));
     expect(await screen.findByText("Removed NVDA from watchlist")).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Undo" }));
     expect(await screen.findByText("NVDA")).toBeInTheDocument();
