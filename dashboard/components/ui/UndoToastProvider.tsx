@@ -49,7 +49,7 @@ export default function UndoToastProvider({ children }: { children: ReactNode })
     <UndoContext.Provider value={{ run }}>
       {children}
       {toast && (
-        <div className="fixed bottom-4 left-1/2 z-[100] -translate-x-1/2 flex items-center gap-3 rounded-md border border-line bg-elevated px-3 py-2 text-[13px] text-foreground shadow-lg">
+        <div className="fixed bottom-4 left-1/2 z-[100] -translate-x-1/2 flex items-center gap-3 rounded-md border border-line bg-elevated px-3 py-2 text-body text-foreground shadow-lg">
           <span>{toast.label}</span>
           <button
             type="button"

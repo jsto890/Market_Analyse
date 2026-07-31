@@ -105,7 +105,7 @@ function TickerCell({ row, isNew }: { row: BridgeRow; isNew: boolean }) {
       className="font-mono font-medium text-accent hover:underline"
     >
       {row.ticker}
-      {isNew && <sup className="ml-0.5 text-[11px] font-semibold text-warn">NEW</sup>}
+      {isNew && <sup className="ml-0.5 text-micro font-semibold text-warn">NEW</sup>}
     </Link>
   );
 }
@@ -144,14 +144,14 @@ function RowFlags({ ext, earnDays }: { ext: boolean; earnDays: number | null }) 
   return (
     <span className="inline-flex items-center gap-1">
       {ext && (
-        <span className="rounded border border-line px-1 py-px text-[11px] text-muted">ext</span>
+        <span className="rounded border border-line px-1 py-px text-micro text-muted">ext</span>
       )}
       {showEarn && (
         <InfoTip
           content={`earnings in ${earnDays}d — inside typical hold window`}
           label={`Earnings in ${earnDays} days`}
         >
-          <span className="rounded border border-warn/50 bg-warn/10 px-1 py-px text-[11px] font-medium text-warn">
+          <span className="rounded border border-warn/50 bg-warn/10 px-1 py-px text-micro font-medium text-warn">
             E{earnDays}d
           </span>
         </InfoTip>
@@ -182,7 +182,7 @@ function CatalystCount({ value }: { value: string | null }) {
       }
       label={`${list.length} catalysts`}
     >
-      <span className="inline-flex cursor-default items-center rounded border border-line px-1.5 py-px font-mono text-[11px] tabular-nums text-muted">
+      <span className="inline-flex cursor-default items-center rounded border border-line px-1.5 py-px font-mono text-micro tabular-nums text-muted">
         {list.length}
       </span>
     </InfoTip>
@@ -236,7 +236,7 @@ function ExpandedRow({ row }: { row: BridgeRow }) {
     row.earnings_in_days <= 10;
 
   return (
-    <div className="space-y-1.5 py-3 font-mono text-[13px] text-muted">
+    <div className="space-y-1.5 py-3 font-mono text-body text-muted">
       <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
         <span className="inline-flex items-center gap-1">
           Conviction <ConvictionDot value={row.conviction} />
@@ -424,7 +424,7 @@ function GroupTable({
 }) {
   const columns = useMemo(() => columnsFor(newSet), [newSet]);
   if (rows.length === 0) {
-    return <p className="px-1 py-2 text-[13px] text-muted">none today</p>;
+    return <p className="px-1 py-2 text-body text-muted">none today</p>;
   }
   return (
     <DataTable
@@ -502,7 +502,7 @@ export default function SignalGroups({
             type="button"
             onClick={() => update({ hcOnly: !active.hcOnly })}
             aria-pressed={active.hcOnly}
-            className={`inline-flex h-8 items-center gap-1 rounded border px-2.5 text-[12px] font-medium transition-colors ${
+            className={`inline-flex h-8 items-center gap-1 rounded border px-2.5 text-dense font-medium transition-colors ${
               active.hcOnly
                 ? "border-accent bg-accent-dim text-accent"
                 : "border-line bg-raised text-muted hover:text-foreground"
@@ -551,7 +551,7 @@ export default function SignalGroups({
             : `${g.title}  (${shown})`;
         return (
           <Panel key={g.key} title={title} subtitle={g.rationale}>
-            {sorted[g.key].length > 0 && <p className="mb-2 border-b border-line pb-2 text-[12px] text-muted">{CAVEAT_LINE}</p>}
+            {sorted[g.key].length > 0 && <p className="mb-2 border-b border-line pb-2 text-dense text-muted">{CAVEAT_LINE}</p>}
             <GroupTable
               rows={sorted[g.key]}
               newSet={newSet}
@@ -569,7 +569,7 @@ export default function SignalGroups({
         defaultOpen={false}
         persistKey="today-other"
       >
-        {sorted.other.length > 0 && <p className="mb-2 border-b border-line pb-2 text-[12px] text-muted">{CAVEAT_LINE}</p>}
+        {sorted.other.length > 0 && <p className="mb-2 border-b border-line pb-2 text-dense text-muted">{CAVEAT_LINE}</p>}
         <GroupTable
           rows={sorted.other}
           newSet={newSet}

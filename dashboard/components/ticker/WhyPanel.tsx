@@ -28,7 +28,7 @@ function InfoTooltip({ text }: { text: string }) {
       <Tooltip.Trigger asChild>
         <button
           type="button"
-          className="text-muted text-[11px] font-mono leading-none cursor-default select-none align-middle"
+          className="text-muted text-micro font-mono leading-none cursor-default select-none align-middle"
           aria-label="info"
         >
           i
@@ -36,7 +36,7 @@ function InfoTooltip({ text }: { text: string }) {
       </Tooltip.Trigger>
       <Tooltip.Portal>
         <Tooltip.Content
-          className="rounded bg-elevated px-2 py-1 text-[12px] text-muted shadow-lg border border-line z-50 max-w-[240px]"
+          className="rounded bg-elevated px-2 py-1 text-dense text-muted shadow-lg border border-line z-50 max-w-[240px]"
           sideOffset={4}
         >
           {text}
@@ -63,19 +63,19 @@ function FamilyRow({ family, longV, shortV, waitV, attribution }: FamilyRowProps
 
   return (
     <div className="flex items-center gap-2 py-0.5">
-      <span className="w-[90px] shrink-0 font-mono text-[11px] text-muted truncate">
+      <span className="w-[90px] shrink-0 font-mono text-micro text-muted truncate">
         {family}
       </span>
       <CenterBar value={net} width={80} />
-      <span className="font-mono text-[11px] text-foreground tabular-nums w-[28px] shrink-0">
+      <span className="font-mono text-micro text-foreground tabular-nums w-[28px] shrink-0">
         {netStr}
       </span>
-      <span className="font-mono text-[11px] text-muted tabular-nums">
+      <span className="font-mono text-micro text-muted tabular-nums">
         {longV}/{total}
       </span>
       {attribution !== undefined && (
         <span
-          className={`font-mono text-[11px] tabular-nums ml-auto shrink-0 ${
+          className={`font-mono text-micro tabular-nums ml-auto shrink-0 ${
             attribution >= 0 ? "text-pos" : "text-neg"
           }`}
         >
@@ -104,18 +104,18 @@ function VoteRow({ agent, direction, confidence, note }: VoteRowProps) {
 
   return (
     <div className="flex items-baseline gap-2 py-px">
-      <span className="font-mono text-[11px] text-foreground truncate flex-1 min-w-0">
+      <span className="font-mono text-micro text-foreground truncate flex-1 min-w-0">
         {agent}
       </span>
-      <span className={`font-mono text-[11px] shrink-0 ${dirClass}`}>
+      <span className={`font-mono text-micro shrink-0 ${dirClass}`}>
         {direction}
       </span>
-      <span className="font-mono text-[11px] text-muted tabular-nums shrink-0 w-[32px] text-right">
+      <span className="font-mono text-micro text-muted tabular-nums shrink-0 w-[32px] text-right">
         {(confidence * 100).toFixed(0)}%
       </span>
       {note && (
         <span
-          className="font-mono text-[11px] text-muted truncate max-w-[240px] shrink-0"
+          className="font-mono text-micro text-muted truncate max-w-[240px] shrink-0"
           title={note ?? undefined}
         >
           {note}
@@ -154,10 +154,10 @@ function VoteSection({
 
   return (
     <div>
-      <p className={`font-mono text-[11px] tracking-wide mb-1 ${tone}`}>{title}</p>
+      <p className={`font-mono text-micro tracking-wide mb-1 ${tone}`}>{title}</p>
       {groups.map(([family, rows]) => (
         <div key={family} className="mb-1.5">
-          <p className="font-mono text-[11px] text-muted">{family}</p>
+          <p className="font-mono text-micro text-muted">{family}</p>
           {rows.map((v) => (
             <VoteRow
               key={v.agent}
@@ -190,7 +190,7 @@ export default function WhyPanel({ ticker }: { ticker: string }) {
             <Skeleton width={180} height={14} />
             <Skeleton width={60} height={14} />
           </div>
-          <p className="font-mono text-[11px] text-muted animate-pulse">
+          <p className="font-mono text-micro text-muted animate-pulse">
             Running 70 agents… ~10s
           </p>
           <Skeleton width="100%" height={8} className="mt-2" />
@@ -208,7 +208,7 @@ export default function WhyPanel({ ticker }: { ticker: string }) {
     return (
       <Panel title="Why">
         <div className="space-y-2 py-1">
-          <p className={`font-mono text-[12px] ${timedOut ? "text-warn" : "text-neg"}`}>
+          <p className={`font-mono text-dense ${timedOut ? "text-warn" : "text-neg"}`}>
             {timedOut ? (
               retrying ? (
                 "Scoring timed out — retrying…"
@@ -225,7 +225,7 @@ export default function WhyPanel({ ticker }: { ticker: string }) {
             <button
               type="button"
               onClick={() => mutate()}
-              className="font-mono text-[11px] text-accent border border-accent/40 rounded px-2 py-0.5 hover:bg-accent/10 transition-colors"
+              className="font-mono text-micro text-accent border border-accent/40 rounded px-2 py-0.5 hover:bg-accent/10 transition-colors"
             >
               Retry
             </button>
@@ -317,7 +317,7 @@ export default function WhyPanel({ ticker }: { ticker: string }) {
 
   const titleActions = (
     <div className="flex items-center gap-1.5 flex-wrap">
-      <span className="font-mono text-[11px] tabular-nums text-muted">
+      <span className="font-mono text-micro tabular-nums text-muted">
         <span
           className={
             verdict === "LONG"
@@ -337,17 +337,20 @@ export default function WhyPanel({ ticker }: { ticker: string }) {
         <span className="text-foreground tabular-nums">{agrPct}%</span>
       </span>
       {ciWide && (
-        <span className="inline-flex items-center rounded border border-warn/50 bg-warn/10 px-1.5 py-px font-mono text-[11px] text-warn">
+        <span className="inline-flex items-center rounded border border-warn/50 bg-warn/10 px-1.5 py-px font-mono text-micro text-warn">
           wide
         </span>
       )}
       {error && (
-        <span
-          className="inline-flex items-center rounded border border-muted/40 bg-muted/10 px-1.5 py-px font-mono text-[11px] text-muted"
-          title={timedOut ? "scoring timed out — showing last result" : "refresh failed — showing last result"}
+        <InfoTip
+          label="Why this reading is stale"
+          content={
+            timedOut ? "Scoring timed out — showing the last result." : "Refresh failed — showing the last result."
+          }
+          className="inline-flex items-center rounded border border-muted/40 bg-muted/10 px-1.5 py-px font-mono text-micro text-muted"
         >
           stale
-        </span>
+        </InfoTip>
       )}
     </div>
   );
@@ -359,7 +362,7 @@ export default function WhyPanel({ ticker }: { ticker: string }) {
         {inflationAbove && (
           <div className="flex items-start gap-1.5 rounded border border-warn/40 bg-warn/5 px-3 py-2">
             <AlertTriangle size={12} className="text-warn mt-px shrink-0" />
-            <span className="font-mono text-[11px] text-warn leading-snug">
+            <span className="font-mono text-micro text-warn leading-snug">
               High inflation gap — correlated consensus, discount this score.
             </span>
           </div>
@@ -368,12 +371,12 @@ export default function WhyPanel({ ticker }: { ticker: string }) {
         {/* Combo headline */}
         {combo && (
           <div className="space-y-1">
-            <span className="font-mono text-[12px] text-foreground">
+            <span className="font-mono text-dense text-foreground">
               combo{" "}
               <span className="font-medium">{combo}</span>
             </span>
             {comboNote && (
-              <p className="font-mono text-[11px] text-muted leading-snug">
+              <p className="font-mono text-micro text-muted leading-snug">
                 — {comboNote}
               </p>
             )}
@@ -395,7 +398,7 @@ export default function WhyPanel({ ticker }: { ticker: string }) {
                       </>
                     }
                   >
-                    <span className="inline-flex items-center gap-1 rounded border border-line bg-surface px-1.5 py-0.5 font-mono text-[11px] text-muted">
+                    <span className="inline-flex items-center gap-1 rounded border border-line bg-surface px-1.5 py-0.5 font-mono text-micro text-muted">
                       {family}
                       <span className={letter === "L" ? "text-pos" : letter === "S" ? "text-neg" : "text-muted"}>
                         {letter}
@@ -421,8 +424,8 @@ export default function WhyPanel({ ticker }: { ticker: string }) {
         <div className="flex items-center gap-1.5 flex-wrap">
           {n_eff !== undefined && (
             <span className="inline-flex items-center gap-1 rounded border border-line bg-surface px-2 py-0.5">
-              <span className="text-[11px] text-muted">n_eff</span>
-              <span className="font-mono text-[13px] tabular-nums text-foreground">
+              <span className="text-micro text-muted">n_eff</span>
+              <span className="font-mono text-body tabular-nums text-foreground">
                 {n_eff.toFixed(1)}
               </span>
               <InfoTip content="Higher is not better — high n_eff backtested worse" label="n_eff info" />
@@ -443,10 +446,10 @@ export default function WhyPanel({ ticker }: { ticker: string }) {
         {meta_note && meta_note.trim().length > 0 && (
           <div className="flex items-start gap-1.5 rounded border border-warn/40 bg-warn/5 px-3 py-2">
             <AlertTriangle size={12} className="text-warn mt-px shrink-0" />
-            <span className="font-mono text-[11px] text-warn leading-snug">
+            <span className="font-mono text-micro text-warn leading-snug">
               Meta-analyst: {meta_note}
             </span>
-            <span className="ml-1 font-mono text-[11px] text-muted shrink-0">
+            <span className="ml-1 font-mono text-micro text-muted shrink-0">
               advisory only
             </span>
           </div>
@@ -466,7 +469,7 @@ export default function WhyPanel({ ticker }: { ticker: string }) {
               className="text-muted transition-transform duration-150 shrink-0"
               style={{ transform: votesOpen ? "rotate(0deg)" : "rotate(-90deg)" }}
             />
-            <span className="font-mono text-[11px] text-muted">
+            <span className="font-mono text-micro text-muted">
               agent votes (
               <span className="text-pos">{agreedCount} agreed</span>
               {" · "}

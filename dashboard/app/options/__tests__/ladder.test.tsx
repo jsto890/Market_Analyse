@@ -1,5 +1,5 @@
 import { vi } from "vitest";
-import { render, screen, fireEvent, waitFor } from "@/test/render";
+import { render, screen, fireEvent, waitFor, within } from "@/test/render";
 import { mockFetchJson } from "@/test/fetchMock";
 import { resetLocalStorage, seedLocalStorage } from "@/test/localStorage";
 import userEvent from "@testing-library/user-event";
@@ -126,7 +126,7 @@ describe("OptionsLadderPage — controls (OPT-01, OPT-05)", () => {
     const strikeOrder = () =>
       screen
         .getAllByRole("row")
-        .slice(2)
+        .slice(1)
         .map((r) => r.querySelectorAll("td")[3]?.textContent?.replace(/\D/g, ""))
         .filter(Boolean);
 
@@ -162,11 +162,33 @@ describe("OptionsLadderPage — classic ladder", () => {
     mockAll();
   });
 
-  it("labels the put and call column blocks in text, not colour alone (OPT-10)", async () => {
+  it("labels the put and call side in every column header, not colour alone (OPT-10)", async () => {
     render(<OptionsLadderPage />);
     await screen.findByText("call IV");
-    expect(screen.getByText("Puts")).toBeInTheDocument();
-    expect(screen.getByText("Calls")).toBeInTheDocument();
+    // The side used to live in a separate colgroup row, which scrolled out of
+    // view horizontally. It is now in each column label, so it survives scroll.
+    for (const label of ["put OI", "put vol", "put IV", "call IV", "call vol", "call OI"]) {
+      expect(screen.getByText(label)).toBeInTheDocument();
+    }
+  });
+
+  it("keeps the strike column pinned while the ladder scrolls sideways", async () => {
+    render(<OptionsLadderPage />);
+    await screen.findByText("call IV");
+    const strikeHeader = screen.getByText("strike");
+    expect(strikeHeader.className).toContain("sticky");
+    expect(strikeHeader.className).toContain("left-0");
+  });
+
+  it("paints the sticky header on its cells so data rows cannot show through", async () => {
+    render(<OptionsLadderPage />);
+    await screen.findByText("call IV");
+    // A border-collapse table will not paint a background on <thead>/<tr>.
+    const table = screen.getByText("strike").closest("table")!;
+    expect(table.className).toContain("border-separate");
+    for (const label of ["put OI", "call IV", "call OI"]) {
+      expect(screen.getByText(label).className).toContain("bg-surface");
+    }
   });
 
   it("advertises click-to-copy before you click (OPT-06)", async () => {
@@ -217,24 +239,33 @@ describe("OptionsLadderPage — live ladder", () => {
     mockAll();
   });
 
-  it("groups the call and put blocks under headed spans (OPT-10)", async () => {
+  it("names the side in every live column header, not in a spanning row (OPT-10)", async () => {
+    // A two-row header needs a hardcoded top offset on the second row to stay
+    // sticky, and the side label scrolls out of view horizontally. Each column
+    // carries its own c-/p- prefix instead.
     render(<OptionsLadderPage />);
-    await screen.findByText("C Bid");
-    const calls = screen.getByText("Calls");
-    expect(calls.tagName).toBe("TH");
-    expect(calls.getAttribute("colspan")).toBe(screen.getByText("Puts").getAttribute("colspan"));
+    await screen.findByText("c bid");
+    for (const label of ["c bid", "c ask", "c IV", "c vol", "c OI", "c GEX"]) {
+      expect(screen.getByText(label).closest("th")).toBeInTheDocument();
+    }
+    for (const label of ["p bid", "p ask", "p IV", "p vol", "p OI", "p GEX"]) {
+      expect(screen.getByText(label).closest("th")).toBeInTheDocument();
+    }
   });
 
   it("marks the MSI strikes on the ladder, not just in a summary chip", async () => {
     render(<OptionsLadderPage />);
-    await screen.findByText("C Bid");
-    expect(screen.getByText("MSI-C")).toBeInTheDocument();
-    expect(screen.getByText("MSI-P")).toBeInTheDocument();
+    await screen.findByText("c bid");
+    // Also named in the legend above the table, so scope the assertion to the
+    // ladder body itself.
+    const table = document.querySelector("table")!;
+    expect(within(table).getByText("MSI-C")).toBeInTheDocument();
+    expect(within(table).getByText("MSI-P")).toBeInTheDocument();
   });
 
   it("formats GEX with the same scale as everywhere else (OPT-11)", async () => {
     render(<OptionsLadderPage />);
-    await screen.findByText("C Bid");
+    await screen.findByText("c bid");
     expect(screen.getByText("+3M")).toBeInTheDocument();
     expect(screen.getByText("−2M")).toBeInTheDocument();
   });
@@ -242,10 +273,10 @@ describe("OptionsLadderPage — live ladder", () => {
   it("exposes vega and rho as toggleable columns (OPT-05)", async () => {
     const user = userEvent.setup();
     render(<OptionsLadderPage />);
-    await screen.findByText("C Bid");
+    await screen.findByText("c bid");
 
     const vegaHeaders = () =>
-      screen.queryAllByText("ν").filter((el) => el.tagName === "TH");
+      [...screen.queryAllByText(/^[cp] ν$/)].map((el) => el.closest("th")).filter(Boolean);
     expect(vegaHeaders()).toHaveLength(0);
     await user.click(screen.getByRole("checkbox", { name: /vega/i }));
     expect(vegaHeaders()).toHaveLength(2);
@@ -253,7 +284,7 @@ describe("OptionsLadderPage — live ladder", () => {
 
   it("groups the levels strip by what each number answers (OPT-12, OPT-13)", async () => {
     render(<OptionsLadderPage />);
-    await screen.findByText("C Bid");
+    await screen.findByText("c bid");
     for (const group of ["Pin", "Dealer gamma", "Crowd", "Data"]) {
       expect(screen.getByText(group)).toBeInTheDocument();
     }
@@ -261,14 +292,14 @@ describe("OptionsLadderPage — live ladder", () => {
 
   it("gives every levels tooltip a real accessible name, not an sr-only child (OPT-14)", async () => {
     render(<OptionsLadderPage />);
-    await screen.findByText("C Bid");
+    await screen.findByText("c bid");
     expect(screen.getByRole("button", { name: /what max pain means/i })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /what fresh means/i })).toBeInTheDocument();
   });
 
   it("keeps the mutating table out of the live region and announces mode in a status", async () => {
     render(<OptionsLadderPage />);
-    await screen.findByText("C Bid");
+    await screen.findByText("c bid");
     const table = document.querySelector("table")!;
     expect(table.closest("[aria-live]")?.getAttribute("aria-live")).toBe("off");
     expect(screen.getAllByRole("status").some((s) => /live ladder on/i.test(s.textContent ?? ""))).toBe(

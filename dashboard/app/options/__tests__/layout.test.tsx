@@ -1,5 +1,5 @@
 import { vi } from "vitest";
-import { render, screen } from "@/test/render";
+import { render, screen, within } from "@/test/render";
 import { mockFetchJson } from "@/test/fetchMock";
 import { resetLocalStorage } from "@/test/localStorage";
 import userEvent from "@testing-library/user-event";
@@ -15,15 +15,19 @@ describe("OptionsLayout — one page became five (OPT-07)", () => {
     mockFetchJson({ "/api/odte/health": { ok: true, ibkr_connected: true } });
   });
 
-  it("offers a tab per section, each with a plain-language blurb", async () => {
+  it("offers a tab per section, and states the current one's blurb in view", async () => {
+    // The blurb used to be a native title on every tab — mouse-only, and only
+    // for whichever tab you happened to hover. The active tab states it inline.
     render(<OptionsLayout>{null}</OptionsLayout>);
     const nav = screen.getByRole("navigation", { name: /options sections/i });
     for (const t of OPTIONS_TABS) {
       const link = screen.getByRole("link", { name: t.label });
       expect(link).toHaveAttribute("href", t.href);
-      expect(link).toHaveAttribute("title", t.blurb);
+      expect(link).not.toHaveAttribute("title");
       expect(nav).toContainElement(link);
     }
+    const active = OPTIONS_TABS.find((t) => t.href === "/options/ladder")!;
+    expect(within(nav).getByText(active.blurb)).toBeInTheDocument();
   });
 
   it("marks the current tab for assistive tech", () => {

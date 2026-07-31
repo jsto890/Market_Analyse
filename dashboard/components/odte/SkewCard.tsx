@@ -25,7 +25,7 @@ function SkewTooltip({ active, payload }: { active?: boolean; payload?: { payloa
   if (!active || !payload || payload.length === 0) return null;
   const p = payload[0].payload;
   return (
-    <div className="rounded border border-line bg-elevated px-3 py-2 font-mono text-[11px] shadow-lg">
+    <div className="rounded border border-line bg-elevated px-3 py-2 font-mono text-micro shadow-lg">
       <p className="text-foreground">strike {p.strike.toFixed(0)}</p>
       <p className="text-pos">call IV {fmtPct(p.callIv)}</p>
       <p className="text-neg">put IV {fmtPct(p.putIv)}</p>
@@ -67,7 +67,7 @@ export default function SkewCard({
       actions={<InfoTip label="How to read the skew curve" content={SKEW_TIP} />}
     >
       {points.length === 0 ? (
-        <p className="font-mono text-[11px] text-muted">no implied vols in this snapshot</p>
+        <p className="font-mono text-micro text-muted">no implied vols in this snapshot</p>
       ) : (
         <>
           <ResponsiveContainer width="100%" height={200}>
@@ -103,7 +103,7 @@ export default function SkewCard({
               />
             </LineChart>
           </ResponsiveContainer>
-          <p className="mt-2 flex flex-wrap gap-x-4 font-mono text-[11px]">
+          <p className="mt-2 flex flex-wrap gap-x-4 font-mono text-micro">
             <span>
               <span className="text-muted">ATM skew </span>
               <span className={verdict?.tone ?? "text-muted"}>

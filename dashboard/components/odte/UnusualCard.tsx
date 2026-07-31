@@ -36,7 +36,7 @@ export default function UnusualCard({ symbol }: { symbol: OdteSymbol }) {
       empty={empty}
     >
       {data && (
-        <div className="font-mono text-[11px] space-y-1">
+        <div className="font-mono text-micro space-y-1">
           {data.rows.slice(0, 5).map((row, i) => (
             <div key={`${row.contract}-${i}`} className="flex justify-between gap-2 tabular-nums">
               <span className="truncate text-foreground">{row.contract}</span>

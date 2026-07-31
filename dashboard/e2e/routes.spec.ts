@@ -5,9 +5,9 @@ test("/macro is reachable", async ({ page }) => {
   expect(res?.status()).toBe(200);
 });
 
-test("/sources currently 404s (baseline — see MARKET_ANALYSE_UI_AUDIT.md)", async ({ page }) => {
+test("/sources is reachable", async ({ page }) => {
   const res = await page.goto("/sources");
-  expect(res?.status()).toBe(404);
+  expect(res?.status()).toBe(200);
 });
 
 test("OL-01: /api/argus/options/live/:symbol should not 404, proxied to Argus", async ({ request }) => {

@@ -111,7 +111,7 @@ describe("MorningReport — content (MB-01..MB-09)", () => {
     const gex = await screen.findByText("SPY zero-gamma 632, spot above");
     expect(gex.className).toContain("text-foreground");
     expect(gex.className).not.toContain("text-muted");
-    expect(gex.className).not.toContain("text-[11px]");
+    expect(gex.className).not.toContain("text-micro");
   });
 
   it("labels the three prose lines with roles (MB-05)", async () => {

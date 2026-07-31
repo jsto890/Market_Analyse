@@ -29,6 +29,24 @@ const config: Config = {
       height: {
         nav: "var(--nav-h)",
       },
+      // Six-step scale, declared in px so the 14px root font-size can't rescale
+      // them (rem-based sizes render 10.5px/12.25px here — never use text-xs/sm).
+      fontSize: {
+        micro: ["11px", { lineHeight: "1.35" }],
+        dense: ["12px", { lineHeight: "1.4" }],
+        body: ["13px", { lineHeight: "1.5" }],
+        subhead: ["15px", { lineHeight: "1.35" }],
+        title: ["18px", { lineHeight: "1.3" }],
+        display: ["24px", { lineHeight: "1.2" }],
+        // Stock keys remapped onto the same six steps so a stray text-xs can
+        // never reintroduce an off-scale 10.5px/12.25px.
+        xs: ["11px", { lineHeight: "1.35" }],
+        sm: ["13px", { lineHeight: "1.5" }],
+        base: ["13px", { lineHeight: "1.5" }],
+        lg: ["15px", { lineHeight: "1.35" }],
+        xl: ["18px", { lineHeight: "1.3" }],
+        "2xl": ["24px", { lineHeight: "1.2" }],
+      },
       fontFamily: {
         sans: ["var(--font-sans)", "system-ui", "sans-serif"],
         mono: ["var(--font-mono)", "ui-monospace", "monospace"],

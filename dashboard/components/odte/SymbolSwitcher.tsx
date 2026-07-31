@@ -22,13 +22,13 @@ function Group({
 }) {
   return (
     <div className="flex items-center gap-2 px-2">
-      <span className="text-xs text-muted">{label}</span>
+      <span className="text-micro text-muted">{label}</span>
       {symbols.map((symbol) => (
         <button
           key={symbol}
           type="button"
           onClick={() => onChange(symbol)}
-          className={`px-2 py-0.5 text-xs ${
+          className={`px-2 py-0.5 text-micro ${
             symbol === active ? "bg-accent-dim text-accent" : "text-muted hover:text-foreground"
           }`}
         >

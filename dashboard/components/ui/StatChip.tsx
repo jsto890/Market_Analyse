@@ -21,8 +21,8 @@ export default function StatChip({ label, value, tone, tooltip }: StatChipProps)
 
   const inner = (
     <span className="inline-flex items-center gap-1 rounded border border-line bg-surface px-2 py-0.5">
-      <span className="text-[11px] text-muted">{label}</span>
-      <span className={`font-mono text-[13px] tabular-nums ${valueClass}`}>{value}</span>
+      <span className="text-micro text-muted">{label}</span>
+      <span className={`font-mono text-body tabular-nums ${valueClass}`}>{value}</span>
     </span>
   );
 

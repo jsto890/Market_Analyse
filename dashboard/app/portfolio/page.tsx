@@ -4,12 +4,16 @@ import DataTable, { Column } from "@/components/ui/DataTable";
 import Badge from "@/components/ui/Badge";
 import StatChip from "@/components/ui/StatChip";
 import InfoTip from "@/components/ui/InfoTip";
+import EmptyState from "@/components/ui/EmptyState";
+import Button from "@/components/ui/Button";
+import { PlugZap, Briefcase } from "lucide-react";
 import { signedCurrency, price as fmtPrice } from "@/lib/format";
 import { PORTFOLIO_EDGE_LABEL } from "@/lib/labels";
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import useSWR from "swr";
+import PageShell from "@/components/PageShell";
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
@@ -131,8 +135,7 @@ export default function PortfolioPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-bg text-foreground">
-      <div className="max-w-5xl mx-auto px-4 py-6 space-y-4">
+    <PageShell width="standard">
         <PageHeader title="Portfolio" subtitle="TWS · port 7496 · live" />
 
         {account && (
@@ -143,74 +146,88 @@ export default function PortfolioPage() {
           </div>
         )}
 
-        {isLoading && <p className="text-xs font-mono text-muted">Loading…</p>}
+        {isLoading && <p className="text-micro font-mono text-muted">Loading…</p>}
 
-        {!isLoading && offline && (
+        {/* Offline with nothing to fall back on: one honest empty state that
+         * fills the column, instead of a banner stacked on a ghost table
+         * header listing columns that will never have rows. */}
+        {!isLoading && offline && pinned.length === 0 && (
+          <EmptyState
+            fill
+            icon={<PlugZap size={26} strokeWidth={1.5} />}
+            title="IBKR Gateway offline"
+            message="Connect TWS on port 7496 (live) to see positions, cost basis and Argus edge. Pin tickers on the watchlist for a price-only fallback."
+            action={
+              <Button variant="secondary" onClick={() => void mutate()}>
+                Retry connection
+              </Button>
+            }
+          />
+        )}
+
+        {!isLoading && offline && pinned.length > 0 && (
           <div className="space-y-4">
             <div className="flex flex-wrap items-center gap-3 rounded border border-line bg-surface px-4 py-2.5">
-              <p className="text-sm font-semibold text-foreground">IBKR Gateway Offline</p>
-              <p className="text-xs text-muted">
+              <p className="text-body font-semibold text-foreground">IBKR Gateway Offline</p>
+              <p className="text-micro text-muted">
                 Connect TWS on port 7496 (live) to see positions.
               </p>
               <button
                 onClick={() => void mutate()}
-                className="ml-auto text-xs bg-elevated hover:bg-raised border border-line text-foreground px-3 py-1 rounded transition-colors"
+                className="ml-auto text-micro bg-elevated hover:bg-raised border border-line text-foreground px-3 py-1 rounded transition-colors"
               >
                 Retry
               </button>
             </div>
 
-            {pinned.length > 0 ? (
-              <div className="space-y-2">
-                <p className="text-[11px] font-mono text-warn/80">
-                  TWS is offline — showing your pinned watchlist instead of live positions ({pinned.length}).
-                </p>
-                <div className="bg-surface border border-line rounded p-2 overflow-x-auto">
-                  <table className="w-full text-sm border-collapse">
-                    <tbody>
-                      {pinned.map((p) => (
-                        <tr key={p.ticker} className="border-b border-[var(--elevated)] last:border-0">
-                          <td className="py-1.5 px-2">
-                            <Link href={`/t/${p.ticker}`} className="font-mono text-accent hover:underline">
-                              {p.ticker}
-                            </Link>
-                          </td>
-                          <td className="py-1.5 px-2 text-right text-[11px] text-muted font-mono">
-                            pinned {new Date(p.pinned_at).toLocaleDateString()}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            ) : (
-              <p className="text-xs text-muted">No pinned watchlist tickers to fall back to.</p>
-            )}
-
-            <div>
-              <p className="mb-1.5 text-[11px] uppercase tracking-wide text-muted/60">
-                Positions (connect TWS to populate)
+            <div className="space-y-2">
+              <p className="text-micro font-mono text-warn/80">
+                TWS is offline — showing your pinned watchlist instead of live positions ({pinned.length}).
               </p>
-              <div className="rounded border border-line bg-surface/40 px-3 py-2 text-[11px] text-muted/60">
-                Symbol · Position · Avg Cost · Argus · Score · Edge
+              <div className="bg-surface border border-line rounded p-2 overflow-x-auto">
+                <table className="w-full text-body border-collapse">
+                  <tbody>
+                    {pinned.map((p) => (
+                      <tr key={p.ticker} className="border-b border-[var(--elevated)] last:border-0">
+                        <td className="py-1.5 px-2">
+                          <Link href={`/t/${p.ticker}`} className="font-mono text-accent hover:underline">
+                            {p.ticker}
+                          </Link>
+                        </td>
+                        <td className="py-1.5 px-2 text-right text-micro text-muted font-mono">
+                          pinned {new Date(p.pinned_at).toLocaleDateString()}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
             </div>
           </div>
         )}
 
         {!isLoading && isEmpty && (
-          <p className="text-sm text-muted">No open positions.</p>
+          <EmptyState
+            fill
+            icon={<Briefcase size={26} strokeWidth={1.5} />}
+            title="No open positions"
+            message="TWS is connected but the account holds no equity positions. Candidates from the screener and watchlist will show their Argus edge here once you're filled."
+            action={
+              <Button variant="secondary" onClick={() => router.push("/screener")}>
+                Open screener
+              </Button>
+            }
+          />
         )}
 
         {!isLoading && !offline && positions.length > 0 && (
           <>
             <div className="flex items-center gap-3">
-              <p className="text-xs text-muted font-mono">
+              <p className="text-micro text-muted font-mono">
                 {positions.length} position{positions.length !== 1 ? "s" : ""}
               </p>
               {liveOffline && (
-                <span className="text-[11px] font-mono text-warn/80">
+                <span className="text-micro font-mono text-warn/80">
                   Price-only preview from your pinned watchlist — TWS positions unavailable
                 </span>
               )}
@@ -226,7 +243,7 @@ export default function PortfolioPage() {
             </div>
           </>
         )}
-      </div>
-    </div>
+      </PageShell>
+    
   );
 }

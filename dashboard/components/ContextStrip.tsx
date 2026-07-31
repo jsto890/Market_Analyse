@@ -70,9 +70,9 @@ export default function ContextStrip() {
   const aggregate: DotState = data?.aggregate ?? "idle";
 
   return (
-    <div className="flex items-center gap-3 text-[13px] leading-none">
+    <div className="flex items-center gap-3 text-body leading-none">
       {/* Session chip (e.g. OVN / RTH / PRE) */}
-      <span className="text-muted font-mono text-[11px] border border-line rounded px-1 py-px select-none">
+      <span className="text-muted font-mono text-micro border border-line rounded px-1 py-px select-none">
         {sessionChip(clock)}
       </span>
 
@@ -82,7 +82,7 @@ export default function ContextStrip() {
           <button
             type="button"
             aria-label="System status"
-            className={`inline-flex items-center gap-1 rounded-sm border border-line border-l-2 bg-elevated px-1.5 py-px font-mono text-[11px] font-semibold tracking-wide select-none ${PILL_CLASS[aggregate]}`}
+            className={`inline-flex items-center gap-1 rounded-sm border border-line border-l-2 bg-elevated px-1.5 py-px font-mono text-micro font-semibold tracking-wide select-none ${PILL_CLASS[aggregate]}`}
           >
             SYS
           </button>
@@ -91,7 +91,7 @@ export default function ContextStrip() {
           <Popover.Content
             side="bottom"
             sideOffset={4}
-            className="rounded bg-elevated border border-line px-2 py-1 text-[12px] text-muted shadow-lg z-50 min-w-[180px]"
+            className="rounded bg-elevated border border-line px-2 py-1 text-dense text-muted shadow-lg z-50 min-w-[180px]"
           >
             {(data?.services ?? []).map((s) => (
               <div key={s.name} className="flex items-center gap-1.5 py-0.5">
@@ -106,7 +106,7 @@ export default function ContextStrip() {
       </Popover.Root>
 
       {freshness && (
-        <span className="text-muted text-[11px] font-mono select-none">{freshness}</span>
+        <span className="text-muted text-micro font-mono select-none">{freshness}</span>
       )}
     </div>
   );

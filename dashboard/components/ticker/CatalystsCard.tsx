@@ -35,7 +35,7 @@ function CatalystRow({ token }: { token: string }) {
         aria-hidden="true"
       />
       <Zap size={12} className={neg ? "text-neg shrink-0" : "text-pos shrink-0"} />
-      <span className="font-mono text-[13px] text-foreground">{humanize(token)}</span>
+      <span className="font-mono text-body text-foreground">{humanize(token)}</span>
     </div>
   );
 }
@@ -78,20 +78,19 @@ function BridgeCatalysts({ bridgeRow }: { bridgeRow: BridgeRow }) {
           ))}
         </div>
       ) : (
-        <p className="text-[12px] text-muted">No catalyst tokens today</p>
+        <p className="text-dense text-muted">No catalyst tokens today</p>
       )}
 
       {/* Vote ticks */}
       <div className="flex items-center gap-3 border-t border-line pt-2 flex-wrap">
-        <span className="text-[11px] text-muted font-mono">votes</span>
+        <span className="text-micro text-muted font-mono">votes</span>
         {VOTE_LABELS.map(({ key, label }) => (
           <span
             key={key}
-            className="inline-flex items-center gap-1 font-mono text-[13px] tabular-nums"
-            title={label}
+            className="inline-flex items-center gap-1 font-mono text-body tabular-nums"
           >
             <VoteTick value={Number(bridgeRow[key])} />
-            <span className="text-[11px] text-muted">{label}</span>
+            <span className="text-micro text-muted">{label}</span>
           </span>
         ))}
       </div>
@@ -115,7 +114,7 @@ function OffBridgeCatalysts({ ticker }: { ticker: string }) {
 
   const offline = error != null || data == null || data.error != null;
   if (offline) {
-    return <p className="text-[12px] text-muted">No fundamental data available</p>;
+    return <p className="text-dense text-muted">No fundamental data available</p>;
   }
 
   const fields: { label: string; value: string }[] = [];
@@ -127,14 +126,14 @@ function OffBridgeCatalysts({ ticker }: { ticker: string }) {
   if (data.short_pct_float != null) fields.push({ label: "short", value: fmtPct(data.short_pct_float) });
 
   if (fields.length === 0) {
-    return <p className="text-[12px] text-muted">No fundamental data available</p>;
+    return <p className="text-dense text-muted">No fundamental data available</p>;
   }
 
   return (
-    <div className="flex flex-wrap gap-x-4 gap-y-1 font-mono text-[13px] tabular-nums">
+    <div className="flex flex-wrap gap-x-4 gap-y-1 font-mono text-body tabular-nums">
       {fields.map((f) => (
         <span key={f.label}>
-          <span className="text-muted text-[11px]">{f.label} </span>
+          <span className="text-muted text-micro">{f.label} </span>
           <span className="text-foreground">{f.value}</span>
         </span>
       ))}

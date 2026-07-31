@@ -21,7 +21,7 @@ export default function GexCard({ symbol }: { symbol: OdteSymbol }) {
   const empty = !isLoading && (!!error || !data);
 
   const row = (label: string, value: string) => (
-    <div className="flex justify-between font-mono text-[11px] tabular-nums">
+    <div className="flex justify-between font-mono text-micro tabular-nums">
       <span className="text-muted">{label}</span>
       <span className="text-foreground">{value}</span>
     </div>
@@ -40,13 +40,13 @@ export default function GexCard({ symbol }: { symbol: OdteSymbol }) {
           {row("zero-gamma", data.zero_gamma != null ? String(data.zero_gamma) : "—")}
           {row("call wall", data.call_wall != null ? String(data.call_wall) : "—")}
           {row("put wall", data.put_wall != null ? String(data.put_wall) : "—")}
-          <div className="flex justify-between font-mono text-[11px] tabular-nums">
+          <div className="flex justify-between font-mono text-micro tabular-nums">
             <span className="text-muted">total GEX</span>
             <span className={(data.total_gex ?? 0) >= 0 ? "text-pos" : "text-neg"}>
               {fmtGex(data.total_gex)}
             </span>
           </div>
-          <p className="text-[9px] text-muted pt-1 border-t border-line">
+          <p className="text-micro text-muted pt-1 border-t border-line">
             OI-based · overnight book
           </p>
         </div>

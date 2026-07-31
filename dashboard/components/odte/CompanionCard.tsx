@@ -25,15 +25,15 @@ export default function CompanionCard({
     <div className="bg-surface border border-line rounded p-3">
       <div className="flex items-center justify-between gap-2 mb-2">
         <div className="flex items-center gap-1.5">
-          <span className="text-[10px] uppercase tracking-[0.08em] text-muted font-mono">
+          <span className="text-micro uppercase tracking-[0.08em] text-muted font-mono">
             {title}
           </span>
           {isProxied(symbol) && (
-            <span className="text-[9px] bg-elevated px-1 rounded text-muted">PROXY</span>
+            <span className="text-micro bg-elevated px-1 rounded text-muted">PROXY</span>
           )}
         </div>
         {asOf && (
-          <span className="text-[10px] text-muted font-mono tabular-nums">{asOf}</span>
+          <span className="text-micro text-muted font-mono tabular-nums">{asOf}</span>
         )}
       </div>
       {loading ? (
@@ -43,7 +43,7 @@ export default function CompanionCard({
           <Skeleton height={12} className="w-1/2" />
         </div>
       ) : empty ? (
-        <p className="text-[11px] text-muted font-mono py-2">{emptyLabel}</p>
+        <p className="text-micro text-muted font-mono py-2">{emptyLabel}</p>
       ) : (
         children
       )}

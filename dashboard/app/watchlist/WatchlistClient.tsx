@@ -17,6 +17,7 @@ import { heatBg } from "@/lib/heat";
 import { price, pct, relativeAge } from "@/lib/format";
 import { WATCHLIST_STATUS_LABEL } from "@/lib/labels";
 import { STATIC_KEYS } from "@/lib/storageKeys";
+import PageShell from "@/components/PageShell";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -100,7 +101,7 @@ function fmtDate(v: string): React.ReactNode {
 }
 
 function fmtLoading(): React.ReactNode {
-  return <span className="text-muted text-[12px]">Loading…</span>;
+  return <span className="text-muted text-dense">Loading…</span>;
 }
 
 const CONCURRENCY = 5;
@@ -278,7 +279,7 @@ function PinnedSection({
       key: "pinned_at",
       header: "Pinned",
       width: "84px",
-      render: (r) => <span className="text-muted text-[12px]">{fmtDate(r.pinned_at)}</span>,
+      render: (r) => <span className="text-muted text-dense">{fmtDate(r.pinned_at)}</span>,
     },
     {
       key: "price_at_pin",
@@ -318,7 +319,7 @@ function PinnedSection({
       header: "Last signal",
       render: (r) =>
         r.lastSignal ? (
-          <span className="text-[12px] text-muted">{r.lastSignal}</span>
+          <span className="text-dense text-muted">{r.lastSignal}</span>
         ) : (
           <span className="text-muted">—</span>
         ),
@@ -356,9 +357,9 @@ function PinnedSection({
         <Button onClick={handleAdd} disabled={adding || !addInput.trim()} loading={adding}>
           Pin
         </Button>
-        {confirmMsg && <span className="text-[12px] text-pos">{confirmMsg}</span>}
+        {confirmMsg && <span className="text-dense text-pos">{confirmMsg}</span>}
         {addError && (
-          <span className="flex items-center gap-1.5 text-[12px] text-neg">
+          <span className="flex items-center gap-1.5 text-dense text-neg">
             {addError}
             <button
               type="button"
@@ -477,12 +478,12 @@ function RecentPicksSection({ medianDaysToPeak }: { medianDaysToPeak: number }) 
     {
       key: "first_date",
       header: "First flagged",
-      render: (r) => <span className="text-[12px] text-muted">{r.first_date}</span>,
+      render: (r) => <span className="text-dense text-muted">{r.first_date}</span>,
     },
     {
       key: "first_group",
       header: "Group",
-      render: (r) => <span className="font-mono text-[12px] text-muted">{r.first_group}</span>,
+      render: (r) => <span className="font-mono text-dense text-muted">{r.first_group}</span>,
     },
     {
       key: "entry_at_flag",
@@ -518,9 +519,9 @@ function RecentPicksSection({ medianDaysToPeak }: { medianDaysToPeak: number }) 
       render: (r) => {
         if (r.stillIn === null) return <span className="text-muted">—</span>;
         return r.stillIn ? (
-          <span className="text-pos text-[12px]">{WATCHLIST_STATUS_LABEL.in}</span>
+          <span className="text-pos text-dense">{WATCHLIST_STATUS_LABEL.in}</span>
         ) : (
-          <span className="text-muted text-[12px]">{WATCHLIST_STATUS_LABEL.out}</span>
+          <span className="text-muted text-dense">{WATCHLIST_STATUS_LABEL.out}</span>
         );
       },
     },
@@ -618,10 +619,10 @@ export default function WatchlistClient({
   }, []);
 
   return (
-    <main className="max-w-5xl mx-auto px-4 py-6 space-y-4">
+    <PageShell width="standard">
       <PageHeader title="Watchlist" subtitle="Pinned names + auto-flagged recent picks" />
       {migrationResult && (
-        <div className="flex items-center gap-3 rounded border border-line bg-elevated px-3 py-2 text-[12px] text-muted">
+        <div className="flex items-center gap-3 rounded border border-line bg-elevated px-3 py-2 text-dense text-muted">
           <span>
             Migrated {migrationResult.ok} of {migrationResult.ok + migrationResult.failed} ticker
             {migrationResult.ok + migrationResult.failed === 1 ? "" : "s"} from your old watchlist
@@ -642,6 +643,6 @@ export default function WatchlistClient({
       )}
       <PinnedSection entries={entries} onAdded={mutate} />
       <RecentPicksSection medianDaysToPeak={medianDaysToPeak} />
-    </main>
+    </PageShell>
   );
 }

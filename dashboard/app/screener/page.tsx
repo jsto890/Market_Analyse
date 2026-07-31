@@ -3,7 +3,7 @@ import PageHeader from "@/components/ui/PageHeader";
 import SkeletonTable from "@/components/ui/SkeletonTable";
 
 import { useRef, useState } from "react";
-import { Search, ArrowRight, Loader2 } from "lucide-react";
+import { Search, ArrowRight, Loader2, Filter } from "lucide-react";
 import { useRouter } from "next/navigation";
 import type { ScreenerResult } from "@/types/argus";
 import DataTable, { Column } from "@/components/ui/DataTable";
@@ -12,9 +12,11 @@ import Button from "@/components/ui/Button";
 import Badge from "@/components/ui/Badge";
 import PinToggle from "@/components/ui/PinToggle";
 import InfoTip from "@/components/ui/InfoTip";
+import EmptyState from "@/components/ui/EmptyState";
 import { HEADER_GLOSS } from "@/lib/labels";
 import { pctWhole, pct } from "@/lib/format";
 import { STATIC_KEYS } from "@/lib/storageKeys";
+import PageShell from "@/components/PageShell";
 
 function scoreColor(s: number): string {
   if (s >= 0.7) return "text-pos";
@@ -224,8 +226,7 @@ export default function ScreenerPage() {
   }
 
   return (
-    <div className="min-h-screen bg-bg text-foreground">
-      <div className="max-w-6xl mx-auto px-4 py-6 space-y-4">
+    <PageShell width="standard">
         <PageHeader title="Screener" subtitle="Agent-ranked long candidates" />
 
         {/* Controls */}
@@ -239,7 +240,7 @@ export default function ScreenerPage() {
             placeholder="Filter tickers — AAPL, TSLA, NVDA…"
             className="w-64"
           />
-          <label className="flex items-center gap-1.5 text-xs text-muted">
+          <label className="flex items-center gap-1.5 text-micro text-muted">
             Min score
             <Input
               type="number"
@@ -276,22 +277,22 @@ export default function ScreenerPage() {
 
         {/* States */}
         {loading && (
-          <p className="flex items-center gap-1.5 text-xs font-mono text-muted">
+          <p className="flex items-center gap-1.5 text-micro font-mono text-muted">
             <Loader2 size={12} className="animate-spin" /> Running agent ensemble… (10–30s)
             <Button variant="ghost" size="sm" onClick={handleCancel}>Cancel</Button>
           </p>
         )}
 
         {error && (
-          <div className="rounded-md border border-neg/50 bg-neg/10 px-3 py-2 text-sm text-neg">
+          <div className="rounded-md border border-neg/50 bg-neg/10 px-3 py-2 text-body text-neg">
             {error}
           </div>
         )}
 
         {!loading && !error && results === null && (
           <div className="rounded-md border border-dashed border-line bg-elevated/40 px-6 py-8 text-center">
-            <p className="text-sm text-foreground">Rank long candidates with the agent ensemble</p>
-            <p className="mx-auto mt-1.5 max-w-md text-xs text-muted">
+            <p className="text-body text-foreground">Rank long candidates with the agent ensemble</p>
+            <p className="mx-auto mt-1.5 max-w-md text-micro text-muted">
               Enter tickers to score a shortlist, or run the full universe. Sort any column, click
               a row to open the ticker, and pin candidates to your watchlist.
             </p>
@@ -307,7 +308,7 @@ export default function ScreenerPage() {
 
         {!loading && !error && results !== null && (
           <>
-            <div className="flex flex-wrap items-center gap-2 text-xs font-mono text-muted">
+            <div className="flex flex-wrap items-center gap-2 text-micro font-mono text-muted">
               <span>
                 {results.length} signal{results.length !== 1 ? "s" : ""} found
               </span>
@@ -328,7 +329,12 @@ export default function ScreenerPage() {
               )}
             </div>
             {results.length === 0 ? (
-              <p className="text-sm text-muted">No results above threshold.</p>
+              <EmptyState
+                fill
+                icon={<Filter size={26} strokeWidth={1.5} />}
+                title="No signals above threshold"
+                message="Every scanned symbol scored below the current cutoff. Lower the score threshold or widen the universe, then re-run."
+              />
             ) : (
               <div className="bg-surface border border-line rounded p-4">
                 <DataTable
@@ -342,7 +348,7 @@ export default function ScreenerPage() {
             )}
           </>
         )}
-      </div>
-    </div>
+      </PageShell>
+    
   );
 }

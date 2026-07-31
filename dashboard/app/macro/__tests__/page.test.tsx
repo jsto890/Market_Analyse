@@ -126,7 +126,7 @@ describe("MacroPage tiles (MAC-07)", () => {
     mockMacroFetch();
     render(<MacroPage />);
     const nEl = await screen.findByText("n=50");
-    expect(nEl.className).toMatch(/text-\[11px\]/);
+    expect(nEl.className).toMatch(/text-micro/);
     expect(nEl.className).not.toMatch(/opacity-/);
   });
 });

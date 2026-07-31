@@ -80,10 +80,10 @@ export default function StrikeGuidance({ spot, zeroGamma, callWall, putWall, atm
   return (
     <section className="rounded-md border border-line bg-elevated">
       <div className="flex flex-wrap items-center gap-2 px-4 py-2.5">
-        <span className="tick text-[13px] font-semibold text-foreground">Strike guidance</span>
-        <span className="text-[11px] text-muted">levels → what to actually trade</span>
+        <span className="tick text-body font-semibold text-foreground">Strike guidance</span>
+        <span className="text-micro text-muted">levels → what to actually trade</span>
         <span
-          className={`ml-auto inline-flex items-center gap-1 rounded border px-1.5 py-px font-mono text-[11px] ${
+          className={`ml-auto inline-flex items-center gap-1 rounded border px-1.5 py-px font-mono text-micro ${
             live ? "border-teal/50 bg-teal/10 text-teal" : "border-line text-muted"
           }`}
         >
@@ -92,11 +92,11 @@ export default function StrikeGuidance({ spot, zeroGamma, callWall, putWall, atm
         </span>
       </div>
 
-      <p className="border-t border-line px-4 py-1.5 text-[11px] text-muted-2">
+      <p className="border-t border-line px-4 py-1.5 text-micro text-muted-2">
         Advisory only, not financial advice — context for your own decision, not a signal to execute.
       </p>
 
-      <div className="space-y-3 border-t border-line px-4 py-3 text-[12px] leading-relaxed">
+      <div className="space-y-3 border-t border-line px-4 py-3 text-dense leading-relaxed">
         <p className="text-muted">
           <span className="text-foreground">Regime:</span> spot{" "}
           <span className="font-mono text-foreground">{n2(spot)}</span>{" "}
@@ -129,7 +129,7 @@ export default function StrikeGuidance({ spot, zeroGamma, callWall, putWall, atm
 
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
           <div className="rounded border border-pos/30 bg-pos/[0.06] px-3 py-2">
-            <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-pos">
+            <p className="mb-1 text-micro font-semibold uppercase tracking-wide text-pos">
               If bullish
             </p>
             <ul className="space-y-0.5 text-muted">
@@ -149,7 +149,7 @@ export default function StrikeGuidance({ spot, zeroGamma, callWall, putWall, atm
             </ul>
           </div>
           <div className="rounded border border-neg/30 bg-neg/[0.06] px-3 py-2">
-            <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-neg">
+            <p className="mb-1 text-micro font-semibold uppercase tracking-wide text-neg">
               If bearish
             </p>
             <ul className="space-y-0.5 text-muted">
@@ -170,7 +170,7 @@ export default function StrikeGuidance({ spot, zeroGamma, callWall, putWall, atm
           </div>
         </div>
 
-        <p className="text-[11px] text-muted-2">
+        <p className="text-micro text-muted-2">
           <span className="text-foreground">{PHASE_LABEL[phase]}:</span> {PHASE_NOTE[phase]}
         </p>
       </div>

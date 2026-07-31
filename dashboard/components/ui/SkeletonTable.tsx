@@ -15,7 +15,7 @@ export default function SkeletonTable({
         {headers.map((h, i) => (
           <span
             key={i}
-            className="text-[11px] uppercase tracking-wide text-muted/40"
+            className="text-micro uppercase tracking-wide text-muted/40"
             style={{ flex: i === 0 ? "0 0 90px" : "1" }}
           >
             {h}

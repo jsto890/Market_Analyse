@@ -4,6 +4,7 @@ import RotationPanel, { type RotationRow } from "@/components/today/RotationPane
 import RRGChart from "@/components/rotation/RRGChart";
 import PageHeader from "@/components/ui/PageHeader";
 import { dualClock } from "@/lib/tz-display";
+import PageShell from "@/components/PageShell";
 
 export const dynamic = "force-dynamic";
 
@@ -40,7 +41,7 @@ export default function RotationPage() {
   const clock = mtime ? dualClock(mtime) : null;
 
   return (
-    <main className="mx-auto max-w-6xl space-y-4 px-4 py-6">
+    <PageShell width="wide">
       <PageHeader
         title="Sector Rotation"
         subtitle={clock ? `Updated ${clock.primary} · ${clock.secondary}` : undefined}
@@ -51,10 +52,10 @@ export default function RotationPage() {
           <RotationPanel rows={rotation} defaultOpen collapsible={false} />
         </>
       ) : (
-        <div className="rounded-lg border border-warn/50 bg-warn/10 px-4 py-2.5 text-[13px] text-warn">
+        <div className="rounded-lg border border-warn/50 bg-warn/10 px-4 py-2.5 text-body text-warn">
           No rotation data — run_daily may have failed
         </div>
       )}
-    </main>
+    </PageShell>
   );
 }

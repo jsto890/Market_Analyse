@@ -58,12 +58,35 @@ function BarCell({
   );
 }
 
-/** Strike markers, spelled out rather than left as bare initials. */
-function Marker({ text, title, tone }: { text: string; title: string; tone: string }) {
+/** Strike markers. Deliberately *not* tooltipped per row: the ladder renders
+ * ~100 rows, so a `title` per marker meant the same six explanations were
+ * repeated over a hundred times and were only reachable by hovering a 20px
+ * glyph. MarkerLegend states each one once, above the table. */
+function Marker({ text, tone }: { text: string; tone: string }) {
+  return <span className={`ml-1 align-middle text-micro ${tone}`}>{text}</span>;
+}
+
+const MARKER_MEANING: Array<{ code: string; tone: string; meaning: string }> = [
+  { code: "ATM", tone: "text-warn", meaning: "at the money — strike nearest spot" },
+  { code: "SPOT", tone: "text-warn", meaning: "current underlying price" },
+  { code: "ZG", tone: "text-teal", meaning: "zero gamma — the dealer hedging flip" },
+  { code: "CW", tone: "text-pos", meaning: "call wall — heaviest dealer gamma above spot" },
+  { code: "PW", tone: "text-neg", meaning: "put wall — heaviest dealer gamma below spot" },
+  { code: "MSI-C", tone: "text-pos", meaning: "max strike interest, calls" },
+  { code: "MSI-P", tone: "text-neg", meaning: "max strike interest, puts" },
+];
+
+function MarkerLegend({ codes }: { codes: string[] }) {
+  const shown = MARKER_MEANING.filter((m) => codes.includes(m.code));
   return (
-    <span className={`ml-1 align-middle text-[11px] ${tone}`} title={title}>
-      {text}
-    </span>
+    <dl className="flex flex-wrap items-baseline gap-x-4 gap-y-1 px-1 text-micro text-muted">
+      {shown.map((m) => (
+        <div key={m.code} className="flex items-baseline gap-1.5">
+          <dt className={`font-mono ${m.tone}`}>{m.code}</dt>
+          <dd>{m.meaning}</dd>
+        </div>
+      ))}
+    </dl>
   );
 }
 
@@ -96,7 +119,13 @@ function LiveLadderRow({
   const isPutWall = level.strike === putWallStrike;
   const isMsiCall = level.strike === msiCallStrike;
   const isMsiPut = level.strike === msiPutStrike;
-  const leftBorder = isAtm ? "border-l-2 border-l-warn" : isZg ? "border-l-2 border-l-teal" : "";
+  // border-separate means <tr> borders and backgrounds no longer paint, so the
+  // row rule, the accent edge and the flash all ride on the cells.
+  const leftBorder = isAtm
+    ? "[&>td:first-child]:border-l-2 [&>td:first-child]:border-l-warn"
+    : isZg
+      ? "[&>td:first-child]:border-l-2 [&>td:first-child]:border-l-teal"
+      : "";
 
   const side = (kind: "call" | "put") => {
     const q = level[kind];
@@ -116,8 +145,11 @@ function LiveLadderRow({
           {q.spread_pct != null ? q.spread_pct.toFixed(1) : "—"}
         </td>
         <td className="px-1 py-1 text-center">
-          <span className={q.liquid ? "text-teal" : "text-muted"} title={q.liquid ? "liquid" : "wide or one-sided"}>
-            {q.liquid ? "●" : "○"}
+          {/* No per-cell title: 100 rows × 2 sides meant 200 copies of the same
+           * two words. The column header carries the key once. */}
+          <span className={q.liquid ? "text-teal" : "text-muted"}>
+            <span className="sr-only">{q.liquid ? "liquid" : "wide or one-sided"}</span>
+            <span aria-hidden>{q.liquid ? "●" : "○"}</span>
           </span>
         </td>
         <td className="px-1 py-1 text-right">{q.volume != null ? q.volume.toFixed(0) : "—"}</td>
@@ -130,15 +162,20 @@ function LiveLadderRow({
   };
 
   return (
-    <tr ref={rowRef} className={`border-b border-line/50 ${flash ? "bg-teal/10" : ""} ${leftBorder}`}>
-      <td className="sticky left-0 z-10 bg-elevated px-2 py-1 font-bold">
+    <tr
+      ref={rowRef}
+      className={`[&>td]:border-b [&>td]:border-line/50 ${
+        flash ? "[&>td]:bg-teal/10" : ""
+      } ${leftBorder}`}
+    >
+      <td className={`sticky left-0 z-10 px-2 py-1 font-bold ${flash ? "bg-teal/10" : "bg-elevated"}`}>
         {level.strike.toFixed(0)}
-        {isAtm && <Marker text="ATM" title="At the money — strike nearest spot" tone="text-warn" />}
-        {isZg && <Marker text="ZG" title="Zero gamma — the dealer hedging flip" tone="text-teal" />}
-        {isCallWall && <Marker text="CW" title="Call wall — heaviest dealer gamma above spot" tone="text-pos" />}
-        {isPutWall && <Marker text="PW" title="Put wall — heaviest dealer gamma below spot" tone="text-neg" />}
-        {isMsiCall && <Marker text="MSI-C" title="Max strike interest, calls — heaviest crowd concentration" tone="text-pos" />}
-        {isMsiPut && <Marker text="MSI-P" title="Max strike interest, puts — heaviest crowd concentration" tone="text-neg" />}
+        {isAtm && <Marker text="ATM" tone="text-warn" />}
+        {isZg && <Marker text="ZG" tone="text-teal" />}
+        {isCallWall && <Marker text="CW" tone="text-pos" />}
+        {isPutWall && <Marker text="PW" tone="text-neg" />}
+        {isMsiCall && <Marker text="MSI-C" tone="text-pos" />}
+        {isMsiPut && <Marker text="MSI-P" tone="text-neg" />}
       </td>
       {side("call")}
       {side("put")}
@@ -256,8 +293,6 @@ export default function OptionsLadderPage() {
     );
   }
 
-  const perSideCols = 8 + greekCols.length;
-
   return (
     <>
       <p role="status" aria-live="polite" className="sr-only">
@@ -266,14 +301,14 @@ export default function OptionsLadderPage() {
           : "Live ladder off — daily snapshot ladder."}
       </p>
 
-      {isLoading && !data && <p className="p-4 font-mono text-[11px] text-muted">loading ladder…</p>}
+      {isLoading && !data && <p className="p-4 font-mono text-micro text-muted">loading ladder…</p>}
       {error && !data && (
-        <p className="p-4 font-mono text-[11px] text-muted">no data — source unavailable</p>
+        <p className="p-4 font-mono text-micro text-muted">no data — source unavailable</p>
       )}
 
       {/* Controls — expiry, density, sort, jump. Shared by both ladders (I4);
          must stay reachable in live mode since expiry drives the poller too. */}
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-line px-4 py-2">
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-line px-[var(--page-x)] py-2">
         <div className="flex items-center gap-1 overflow-x-auto">
           <span className="eyebrow shrink-0">Expiry</span>
           {expiries.map((e, i) => (
@@ -281,14 +316,14 @@ export default function OptionsLadderPage() {
               key={e.expiry}
               onClick={() => setExpiry(e.expiry)}
               aria-pressed={i === idx}
-              className={`whitespace-nowrap rounded px-2 py-1 text-[11px] ${
+              className={`whitespace-nowrap rounded px-2 py-1 text-micro ${
                 i === idx ? "bg-elevated text-foreground" : "text-muted hover:text-foreground"
               }`}
             >
               {e.expiry} · EM {e.expected_move_pct.toFixed(2)}%
             </button>
           ))}
-          {expiries.length === 0 && <span className="px-2 text-[11px] text-muted">—</span>}
+          {expiries.length === 0 && <span className="px-2 text-micro text-muted">—</span>}
         </div>
 
         {/* Density (OPT-01) — the ladder used to be pinned at ±6% with no say. */}
@@ -299,21 +334,25 @@ export default function OptionsLadderPage() {
               key={d.key}
               onClick={() => setDensity(d.key as DensityKey)}
               aria-pressed={density === d.key}
-              title={d.blurb}
-              className={`rounded px-2 py-1 text-[11px] ${
+              className={`rounded px-2 py-1 text-micro ${
                 density === d.key ? "bg-elevated text-foreground" : "text-muted hover:text-foreground"
               }`}
             >
               {d.label}
             </button>
           ))}
+          {/* The selected option's blurb, inline — five native titles meant the
+           * explanation was mouse-only and only for the option you hovered. */}
+          <span className="text-micro text-muted-2">
+            {DENSITY_OPTIONS.find((d) => d.key === density)?.blurb}
+          </span>
         </div>
 
         <div className="flex items-center gap-1">
           <span className="eyebrow shrink-0">Sort</span>
           <button
             onClick={() => setDescending(!descending)}
-            className="rounded px-2 py-1 text-[11px] text-muted hover:text-foreground"
+            className="rounded px-2 py-1 text-micro text-muted hover:text-foreground"
           >
             strike {descending ? "high → low" : "low → high"}
           </button>
@@ -332,11 +371,11 @@ export default function OptionsLadderPage() {
               if (e.key === "Enter") jumpToStrike();
             }}
             placeholder="strike"
-            className="w-20 rounded border border-line bg-raised px-2 py-1 font-mono text-[11px] text-foreground placeholder:text-muted-2"
+            className="w-20 rounded border border-line bg-raised px-2 py-1 font-mono text-micro text-foreground placeholder:text-muted-2"
           />
           <button
             onClick={jumpToStrike}
-            className="rounded px-2 py-1 text-[11px] text-teal hover:underline"
+            className="rounded px-2 py-1 text-micro text-teal hover:underline"
           >
             Go
           </button>
@@ -345,7 +384,7 @@ export default function OptionsLadderPage() {
         <button
           type="button"
           onClick={centerOnSpot}
-          className="ml-auto shrink-0 px-2 py-1 text-[11px] text-teal hover:underline"
+          className="ml-auto shrink-0 px-2 py-1 text-micro text-teal hover:underline"
         >
           Center on spot
         </button>
@@ -354,31 +393,35 @@ export default function OptionsLadderPage() {
       {showLive && (
         <>
           {/* Greek columns (OPT-05) — vega and rho were unreachable before. */}
-          <div className="flex flex-wrap items-center gap-2 border-b border-line px-4 py-1.5">
+          <div className="flex flex-wrap items-center gap-2 border-b border-line px-[var(--page-x)] py-1.5">
             <span className="eyebrow shrink-0">Greeks</span>
             {ALL_GREEKS.map((g) => (
-              <label key={g} className="flex items-center gap-1 font-mono text-[11px] text-muted">
-                <input
-                  type="checkbox"
-                  checked={greekCols.includes(g)}
-                  onChange={() => toggleGreek(g)}
-                  className="accent-[var(--teal)]"
-                />
-                <span title={GREEK_LABEL[g].gloss}>
+              <span key={g} className="flex items-center gap-1">
+                <label className="flex items-center gap-1 font-mono text-micro text-muted">
+                  <input
+                    type="checkbox"
+                    checked={greekCols.includes(g)}
+                    onChange={() => toggleGreek(g)}
+                    className="accent-[var(--teal)]"
+                  />
                   {GREEK_LABEL[g].symbol} {g}
-                </span>
-              </label>
+                </label>
+                {/* InfoTip sits outside the <label>: a button inside a label
+                 * swallows the click that toggles the checkbox, and a native
+                 * `title` here was mouse-only. */}
+                <InfoTip label={`What ${g} means`} content={GREEK_LABEL[g].gloss} />
+              </span>
             ))}
           </div>
 
           {liveStatus === "connecting" && (
-            <div className="px-4 py-6 text-center text-[11px] text-muted">
+            <div className="px-4 py-6 text-center text-micro text-muted">
               Connecting to live session…
             </div>
           )}
           {liveError && (
-            <div className="border-b border-line px-4 py-2">
-              <p className="text-[11px] text-neg">{liveError}</p>
+            <div className="border-b border-line px-[var(--page-x)] py-2">
+              <p className="text-micro text-neg">{liveError}</p>
             </div>
           )}
 
@@ -387,7 +430,7 @@ export default function OptionsLadderPage() {
               <div className="flex items-center justify-between border-b border-line bg-elevated/30 px-4 py-2">
                 <div className="flex items-center gap-3">
                   <span
-                    className={`rounded px-2 py-0.5 text-xs font-semibold ${
+                    className={`rounded px-2 py-0.5 text-micro font-semibold ${
                       isStale(consecutiveFailures)
                         ? "tone-frozen"
                         : liveLadder.source === "LIVE"
@@ -399,22 +442,22 @@ export default function OptionsLadderPage() {
                   >
                     {isStale(consecutiveFailures) ? "STALE" : liveLadder.source}
                   </span>
-                  <span className="text-[11px] text-muted">
+                  <span className="text-micro text-muted">
                     {new Date(liveLadder.as_of).toLocaleTimeString()}
                   </span>
                   {liveLadder.stale_ms > 1500 && (
-                    <span className="text-[11px] text-warn">
+                    <span className="text-micro text-warn">
                       {(liveLadder.stale_ms / 1000).toFixed(1)}s stale
                     </span>
                   )}
                 </div>
-                <span className="font-mono text-[11px] text-muted">
+                <span className="font-mono text-micro text-muted">
                   {liveLevels.length} of {liveLadder.levels.length} strikes shown
                 </span>
               </div>
 
               {/* Levels — grouped by what each number answers (OPT-12, OPT-13). */}
-              <div className="flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-line px-4 py-2 text-[11px]">
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-line px-[var(--page-x)] py-2 text-micro">
                 <LevelGroup title="Pin">
                   <Lvl label="ATM" value={liveLadder.atm_strike.toFixed(0)} />
                   <Lvl
@@ -472,64 +515,58 @@ export default function OptionsLadderPage() {
                 {isStale(consecutiveFailures) ? "STALE" : liveLadder.source}.
               </p>
               <div aria-live="off">
-                <div className="flex-1 overflow-auto [mask-image:linear-gradient(to_right,black_calc(100%-16px),transparent)]">
-                  <table className="w-full border-collapse text-[11px] tabular-nums">
-                    <thead className="sticky top-0 bg-elevated">
-                      {/* Grouped header — the call and put blocks used to be told
-                         apart by colour alone (OPT-10). */}
-                      <tr className="border-b border-line text-[10px] uppercase tracking-[0.06em]">
-                        <th className="sticky left-0 z-20 bg-elevated px-2 py-1 text-left font-normal text-muted">
-                          &nbsp;
-                        </th>
-                        <th colSpan={perSideCols} className="border-b border-pos/40 px-1 py-1 text-center font-semibold text-pos">
-                          Calls
-                        </th>
-                        <th colSpan={perSideCols} className="border-b border-neg/40 border-l border-line px-1 py-1 text-center font-semibold text-neg">
-                          Puts
-                        </th>
-                      </tr>
-                      <tr className="border-b border-line">
-                        <th scope="col" className="sticky left-0 z-20 bg-elevated px-2 py-1 text-left font-semibold">
+                <MarkerLegend codes={["ATM", "ZG", "CW", "PW", "MSI-C", "MSI-P"]} />
+                <div className="mt-1.5 flex-1 overflow-auto [mask-image:linear-gradient(to_right,black_calc(100%-16px),transparent)]">
+                  {/* border-separate + backgrounds on the cells: a collapsed
+                   * table paints no background on <thead>, so the sticky header
+                   * was transparent and rows scrolled through it. One header
+                   * row, not two — a two-row sticky header needs a hardcoded
+                   * top offset on the second row, and the side is already
+                   * carried by the c-/p- prefix and tone on every column. */}
+                  <table className="w-full border-separate border-spacing-0 text-micro tabular-nums">
+                    <thead>
+                      <tr className="text-micro uppercase tracking-[0.06em]">
+                        <th scope="col" className="sticky left-0 top-0 z-30 border-b border-line bg-elevated px-2 py-1 text-left font-semibold">
                           Strike
                         </th>
-                        {(["call", "put"] as const).map((side) => (
-                          <Fragment key={side}>
-                            <th scope="col" className={`px-1 py-1 text-center ${side === "put" ? "border-l border-line" : ""}`}>
-                              {side === "call" ? "C" : "P"} Bid
-                            </th>
-                            <th scope="col" className="px-1 py-1 text-center">
-                              Ask
-                            </th>
-                            <th scope="col" className="px-1 py-1 text-center">
-                              IV
-                            </th>
-                            {greekCols.map((g) => (
-                              <th
-                                key={g}
-                                scope="col"
-                                className="px-1 py-1 text-center"
-                                title={GREEK_LABEL[g].gloss}
-                              >
-                                {GREEK_LABEL[g].symbol}
+                        {(["call", "put"] as const).map((side) => {
+                          const p = side === "call" ? "c" : "p";
+                          const tone = side === "call" ? "text-pos" : "text-neg";
+                          const hd = `sticky top-0 z-20 border-b border-line bg-elevated px-1 py-1 text-center font-normal ${tone}`;
+                          return (
+                            <Fragment key={side}>
+                              <th scope="col" className={`${hd} ${side === "put" ? "border-l border-line" : ""}`}>
+                                {p} bid
                               </th>
-                            ))}
-                            <th scope="col" className="px-1 py-1 text-center">
-                              Spread%
-                            </th>
-                            <th scope="col" className="px-1 py-1 text-center">
-                              Liq
-                            </th>
-                            <th scope="col" className="px-1 py-1 text-center">
-                              Vol
-                            </th>
-                            <th scope="col" className="px-1 py-1 text-center">
-                              OI
-                            </th>
-                            <th scope="col" className="px-1 py-1 text-center">
-                              GEX
-                            </th>
-                          </Fragment>
-                        ))}
+                              <th scope="col" className={hd}>{p} ask</th>
+                              <th scope="col" className={hd}>{p} IV</th>
+                              {greekCols.map((g) => (
+                                <th key={g} scope="col" className={hd}>
+                                  <InfoTip
+                                    label={`What ${GREEK_LABEL[g].symbol} means`}
+                                    content={GREEK_LABEL[g].gloss}
+                                    className={tone}
+                                  >
+                                    {p} {GREEK_LABEL[g].symbol}
+                                  </InfoTip>
+                                </th>
+                              ))}
+                              <th scope="col" className={hd}>{p} spread%</th>
+                              <th scope="col" className={hd}>
+                                <InfoTip
+                                  label="What liq means"
+                                  content="● two-sided and inside the spread cap · ○ wide or one-sided — treat the mid as unreliable."
+                                  className={tone}
+                                >
+                                  {p} liq
+                                </InfoTip>
+                              </th>
+                              <th scope="col" className={hd}>{p} vol</th>
+                              <th scope="col" className={hd}>{p} OI</th>
+                              <th scope="col" className={hd}>{p} GEX</th>
+                            </Fragment>
+                          );
+                        })}
                       </tr>
                     </thead>
                     <tbody>
@@ -573,7 +610,7 @@ export default function OptionsLadderPage() {
 
       {!showLive && data && (
         <>
-          <div className="flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-line px-4 py-2 text-[11px]">
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-line px-[var(--page-x)] py-2 text-micro">
             <LevelGroup title="Dealer gamma">
               <Lvl
                 label="zero-γ"
@@ -600,33 +637,31 @@ export default function OptionsLadderPage() {
           </div>
 
           <div className="flex-1 overflow-y-auto p-3">
-            <p className="mb-1.5 font-mono text-[11px] text-muted-2">
+            <p className="mb-1.5 font-mono text-micro text-muted-2">
               Click any row to copy its strike, both IVs and GEX. Greeks and quote-level detail need
               the live ladder — the switch is in the header.
             </p>
-            <div className="max-h-[70vh] overflow-x-auto overflow-y-auto rounded border border-line bg-surface">
-              <table className="w-full border-collapse font-mono text-[11px] tabular-nums">
-                <thead className="sticky top-0 bg-surface">
-                  <tr className="text-[11px] uppercase tracking-[0.06em] text-muted">
-                    <th colSpan={3} scope="colgroup" className="px-2 py-1 text-right font-semibold text-neg">
-                      Puts
-                    </th>
-                    <th className="border-x border-line px-3 py-1 text-center font-normal">&nbsp;</th>
-                    <th colSpan={4} scope="colgroup" className="px-2 py-1 text-left font-semibold text-pos">
-                      Calls
-                    </th>
-                  </tr>
-                  <tr className="text-[11px] uppercase tracking-[0.06em] text-muted">
-                    <th scope="col" className="px-2 py-1.5 text-right font-normal">put OI</th>
-                    <th scope="col" className="px-2 py-1.5 text-right font-normal">put vol</th>
-                    <th scope="col" className="px-2 py-1.5 text-right font-normal">put IV</th>
-                    <th scope="col" className="border-x border-line px-3 py-1.5 text-center font-normal">
+            <MarkerLegend codes={["SPOT", "ZG", "CW", "PW"]} />
+            <div className="mt-1.5 max-h-[70vh] overflow-x-auto overflow-y-auto rounded border border-line bg-surface">
+              {/* border-separate, not border-collapse: a collapsed table won't
+               * paint backgrounds on <thead>/<tr>, so a sticky header let the
+               * first data rows show through it. Backgrounds now sit on the
+               * cells themselves. One header row, not two — the side is carried
+               * by the put-/call- prefixes and their tone, so it stays legible
+               * when the table is scrolled horizontally. */}
+              <table className="w-full border-separate border-spacing-0 font-mono text-micro tabular-nums">
+                <thead>
+                  <tr className="text-micro uppercase tracking-[0.06em]">
+                    <th scope="col" className="sticky top-0 z-20 border-b border-line bg-surface px-2 py-1.5 text-right font-normal text-neg">put OI</th>
+                    <th scope="col" className="sticky top-0 z-20 border-b border-line bg-surface px-2 py-1.5 text-right font-normal text-neg">put vol</th>
+                    <th scope="col" className="sticky top-0 z-20 border-b border-line bg-surface px-2 py-1.5 text-right font-normal text-neg">put IV</th>
+                    <th scope="col" className="sticky left-0 top-0 z-30 border-x border-b border-line bg-surface px-3 py-1.5 text-center font-semibold text-foreground">
                       strike
                     </th>
-                    <th scope="col" className="px-2 py-1.5 text-left font-normal">call IV</th>
-                    <th scope="col" className="px-2 py-1.5 text-left font-normal">call vol</th>
-                    <th scope="col" className="px-2 py-1.5 text-left font-normal">call OI</th>
-                    <th scope="col" className="px-2 py-1.5 text-left font-normal">GEX</th>
+                    <th scope="col" className="sticky top-0 z-20 border-b border-line bg-surface px-2 py-1.5 text-left font-normal text-pos">call IV</th>
+                    <th scope="col" className="sticky top-0 z-20 border-b border-line bg-surface px-2 py-1.5 text-left font-normal text-pos">call vol</th>
+                    <th scope="col" className="sticky top-0 z-20 border-b border-line bg-surface px-2 py-1.5 text-left font-normal text-pos">call OI</th>
+                    <th scope="col" className="sticky top-0 z-20 border-b border-line bg-surface px-2 py-1.5 text-left font-normal text-muted">GEX</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -636,11 +671,20 @@ export default function OptionsLadderPage() {
                     const isPutWall = i === putWallIdx;
                     const isSpot = i === spotIdx;
                     const highlight = isZg || isCallWall || isPutWall || isSpot;
+                    // border-separate means <tr> borders and the row background
+                    // no longer paint under the sticky strike cell, so both are
+                    // pushed down onto the cells.
                     const leftBorder = isSpot
-                      ? "border-l-2 border-l-warn"
+                      ? "[&>td:first-child]:border-l-2 [&>td:first-child]:border-l-warn"
                       : isZg
-                        ? "border-l-2 border-l-teal"
+                        ? "[&>td:first-child]:border-l-2 [&>td:first-child]:border-l-teal"
                         : "";
+                    const strikeBg =
+                      flashStrike === row.strike
+                        ? "bg-teal/10"
+                        : highlight
+                          ? "bg-elevated"
+                          : "bg-surface";
                     return (
                       <tr
                         key={row.strike}
@@ -650,7 +694,8 @@ export default function OptionsLadderPage() {
                         }}
                         onClick={() => copyStrike(row)}
                         tabIndex={0}
-                        title="Click to copy this strike"
+                        // No per-row title: ~90 rows meant 90 copies of the
+                        // same five words. Said once above the table instead.
                         aria-label={`Copy strike ${row.strike}`}
                         onKeyDown={(e) => {
                           if (e.key === "Enter" || e.key === " ") {
@@ -658,26 +703,28 @@ export default function OptionsLadderPage() {
                             copyStrike(row);
                           }
                         }}
-                        className={`group cursor-pointer border-t border-line/50 hover:bg-elevated/60 focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-teal ${
-                          highlight ? "bg-elevated" : ""
-                        } ${flashStrike === row.strike ? "bg-teal/10" : ""} ${leftBorder}`}
+                        className={`group cursor-pointer [&>td]:border-t [&>td]:border-line/50 hover:[&>td]:bg-elevated/60 focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-teal ${
+                          highlight ? "[&>td]:bg-elevated" : ""
+                        } ${flashStrike === row.strike ? "[&>td]:bg-teal/10" : ""} ${leftBorder}`}
                       >
                         <BarCell value={row.put?.oi} max={maxOi} side="put" tone="bg-neg/20" />
                         <BarCell value={row.put?.vol} max={maxVol} side="put" tone="bg-neg/10" />
                         <td className="px-2 py-1 text-right text-muted">{fmtIv(row.put?.iv)}</td>
-                        <td className="border-x border-line px-3 py-1 text-center text-foreground">
+                        <td
+                          className={`sticky left-0 z-10 border-x border-line px-3 py-1 text-center text-foreground ${strikeBg}`}
+                        >
                           <span>{row.strike}</span>
                           {copiedStrike === row.strike ? (
-                            <span className="ml-1 align-middle text-[11px] text-teal">Copied</span>
+                            <span className="ml-1 align-middle text-micro text-teal">Copied</span>
                           ) : (
-                            <span className="ml-1 align-middle text-[11px] text-muted-2 opacity-0 transition-opacity group-hover:opacity-100">
+                            <span className="ml-1 align-middle text-micro text-muted-2 opacity-0 transition-opacity group-hover:opacity-100">
                               copy
                             </span>
                           )}
-                          {isSpot && <Marker text="SPOT" title="Current underlying price" tone="text-warn" />}
-                          {isZg && <Marker text="ZG" title="Zero gamma — the dealer hedging flip" tone="text-teal" />}
-                          {isCallWall && <Marker text="CW" title="Call wall — heaviest dealer gamma above spot" tone="text-pos" />}
-                          {isPutWall && <Marker text="PW" title="Put wall — heaviest dealer gamma below spot" tone="text-neg" />}
+                          {isSpot && <Marker text="SPOT" tone="text-warn" />}
+                          {isZg && <Marker text="ZG" tone="text-teal" />}
+                          {isCallWall && <Marker text="CW" tone="text-pos" />}
+                          {isPutWall && <Marker text="PW" tone="text-neg" />}
                         </td>
                         <td className="px-2 py-1 text-left text-muted">{fmtIv(row.call?.iv)}</td>
                         <BarCell value={row.call?.vol} max={maxVol} side="call" tone="bg-pos/10" />
@@ -730,16 +777,16 @@ export default function OptionsLadderPage() {
         <Collapsible
           persistKey="strikes-how-to-read"
           trigger={
-            <span className="tick text-[13px] font-semibold text-foreground">
+            <span className="tick text-body font-semibold text-foreground">
               How to read this ladder
             </span>
           }
           className="rounded-md border border-line bg-elevated"
           triggerClassName="px-4 py-2.5"
         >
-          <div className="grid gap-x-8 gap-y-3 border-t border-line px-4 py-3 text-[12px] leading-relaxed text-muted sm:grid-cols-2">
+          <div className="grid gap-x-8 gap-y-3 border-t border-line px-4 py-3 text-dense leading-relaxed text-muted sm:grid-cols-2">
             <div>
-              <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-foreground">
+              <p className="mb-1.5 text-micro font-semibold uppercase tracking-wide text-foreground">
                 Markers
               </p>
               <ul className="space-y-1">
@@ -764,7 +811,7 @@ export default function OptionsLadderPage() {
               </ul>
             </div>
             <div>
-              <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-foreground">
+              <p className="mb-1.5 text-micro font-semibold uppercase tracking-wide text-foreground">
                 Columns
               </p>
               <ul className="space-y-1">

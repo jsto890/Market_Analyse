@@ -38,9 +38,9 @@ export default function OptionsGammaPage() {
   const rr25 = levels.length > 0 ? deltaSkew(levels) : null;
 
   return (
-    <div className="space-y-3 p-3">
+    <div className="space-y-3 px-[var(--page-x)] py-[var(--page-y)]">
       {!live && (
-        <p className="rounded border border-line bg-elevated px-3 py-2 font-mono text-[11px] text-muted">
+        <p className="rounded border border-line bg-elevated px-3 py-2 font-mono text-micro text-muted">
           Delta bands, the DEX profile and the contract ranking need per-contract greeks — turn{" "}
           <b className="text-foreground">Live ladder</b> on in the header. Gamma and skew below are
           from today&apos;s snapshot.

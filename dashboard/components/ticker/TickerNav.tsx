@@ -18,7 +18,7 @@ export default function TickerNav({ ticker }: { ticker: string }) {
       <nav aria-label="Ticker breadcrumb">
         <Link
           href="/"
-          className="inline-flex items-center gap-1 font-mono text-[12px] text-muted hover:text-foreground transition-colors"
+          className="inline-flex items-center gap-1 font-mono text-dense text-muted hover:text-foreground transition-colors"
         >
           <ChevronLeft size={12} /> Today
         </Link>
@@ -31,7 +31,7 @@ export default function TickerNav({ ticker }: { ticker: string }) {
   const next = idx < nav.tickers.length - 1 ? nav.tickers[idx + 1] : null;
 
   return (
-    <nav aria-label="Ticker breadcrumb" className="flex items-center gap-2 font-mono text-[12px] text-muted">
+    <nav aria-label="Ticker breadcrumb" className="flex items-center gap-2 font-mono text-dense text-muted">
       <Link href="/" className="hover:text-foreground transition-colors">
         Today
       </Link>

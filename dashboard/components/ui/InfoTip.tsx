@@ -27,7 +27,7 @@ export default function InfoTip({ content, children, label, className }: InfoTip
       </Tooltip.Trigger>
       <Tooltip.Portal>
         <Tooltip.Content
-          className="z-50 max-w-xs rounded border border-line bg-elevated px-2 py-1.5 text-[12px] font-normal normal-case tracking-normal text-muted shadow-lg"
+          className="z-50 max-w-xs rounded border border-line bg-elevated px-2 py-1.5 text-dense font-normal normal-case tracking-normal text-muted shadow-lg"
           sideOffset={4}
         >
           {content}

@@ -8,6 +8,7 @@ import { useMarketClock } from "@/lib/useMarketClock";
 import { forexSessions } from "@/lib/forex-session";
 import { useMacro } from "@/lib/macro";
 import { useCalendar } from "@/lib/calendar";
+import InfoTip from "@/components/ui/InfoTip";
 import { QuoteRow } from "./QuoteRow";
 import { MacroGauges } from "./MacroGauges";
 import { EconCalendar } from "./EconCalendar";
@@ -27,7 +28,7 @@ function EquityBadge() {
       ? "bg-accent/10 text-accent/70"
       : "bg-warn/10 text-warn"; // closed
   return (
-    <span className={`rounded px-1.5 py-px text-[11px] font-medium font-mono leading-none ${cls}`}>
+    <span className={`rounded px-1.5 py-px text-micro font-medium font-mono leading-none ${cls}`}>
       {label}
     </span>
   );
@@ -38,7 +39,7 @@ function FxChip() {
   const { active, closed } = forexSessions();
   const state = closed ? "CLOSED" : active.length === 0 ? "OPEN" : active.join("·");
   return (
-    <span className="rounded px-1.5 py-px text-[11px] font-mono font-medium leading-none bg-elevated text-muted">
+    <span className="rounded px-1.5 py-px text-micro font-mono font-medium leading-none bg-elevated text-muted">
       FX · {state}
     </span>
   );
@@ -59,7 +60,7 @@ function Block({ label, badge, children, separator }: BlockProps) {
     <div className={separator ? "border-t border-line-strong pt-0.5" : undefined}>
       {/* Block header §4.3 / §8.2 */}
       <div className="h-[24px] flex items-center justify-between px-3">
-        <span className="text-[11px] font-medium uppercase tracking-[0.08em] text-muted font-mono leading-none">
+        <span className="text-micro font-medium uppercase tracking-[0.08em] text-muted font-mono leading-none">
           {label}
         </span>
         {badge}
@@ -100,8 +101,8 @@ function MiniItem({ symbol, changePct }: MiniItemProps) {
 
   return (
     <div className="w-full flex flex-col items-center py-1.5 gap-0.5 hover:bg-elevated cursor-default">
-      <span className="text-[11px] font-mono text-muted leading-none uppercase">{label}</span>
-      <span className={`text-[11px] font-mono font-medium tabular-nums leading-none ${pctCls}`}>
+      <span className="text-micro font-mono text-muted leading-none uppercase">{label}</span>
+      <span className={`text-micro font-mono font-medium tabular-nums leading-none ${pctCls}`}>
         {pctStr}
       </span>
     </div>
@@ -141,9 +142,17 @@ function HiddenBlockGlyphs() {
 
   return (
     <div className="flex flex-col items-center gap-1.5 py-1.5 border-t border-line w-full">
-      <span aria-label={fxLabel} title={fxLabel} className={`w-1.5 h-1.5 rounded-full ${fxClass}`} />
-      <span aria-label={calLabel} title={calLabel} className={`w-1.5 h-1.5 rounded-full ${calClass}`} />
-      <span aria-label={macroLabel} title={macroLabel} className={`w-1.5 h-1.5 rounded-full ${macroClass}`} />
+      {/* InfoTip, not `title`: these are 6px dots, so the label is the only way
+       * to read them — and a native title is mouse-only. */}
+      <InfoTip label={fxLabel} content={fxLabel}>
+        <span aria-hidden className={`w-1.5 h-1.5 rounded-full ${fxClass}`} />
+      </InfoTip>
+      <InfoTip label={calLabel} content={calLabel}>
+        <span aria-hidden className={`w-1.5 h-1.5 rounded-full ${calClass}`} />
+      </InfoTip>
+      <InfoTip label={macroLabel} content={macroLabel}>
+        <span aria-hidden className={`w-1.5 h-1.5 rounded-full ${macroClass}`} />
+      </InfoTip>
     </div>
   );
 }
@@ -214,7 +223,7 @@ export function LeftRail() {
           aria-label="Expand quote rail"
           className="mt-auto w-9 h-9 flex items-center justify-center text-muted hover:text-foreground hover:bg-elevated"
         >
-          <span className="text-[14px] leading-none select-none">›</span>
+          <span className="text-body leading-none select-none">›</span>
         </button>
       </aside>
     );
@@ -258,7 +267,7 @@ export function LeftRail() {
     >
       <div className="pt-1 flex-1 min-h-0 overflow-y-auto">
         {error && (
-          <div className="mx-3 mt-1 mb-0.5 px-2 py-1.5 rounded border border-warn/30 bg-warn/10 text-warn text-[11px] font-mono leading-snug">
+          <div className="mx-3 mt-1 mb-0.5 px-2 py-1.5 rounded border border-warn/30 bg-warn/10 text-warn text-micro font-mono leading-snug">
             QUOTE FEED OFFLINE
           </div>
         )}
@@ -292,7 +301,7 @@ export function LeftRail() {
           aria-label="Collapse quote rail"
           className="w-9 h-9 flex items-center justify-center text-muted hover:text-foreground hover:bg-elevated"
         >
-          <span className="text-[14px] leading-none select-none">‹</span>
+          <span className="text-body leading-none select-none">‹</span>
         </button>
       </div>
     </aside>

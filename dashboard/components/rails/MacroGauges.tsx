@@ -10,8 +10,8 @@ function Gauge({ g }: { g: MacroGauge }) {
   return (
     <div className="px-3 py-1">
       <div className="flex items-baseline justify-between">
-        <span className="text-[11px] font-mono text-muted truncate">{scopeLabel(g.scope)}</span>
-        <span className={`text-[11px] font-mono tabular-nums ${toneClass(g.score)}`}>
+        <span className="text-micro font-mono text-muted truncate">{scopeLabel(g.scope)}</span>
+        <span className={`text-micro font-mono tabular-nums ${toneClass(g.score)}`}>
           {g.score >= 0 ? "+" : ""}{g.score.toFixed(2)}
         </span>
       </div>
@@ -40,13 +40,13 @@ export function MacroGauges({ window = "1d" }: { window?: string }) {
   return (
     <div className="border-t border-line-strong">
       <div className="h-[24px] flex items-center justify-between px-3">
-        <span className="text-[11px] font-medium uppercase tracking-[0.08em] text-muted font-mono leading-none">
+        <span className="text-micro font-medium uppercase tracking-[0.08em] text-muted font-mono leading-none">
           Macro
         </span>
-        <Link href={`/macro?window=${window}`} className="text-[11px] font-mono text-muted hover:text-accent">{window} ›</Link>
+        <Link href={`/macro?window=${window}`} className="text-micro font-mono text-muted hover:text-accent">{window} ›</Link>
       </div>
       {show.length === 0
-        ? <p className="px-3 py-1 text-[11px] font-mono text-muted-2">building…</p>
+        ? <p className="px-3 py-1 text-micro font-mono text-muted-2">building…</p>
         : show.map((g) => <Gauge key={`${g.scope}-${g.window}`} g={g} />)}
     </div>
   );

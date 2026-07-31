@@ -8,7 +8,7 @@ import type { GreekKind } from "@/lib/format";
 function Term({ term, children }: { term: string; children: React.ReactNode }) {
   return (
     <li className="flex flex-col gap-0.5 sm:flex-row sm:gap-3">
-      <span className="w-40 shrink-0 font-mono text-[12px] text-foreground">{term}</span>
+      <span className="w-40 shrink-0 font-mono text-dense text-foreground">{term}</span>
       <span className="min-w-0 flex-1">{children}</span>
     </li>
   );
@@ -16,7 +16,7 @@ function Term({ term, children }: { term: string; children: React.ReactNode }) {
 
 export default function OptionsLearnPage() {
   return (
-    <div className="mx-auto w-full max-w-3xl space-y-3 p-3 text-[12px] leading-relaxed text-muted">
+    <div className="mx-auto w-full max-w-[720px] space-y-3 px-[var(--page-x)] py-[var(--page-y)] text-dense leading-relaxed text-muted">
       <p className="text-muted-2">
         Reference for every number on the{" "}
         <Link href="/options/ladder" className="text-teal hover:underline">

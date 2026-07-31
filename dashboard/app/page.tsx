@@ -13,6 +13,7 @@ import DateStepper from "@/components/today/DateStepper";
 import Link from "next/link";
 import { type RotationRow } from "@/components/today/RotationPanel";
 import { MorningReport } from "@/components/today/MorningReport";
+import PageShell from "@/components/PageShell";
 
 export const dynamic = "force-dynamic";
 
@@ -127,7 +128,7 @@ export default async function Home({
   ).sort();
 
   return (
-    <main className="mx-auto max-w-6xl space-y-4 px-4 py-6">
+    <PageShell width="standard">
       <div className="flex items-center justify-between">
         <MorningReport />
       </div>
@@ -140,7 +141,7 @@ export default async function Home({
             ? "border-neg/50 bg-neg/10 text-neg"
             : "border-warn/50 bg-warn/10 text-warn";
         return (
-          <div role="status" className={`rounded-md border px-4 py-2.5 text-[13px] ${tone}`}>
+          <div role="status" className={`rounded-md border px-4 py-2.5 text-body ${tone}`}>
             {status.text}
           </div>
         );
@@ -153,11 +154,11 @@ export default async function Home({
       {rotation && rotation.length > 0 && (
         <Link
           href="/rotation"
-          className="block rounded-md border border-line bg-elevated px-4 py-2.5 text-[13px] text-muted hover:text-foreground transition-colors"
+          className="block rounded-md border border-line bg-elevated px-4 py-2.5 text-body text-muted hover:text-foreground transition-colors"
         >
           {rotationSummary(rotation)}
         </Link>
       )}
-    </main>
+    </PageShell>
   );
 }

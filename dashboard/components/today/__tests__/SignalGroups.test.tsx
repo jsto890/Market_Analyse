@@ -139,7 +139,12 @@ describe("SignalGroups — row-encoding diet (TD-03/04/05/06)", () => {
     };
     render(<SignalGroups groups={groups} newTickers={[]} sectors={["Semiconductors"]} />);
     await screen.findByText("NVDA");
-    const headers = screen.getAllByRole("columnheader").map((h) => h.textContent);
+    // The trailing disclosure column is sr-only and carries no data, so it is
+    // not one of the six the reader has to parse.
+    const headers = screen
+      .getAllByRole("columnheader")
+      .map((h) => h.textContent)
+      .filter((t) => t !== "Details");
     expect(headers).toHaveLength(6);
     expect(screen.queryByRole("columnheader", { name: /^C$/ })).not.toBeInTheDocument();
     expect(screen.queryByRole("columnheader", { name: "⚑" })).not.toBeInTheDocument();
@@ -189,12 +194,9 @@ describe("SignalGroups — row-encoding diet (TD-03/04/05/06)", () => {
     const user = userEvent.setup();
     render(<SignalGroups groups={groups} newTickers={[]} sectors={["Semiconductors"]} />);
     await screen.findByText("NVDA");
-    // Click the sector cell, not the ticker link — the ticker's <Link> calls
-    // stopPropagation() so it navigates instead of toggling the row.
-    // Scoped to role "cell" (not screen.getByText) because the sector filter's
-    // <select> also renders an <option>Semiconductors</option> with the same
-    // text — getByText matches both and throws a multiple-elements error.
-    await user.click(screen.getByRole("cell", { name: "Semiconductors" }));
+    // Expansion has its own disclosure control now — a row click opens the
+    // ticker, since the row advertises itself as openable.
+    await user.click(screen.getByRole("button", { name: "Show details" }));
     // conviction, catalyst count and flags are gone from the main row's header set (checked above)
     // and now live under the expanded row's own labels:
     expect(await screen.findByText("Conviction")).toBeInTheDocument();
@@ -265,7 +267,7 @@ describe("SignalGroups — history cache + hover prefetch (TD-08)", () => {
     await user.hover(screen.getByRole("cell", { name: "Semiconductors" }));
     expect(fetchCount).toBe(1);
 
-    await user.click(screen.getByRole("cell", { name: "Semiconductors" }));
+    await user.click(screen.getByRole("button", { name: "Show details" }));
     await screen.findByText("Conviction");
     // second call would only happen on a fresh (uncached) fetch — the hover already resolved it
     expect(fetchCount).toBe(1);

@@ -31,7 +31,7 @@ function DexTooltip({ active, payload }: { active?: boolean; payload?: { payload
   if (!active || !payload || payload.length === 0) return null;
   const p = payload[0].payload;
   return (
-    <div className="rounded border border-line bg-elevated px-3 py-2 font-mono text-[11px] shadow-lg">
+    <div className="rounded border border-line bg-elevated px-3 py-2 font-mono text-micro shadow-lg">
       <p className="text-foreground">strike {p.strike.toFixed(0)}</p>
       <p className={p.dex >= 0 ? "text-pos" : "text-neg"}>at strike {fmtAxis(p.dex)}</p>
       <p className="text-muted">cumulative {fmtAxis(p.cumulative)}</p>
@@ -59,7 +59,7 @@ export default function DexChart({
       actions={<InfoTip label="What the DEX profile shows" content={DEX_TIP} />}
     >
       {points.length === 0 ? (
-        <p className="font-mono text-[11px] text-muted">
+        <p className="font-mono text-micro text-muted">
           no greeks in this snapshot — turn the live ladder on
         </p>
       ) : (
@@ -86,7 +86,7 @@ export default function DexChart({
               />
             </ComposedChart>
           </ResponsiveContainer>
-          <p className="mt-2 font-mono text-[11px] text-muted">
+          <p className="mt-2 font-mono text-micro text-muted">
             net dealer delta{" "}
             <span className={total >= 0 ? "text-pos" : "text-neg"}>{fmtAxis(total)}</span>
             <span className="ml-2 text-muted-2">

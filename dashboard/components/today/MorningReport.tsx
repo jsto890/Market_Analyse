@@ -25,7 +25,7 @@ function SessionTag({ session }: { session: "BMO" | "AMC" | "—" }) {
         ? "border-accent/50 text-accent bg-accent/10"
         : "border-line text-muted-2 bg-raised";
   return (
-    <span className={`ml-1 rounded border px-1 py-px text-[11px] font-medium ${cls}`}>
+    <span className={`ml-1 rounded border px-1 py-px text-micro font-medium ${cls}`}>
       {session === "—" ? "time TBA" : session}
     </span>
   );
@@ -34,10 +34,10 @@ function SessionTag({ session }: { session: "BMO" | "AMC" | "—" }) {
 function EarningsRow({ e, when }: { e: DayAheadEarning; when: string }) {
   return (
     <li className="flex items-baseline gap-1.5">
-      <span className="w-12 shrink-0 font-mono text-[11px] text-muted-2">{when}</span>
+      <span className="w-12 shrink-0 font-mono text-micro text-muted-2">{when}</span>
       <span className={e.watchlist ? "text-accent" : "text-foreground/80"}>{e.ticker ?? e.event}</span>
       <SessionTag session={e.session} />
-      {e.watchlist && <span className="font-mono text-[11px] text-accent">watchlist</span>}
+      {e.watchlist && <span className="font-mono text-micro text-accent">watchlist</span>}
     </li>
   );
 }
@@ -45,7 +45,7 @@ function EarningsRow({ e, when }: { e: DayAheadEarning; when: string }) {
 function FutureChip({ symbol, change_pct }: { symbol: string; change_pct: number }) {
   const tone = change_pct > 0.02 ? "text-pos" : change_pct < -0.02 ? "text-neg" : "text-muted";
   return (
-    <span className="whitespace-nowrap font-mono text-[11px]">
+    <span className="whitespace-nowrap font-mono text-micro">
       <span className="text-muted">{symbol.replace("=F", "").replace("^", "")}</span>{" "}
       <span className={tone}>
         {change_pct >= 0 ? "+" : ""}
@@ -63,8 +63,8 @@ function eventLine(e: MorningEvent, today: string): string {
 
 function Role({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <p className="mb-1 flex gap-2 text-xs leading-relaxed">
-      <span className="w-[68px] shrink-0 font-mono text-[11px] uppercase tracking-wide text-muted-2">
+    <p className="mb-1 flex gap-2 text-body leading-relaxed">
+      <span className="w-[68px] shrink-0 font-mono text-micro uppercase tracking-wide text-muted-2">
         {label}
       </span>
       <span className="min-w-0 flex-1 text-foreground">{children}</span>
@@ -142,7 +142,7 @@ export function MorningReport() {
   if (error) {
     return (
       <section className="mb-5 rounded-md border border-line bg-elevated p-4">
-        <p className="text-[12px] text-muted">
+        <p className="text-dense text-muted">
           Couldn&rsquo;t load the morning brief. It refreshes every 5 minutes — try reloading.
         </p>
       </section>
@@ -166,8 +166,8 @@ export function MorningReport() {
       defaultOpen
       trigger={
         <div className="flex flex-1 items-baseline justify-between">
-          <h2 className="tick text-[13px] font-semibold text-foreground">Morning Brief</h2>
-          <span className="font-mono text-[11px] text-muted">
+          <h2 className="tick text-body font-semibold text-foreground">Morning Brief</h2>
+          <span className="font-mono text-micro text-muted">
             {data.weekday} {data.date}
             {stamp && <span className="ml-2 text-muted-2">built {stamp}</span>}
           </span>
@@ -181,7 +181,7 @@ export function MorningReport() {
         {data.day_ahead?.gex_line && (
           <Role label="Positioning">
             {/* the most actionable line in the brief — no longer the faintest (MB-04) */}
-            <span className="font-mono text-xs text-foreground">{data.day_ahead.gex_line}</span>
+            <span className="font-mono text-foreground">{data.day_ahead.gex_line}</span>
           </Role>
         )}
         <Role label="Tone">
@@ -203,14 +203,14 @@ export function MorningReport() {
             <Link
               key={n.ticker}
               href={`/t/${n.ticker}`}
-              className="flex items-baseline gap-2 text-[12px] text-foreground/90 hover:text-accent"
+              className="flex items-baseline gap-2 text-dense text-foreground/90 hover:text-accent"
             >
-              <span className="w-12 shrink-0 font-mono text-[11px] text-accent">${n.ticker}</span>
+              <span className="w-12 shrink-0 font-mono text-micro text-accent">${n.ticker}</span>
               <span className="min-w-0 flex-1 truncate" title={n.headline}>
                 {n.headline}
               </span>
               {n.extra > 0 && (
-                <span className="shrink-0 font-mono text-[11px] text-muted-2">+{n.extra} more</span>
+                <span className="shrink-0 font-mono text-micro text-muted-2">+{n.extra} more</span>
               )}
             </Link>
           ))}
@@ -219,11 +219,11 @@ export function MorningReport() {
 
       <div className="grid gap-x-6 gap-y-3 sm:grid-cols-2">
         <div>
-          <div className="mb-0.5 text-[11px] uppercase tracking-wide text-muted">
+          <div className="mb-0.5 text-micro uppercase tracking-wide text-muted">
             Macro — today &amp; tomorrow
           </div>
           {near.length > 0 ? (
-            <ul className="space-y-0.5 font-mono text-[11px] text-foreground/80">
+            <ul className="space-y-0.5 font-mono text-micro text-foreground/80">
               {near.map((e, i) => (
                 <li key={i}>
                   <span className={e.importance === "high" ? "text-warn" : "text-muted"}>•</span>{" "}
@@ -232,17 +232,17 @@ export function MorningReport() {
               ))}
             </ul>
           ) : (
-            <p className="font-mono text-[11px] text-muted-2">nothing scheduled</p>
+            <p className="font-mono text-micro text-muted-2">nothing scheduled</p>
           )}
-          <Link href="/calendar" className="mt-0.5 inline-block font-mono text-[11px] text-muted hover:text-accent">
+          <Link href="/calendar" className="mt-0.5 inline-block font-mono text-micro text-muted hover:text-accent">
             {laterCount > 0 ? `+${laterCount} later this week · calendar ›` : "calendar ›"}
           </Link>
         </div>
 
         <div>
-          <div className="mb-0.5 text-[11px] uppercase tracking-wide text-muted">Earnings</div>
+          <div className="mb-0.5 text-micro uppercase tracking-wide text-muted">Earnings</div>
           {hasDayAheadEarnings ? (
-            <ul className="space-y-0.5 font-mono text-[11px]">
+            <ul className="space-y-0.5 font-mono text-micro">
               {earningsToday.slice(0, 3).map((e, i) => (
                 <EarningsRow key={`t${i}`} e={e} when="today" />
               ))}
@@ -251,7 +251,7 @@ export function MorningReport() {
               ))}
             </ul>
           ) : data.earnings.length > 0 ? (
-            <ul className="space-y-0.5 font-mono text-[11px] text-foreground/80">
+            <ul className="space-y-0.5 font-mono text-micro text-foreground/80">
               {data.earnings.slice(0, 4).map((e, i) => (
                 <li key={i} className="flex items-baseline gap-1.5">
                   <span className="w-12 shrink-0 text-muted-2">{e.date.slice(5)}</span>
@@ -260,14 +260,14 @@ export function MorningReport() {
               ))}
             </ul>
           ) : (
-            <p className="font-mono text-[11px] text-muted-2">none in the next 7 days</p>
+            <p className="font-mono text-micro text-muted-2">none in the next 7 days</p>
           )}
         </div>
       </div>
 
       <Link
         href="/brief"
-        className="mt-3 inline-block font-mono text-[11px] text-muted hover:text-accent"
+        className="mt-3 inline-block font-mono text-micro text-muted hover:text-accent"
       >
         Full brief ›
       </Link>

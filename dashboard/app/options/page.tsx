@@ -96,7 +96,7 @@ export default function OptionsOverviewPage() {
 
   return (
     <>
-      <section className="grid grid-cols-1 gap-3 p-3 md:grid-cols-2 xl:grid-cols-4">
+      <section className="grid grid-cols-1 gap-3 px-[var(--page-x)] py-[var(--page-y)] md:grid-cols-2 xl:grid-cols-4">
         <VerdictCard
           title="Spot / Regime"
           verdict={spotVerdict}
@@ -121,7 +121,7 @@ export default function OptionsOverviewPage() {
           loading={ladderLoading}
           whyItMatters="Put/call IV skew shows whether hedging or speculative demand dominates near the money."
           detail={
-            <div className="space-y-1 font-mono text-[11px] tabular-nums">
+            <div className="space-y-1 font-mono text-micro tabular-nums">
               <div className="flex justify-between">
                 <span className="text-muted">ATM strike</span>
                 <span className="text-foreground">{atmRow?.strike ?? "—"}</span>
@@ -164,7 +164,7 @@ export default function OptionsOverviewPage() {
         />
       </section>
 
-      <section className="flex flex-wrap items-center gap-4 border-y border-line px-4 py-2 font-mono text-[11px] tabular-nums">
+      <section className="flex flex-wrap items-center gap-4 border-y border-line px-4 py-2 font-mono text-micro tabular-nums">
         <span>
           <span className="text-muted">net GEX </span>
           <span className={(totalGex ?? 0) >= 0 ? "text-pos" : "text-neg"}>{fmtGex(totalGex)}</span>

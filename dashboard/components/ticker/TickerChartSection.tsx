@@ -80,7 +80,7 @@ export default function TickerChartSection({
             type="button"
             onClick={() => void retry()}
             disabled={retrying}
-            className="mt-2 font-mono text-[11px] text-accent border border-accent/40 rounded px-2 py-0.5 hover:bg-accent/10 transition-colors disabled:opacity-50"
+            className="mt-2 font-mono text-micro text-accent border border-accent/40 rounded px-2 py-0.5 hover:bg-accent/10 transition-colors disabled:opacity-50"
           >
             {retrying ? "Retrying…" : "Retry"}
           </button>

@@ -73,7 +73,7 @@ function CopyButton({ ticker }: { ticker: string }) {
           () => {}
         );
       }}
-      className="rounded border border-line px-1.5 py-0.5 font-mono text-[11px] text-muted transition-colors hover:border-line-strong hover:text-foreground"
+      className="rounded border border-line px-1.5 py-0.5 font-mono text-micro text-muted transition-colors hover:border-line-strong hover:text-foreground"
     >
       {done ? "Copied" : "Copy"}
     </button>
@@ -145,21 +145,21 @@ export default function Header({
     <div className="px-4 py-3.5">
       {/* Row 1 — identity and price. Three type sizes, not five (TH-06). */}
       <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1.5">
-        <span className="font-mono text-[26px] font-semibold leading-none tabular-nums text-foreground">
+        <span className="font-mono text-display font-semibold leading-none tabular-nums text-foreground">
           {ticker}
         </span>
 
-        <span className="font-mono text-[20px] leading-none tabular-nums text-foreground">
+        <span className="font-mono text-title leading-none tabular-nums text-foreground">
           {mark !== null ? mark.toFixed(2) : "—"}
         </span>
         {changePct !== null && (
-          <span className={`font-mono text-[13px] tabular-nums ${posNeg}`}>
+          <span className={`font-mono text-body tabular-nums ${posNeg}`}>
             {changePct >= 0 ? "+" : ""}
             {changePct.toFixed(2)}%
           </span>
         )}
         {markBasis && (
-          <span className="font-mono text-[11px] text-muted-2" title="Basis for the price shown and for every % on this page">
+          <span className="font-mono text-micro text-muted-2" title="Basis for the price shown and for every % on this page">
             {markBasis}
           </span>
         )}
@@ -184,7 +184,7 @@ export default function Header({
               // The glossary used to sit under the header as body copy on every
               // ticker; it belongs on the chip it explains (TH-01).
               <InfoTip content={HC_TOOLTIP} label="What HC means">
-                <span className="inline-flex items-center rounded border border-accent/50 bg-accent/10 px-1.5 py-px font-mono text-[11px] text-accent">
+                <span className="inline-flex items-center rounded border border-accent/50 bg-accent/10 px-1.5 py-px font-mono text-micro text-accent">
                   HC
                 </span>
               </InfoTip>
@@ -198,13 +198,13 @@ export default function Header({
           <CopyButton ticker={ticker} />
           <Link
             href={`/alerts?symbol=${ticker}`}
-            className="rounded border border-line px-1.5 py-0.5 font-mono text-[11px] text-muted transition-colors hover:border-line-strong hover:text-foreground"
+            className="rounded border border-line px-1.5 py-0.5 font-mono text-micro text-muted transition-colors hover:border-line-strong hover:text-foreground"
           >
             Alert
           </Link>
           <Link
             href="#options"
-            className="rounded border border-line px-1.5 py-0.5 font-mono text-[11px] text-muted transition-colors hover:border-line-strong hover:text-foreground"
+            className="rounded border border-line px-1.5 py-0.5 font-mono text-micro text-muted transition-colors hover:border-line-strong hover:text-foreground"
           >
             Options ↓
           </Link>
@@ -212,7 +212,7 @@ export default function Header({
       </div>
 
       {/* Row 2 — identity context (TH-08) */}
-      <p className="mt-2 flex flex-wrap items-center gap-x-2.5 gap-y-1 font-mono text-[11px] text-muted">
+      <p className="mt-2 flex flex-wrap items-center gap-x-2.5 gap-y-1 font-mono text-micro text-muted">
         {companyName && (
           <span className="max-w-[280px] truncate text-muted" title={companyName}>
             {companyName}
@@ -261,9 +261,9 @@ export default function Header({
 
       {/* Row 3 — this call, then the cohort it belongs to. Two claims, two lines (TH-05, TH-09). */}
       {cs && (
-        <div className="mt-2 border-t border-line pt-2 font-mono text-[12px] tabular-nums">
+        <div className="mt-2 border-t border-line pt-2 font-mono text-dense tabular-nums">
           <p className="text-foreground/85">
-            <span className="mr-2 inline-block w-[62px] text-[11px] uppercase tracking-wide text-muted-2">
+            <span className="mr-2 inline-block w-[62px] text-micro uppercase tracking-wide text-muted-2">
               This call
             </span>
             called {cs.dateLabel}
@@ -280,7 +280,7 @@ export default function Header({
             ) : null}
           </p>
           <p className="text-muted">
-            <span className="mr-2 inline-block w-[62px] text-[11px] uppercase tracking-wide text-muted-2">
+            <span className="mr-2 inline-block w-[62px] text-micro uppercase tracking-wide text-muted-2">
               Cohort
             </span>
             median pick peaks +{medianPeakPct}% @ ~{medianDaysToPeak}d — a base rate for calls like

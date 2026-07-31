@@ -15,6 +15,7 @@ import {
 import { useWatchlistTickers } from "@/lib/watchlist";
 import { useLocalStorage } from "@/lib/useLocalStorage";
 import { STATIC_KEYS } from "@/lib/storageKeys";
+import PageShell from "@/components/PageShell";
 
 const HORIZONS = [30, 60] as const;
 const SHOW = [
@@ -37,7 +38,7 @@ function Segmented<T extends string | number>({
 }) {
   return (
     <div className="flex items-center gap-2">
-      <span className="text-[11px] uppercase tracking-wide text-muted">{label}</span>
+      <span className="text-micro uppercase tracking-wide text-muted">{label}</span>
       <div className="flex overflow-hidden rounded border border-line">
         {options.map((o) => (
           <button
@@ -45,7 +46,7 @@ function Segmented<T extends string | number>({
             type="button"
             onClick={() => onChange(o.key)}
             aria-pressed={o.key === value}
-            className={`px-2 py-1 text-[11px] ${
+            className={`px-2 py-1 text-micro ${
               o.key === value ? "bg-accent/20 text-accent" : "text-muted hover:text-foreground"
             }`}
           >
@@ -90,12 +91,12 @@ export default function CalendarPage() {
   const earningsCount = filtered.length - macroCount;
 
   return (
-    <main className="mx-auto max-w-4xl px-6 py-6">
+    <PageShell width="standard">
       <PageHeader
         title="Economic Calendar"
         subtitle={`Scheduled US macro releases and tracked-name earnings on one timeline — the next ${horizon} days, all times US Eastern with your local time alongside.`}
         actions={
-          <Link href="/macro" className="text-[12px] text-muted hover:text-accent">
+          <Link href="/macro" className="text-dense text-muted hover:text-accent">
             Macro sentiment ›
           </Link>
         }
@@ -109,13 +110,13 @@ export default function CalendarPage() {
           onChange={setHorizon}
         />
         <Segmented label="Show" value={show} options={SHOW} onChange={setShow} />
-        <span className="font-mono text-[11px] text-muted-2">
+        <span className="font-mono text-micro text-muted-2">
           {macroCount} macro · {earningsCount} earnings
         </span>
       </div>
 
       {isLoading && !data && (
-        <p className="font-mono text-[11px] text-muted">loading calendar…</p>
+        <p className="font-mono text-micro text-muted">loading calendar…</p>
       )}
       {error && !data && (
         <EmptyState message="Calendar unavailable — the Argus API isn't answering." />
@@ -127,7 +128,7 @@ export default function CalendarPage() {
       <div className="space-y-6">
         {weeks.map((week) => (
           <section key={week.start}>
-            <h2 className="tick mb-2 text-[13px] font-semibold text-foreground">{week.label}</h2>
+            <h2 className="tick mb-2 text-body font-semibold text-foreground">{week.label}</h2>
             <div className="space-y-3">
               {byDay(week.events).map(([date, evs]) => (
                 <div key={date} className="overflow-hidden rounded-md border border-line bg-surface">
@@ -137,16 +138,16 @@ export default function CalendarPage() {
                     }`}
                   >
                     <span
-                      className={`text-[12px] font-medium ${
+                      className={`text-dense font-medium ${
                         date === today ? "text-accent" : "text-foreground"
                       }`}
                     >
                       {fullDayLabel(date)}
                     </span>
                     {date === today && (
-                      <span className="font-mono text-[11px] text-accent">today</span>
+                      <span className="font-mono text-micro text-accent">today</span>
                     )}
-                    <span className="ml-auto font-mono text-[11px] text-muted-2">
+                    <span className="ml-auto font-mono text-micro text-muted-2">
                       {evs.length} {evs.length === 1 ? "event" : "events"}
                     </span>
                   </div>
@@ -164,13 +165,13 @@ export default function CalendarPage() {
         ))}
       </div>
 
-      <p className="mt-6 border-t border-line pt-3 text-[11px] leading-relaxed text-muted-2">
+      <p className="mt-6 border-t border-line pt-3 text-micro leading-relaxed text-muted-2">
         Release dates come from the OMB/OIRA principal-federal-economic-indicator schedule and the
         Federal Reserve FOMC calendar; earnings dates are refreshed daily for tracked names and can
         move. Consensus, prior and actual figures are not ingested yet — they need a paid feed, so
         the calendar answers <em>what is scheduled and what it transmits into</em>, not{" "}
         <em>what the number printed</em>.
       </p>
-    </main>
+    </PageShell>
   );
 }

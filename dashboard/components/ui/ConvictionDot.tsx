@@ -40,7 +40,7 @@ function Dots({ value }: { value: "high" | "med" | "low" }) {
 
 export default function ConvictionDot({ value }: ConvictionDotProps) {
   if (value === null) {
-    return <span className="font-mono text-[13px] text-muted tabular-nums">—</span>;
+    return <span className="font-mono text-body text-muted tabular-nums">—</span>;
   }
 
   return (

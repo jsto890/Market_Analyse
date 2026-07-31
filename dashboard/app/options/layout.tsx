@@ -38,11 +38,11 @@ function OptionsChrome({ children }: { children: React.ReactNode }) {
 
   return (
     <main className="flex h-full flex-col">
-      <div className="flex flex-wrap items-center gap-x-3 gap-y-2 border-b border-line px-4 py-2">
-        <h1 className="text-sm font-semibold">
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-2 border-b border-line px-[var(--page-x)] py-2">
+        <h1 className="text-body font-semibold">
           Options · {activeSymbol}
           {isProxied(activeSymbol) && (
-            <span className="ml-1.5 font-mono text-[11px] font-normal text-muted">
+            <span className="ml-1.5 font-mono text-micro font-normal text-muted">
               (via {companionSymbol(activeSymbol)})
             </span>
           )}
@@ -53,10 +53,10 @@ function OptionsChrome({ children }: { children: React.ReactNode }) {
         {/* One live control for every tab, with its name and its state both in
            text — the bare switch said neither (OPT-03). */}
         <div className="ml-auto flex items-center gap-1.5">
-          <span className="font-mono text-[11px] text-muted">Live ladder</span>
+          <span className="font-mono text-micro text-muted">Live ladder</span>
           <Toggle checked={live} onChange={setLive} label="Live ladder" />
           <span
-            className={`w-6 font-mono text-[11px] ${live ? "text-teal" : "text-muted-2"}`}
+            className={`w-6 font-mono text-micro ${live ? "text-teal" : "text-muted-2"}`}
             aria-hidden
           >
             {live ? "on" : "off"}
@@ -64,7 +64,7 @@ function OptionsChrome({ children }: { children: React.ReactNode }) {
           <p role="status" aria-live="polite" className="sr-only">
             Live ladder {live ? "on — streaming quotes and greeks" : "off — showing the daily snapshot"}
           </p>
-          <span className={`rounded px-2 py-0.5 text-xs ${toneClass[badge.tone]}`}>{badge.label}</span>
+          <span className={`rounded px-2 py-0.5 text-micro ${toneClass[badge.tone]}`}>{badge.label}</span>
           <InfoTip
             label="What does this status mean?"
             content="Connection status polls the backend every 5s and won't retry automatically on failure — if IBKR drops mid-session this badge can sit stale until the next scheduled poll succeeds."
@@ -74,7 +74,7 @@ function OptionsChrome({ children }: { children: React.ReactNode }) {
 
       <nav
         aria-label="Options sections"
-        className="flex gap-4 overflow-x-auto border-b border-line px-4 py-1.5"
+        className="flex gap-4 overflow-x-auto border-b border-line px-[var(--page-x)] py-1.5"
       >
         {OPTIONS_TABS.map((t) => {
           const active = t.href === "/options" ? pathname === "/options" : pathname.startsWith(t.href);
@@ -83,8 +83,7 @@ function OptionsChrome({ children }: { children: React.ReactNode }) {
               key={t.href}
               href={t.href}
               aria-current={active ? "page" : undefined}
-              title={t.blurb}
-              className={`shrink-0 whitespace-nowrap border-b-2 pb-1 text-[12px] font-medium transition-colors ${
+              className={`shrink-0 whitespace-nowrap border-b-2 pb-1 text-dense font-medium transition-colors ${
                 active
                   ? "border-accent text-foreground"
                   : "border-transparent text-muted hover:text-foreground"
@@ -94,6 +93,13 @@ function OptionsChrome({ children }: { children: React.ReactNode }) {
             </Link>
           );
         })}
+        {/* The active tab's blurb, inline — a native title per tab put the
+         * explanation behind a hover on a link, reachable by mouse only. */}
+        <span className="self-center text-micro text-muted-2">
+          {OPTIONS_TABS.find((t) =>
+            t.href === "/options" ? pathname === "/options" : pathname.startsWith(t.href)
+          )?.blurb}
+        </span>
       </nav>
 
       {children}

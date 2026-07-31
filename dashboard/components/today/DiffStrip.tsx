@@ -46,13 +46,13 @@ export default function DiffStrip({ diff }: DiffStripProps) {
 
   return (
     <Collapsible
-      trigger={<span className="font-medium text-[13px]">Changes since yesterday</span>}
+      trigger={<span className="font-medium text-body">Changes since yesterday</span>}
       defaultOpen
       persistKey="diff"
       className="rounded-lg border border-line bg-surface"
       triggerClassName="px-4 py-3"
     >
-      <div className="space-y-1 border-t border-line px-4 py-3 text-[13px]">
+      <div className="space-y-1 border-t border-line px-4 py-3 text-body">
         {hasNew && (
           <div className="flex flex-wrap gap-2">
             <span className="text-muted">NEW:</span>

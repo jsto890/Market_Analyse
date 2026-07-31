@@ -58,7 +58,7 @@ export function QuoteRow({ symbol, price, changePct, prevBasis, skeleton }: Quot
     // Spec §8.8 — symbol label stays, price/pct are animated bars
     return (
       <div className="h-[26px] flex items-center px-3 gap-2">
-        <span className="w-12 text-[11px] font-mono text-muted flex-shrink-0 leading-none">
+        <span className="w-12 text-micro font-mono text-muted flex-shrink-0 leading-none">
           {label}
         </span>
         <div className="flex-1 flex justify-end">
@@ -75,14 +75,14 @@ export function QuoteRow({ symbol, price, changePct, prevBasis, skeleton }: Quot
   // pos/neg applied to the price). The % change column still colors normally.
   return (
     <Link href={`/t/${symbol}`} className="h-[26px] flex items-center px-3 hover:bg-elevated">
-      <span className="w-12 text-[11px] font-mono text-muted flex-shrink-0 leading-none">
+      <span className="w-12 text-micro font-mono text-muted flex-shrink-0 leading-none">
         {label}
       </span>
-      <span className="flex-1 text-right text-[12px] font-mono tabular-nums text-foreground leading-none">
+      <span className="flex-1 text-right text-dense font-mono tabular-nums text-foreground leading-none">
         {formatPrice(symbol, price)}
       </span>
       <span
-        className={`w-14 text-right text-[11px] font-mono font-medium tabular-nums leading-none ${pctColor(changePct)}`}
+        className={`w-14 text-right text-micro font-mono font-medium tabular-nums leading-none ${pctColor(changePct)}`}
       >
         {formatPct(changePct)}
       </span>

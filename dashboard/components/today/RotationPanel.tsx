@@ -40,7 +40,7 @@ function QuadrantDot({ quadrant }: { quadrant: string }) {
       </Tooltip.Trigger>
       <Tooltip.Portal>
         <Tooltip.Content
-          className="rounded bg-elevated px-2 py-1 text-[12px] text-muted shadow-lg border border-line z-50"
+          className="rounded bg-elevated px-2 py-1 text-dense text-muted shadow-lg border border-line z-50"
           sideOffset={4}
         >
           {label}
@@ -95,7 +95,7 @@ const columns: Column<RotationRow>[] = [
         <span className="inline-flex items-center gap-1.5">
           {r.industry}
           <InfoTip content={HEADER_GLOSS.n}>
-            <span className="rounded border border-line px-1 text-[11px] uppercase tracking-wide text-muted">
+            <span className="rounded border border-line px-1 text-micro uppercase tracking-wide text-muted">
               thin
             </span>
           </InfoTip>

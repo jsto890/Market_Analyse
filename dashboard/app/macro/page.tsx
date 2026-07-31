@@ -23,6 +23,7 @@ import EmptyState from "@/components/ui/EmptyState";
 import PageHeader from "@/components/ui/PageHeader";
 import { useLocalStorage } from "@/lib/useLocalStorage";
 import { STATIC_KEYS } from "@/lib/storageKeys";
+import PageShell from "@/components/PageShell";
 
 const fetcher = (u: string) => fetch(u).then((r) => { if (!r.ok) throw new Error(`${r.status}`); return r.json(); });
 const WINDOWS = ["1h", "1d", "1w"];
@@ -36,7 +37,7 @@ function Methodology({ window }: { window: string }) {
       className="mb-4 rounded-md border border-line bg-surface"
       triggerClassName="px-3 py-2"
       trigger={
-        <span className="text-[12px] font-medium text-foreground">
+        <span className="text-dense font-medium text-foreground">
           How this score is computed
           <span className="ml-2 font-normal text-muted">
             model, sources, decay, and what a number means
@@ -44,9 +45,9 @@ function Methodology({ window }: { window: string }) {
         </span>
       }
     >
-      <dl className="grid gap-x-6 gap-y-2 border-t border-line px-3 py-3 text-[12px] leading-relaxed sm:grid-cols-2">
+      <dl className="grid gap-x-6 gap-y-2 border-t border-line px-3 py-3 text-dense leading-relaxed sm:grid-cols-2">
         <div>
-          <dt className="font-mono text-[11px] uppercase tracking-wide text-muted">Model</dt>
+          <dt className="font-mono text-micro uppercase tracking-wide text-muted">Model</dt>
           <dd className="text-muted">
             FinBERT (ProsusAI/finbert), a sentiment classifier fine-tuned on financial text. Each
             headline scores −1 (bearish) to +1 (bullish) as P(positive) − P(negative). Headline text
@@ -54,7 +55,7 @@ function Methodology({ window }: { window: string }) {
           </dd>
         </div>
         <div>
-          <dt className="font-mono text-[11px] uppercase tracking-wide text-muted">Corpus</dt>
+          <dt className="font-mono text-micro uppercase tracking-wide text-muted">Corpus</dt>
           <dd className="text-muted">
             Every item in the news store: the Discord feeds, RSS pulls and whale-flow alerts that
             fill the news rail. Scored once on arrival by the aggregator, which runs every 20
@@ -62,7 +63,7 @@ function Methodology({ window }: { window: string }) {
           </dd>
         </div>
         <div>
-          <dt className="font-mono text-[11px] uppercase tracking-wide text-muted">Lookback &amp; decay</dt>
+          <dt className="font-mono text-micro uppercase tracking-wide text-muted">Lookback &amp; decay</dt>
           <dd className="text-muted">
             The <span className="font-mono">{window}</span> gauge reads the {meta.lookback} only.
             Inside it, weight decays exponentially with age at a half-life of {meta.halfLife}, so a
@@ -71,7 +72,7 @@ function Methodology({ window }: { window: string }) {
           </dd>
         </div>
         <div>
-          <dt className="font-mono text-[11px] uppercase tracking-wide text-muted">Scopes</dt>
+          <dt className="font-mono text-micro uppercase tracking-wide text-muted">Scopes</dt>
           <dd className="text-muted">
             Every item lands in <span className="font-mono">GLOBAL</span>. It also lands in{" "}
             <span className="font-mono">US</span> if the headline hits a US-macro keyword (Fed, CPI,
@@ -81,14 +82,14 @@ function Methodology({ window }: { window: string }) {
           </dd>
         </div>
         <div>
-          <dt className="font-mono text-[11px] uppercase tracking-wide text-muted">n =</dt>
+          <dt className="font-mono text-micro uppercase tracking-wide text-muted">n =</dt>
           <dd className="text-muted">
             Headlines inside the lookback for that scope, before decay weighting. A high score on
             n=3 is three headlines, not a consensus.
           </dd>
         </div>
         <div>
-          <dt className="font-mono text-[11px] uppercase tracking-wide text-muted">Reading a number</dt>
+          <dt className="font-mono text-micro uppercase tracking-wide text-muted">Reading a number</dt>
           <dd className="text-muted">
             ±{NEUTRAL_BAND.toFixed(2)} is the neutral band — inside it the tone is treated as no
             signal, so +0.04 is <em>not</em> mild bullishness. Beyond it the score says the
@@ -149,12 +150,12 @@ function MacroPageInner() {
   }, [tiles, scope, win]);
 
   return (
-    <main className="mx-auto max-w-5xl px-6 py-6">
+    <PageShell width="wide">
       <PageHeader
         title="Macro Sentiment"
         subtitle="FinBERT-scored news, recency-weighted by scope. −1 bearish · +1 bullish."
         actions={
-          <Link href="/calendar" className="text-[12px] text-muted hover:text-accent">
+          <Link href="/calendar" className="text-dense text-muted hover:text-accent">
             Event calendar ›
           </Link>
         }
@@ -163,15 +164,14 @@ function MacroPageInner() {
       <Methodology window={win} />
 
       <div className="mb-4 flex flex-wrap items-center gap-x-3 gap-y-2">
-        <span className="text-[11px] uppercase tracking-wide text-muted">Lookback</span>
+        <span className="text-micro uppercase tracking-wide text-muted">Lookback</span>
         <div className="flex gap-2">
           {WINDOWS.map((w) => (
             <button
               key={w}
               onClick={() => pickWindow(w)}
               aria-pressed={w === win}
-              title={WINDOW_META[w].meaning}
-              className={`rounded px-2 py-1 text-xs ${
+              className={`rounded px-2 py-1 text-micro ${
                 w === win ? "bg-accent/20 text-accent" : "bg-elevated text-muted hover:text-foreground"
               }`}
             >
@@ -179,13 +179,13 @@ function MacroPageInner() {
             </button>
           ))}
         </div>
-        <span className="text-[11px] text-muted-2">{meta.meaning}</span>
+        <span className="text-micro text-muted-2">{meta.meaning}</span>
       </div>
 
       {resetNotice && (
         <p
           role="status"
-          className="mb-3 rounded border border-warn/40 bg-warn/5 px-3 py-1.5 text-[12px] text-warn"
+          className="mb-3 rounded border border-warn/40 bg-warn/5 px-3 py-1.5 text-dense text-warn"
         >
           {resetNotice}
         </p>
@@ -213,7 +213,7 @@ function MacroPageInner() {
 
       {anyData ? (
         <>
-          <div className="mb-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted">
+          <div className="mb-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-micro text-muted">
             <span>
               {scopeLabel(scope)} · {meta.label} lookback
               {current && (
@@ -243,7 +243,7 @@ function MacroPageInner() {
       ) : (
         <EmptyState message="No macro data yet — the aggregator runs every 20 min." />
       )}
-    </main>
+    </PageShell>
   );
 }
 

@@ -62,9 +62,9 @@ export default function OptionsFlowPage() {
   const callShare = totalVol > 0 ? (callVol / totalVol) * 100 : null;
 
   return (
-    <div className="space-y-3 p-3">
+    <div className="space-y-3 px-[var(--page-x)] py-[var(--page-y)]">
       {verdict && (
-        <p className="rounded border border-line bg-elevated px-3 py-2 text-[12px] text-muted">
+        <p className="rounded border border-line bg-elevated px-3 py-2 text-dense text-muted">
           {verdict.sentence}
         </p>
       )}
@@ -81,9 +81,9 @@ export default function OptionsFlowPage() {
           }
         >
           {totalVol === 0 ? (
-            <p className="font-mono text-[11px] text-muted">no volume in this band yet</p>
+            <p className="font-mono text-micro text-muted">no volume in this band yet</p>
           ) : (
-            <div className="space-y-2 font-mono text-[11px] tabular-nums">
+            <div className="space-y-2 font-mono text-micro tabular-nums">
               <div className="flex h-2 overflow-hidden rounded bg-raised">
                 <div className="bg-pos/60" style={{ width: `${callShare ?? 0}%` }} />
                 <div className="bg-neg/60" style={{ width: `${100 - (callShare ?? 0)}%` }} />

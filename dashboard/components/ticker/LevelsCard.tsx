@@ -29,7 +29,7 @@ function InfoTooltip({ text }: { text: string }) {
       <Tooltip.Trigger asChild>
         <button
           type="button"
-          className="ml-1 cursor-default select-none font-mono text-[11px] leading-none text-muted"
+          className="ml-1 cursor-default select-none font-mono text-micro leading-none text-muted"
           aria-label="info"
         >
           i
@@ -37,7 +37,7 @@ function InfoTooltip({ text }: { text: string }) {
       </Tooltip.Trigger>
       <Tooltip.Portal>
         <Tooltip.Content
-          className="z-50 max-w-[240px] rounded border border-line bg-elevated px-2 py-1 text-[12px] text-muted shadow-lg"
+          className="z-50 max-w-[240px] rounded border border-line bg-elevated px-2 py-1 text-dense text-muted shadow-lg"
           sideOffset={4}
         >
           {text}
@@ -91,7 +91,7 @@ function PriceRail({
         {price != null && priceLeft != null && (
           <>
             <span
-              className="absolute -top-4 -translate-x-1/2 whitespace-nowrap font-mono text-[11px] tabular-nums text-accent"
+              className="absolute -top-4 -translate-x-1/2 whitespace-nowrap font-mono text-micro tabular-nums text-accent"
               style={{ left: `${priceLeft}%` }}
             >
               {price.toFixed(2)}
@@ -99,12 +99,11 @@ function PriceRail({
             <div
               className="absolute top-1/2 h-3.5 w-3.5 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-accent bg-bg"
               style={{ left: `${priceLeft}%` }}
-              title={`price ${price.toFixed(2)}`}
             />
           </>
         )}
       </div>
-      <div className="mt-1 flex items-center justify-between font-mono text-[11px] tabular-nums text-muted">
+      <div className="mt-1 flex items-center justify-between font-mono text-micro tabular-nums text-muted">
         <span>{lo.toFixed(2)}</span>
         <span>{hi.toFixed(2)}</span>
       </div>
@@ -168,12 +167,12 @@ export default function LevelsCard({ ticker, bridgeRow }: LevelsCardProps) {
   return (
     <section className="rounded-md border border-line bg-elevated">
       <div className="flex items-center gap-2 border-b border-line px-4 py-3">
-        <span className="tick text-[13px] font-semibold text-foreground">Trade levels</span>
+        <span className="tick text-body font-semibold text-foreground">Trade levels</span>
         <InfoTooltip text="Entry/stop/target from the live scorer. Context, not a mechanical exit system." />
       </div>
 
       {!valid ? (
-        <div className="px-4 py-4 text-[12px] text-muted">
+        <div className="px-4 py-4 text-dense text-muted">
           No trade levels for {ticker} yet — the scorer needs a directional setup (entry, stop and
           target must differ).
         </div>
@@ -181,7 +180,7 @@ export default function LevelsCard({ ticker, bridgeRow }: LevelsCardProps) {
         <div className="space-y-3 px-4 py-3">
           {/* Directional trade plan synthesized from the model verdict + levels */}
           <div
-            className={`rounded border px-3 py-2 text-[12px] leading-relaxed ${
+            className={`rounded border px-3 py-2 text-dense leading-relaxed ${
               dir === "long"
                 ? "border-pos/30 bg-pos/[0.06]"
                 : dir === "short"
@@ -195,9 +194,9 @@ export default function LevelsCard({ ticker, bridgeRow }: LevelsCardProps) {
                   {dir === "long" ? "Long" : "Short"} {committed ? "plan" : "bias"}
                 </span>
                 {!committed && (
-                  <span className="ml-1.5 text-[11px] font-medium uppercase text-muted">watch</span>
+                  <span className="ml-1.5 text-micro font-medium uppercase text-muted">watch</span>
                 )}
-                {hc && <span className="ml-1.5 text-[11px] font-semibold text-warn">HIGH CONV</span>}
+                {hc && <span className="ml-1.5 text-micro font-semibold text-warn">HIGH CONV</span>}
                 <span className="text-muted">
                   {" — "}
                   {dir === "long" ? "enter near" : "sell near"}{" "}
@@ -221,23 +220,23 @@ export default function LevelsCard({ ticker, bridgeRow }: LevelsCardProps) {
 
           <div className="grid grid-cols-4 gap-2 text-center">
             <div>
-              <p className="mb-0.5 text-[11px] uppercase tracking-wide text-muted">Entry</p>
-              <p className="font-mono text-[14px] tabular-nums text-foreground">
+              <p className="mb-0.5 text-micro uppercase tracking-wide text-muted">Entry</p>
+              <p className="font-mono text-body tabular-nums text-foreground">
                 {entry!.toFixed(2)}
               </p>
             </div>
             <div>
-              <p className="mb-0.5 text-[11px] uppercase tracking-wide text-muted">Stop</p>
-              <p className="font-mono text-[14px] tabular-nums text-neg">{stop!.toFixed(2)}</p>
+              <p className="mb-0.5 text-micro uppercase tracking-wide text-muted">Stop</p>
+              <p className="font-mono text-body tabular-nums text-neg">{stop!.toFixed(2)}</p>
             </div>
             <div>
-              <p className="mb-0.5 text-[11px] uppercase tracking-wide text-muted">Target</p>
-              <p className="font-mono text-[14px] tabular-nums text-pos">{target!.toFixed(2)}</p>
+              <p className="mb-0.5 text-micro uppercase tracking-wide text-muted">Target</p>
+              <p className="font-mono text-body tabular-nums text-pos">{target!.toFixed(2)}</p>
             </div>
             <div>
-              <p className="mb-0.5 text-[11px] uppercase tracking-wide text-muted">R:R</p>
+              <p className="mb-0.5 text-micro uppercase tracking-wide text-muted">R:R</p>
               <p
-                className={`font-mono text-[14px] tabular-nums ${
+                className={`font-mono text-body tabular-nums ${
                   risk_reward != null && risk_reward >= 2
                     ? "text-pos"
                     : risk_reward != null && risk_reward < 1
@@ -253,7 +252,7 @@ export default function LevelsCard({ ticker, bridgeRow }: LevelsCardProps) {
           <PriceRail stop={stop!} entry={entry!} target={target!} price={livePrice} />
 
           {distToEntry !== null && (
-            <p className="font-mono text-[12px] tabular-nums text-muted">
+            <p className="font-mono text-dense tabular-nums text-muted">
               price{" "}
               <span className={Number(distToEntry) >= 0 ? "text-pos" : "text-neg"}>
                 {Number(distToEntry) >= 0 ? "+" : ""}
@@ -263,7 +262,7 @@ export default function LevelsCard({ ticker, bridgeRow }: LevelsCardProps) {
             </p>
           )}
 
-          {anchorLabel && <p className="text-[12px] text-muted">{anchorLabel}</p>}
+          {anchorLabel && <p className="text-dense text-muted">{anchorLabel}</p>}
 
           <div className="space-y-2 border-t border-line pt-3">
             <div className="flex flex-wrap items-center gap-2">
@@ -280,7 +279,7 @@ export default function LevelsCard({ ticker, bridgeRow }: LevelsCardProps) {
                   const v = Number(e.target.value);
                   if (!Number.isNaN(v) && v >= 0) setAccountSize(v);
                 }}
-                className="w-24 rounded border border-line bg-raised px-2 py-0.5 font-mono text-[12px] tabular-nums text-foreground focus:border-accent focus:outline-none"
+                className="w-24 rounded border border-line bg-raised px-2 py-0.5 font-mono text-dense tabular-nums text-foreground focus:border-accent focus:outline-none"
               />
               <label className="font-mono text-muted" htmlFor="risk-pct">
                 Risk %
@@ -296,19 +295,19 @@ export default function LevelsCard({ ticker, bridgeRow }: LevelsCardProps) {
                   const v = Number(e.target.value);
                   if (!Number.isNaN(v) && v >= 0) setRiskPct(v);
                 }}
-                className="w-16 rounded border border-line bg-raised px-2 py-0.5 font-mono text-[12px] tabular-nums text-foreground focus:border-accent focus:outline-none"
+                className="w-16 rounded border border-line bg-raised px-2 py-0.5 font-mono text-dense tabular-nums text-foreground focus:border-accent focus:outline-none"
               />
             </div>
             {shares !== null ? (
-              <p className="font-mono text-[13px] tabular-nums text-foreground">
+              <p className="font-mono text-body tabular-nums text-foreground">
                 = <span className="text-accent">{shares}</span> shares (risking{" "}
                 ${riskUsd.toLocaleString(undefined, { maximumFractionDigits: 0 })} = {riskPct}% $
                 {accountSize.toLocaleString(undefined, { maximumFractionDigits: 0 })} account)
               </p>
             ) : (
-              <span className="font-mono text-[13px] text-muted">—</span>
+              <span className="font-mono text-body text-muted">—</span>
             )}
-            <p className="text-[12px] leading-snug text-muted">
+            <p className="text-dense leading-snug text-muted">
               No fees or slippage modeled. Levels are context, not a mechanical exit system.
             </p>
           </div>

@@ -29,7 +29,7 @@ export default function DateStepper({ dates, current }: DateStepperProps) {
   }
 
   return (
-    <div className="flex items-center gap-2 font-mono text-[12px] text-muted">
+    <div className="flex items-center gap-2 font-mono text-dense text-muted">
       <button
         type="button"
         aria-label="Previous"

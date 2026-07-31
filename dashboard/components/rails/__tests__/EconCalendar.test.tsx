@@ -49,10 +49,8 @@ describe("EconCalendar (LR-09, A11Y-03, MAC-01, MAC-04)", () => {
     } as ReturnType<typeof calendarLib.useCalendar>);
     render(<EconCalendar days={7} max={6} />);
     const time = screen.getByText("08:30");
-    expect(time.className).toContain("text-[11px]");
+    expect(time.className).toContain("text-micro");
     expect(time.className).toContain("text-muted-2");
     expect(time.className).not.toContain("opacity-60");
-    expect(time.className).not.toContain("text-[9px]");
-    expect(time.className).not.toContain("text-[10px]");
-  });
+          });
 });

@@ -14,7 +14,7 @@ import {
 } from "recharts";
 import Panel from "@/components/ui/Panel";
 import type { RotationRow } from "@/components/today/RotationPanel";
-import { QUADRANT_COLOR, deriveQuadrant, abbreviate, splitDegenerate, computeLabelCollisions } from "@/lib/rotation";
+import { QUADRANT_COLOR, deriveQuadrant, splitDegenerate } from "@/lib/rotation";
 import { CHART_HEIGHT, CHART_AXIS_STYLE } from "@/lib/chartConventions";
 import { QUADRANT_LABEL } from "@/lib/labels";
 
@@ -26,7 +26,7 @@ function RRGTooltip({ active, payload }: { active?: boolean; payload?: TooltipPa
   if (!active || !payload?.length) return null;
   const row = payload[0].payload;
   return (
-    <div className="rounded border border-line bg-elevated px-2.5 py-1.5 text-[12px] shadow-lg">
+    <div className="rounded border border-line bg-elevated px-2.5 py-1.5 text-dense shadow-lg">
       <div className="font-medium text-text">{row.industry}</div>
       <div className="text-muted">
         {QUADRANT_LABEL[row.quadrantKey as keyof typeof QUADRANT_LABEL] ?? row.quadrantKey}
@@ -60,7 +60,7 @@ export default function RRGChart({ rows }: { rows: RotationRow[] }) {
   if (!plotted.length) {
     return (
       <Panel title="Relative Rotation Graph" subtitle="RS-Ratio vs RS-Momentum">
-        <p className="px-1 py-6 text-center text-[13px] text-muted">
+        <p className="px-1 py-6 text-center text-body text-muted">
           No sector data available — the rotation job returned no populated sectors.
         </p>
       </Panel>
@@ -80,8 +80,11 @@ export default function RRGChart({ rows }: { rows: RotationRow[] }) {
   const xDomain: [number, number] = [minR - padR, maxR + padR];
   const yDomain: [number, number] = [minM - padM, maxM + padM];
 
-  const collisions = computeLabelCollisions(plotted);
-  const data = plotted.map((r, i) => ({ ...r, quadrantKey: deriveQuadrant(r), labelCollision: collisions[i] }));
+  const data = plotted.map((r, i) => ({
+    ...r,
+    quadrantKey: deriveQuadrant(r),
+    rrgIndex: i + 1,
+  }));
 
   return (
     <Panel
@@ -178,23 +181,26 @@ export default function RRGChart({ rows }: { rows: RotationRow[] }) {
                 return (
                   <g>
                     <circle cx={p.cx} cy={p.cy} r={4} fill={color} stroke="var(--bg)" strokeWidth={1} />
-                    {!p.payload.labelCollision && (
-                      <text
-                        x={p.cx + (right ? 7 : -7)}
-                        y={p.cy + (up ? -3 : 9)}
-                        fontSize={10}
-                        fill={CHART_AXIS_STYLE.pointLabel}
-                        textAnchor={right ? "start" : "end"}
-                        style={{
-                          paintOrder: "stroke",
-                          stroke: "var(--bg)",
-                          strokeWidth: 3,
-                          strokeLinejoin: "round",
-                        }}
-                      >
-                        {abbreviate(p.payload.industry)}
-                      </text>
-                    )}
+                    {/* Index only — the name goes in the keyed legend below.
+                     * Naming just the uncrowded points was both inconsistent
+                     * (2 of 12 labelled) and unreadable: an abbreviated sector
+                     * name still ellipsised, so it named nothing the legend
+                     * didn't already name in full. */}
+                    <text
+                      x={p.cx + (right ? 7 : -7)}
+                      y={p.cy + (up ? -3 : 9)}
+                      fontSize={11}
+                      fill={CHART_AXIS_STYLE.pointLabel}
+                      textAnchor={right ? "start" : "end"}
+                      style={{
+                        paintOrder: "stroke",
+                        stroke: "var(--bg)",
+                        strokeWidth: 3,
+                        strokeLinejoin: "round",
+                      }}
+                    >
+                      {p.payload.rrgIndex}
+                    </text>
                   </g>
                 );
               }}
@@ -203,8 +209,23 @@ export default function RRGChart({ rows }: { rows: RotationRow[] }) {
           </ScatterChart>
         </ResponsiveContainer>
       </div>
+      {/* Keyed legend — every plotted sector is named exactly once, so a
+       * cluster near the origin stays identifiable without hovering. */}
+      <ul className="mt-3 grid grid-cols-2 gap-x-5 gap-y-1 px-1 text-micro md:grid-cols-3">
+        {data.map((r) => (
+          <li key={r.industry} className="flex min-w-0 items-center gap-1.5">
+            <span
+              aria-hidden
+              className="h-1.5 w-1.5 flex-shrink-0 rounded-full"
+              style={{ background: QUADRANT_COLOR[r.quadrantKey] ?? "var(--accent)" }}
+            />
+            <span className="w-4 flex-shrink-0 text-right font-mono text-muted-2">{r.rrgIndex}</span>
+            <span className="truncate text-muted">{r.industry}</span>
+          </li>
+        ))}
+      </ul>
       {hidden.length > 0 && (
-        <p className="mt-2 px-1 text-[11px] text-muted">
+        <p className="mt-2 px-1 text-micro text-muted">
           Hidden (flat/no data): {hidden.map((r) => r.industry).join(", ")}
         </p>
       )}

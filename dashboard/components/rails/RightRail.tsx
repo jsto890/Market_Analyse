@@ -31,7 +31,9 @@ export function RightRail() {
     const stored = readStored();
     if (stored === "1") setCollapsed(true);
     else if (stored === "0") setCollapsed(false);
-    else setCollapsed(window.innerWidth < 1280);
+    // Default closed at every width: the feed is ambient, and 260px of
+    // permanent chrome is the single largest tax on the content column.
+    else setCollapsed(true);
 
     if (typeof window.matchMedia !== "function") return;
     const mql = window.matchMedia(NARROW_QUERY);
@@ -90,11 +92,11 @@ export function RightRail() {
           aria-label="Expand news rail"
           className="w-9 h-9 flex items-center justify-center text-muted hover:text-foreground hover:bg-elevated"
         >
-          <span className="text-[14px] leading-none select-none">‹</span>
+          <span className="text-body leading-none select-none">‹</span>
         </button>
         {/* Rotated "NEWS" label per spec §6.2 */}
         <span
-          className="text-[11px] font-mono font-medium uppercase tracking-[0.12em] text-muted mt-4"
+          className="text-micro font-mono font-medium uppercase tracking-[0.12em] text-muted mt-4"
           style={{ writingMode: "vertical-rl", transform: "rotate(180deg)" }}
         >
           NEWS
@@ -110,10 +112,18 @@ export function RightRail() {
       onScroll={handleScroll}
       className="order-3 w-[260px] flex-shrink-0 bg-surface border-l border-line font-mono sticky top-[var(--nav-h)] h-[calc(100vh-var(--nav-h))] overflow-y-auto"
     >
-      {/* Header row per spec §7.1 — NEWS label + live item count */}
-      <div className="h-[24px] flex items-center justify-between px-3 border-b border-line">
-        <span className="text-[11px] font-medium uppercase tracking-[0.08em] text-muted font-mono leading-none">
-          NEWS
+      {/* Header row — collapse control lives here, not at the bottom of a
+       * scrolling column where a long feed pushes it out of reach. */}
+      <div className="sticky top-0 z-10 flex h-[26px] items-center justify-between gap-2 border-b border-line bg-surface px-2">
+        <button
+          onClick={toggle}
+          aria-label="Collapse news rail"
+          className="-ml-1 flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-sm text-muted hover:bg-elevated hover:text-foreground"
+        >
+          <span className="text-body leading-none select-none">›</span>
+        </button>
+        <span className="mr-auto text-micro font-medium uppercase tracking-[0.08em] text-muted font-mono leading-none">
+          News
         </span>
         <NewsFeedHeader />
       </div>
@@ -146,15 +156,6 @@ export function RightRail() {
 
       {/* Live feed body */}
       <NewsFeedBody filter={filter} />
-
-      {/* Collapse button per spec §8.5 — right rail: expanded shows › (push outward = collapse) */}
-      <button
-        onClick={toggle}
-        aria-label="Collapse news rail"
-        className="w-9 h-9 flex items-center justify-center text-muted hover:text-foreground hover:bg-elevated"
-      >
-        <span className="text-[14px] leading-none select-none">›</span>
-      </button>
     </aside>
   );
 }
@@ -180,10 +181,10 @@ function shortSource(s: string): string {
 // ── Header right-side: item count indicator ───────────────────────────────────
 function NewsFeedHeader() {
   const { data, error } = useNewsFeed();
-  if (error) return <span className="text-[11px] text-warn leading-none">offline</span>;
-  if (!data) return <span className="text-[11px] text-muted opacity-40 leading-none">…</span>;
+  if (error) return <span className="text-micro text-warn leading-none">offline</span>;
+  if (!data) return <span className="text-micro text-muted opacity-40 leading-none">…</span>;
   return (
-    <span className="text-[11px] text-muted leading-none">
+    <span className="text-micro text-muted leading-none">
       {data.items.length}
     </span>
   );
@@ -196,7 +197,7 @@ function NewsFeedBody({ filter }: { filter: "all" | "mine" }) {
 
   if (error) {
     return (
-      <p className="flex items-center gap-1.5 text-[11px] text-warn px-3 pt-3 leading-relaxed">
+      <p className="flex items-center gap-1.5 text-micro text-warn px-3 pt-3 leading-relaxed">
         <AlertTriangle size={12} strokeWidth={2} className="flex-shrink-0" />
         news feed offline
       </p>
@@ -221,7 +222,7 @@ function NewsFeedBody({ filter }: { filter: "all" | "mine" }) {
 
   if (items.length === 0) {
     return (
-      <p className="text-[11px] text-muted opacity-70 px-3 pt-3 leading-relaxed">
+      <p className="text-micro text-muted opacity-70 px-3 pt-3 leading-relaxed">
         {filter === "mine"
           ? "no news for your watchlist tickers yet"
           : "no news yet — feed starts when the ingest service runs"}
@@ -241,14 +242,15 @@ function NewsFeedBody({ filter }: { filter: "all" | "mine" }) {
 // ── Individual news row ───────────────────────────────────────────────────────
 function NewsRow({ item }: { item: NewsItem }) {
   const isBreaking = Boolean(item.is_breaking);
-  const isWhale = item.source === "whale";
 
+  // No per-source accent stripe: the feed is predominantly whale prints, so a
+  // teal border on every row carried no signal. Source is already stated in
+  // the meta line. Only BREAKING — genuinely exceptional — gets an edge mark.
   return (
     <div
       className={[
         "px-3 py-1.5 border-b border-line/50",
         isBreaking ? "border-l-2 border-neg pl-2" : "",
-        isWhale && !isBreaking ? "border-l-2 border-teal pl-2" : "",
       ]
         .filter(Boolean)
         .join(" ")}
@@ -256,20 +258,20 @@ function NewsRow({ item }: { item: NewsItem }) {
       {/* Top meta line */}
       <div className="flex items-center gap-1.5 mb-0.5">
         {isBreaking && (
-          <span className="text-[11px] font-medium text-neg mr-1 leading-none">
+          <span className="text-micro font-medium text-neg mr-1 leading-none">
             BREAKING
           </span>
         )}
-        <span className="text-[11px] text-muted leading-none">
+        <span className="text-micro text-muted leading-none">
           {relTime(item.ts)}
         </span>
-        <span className="text-[11px] text-muted uppercase leading-none">
+        <span className="text-micro text-muted uppercase leading-none">
           {shortSource(item.source)}
         </span>
         {item.ticker && (
           <Link
             href={`/t/${item.ticker}`}
-            className="text-[11px] text-accent leading-none ml-auto -my-1.5 py-1.5 px-1"
+            className="text-micro text-accent leading-none ml-auto -my-1.5 py-1.5 px-1"
           >
             {item.ticker}
           </Link>
@@ -283,12 +285,12 @@ function NewsRow({ item }: { item: NewsItem }) {
           target="_blank"
           rel="noreferrer"
           title={item.headline}
-          className="text-[12px] text-foreground leading-snug line-clamp-3 block"
+          className="text-dense text-foreground leading-snug line-clamp-3 block"
         >
           {item.headline}
         </a>
       ) : (
-        <p title={item.headline} className="text-[12px] text-foreground leading-snug line-clamp-3">
+        <p title={item.headline} className="text-dense text-foreground leading-snug line-clamp-3">
           {item.headline}
         </p>
       )}

@@ -6,7 +6,7 @@ import { NEUTRAL_BAND, scopeLabel, signed, toneClass, toneLabel, type MacroTile 
 function Delta({ label, value }: { label: string; value: number | null }) {
   if (value === null) {
     return (
-      <span className="font-mono text-[11px] text-muted-2" title="Not enough history yet">
+      <span className="font-mono text-micro text-muted-2" title="Not enough history yet">
         {label} —
       </span>
     );
@@ -15,7 +15,7 @@ function Delta({ label, value }: { label: string; value: number | null }) {
   const tone = flat ? "text-muted" : value > 0 ? "text-pos" : "text-neg";
   const arrow = flat ? "→" : value > 0 ? "↑" : "↓";
   return (
-    <span className={`font-mono text-[11px] tabular-nums ${tone}`}>
+    <span className={`font-mono text-micro tabular-nums ${tone}`}>
       {label} {arrow}
       {signed(value)}
     </span>
@@ -43,15 +43,15 @@ export default function ScopeTile({
       }`}
     >
       <div className="flex items-baseline gap-2">
-        <span className="min-w-0 flex-1 truncate text-[11px] text-muted">{scopeLabel(tile.scope)}</span>
-        <span className="font-mono text-[10px] uppercase tracking-wide text-muted-2">
+        <span className="min-w-0 flex-1 truncate text-micro text-muted">{scopeLabel(tile.scope)}</span>
+        <span className="font-mono text-micro uppercase tracking-wide text-muted-2">
           {toneLabel(tile.score)}
         </span>
       </div>
       <div className="flex items-end justify-between gap-2">
-        <span className={`font-mono text-sm tabular-nums ${toneClass(tile.score)}`}>
+        <span className={`font-mono text-body tabular-nums ${toneClass(tile.score)}`}>
           {signed(tile.score)}
-          {inBand && <span className="ml-1 text-[10px] text-muted-2">in band</span>}
+          {inBand && <span className="ml-1 text-micro text-muted-2">in band</span>}
         </span>
         <Sparkline
           values={tile.spark}
@@ -63,7 +63,7 @@ export default function ScopeTile({
       <div className="mt-0.5 flex flex-wrap items-baseline gap-x-2">
         <Delta label="1h" value={tile.delta_1h} />
         <Delta label="1d" value={tile.delta_1d} />
-        <span className="font-mono text-[11px] text-muted-2" title="Scored headlines in this lookback">
+        <span className="font-mono text-micro text-muted-2" title="Scored headlines in this lookback">
           n={tile.n}
         </span>
       </div>

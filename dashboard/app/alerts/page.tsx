@@ -3,13 +3,15 @@
 import { Suspense, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import useSWR from "swr";
-import { Bell, Trash2, Play } from "lucide-react";
+import { Bell, BellOff, History, Trash2, Play } from "lucide-react";
 import PageHeader from "@/components/ui/PageHeader";
 import Toggle from "@/components/ui/Toggle";
 import Input from "@/components/ui/Input";
 import Select from "@/components/ui/Select";
 import Button from "@/components/ui/Button";
 import { useUndoAction } from "@/components/ui/UndoToastProvider";
+import EmptyState from "@/components/ui/EmptyState";
+import PageShell from "@/components/PageShell";
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
@@ -198,8 +200,7 @@ function AlertsBody() {
   }
 
   return (
-    <div className="min-h-screen bg-bg text-foreground">
-      <div className="mx-auto max-w-5xl space-y-4 px-4 py-6">
+    <PageShell width="standard">
         <PageHeader
           title="Alerts"
           subtitle="Watch conditions the app already computes — fires via your alert channels"
@@ -210,9 +211,9 @@ function AlertsBody() {
           }
         />
 
-        {evalResult && <p className="text-[12px] text-muted">{evalResult}</p>}
+        {evalResult && <p className="text-dense text-muted">{evalResult}</p>}
 
-        <div className="flex flex-wrap items-center gap-3 rounded-md border border-line bg-elevated px-3 py-2 text-[12px]">
+        <div className="flex flex-wrap items-center gap-3 rounded-md border border-line bg-elevated px-3 py-2 text-dense">
           <span className={channels?.email ? "text-pos" : "text-muted"}>Email {channels?.email ? "✓" : "—"}</span>
           <span className={channels?.telegram ? "text-pos" : "text-muted"}>Telegram {channels?.telegram ? "✓" : "—"}</span>
           <span className={channels?.webhook ? "text-pos" : "text-muted"}>Webhook {channels?.webhook ? "✓" : "—"}</span>
@@ -229,10 +230,10 @@ function AlertsBody() {
         {/* New rule */}
         <section className="rounded-md border border-line bg-elevated">
           <div className="border-b border-line px-4 py-2.5">
-            <span className="tick text-[13px] font-semibold text-foreground">New alert</span>
+            <span className="tick text-body font-semibold text-foreground">New alert</span>
           </div>
           <div className="flex flex-wrap items-end gap-2 px-4 py-3">
-            <label className="flex flex-col gap-1 text-[12px] text-muted">
+            <label className="flex flex-col gap-1 text-dense text-muted">
               Condition
               <Select
                 value={kind}
@@ -240,12 +241,12 @@ function AlertsBody() {
                 options={Object.entries(KIND_LABEL).map(([k, l]) => ({ value: k, label: l }))}
               />
             </label>
-            <label className="flex flex-col gap-1 text-[12px] text-muted">
+            <label className="flex flex-col gap-1 text-dense text-muted">
               Symbol
               <Input value={symbol} onChange={(e) => setSymbol(e.target.value)} placeholder="NVDA" className="w-24" />
             </label>
             {kind === "verdict" && (
-              <label className="flex flex-col gap-1 text-[12px] text-muted">
+              <label className="flex flex-col gap-1 text-dense text-muted">
                 Verdict
                 <Select
                   value={target}
@@ -255,14 +256,14 @@ function AlertsBody() {
               </label>
             )}
             {kind === "earnings" && (
-              <label className="flex flex-col gap-1 text-[12px] text-muted">
+              <label className="flex flex-col gap-1 text-dense text-muted">
                 Days
                 <Input value={days} onChange={(e) => setDays(e.target.value)} type="number" min={1} className="w-20" />
               </label>
             )}
             {kind === "price" && (
               <>
-                <label className="flex flex-col gap-1 text-[12px] text-muted">
+                <label className="flex flex-col gap-1 text-dense text-muted">
                   Direction
                   <Select
                     value={direction}
@@ -270,7 +271,7 @@ function AlertsBody() {
                     options={[{ value: "above", label: "above" }, { value: "below", label: "below" }]}
                   />
                 </label>
-                <label className="flex flex-col gap-1 text-[12px] text-muted">
+                <label className="flex flex-col gap-1 text-dense text-muted">
                   Level
                   <Input value={level} onChange={(e) => setLevel(e.target.value)} type="number" placeholder="200" className="w-24" />
                 </label>
@@ -281,32 +282,33 @@ function AlertsBody() {
             </Button>
           </div>
           {addError && (
-            <p className="px-4 pb-3 text-[12px] text-neg">{addError}</p>
+            <p className="px-4 pb-3 text-dense text-neg">{addError}</p>
           )}
         </section>
 
         {/* Active rules */}
         <section className="rounded-md border border-line bg-elevated">
           <div className="border-b border-line px-4 py-2.5">
-            <span className="tick text-[13px] font-semibold text-foreground">
+            <span className="tick text-body font-semibold text-foreground">
               Active rules ({rules.length})
             </span>
           </div>
           {rules.length === 0 ? (
-            <p className="px-4 py-6 text-center text-[13px] text-muted">
-              No alerts yet. Add one above — e.g. &ldquo;NVDA verdict becomes LONG&rdquo; or
-              &ldquo;AAPL earnings within 3d&rdquo;.
-            </p>
+            <EmptyState
+              icon={<BellOff size={26} strokeWidth={1.5} />}
+              title="No alert rules yet"
+              message="Add one above — e.g. “NVDA verdict becomes LONG” or “AAPL earnings within 3d”. Rules are checked whenever the evaluator runs."
+            />
           ) : (
             <ul className="divide-y divide-line/60">
               {rules.map((r) => (
-                <li key={r.id} className="flex items-center gap-3 px-4 py-2.5 text-[13px]">
-                  <span className="rounded bg-accent-dim px-1.5 py-px font-mono text-[11px] text-accent">
+                <li key={r.id} className="flex items-center gap-3 px-4 py-2.5 text-body">
+                  <span className="rounded bg-accent-dim px-1.5 py-px font-mono text-micro text-accent">
                     {KIND_LABEL[r.kind] ?? r.kind}
                   </span>
                   <span className="font-mono text-foreground">{ruleSummary(r)}</span>
                   {r.last_fired_ts && (
-                    <span className="text-[11px] text-muted">
+                    <span className="text-micro text-muted">
                       last fired {new Date(r.last_fired_ts).toLocaleDateString()}
                     </span>
                   )}
@@ -332,28 +334,29 @@ function AlertsBody() {
         {/* Recent fires */}
         <section className="rounded-md border border-line bg-elevated">
           <div className="border-b border-line px-4 py-2.5 flex items-center justify-between">
-            <span className="tick text-[13px] font-semibold text-foreground">Recent fires</span>
-            <span className="text-[11px] text-muted">Showing latest 30</span>
+            <span className="tick text-body font-semibold text-foreground">Recent fires</span>
+            <span className="text-micro text-muted">Showing latest 30</span>
           </div>
           {log.length === 0 ? (
-            <p className="px-4 py-6 text-center text-[13px] text-muted">
-              Nothing fired yet. Rules are checked when the evaluator runs (or hit &ldquo;Evaluate
-              now&rdquo;).
-            </p>
+            <EmptyState
+              icon={<History size={26} strokeWidth={1.5} />}
+              title="Nothing fired yet"
+              message="Rules are checked when the evaluator runs. Hit “Evaluate now” above to check them against the current data."
+            />
           ) : (
             groupByDay(log).map(([day, items]) => (
               <div key={day}>
-                <div className="bg-surface px-4 py-1 text-[11px] font-mono text-muted">{day}</div>
+                <div className="bg-surface px-4 py-1 text-micro font-mono text-muted">{day}</div>
                 <ul className="divide-y divide-line/60">
                   {items.map((it) => (
                     <li key={it.id} className="px-4 py-2.5">
                       <div className="flex items-baseline justify-between gap-2">
-                        <span className="text-[13px] font-medium text-foreground">{it.title}</span>
-                        <span className="text-[11px] text-muted">
+                        <span className="text-body font-medium text-foreground">{it.title}</span>
+                        <span className="text-micro text-muted">
                           {new Date(it.ts).toLocaleString()} (local time)
                         </span>
                       </div>
-                      <p className="mt-0.5 font-mono text-[12px] text-muted">{it.body}</p>
+                      <p className="mt-0.5 font-mono text-dense text-muted">{it.body}</p>
                     </li>
                   ))}
                 </ul>
@@ -361,7 +364,7 @@ function AlertsBody() {
             ))
           )}
         </section>
-      </div>
-    </div>
+      </PageShell>
+    
   );
 }

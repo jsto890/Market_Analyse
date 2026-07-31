@@ -39,7 +39,7 @@ export default function NewsCard({ ticker }: { ticker: string }) {
   return (
     <Panel title="News">
       {items.length === 0 ? (
-        <p className="text-[12px] text-muted">No recent news</p>
+        <p className="text-dense text-muted">No recent news</p>
       ) : (
         <div className="space-y-2">
           {items.map((item, i) => {
@@ -54,15 +54,15 @@ export default function NewsCard({ ticker }: { ticker: string }) {
                     href={item.url}
                     target="_blank"
                     rel="noreferrer"
-                    className="text-[13px] text-foreground hover:underline"
+                    className="text-body text-foreground hover:underline"
                   >
                     {item.headline}
                   </a>
                 ) : (
-                  <span className="text-[13px] text-foreground">{item.headline}</span>
+                  <span className="text-body text-foreground">{item.headline}</span>
                 )}
                 {subLine && (
-                  <p className="text-[11px] text-muted">{subLine}</p>
+                  <p className="text-micro text-muted">{subLine}</p>
                 )}
               </div>
             );

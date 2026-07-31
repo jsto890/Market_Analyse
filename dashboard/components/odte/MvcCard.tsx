@@ -26,7 +26,7 @@ export default function MvcCard({
       subtitle="greeks per dollar of premium"
       actions={
         <>
-          <label className="flex items-center gap-1 font-mono text-[11px] text-muted">
+          <label className="flex items-center gap-1 font-mono text-micro text-muted">
             <input
               type="checkbox"
               checked={liquidOnly}
@@ -40,16 +40,16 @@ export default function MvcCard({
       }
     >
       {rows.length === 0 ? (
-        <p className="font-mono text-[11px] text-muted">
+        <p className="font-mono text-micro text-muted">
           {levels.length === 0
             ? "no greeks in this snapshot — turn the live ladder on"
             : "nothing clears the spread and liquidity filters right now"}
         </p>
       ) : (
         <div className="overflow-x-auto">
-          <table className="w-full font-mono text-[11px] tabular-nums">
+          <table className="w-full font-mono text-micro tabular-nums">
             <thead>
-              <tr className="text-[10px] uppercase tracking-[0.06em] text-muted">
+              <tr className="text-micro uppercase tracking-[0.06em] text-muted">
                 <th className="px-2 py-1 text-left font-normal">contract</th>
                 <th className="px-2 py-1 text-right font-normal">mid</th>
                 <th className="px-2 py-1 text-right font-normal">Γ/$</th>
@@ -67,7 +67,7 @@ export default function MvcCard({
                       {r.side === "call" ? "C" : "P"}
                     </span>
                     {spot != null && (
-                      <span className="ml-1 text-[10px] text-muted-2">
+                      <span className="ml-1 text-micro text-muted-2">
                         {r.strike > spot ? "+" : ""}
                         {(((r.strike - spot) / spot) * 100).toFixed(1)}%
                       </span>
@@ -86,7 +86,7 @@ export default function MvcCard({
           </table>
         </div>
       )}
-      <p className="mt-2 text-[11px] leading-relaxed text-muted-2">
+      <p className="mt-2 text-micro leading-relaxed text-muted-2">
         Γ/$ is how much convexity a dollar of premium buys; Θ/$ is the share of that premium the
         position gives back each day if nothing moves. High on both means a fast, expensive clock.
         {rows[0]?.gamma != null && (

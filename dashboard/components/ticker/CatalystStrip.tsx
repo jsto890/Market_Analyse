@@ -45,7 +45,7 @@ export default function CatalystStrip({ ticker }: { ticker: string }) {
   if (a) parts.push(<span key="an">{a.firm} {a.action === "up" ? "↑" : a.action === "down" ? "↓" : "→"} {a.to} {fmtDate(a.date)}</span>);
   if (parts.length === 0) return null;
   return (
-    <p className="flex flex-wrap items-center gap-x-2 gap-y-0.5 font-mono text-[12px] text-muted mt-1 px-0.5">
+    <p className="flex flex-wrap items-center gap-x-2 gap-y-0.5 font-mono text-dense text-muted mt-1 px-0.5">
       {parts.map((p, i) => (
         <span key={i} className="flex items-center gap-2">
           {i > 0 && <span className="text-line">·</span>}

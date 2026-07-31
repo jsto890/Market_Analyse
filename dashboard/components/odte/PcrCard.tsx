@@ -36,13 +36,13 @@ export default function PcrCard({ symbol }: { symbol: OdteSymbol }) {
     >
       {data && (
         <div className="space-y-1">
-          <div className={`font-mono text-[20px] tabular-nums ${toneClass[pcrTone(data.pcr_vol)]}`}>
+          <div className={`font-mono text-title tabular-nums ${toneClass[pcrTone(data.pcr_vol)]}`}>
             {data.pcr_vol != null ? data.pcr_vol.toFixed(2) : "—"}
           </div>
-          <div className="font-mono text-[11px] text-muted tabular-nums">
+          <div className="font-mono text-micro text-muted tabular-nums">
             OI {data.pcr_oi != null ? data.pcr_oi.toFixed(2) : "—"}
           </div>
-          <div className="font-mono text-[11px] text-muted tabular-nums">
+          <div className="font-mono text-micro text-muted tabular-nums">
             puts {data.put_vol} / calls {data.call_vol}
           </div>
         </div>

@@ -68,6 +68,41 @@ describe("DataTable", () => {
     expect(screen.getByText("AAPL detail")).toBeInTheDocument();
     expect(container.innerHTML).not.toMatch(/max-height/);
   });
+
+  it("opens the row on click when it is both openable and expandable", async () => {
+    // The row paints an accent edge to say "this opens". Expansion used to
+    // swallow that click, so the affordance was a lie.
+    const onOpen = vi.fn();
+    render(
+      <DataTable
+        columns={COLUMNS}
+        rows={ROWS}
+        rowKey={(r) => r.id}
+        onOpen={onOpen}
+        expandedRender={(r) => <div>{r.symbol} detail</div>}
+      />
+    );
+    await userEvent.click(screen.getByText("AAPL"));
+    expect(onOpen).toHaveBeenCalledWith(ROWS[0]);
+    expect(screen.queryByText("AAPL detail")).not.toBeInTheDocument();
+  });
+
+  it("gives expansion its own control so it stays reachable on openable rows", async () => {
+    const onOpen = vi.fn();
+    render(
+      <DataTable
+        columns={COLUMNS}
+        rows={ROWS}
+        rowKey={(r) => r.id}
+        onOpen={onOpen}
+        expandedRender={(r) => <div>{r.symbol} detail</div>}
+      />
+    );
+    const toggles = screen.getAllByRole("button", { name: "Show details" });
+    await userEvent.click(toggles[0]);
+    expect(screen.getByText("AAPL detail")).toBeInTheDocument();
+    expect(onOpen).not.toHaveBeenCalled();
+  });
 });
 
 interface HoverRow {
@@ -117,5 +152,31 @@ describe("DataTable — expanded-row lifecycle (TD-08)", () => {
     );
     fireEvent.mouseEnter(screen.getByText("Alpha").closest("tr")!);
     expect(onRowHover).toHaveBeenCalledWith(hoverRows[0]);
+  });
+});
+
+describe("DataTable header and empty body", () => {
+  it("paints the sticky header on its cells so data rows cannot show through", () => {
+    const { container } = render(<DataTable columns={COLUMNS} rows={ROWS} rowKey={(r) => r.id} />);
+    // A border-collapse table refuses to paint <thead>/<tr> backgrounds, which
+    // is what made the sticky header transparent.
+    expect((container.querySelector("table") as HTMLElement).className).toMatch(/border-separate/);
+    for (const th of Array.from(container.querySelectorAll("thead th"))) {
+      expect(th.className).toMatch(/sticky/);
+      expect(th.className).toMatch(/bg-surface/);
+    }
+  });
+
+  it("shows an empty state under the header instead of a bare header row", () => {
+    render(
+      <DataTable
+        columns={COLUMNS}
+        rows={[]}
+        rowKey={(r) => r.id}
+        emptyMessage="No symbols passed the screen."
+      />
+    );
+    expect(screen.getByText("Symbol")).toBeInTheDocument();
+    expect(screen.getByText("No symbols passed the screen.")).toBeInTheDocument();
   });
 });

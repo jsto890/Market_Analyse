@@ -27,7 +27,7 @@ export default function NavLinks() {
             key={href}
             href={href}
             aria-current={active ? "page" : undefined}
-            className={`relative flex items-center px-2.5 text-[13px] font-medium transition-colors ${
+            className={`relative flex items-center px-2.5 text-body font-medium transition-colors ${
               active ? "text-foreground" : "text-muted hover:text-foreground"
             }`}
           >

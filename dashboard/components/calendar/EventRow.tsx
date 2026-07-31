@@ -24,13 +24,13 @@ function Consensus({ ev }: { ev: CalEvent }) {
   const present = cells.filter(([, v]) => v != null && v !== "");
   if (present.length === 0) {
     return (
-      <span className="font-mono text-[11px] text-muted-2">
+      <span className="font-mono text-micro text-muted-2">
         consensus · prior not tracked
       </span>
     );
   }
   return (
-    <span className="flex flex-wrap items-center gap-x-3 font-mono text-[11px]">
+    <span className="flex flex-wrap items-center gap-x-3 font-mono text-micro">
       {present.map(([label, value]) => (
         <span key={label}>
           <span className="text-muted">{label} </span>
@@ -43,8 +43,8 @@ function Consensus({ ev }: { ev: CalEvent }) {
 
 function Chain({ label, text, tone }: { label: string; text: string; tone: string }) {
   return (
-    <p className="text-[12px] leading-relaxed text-muted">
-      <span className={`font-mono text-[11px] font-semibold ${tone}`}>{label}</span>{" "}
+    <p className="text-dense leading-relaxed text-muted">
+      <span className={`font-mono text-micro font-semibold ${tone}`}>{label}</span>{" "}
       {text}
     </p>
   );
@@ -65,29 +65,29 @@ export default function EventRow({
   const header = (
     <div className="flex min-w-0 flex-1 flex-wrap items-baseline gap-x-2.5 gap-y-1">
       <span
-        className={`shrink-0 rounded border px-1.5 py-px font-mono text-[10px] uppercase tracking-wide ${importanceChipClass(
+        className={`shrink-0 rounded border px-1.5 py-px font-mono text-micro uppercase tracking-wide ${importanceChipClass(
           ev.importance
         )}`}
       >
         {IMPORTANCE_LABEL[ev.importance] ?? ev.importance}
       </span>
-      <span className="truncate text-[13px] font-medium text-foreground">
+      <span className="truncate text-body font-medium text-foreground">
         {earnings && ev.ticker ? (
           <span className="font-mono">{ev.ticker}</span>
         ) : (
           name
         )}
-        {earnings && <span className="ml-1.5 text-[12px] text-muted">earnings</span>}
+        {earnings && <span className="ml-1.5 text-dense text-muted">earnings</span>}
       </span>
       {isWatchlist && (
-        <span className="shrink-0 rounded border border-accent/50 bg-accent/10 px-1 py-px font-mono text-[10px] text-accent">
+        <span className="shrink-0 rounded border border-accent/50 bg-accent/10 px-1 py-px font-mono text-micro text-accent">
           watchlist
         </span>
       )}
-      <span className="shrink-0 font-mono text-[11px] text-muted-2">
+      <span className="shrink-0 font-mono text-micro text-muted-2">
         {CATEGORY_LABEL[ev.category] ?? ev.category}
       </span>
-      <span className="ml-auto shrink-0 font-mono text-[11px] tabular-nums text-muted">
+      <span className="ml-auto shrink-0 font-mono text-micro tabular-nums text-muted">
         {ev.time_et ? `${ev.time_et} ET` : "time TBA"}
         {local && <span className="text-muted-2"> · {local}</span>}
       </span>
@@ -104,12 +104,12 @@ export default function EventRow({
         <Consensus ev={ev} />
         {meta ? (
           <>
-            <p className="text-[12px] leading-relaxed text-foreground/90">
-              <span className="font-mono text-[11px] font-semibold text-muted">MEASURES</span>{" "}
+            <p className="text-dense leading-relaxed text-foreground/90">
+              <span className="font-mono text-micro font-semibold text-muted">MEASURES</span>{" "}
               {meta.measures}
             </p>
-            <p className="text-[12px] leading-relaxed text-muted">
-              <span className="font-mono text-[11px] font-semibold text-muted">WHY NOW</span>{" "}
+            <p className="text-dense leading-relaxed text-muted">
+              <span className="font-mono text-micro font-semibold text-muted">WHY NOW</span>{" "}
               {meta.whyNow}
             </p>
             <Chain label="BEAT" text={meta.beat} tone="text-pos" />
@@ -119,7 +119,7 @@ export default function EventRow({
                 <Link
                   key={s}
                   href={`/macro?scope=${encodeURIComponent(`sector:${s}`)}`}
-                  className="rounded border border-line px-1.5 py-px font-mono text-[11px] text-muted hover:text-accent"
+                  className="rounded border border-line px-1.5 py-px font-mono text-micro text-muted hover:text-accent"
                 >
                   {s} sentiment ›
                 </Link>
@@ -128,7 +128,7 @@ export default function EventRow({
                 <Link
                   key={t}
                   href={`/t/${t}`}
-                  className="rounded border border-line px-1.5 py-px font-mono text-[11px] text-accent hover:bg-elevated"
+                  className="rounded border border-line px-1.5 py-px font-mono text-micro text-accent hover:bg-elevated"
                 >
                   ${t}
                 </Link>
@@ -136,7 +136,7 @@ export default function EventRow({
             </div>
           </>
         ) : (
-          <p className="text-[12px] text-muted">
+          <p className="text-dense text-muted">
             No transmission note written for this release yet — it is shown for scheduling only.
           </p>
         )}

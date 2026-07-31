@@ -12,7 +12,7 @@ const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
   ref,
 ) {
   const inputCls = [
-    "h-8 w-full rounded border bg-raised text-[13px] text-foreground placeholder-muted",
+    "h-8 w-full rounded border bg-raised text-body text-foreground placeholder-muted",
     "transition-colors focus:border-accent",
     invalid ? "border-neg" : "border-line",
     icon ? "pl-8 pr-3" : "px-3",

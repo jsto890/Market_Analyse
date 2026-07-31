@@ -64,7 +64,7 @@ export default function Badge({ variant, value, label }: BadgeProps) {
   return (
     <span
       title={label && label !== value ? value : undefined}
-      className={`inline-flex cursor-default select-none items-center rounded px-1.5 py-px font-mono text-[11px] tabular-nums leading-tight ${cls}`}
+      className={`inline-flex cursor-default select-none items-center rounded px-1.5 py-px font-mono text-micro tabular-nums leading-tight ${cls}`}
     >
       {label ?? value}
     </span>

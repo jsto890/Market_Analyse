@@ -21,9 +21,11 @@ function mkItem(id: number, ts: string, ticker: string | null = null, headline =
 }
 
 beforeEach(() => {
-  // Mock localStorage to return null (no stored preference)
+  // The rail now defaults to collapsed at every width, so the feed tests below
+  // opt in to the expanded state via the stored preference ("0" = expanded).
+  // The default itself is covered by the collapse-default test at the bottom.
   const mockLocalStorage = {
-    getItem: vi.fn(() => null),
+    getItem: vi.fn(() => "0"),
     setItem: vi.fn(),
     removeItem: vi.fn(),
     clear: vi.fn(),
@@ -205,5 +207,31 @@ describe("NewsRow ticker link hit area (RR-06)", () => {
     const link = screen.getByRole("link", { name: "AAPL" });
     expect(link.className).toContain("py-1.5");
     expect(link.className).toContain("px-1");
+  });
+});
+
+describe("RightRail default state", () => {
+  it("starts collapsed with no stored preference, at any viewport width", () => {
+    vi.mocked(window.localStorage.getItem).mockReturnValue(null);
+    vi.mocked(watchlistLib.useWatchlistTickers).mockReturnValue(new Set());
+    vi.mocked(newsLib.useNewsFeed).mockReturnValue({
+      data: { items: [mkItem(1, "2026-07-28 09:00:00", "AAPL", "headline")] },
+      error: undefined,
+    } as any);
+    render(<RightRail />);
+    expect(screen.getByLabelText("Expand news rail")).toBeInTheDocument();
+    expect(screen.queryByText("headline")).not.toBeInTheDocument();
+  });
+
+  it("puts the collapse control in a sticky header so it stays reachable in a long feed", () => {
+    vi.mocked(watchlistLib.useWatchlistTickers).mockReturnValue(new Set());
+    vi.mocked(newsLib.useNewsFeed).mockReturnValue({
+      data: { items: [mkItem(1, "2026-07-28 09:00:00", "AAPL")] },
+      error: undefined,
+    } as any);
+    render(<RightRail />);
+    const header = screen.getByLabelText("Collapse news rail").parentElement!;
+    expect(header.className).toContain("sticky");
+    expect(header.className).toContain("top-0");
   });
 });

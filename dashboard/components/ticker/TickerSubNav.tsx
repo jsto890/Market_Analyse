@@ -62,7 +62,7 @@ export default function TickerSubNav({ hasGamma = false }: { hasGamma?: boolean 
           // for the current page in a set of pages (TN-05).
           aria-current={activeId === s.id ? "location" : undefined}
           className={[
-            "shrink-0 whitespace-nowrap border-b-2 pb-0.5 text-[11px] uppercase tracking-wide transition-colors",
+            "shrink-0 whitespace-nowrap border-b-2 pb-0.5 text-micro uppercase tracking-wide transition-colors",
             activeId === s.id
               ? "border-accent text-foreground"
               : "border-transparent text-muted hover:text-foreground",

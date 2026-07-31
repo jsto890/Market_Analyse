@@ -53,12 +53,12 @@ function UnusualTable({ rows, label }: { rows: unknown[]; label: string }) {
 
   return (
     <div>
-      <p className="text-[11px] font-medium text-muted uppercase tracking-wide mb-1.5">
+      <p className="text-micro font-medium text-muted uppercase tracking-wide mb-1.5">
         {label}
       </p>
-      <table className="w-full font-mono text-[12px] tabular-nums border-collapse">
+      <table className="w-full font-mono text-dense tabular-nums border-collapse">
         <thead>
-          <tr className="text-left text-muted text-[11px] border-b border-line">
+          <tr className="text-left text-muted text-micro border-b border-line">
             {hasScores && <th className="pb-1 pr-3 font-medium">σ</th>}
             <th className="pb-1 pr-3 font-medium">Strike</th>
             <th className="pb-1 pr-3 font-medium text-right">Last</th>
@@ -81,7 +81,7 @@ function UnusualTable({ rows, label }: { rows: unknown[]; label: string }) {
             return (
               <tr key={i} className="border-t border-line">
                 {hasScores && (
-                  <td className="py-1 pr-3 text-muted" title={String(row.basis ?? "")}>
+                  <td className="py-1 pr-3 text-muted" title={row.basis ? String(row.basis) : undefined}>
                     {score !== null ? score.toFixed(1) : "—"}
                   </td>
                 )}
@@ -130,7 +130,7 @@ export default function OptionsPanel({ ticker }: { ticker: string }) {
   if (isLoading) {
     return (
       <Panel title="Options" collapsible defaultOpen persistKey="ticker-options">
-        <p className="font-mono text-[12px] text-muted">Loading…</p>
+        <p className="font-mono text-dense text-muted">Loading…</p>
       </Panel>
     );
   }
@@ -138,7 +138,7 @@ export default function OptionsPanel({ ticker }: { ticker: string }) {
   if (argusDown) {
     return (
       <Panel title="Options" collapsible defaultOpen={false} persistKey="ticker-options">
-        <div className="flex items-center gap-2 font-mono text-[12px] text-muted">
+        <div className="flex items-center gap-2 font-mono text-dense text-muted">
           <span>Argus API offline</span>
           <span>·</span>
           <button
@@ -156,7 +156,7 @@ export default function OptionsPanel({ ticker }: { ticker: string }) {
   if (noChain) {
     return (
       <Panel title="Options" collapsible defaultOpen={false} persistKey="ticker-options">
-        <p className="font-mono text-[12px] text-muted">
+        <p className="font-mono text-dense text-muted">
           no options chain for {upper} (source: yfinance)
         </p>
       </Panel>
@@ -175,7 +175,7 @@ export default function OptionsPanel({ ticker }: { ticker: string }) {
     >
       <div className="space-y-3">
         {/* Spot */}
-        <div className="font-mono text-[13px] tabular-nums">
+        <div className="font-mono text-body tabular-nums">
           <span className="text-muted">spot </span>
           <span className="text-foreground">${data.spot.toFixed(2)}</span>
         </div>
@@ -186,7 +186,7 @@ export default function OptionsPanel({ ticker }: { ticker: string }) {
             {data.flags.map((flag) => (
               <span
                 key={flag}
-                className="inline-flex items-center rounded border border-warn/50 bg-warn/10 px-1.5 py-px font-mono text-[11px] text-warn"
+                className="inline-flex items-center rounded border border-warn/50 bg-warn/10 px-1.5 py-px font-mono text-micro text-warn"
               >
                 {flag}
               </span>
@@ -196,12 +196,12 @@ export default function OptionsPanel({ ticker }: { ticker: string }) {
 
         {/* P/C summary table */}
         <div>
-          <p className="text-[11px] font-medium text-muted uppercase tracking-wide mb-1.5">
+          <p className="text-micro font-medium text-muted uppercase tracking-wide mb-1.5">
             P/C Summary
           </p>
-          <table className="w-full font-mono text-[12px] tabular-nums border-collapse">
+          <table className="w-full font-mono text-dense tabular-nums border-collapse">
           <thead>
-            <tr className="text-left text-[11px] text-muted border-b border-line">
+            <tr className="text-left text-micro text-muted border-b border-line">
               <th className="pb-1 font-medium" />
               <th className="pb-1 pr-4 font-medium text-right text-pos">Calls</th>
               <th className="pb-1 font-medium text-right text-neg">Puts</th>
@@ -234,10 +234,10 @@ export default function OptionsPanel({ ticker }: { ticker: string }) {
 
         {/* IV row */}
         <div className="border-t border-line pt-2">
-          <p className="text-[11px] font-medium text-muted uppercase tracking-wide mb-1.5">
+          <p className="text-micro font-medium text-muted uppercase tracking-wide mb-1.5">
             Implied Volatility
           </p>
-          <div className="flex flex-wrap gap-4 font-mono text-[12px] tabular-nums">
+          <div className="flex flex-wrap gap-4 font-mono text-dense tabular-nums">
             <span>
               <span className="text-muted">ATM IV c </span>
               <span className="text-pos">{fmtPct(data.iv_atm_call)}</span>
@@ -269,11 +269,11 @@ export default function OptionsPanel({ ticker }: { ticker: string }) {
 
         {/* Unusual activity */}
         {data.unusual_as_of ? (
-          <p className="font-mono text-[11px] text-muted border-t border-line pt-2">
+          <p className="font-mono text-micro text-muted border-t border-line pt-2">
             as of {data.unusual_as_of} close (US) — robust-score (beta), validation pending
           </p>
         ) : state === "closed" ? (
-          <p className="font-mono text-[11px] text-muted border-t border-line pt-2">
+          <p className="font-mono text-micro text-muted border-t border-line pt-2">
             unusual-activity lists rebuild from live volume during US hours; overnight
             recaps land with WS-1 snapshots
           </p>

@@ -20,6 +20,20 @@
   --teal: #2dd4bf;
   --muted-2: #737b8c;
   --nav-h: 46px;
+  --rail-l: 200px;
+  --rail-r: 288px;
+  /* Six-step type scale. Declared here for non-Tailwind consumers (charts,
+   * canvas labels) so they can't drift from the utility classes. */
+  --fs-micro: 11px;
+  --fs-dense: 12px;
+  --fs-body: 13px;
+  --fs-subhead: 15px;
+  --fs-title: 18px;
+  --fs-display: 24px;
+  /* Page rhythm — one gutter, one stack gap, one card padding. */
+  --page-x: 24px;
+  --page-y: 20px;
+  --stack: 16px;
   /* Aliases so Tailwind's background/foreground tokens resolve. */
   --background: var(--bg);
   --foreground: var(--text);
@@ -39,12 +53,22 @@
   border-radius: 2px;
 }
 
-html,
+html {
+  background: var(--bg);
+  /* 14px root is load-bearing for rem-based *spacing* utilities (p-4 = 14px).
+   * It also rescales rem-based *font-size* utilities, which is why every size
+   * token in tailwind.config.ts is declared in px — never add a rem font-size. */
+  font-size: 14px;
+}
+
 body {
   background: var(--bg);
   color: var(--text);
   font-family: var(--font-sans), system-ui, sans-serif;
-  font-size: 14px;
+  /* Inherited text lands on the scale rather than on the 14px rem root — which
+   * is a spacing unit, not a type step. The audit found 111–330 elements per
+   * route rendering at 14px purely because nothing set a size. */
+  font-size: var(--fs-body);
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
@@ -106,7 +130,7 @@ select {
 @layer components {
   /* Section eyebrow: uppercase, tracked, muted micro-label. */
   .eyebrow {
-    @apply text-[11px] font-medium uppercase tracking-[0.1em] text-muted;
+    @apply text-micro font-medium uppercase tracking-[0.1em] text-muted;
   }
   /* Accent tick preceding a section title. */
   .tick::before {

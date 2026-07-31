@@ -62,13 +62,13 @@ export default function Panel({
 
   const Title = (
     <>
-      <span className="tick truncate text-[13px] font-semibold text-foreground">{title}</span>
+      <span className="tick truncate text-body font-semibold text-foreground">{title}</span>
       {count !== undefined && (
-        <span className="rounded bg-elevated px-1.5 py-px font-mono text-[11px] tabular-nums text-muted">
+        <span className="rounded bg-elevated px-1.5 py-px font-mono text-micro tabular-nums text-muted">
           {count}
         </span>
       )}
-      {subtitle && <span className="truncate text-[12px] text-muted">{subtitle}</span>}
+      {subtitle && <span className="truncate text-dense text-muted">{subtitle}</span>}
     </>
   );
 
