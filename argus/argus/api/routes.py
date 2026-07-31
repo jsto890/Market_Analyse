@@ -20,6 +20,7 @@ Single-user, no auth (binds to 127.0.0.1 by default). Argus feature set:
 from __future__ import annotations
 
 import asyncio
+import json
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Optional, List
@@ -634,9 +635,20 @@ def build_app() -> FastAPI:
         conn = get_conn()
         try:
             rows = conn.execute(
-                "SELECT id, ts, title, body FROM alerts_log ORDER BY id DESC LIMIT ?",
+                "SELECT id, ts, title, body, payload_json FROM alerts_log ORDER BY id DESC LIMIT ?",
                 (limit,)).fetchall()
-            return {"items": [dict(r) for r in rows]}
+            items = []
+            for r in rows:
+                item = dict(r)
+                raw = item.pop("payload_json", None)
+                # Rule fires carry {rule_id, kind, symbol}; manually dispatched
+                # alerts carry whatever the caller sent, which may be nothing.
+                try:
+                    item["payload"] = json.loads(raw) if raw else {}
+                except (TypeError, ValueError):
+                    item["payload"] = {}
+                items.append(item)
+            return {"items": items}
         finally:
             conn.close()
 

@@ -1,6 +1,7 @@
 "use client";
 
 import { Suspense, useState } from "react";
+import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import useSWR from "swr";
 import { Bell, BellOff, History, Trash2, Play } from "lucide-react";
@@ -29,12 +30,19 @@ interface LogItem {
   ts: string;
   title: string;
   body: string;
+  /** Rule fires carry {rule_id, kind, symbol}; manual dispatches carry nothing. */
+  payload?: { rule_id?: number; kind?: string; symbol?: string };
 }
 
+/**
+ * The middle of the sentence, in both places a rule is written: the builder
+ * ("Alert me when NVDA verdict flips to LONG") and the row that results. One
+ * phrasing, so the rule you read back is the rule you typed.
+ */
 const KIND_LABEL: Record<string, string> = {
-  verdict: "Verdict flips to",
-  earnings: "Earnings within",
-  price: "Price crosses",
+  verdict: "verdict flips to",
+  earnings: "has earnings within",
+  price: "price crosses",
 };
 
 /** Local calendar date (not UTC) — matches the local timestamp shown per-row below. */
@@ -57,12 +65,13 @@ function groupByDay(items: LogItem[]): Array<[string, LogItem[]]> {
   return Array.from(groups.entries());
 }
 
-function ruleSummary(r: Rule): string {
-  if (r.kind === "verdict") return `${r.symbol} → ${KIND_LABEL.verdict} ${r.params.target ?? "LONG"}`;
-  if (r.kind === "earnings") return `${r.symbol} → ${KIND_LABEL.earnings} ${r.params.days ?? 3}d`;
+/** The rule without its symbol — the row renders that as a link to the ticker. */
+function ruleCondition(r: Rule): string {
+  if (r.kind === "verdict") return `${KIND_LABEL.verdict} ${r.params.target ?? "LONG"}`;
+  if (r.kind === "earnings") return `${KIND_LABEL.earnings} ${r.params.days ?? 3} days`;
   if (r.kind === "price")
-    return `${r.symbol} → ${KIND_LABEL.price} ${r.params.direction ?? "above"} ${r.params.level}`;
-  return `${r.symbol} · ${r.kind}`;
+    return `${KIND_LABEL.price} ${r.params.direction ?? "above"} ${r.params.level}`;
+  return r.kind;
 }
 
 export default function AlertsPage() {
@@ -99,10 +108,23 @@ function AlertsBody() {
   const [sendTestResult, setSendTestResult] = useState<string | null>(null);
   const [addError, setAddError] = useState<string | null>(null);
   const [evalResult, setEvalResult] = useState<string | null>(null);
+  const [logSymbol, setLogSymbol] = useState("");
 
   const rules = rulesData?.rules ?? [];
   const log = logData?.items ?? [];
   const isIncomplete = !symbol.trim() || (kind === "price" && !level.trim());
+
+  // Nothing configured means a fire is recorded here and leaves the machine
+  // nowhere — the one state the three chips could not say on their own.
+  const noChannel = channels != null && !Object.values(channels).some(Boolean);
+
+  // The log is every rule's fires in one stream; on a busy day the only
+  // question is what one name did.
+  const ruleById = new Map(rules.map((r) => [r.id, r] as const));
+  const fireSymbols = Array.from(
+    new Set(log.map((it) => it.payload?.symbol).filter((s): s is string => !!s))
+  );
+  const shownLog = logSymbol ? log.filter((it) => it.payload?.symbol === logSymbol) : log;
 
   async function addRule() {
     const sym = symbol.trim().toUpperCase();
@@ -212,18 +234,29 @@ function AlertsBody() {
 
         {evalResult && <p className="text-body text-2">{evalResult}</p>}
 
-        <div className="flex flex-wrap items-center gap-3 rounded-md border border-line bg-elevated px-3 py-2 text-body">
-          <span className={channels?.email ? "text-pos" : "text-muted"}>Email {channels?.email ? "✓" : "—"}</span>
-          <span className={channels?.telegram ? "text-pos" : "text-muted"}>Telegram {channels?.telegram ? "✓" : "—"}</span>
-          <span className={channels?.webhook ? "text-pos" : "text-muted"}>Webhook {channels?.webhook ? "✓" : "—"}</span>
-          <button
-            onClick={sendTest}
-            disabled={busy}
-            className="ml-auto text-accent hover:underline disabled:opacity-50"
-          >
-            Send test
-          </button>
-          {sendTestResult && <span className="text-muted">{sendTestResult}</span>}
+        <div className="rounded-md border border-line bg-elevated px-3 py-2">
+          <div className="flex flex-wrap items-center gap-3 text-body">
+            <span className={channels?.email ? "text-pos" : "text-muted"}>Email {channels?.email ? "✓" : "—"}</span>
+            <span className={channels?.telegram ? "text-pos" : "text-muted"}>Telegram {channels?.telegram ? "✓" : "—"}</span>
+            <span className={channels?.webhook ? "text-pos" : "text-muted"}>Webhook {channels?.webhook ? "✓" : "—"}</span>
+            <button
+              onClick={sendTest}
+              disabled={busy}
+              className="ml-auto text-accent hover:underline disabled:opacity-50"
+            >
+              Send test
+            </button>
+            {sendTestResult && <span className="text-muted">{sendTestResult}</span>}
+          </div>
+          {noChannel && (
+            <p className="mt-1.5 text-body text-2">
+              Nothing is configured, so fires are recorded below and sent nowhere else. Set{" "}
+              <code className="text-data text-muted">SMTP_HOST</code>,{" "}
+              <code className="text-data text-muted">TELEGRAM_BOT_TOKEN</code> or{" "}
+              <code className="text-data text-muted">WEBHOOK_URL</code> in{" "}
+              <code className="text-data text-muted">argus/.env</code> and restart the API.
+            </p>
+          )}
         </div>
 
         {/* New rule */}
@@ -231,49 +264,64 @@ function AlertsBody() {
           <div className="border-b border-line px-4 py-2.5">
             <span className="tick text-title text-foreground">New alert</span>
           </div>
-          <div className="flex flex-wrap items-end gap-2 px-4 py-3">
-            <label className="flex flex-col gap-1 text-body text-muted">
-              Condition
-              <Select
-                value={kind}
-                onChange={(e) => setKind(e.target.value)}
-                options={Object.entries(KIND_LABEL).map(([k, l]) => ({ value: k, label: l }))}
-              />
-            </label>
-            <label className="flex flex-col gap-1 text-body text-muted">
-              Symbol
-              <Input value={symbol} onChange={(e) => setSymbol(e.target.value)} placeholder="NVDA" className="w-24" />
-            </label>
+          {/* A sentence, not a form. The rule reads as one in the list below;
+              writing it in four stacked labelled boxes made you assemble the
+              same sentence in your head before you could tell what it said. */}
+          <div className="flex flex-wrap items-center gap-1.5 px-4 py-3 text-body text-2">
+            <span>Alert me when</span>
+            <Input
+              aria-label="Symbol"
+              value={symbol}
+              onChange={(e) => setSymbol(e.target.value)}
+              placeholder="NVDA"
+              className="w-24"
+            />
+            <Select
+              aria-label="Condition"
+              value={kind}
+              onChange={(e) => setKind(e.target.value)}
+              options={Object.entries(KIND_LABEL).map(([k, l]) => ({ value: k, label: l }))}
+              className="w-44"
+            />
             {kind === "verdict" && (
-              <label className="flex flex-col gap-1 text-body text-muted">
-                Verdict
-                <Select
-                  value={target}
-                  onChange={(e) => setTarget(e.target.value)}
-                  options={[{ value: "LONG", label: "LONG" }, { value: "SHORT", label: "SHORT" }, { value: "WAIT", label: "WAIT" }]}
-                />
-              </label>
+              <Select
+                aria-label="Verdict"
+                value={target}
+                onChange={(e) => setTarget(e.target.value)}
+                options={[{ value: "LONG", label: "LONG" }, { value: "SHORT", label: "SHORT" }, { value: "WAIT", label: "WAIT" }]}
+                className="w-28"
+              />
             )}
             {kind === "earnings" && (
-              <label className="flex flex-col gap-1 text-body text-muted">
-                Days
-                <Input value={days} onChange={(e) => setDays(e.target.value)} type="number" min={1} className="w-20" />
-              </label>
+              <>
+                <Input
+                  aria-label="Days"
+                  value={days}
+                  onChange={(e) => setDays(e.target.value)}
+                  type="number"
+                  min={1}
+                  className="w-16"
+                />
+                <span>days</span>
+              </>
             )}
             {kind === "price" && (
               <>
-                <label className="flex flex-col gap-1 text-body text-muted">
-                  Direction
-                  <Select
-                    value={direction}
-                    onChange={(e) => setDirection(e.target.value)}
-                    options={[{ value: "above", label: "above" }, { value: "below", label: "below" }]}
-                  />
-                </label>
-                <label className="flex flex-col gap-1 text-body text-muted">
-                  Level
-                  <Input value={level} onChange={(e) => setLevel(e.target.value)} type="number" placeholder="200" className="w-24" />
-                </label>
+                <Select
+                  aria-label="Direction"
+                  value={direction}
+                  onChange={(e) => setDirection(e.target.value)}
+                  options={[{ value: "above", label: "above" }, { value: "below", label: "below" }]}
+                  className="w-24"
+                />
+                <Input
+                  aria-label="Level"
+                  value={level}
+                  onChange={(e) => setLevel(e.target.value)}
+                  type="number"
+                  placeholder="200"
+                  className="w-24"
+                />
               </>
             )}
             <Button variant="primary" onClick={addRule} disabled={busy || isIncomplete} icon={<Bell size={14} />}>
@@ -301,11 +349,17 @@ function AlertsBody() {
           ) : (
             <ul className="divide-y divide-line/60">
               {rules.map((r) => (
-                <li key={r.id} className="flex items-center gap-3 px-4 py-2.5 text-body">
-                  <span className="rounded border border-line bg-muted/10 px-1.5 py-px font-mono text-micro text-muted">
-                    {KIND_LABEL[r.kind] ?? r.kind}
-                  </span>
-                  <span className="text-data text-foreground">{ruleSummary(r)}</span>
+                <li
+                  key={r.id}
+                  id={`rule-${r.id}`}
+                  className="flex scroll-mt-16 items-center gap-2 px-4 py-2.5 text-body target:bg-raised"
+                >
+                  {/* No kind chip: the sentence beside it already opens with
+                      the condition, and the chip said it a second time. */}
+                  <Link href={`/t/${r.symbol}`} className="text-data text-accent hover:underline">
+                    {r.symbol}
+                  </Link>
+                  <span className="text-2">{ruleCondition(r)}</span>
                   {r.last_fired_ts && (
                     <span className="text-data text-muted">
                       last fired {new Date(r.last_fired_ts).toLocaleDateString()}
@@ -332,9 +386,23 @@ function AlertsBody() {
 
         {/* Recent fires */}
         <section className="rounded-md border border-line bg-elevated">
-          <div className="border-b border-line px-4 py-2.5 flex items-center justify-between">
+          <div className="border-b border-line px-4 py-2.5 flex flex-wrap items-center gap-2">
             <span className="tick text-title text-foreground">Recent fires</span>
-            <span className="text-body text-muted">Showing latest 30</span>
+            {fireSymbols.length > 1 && (
+              <Select
+                aria-label="Filter fires by symbol"
+                value={logSymbol}
+                onChange={(e) => setLogSymbol(e.target.value)}
+                options={[
+                  { value: "", label: "All symbols" },
+                  ...fireSymbols.map((s) => ({ value: s, label: s })),
+                ]}
+                className="w-32"
+              />
+            )}
+            <span className="ml-auto text-body text-muted">
+              {logSymbol ? `${shownLog.length} of ${log.length}` : "Showing latest 30"}
+            </span>
           </div>
           {log.length === 0 ? (
             <Empty
@@ -343,21 +411,31 @@ function AlertsBody() {
               message="Rules are checked when the evaluator runs. Hit “Evaluate now” above to check them against the current data."
             />
           ) : (
-            groupByDay(log).map(([day, items]) => (
+            groupByDay(shownLog).map(([day, items]) => (
               <div key={day}>
                 <div className="bg-surface px-4 py-1 text-data text-muted">{day}</div>
                 <ul className="divide-y divide-line/60">
-                  {items.map((it) => (
-                    <li key={it.id} className="px-4 py-2.5">
-                      <div className="flex items-baseline justify-between gap-2">
-                        <span className="text-body font-medium text-foreground">{it.title}</span>
-                        <span className="text-data text-muted">
-                          {new Date(it.ts).toLocaleString()} (local time)
-                        </span>
-                      </div>
-                      <p className="mt-0.5 text-body text-2">{it.body}</p>
-                    </li>
-                  ))}
+                  {items.map((it) => {
+                    // Only rules still on the page can be jumped to; a fire
+                    // from a since-deleted rule gets no dead link.
+                    const rule = it.payload?.rule_id != null ? ruleById.get(it.payload.rule_id) : undefined;
+                    return (
+                      <li key={it.id} className="px-4 py-2.5">
+                        <div className="flex items-baseline justify-between gap-2">
+                          <span className="text-body font-medium text-foreground">{it.title}</span>
+                          <span className="text-data text-muted">
+                            {new Date(it.ts).toLocaleString()} (local time)
+                          </span>
+                        </div>
+                        <p className="mt-0.5 text-body text-2">{it.body}</p>
+                        {rule && (
+                          <a href={`#rule-${rule.id}`} className="mt-1 inline-block text-body text-accent hover:underline">
+                            View rule
+                          </a>
+                        )}
+                      </li>
+                    );
+                  })}
                 </ul>
               </div>
             ))
