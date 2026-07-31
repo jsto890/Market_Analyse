@@ -24,69 +24,6 @@ function stopAnchorLabel(anchor: string): string {
   return anchor;
 }
 
-/** Horizontal range bar plotting stop / entry / current / target as positions. */
-function PriceRail({
-  stop,
-  entry,
-  target,
-  price,
-}: {
-  stop: number;
-  entry: number;
-  target: number;
-  price: number | null;
-}) {
-  const vals = [stop, entry, target, price].filter((v): v is number => v != null);
-  const lo = Math.min(...vals);
-  const hi = Math.max(...vals);
-  const span = hi - lo || 1;
-  const pos = (v: number) => ((v - lo) / span) * 100;
-  const priceLeft = price != null ? Math.min(96, Math.max(4, pos(price))) : null;
-  return (
-    <div className="pt-4" data-testid="price-rail">
-      <div className="relative h-1.5 rounded-full bg-line">
-        <div
-          className="absolute h-full rounded-l-full bg-neg/40"
-          style={{ left: `${pos(Math.min(stop, entry))}%`, width: `${Math.abs(pos(entry) - pos(stop))}%` }}
-        />
-        <div
-          className="absolute h-full rounded-r-full bg-pos/40"
-          style={{ left: `${pos(Math.min(entry, target))}%`, width: `${Math.abs(pos(target) - pos(entry))}%` }}
-        />
-        {[
-          { v: stop, cls: "bg-neg", label: "S" },
-          { v: entry, cls: "bg-foreground", label: "E" },
-          { v: target, cls: "bg-pos", label: "T" },
-        ].map((m) => (
-          <div
-            key={m.label}
-            className={`absolute top-1/2 h-2.5 w-0.5 -translate-y-1/2 ${m.cls}`}
-            style={{ left: `${pos(m.v)}%` }}
-          />
-        ))}
-        {price != null && priceLeft != null && (
-          <>
-            <span
-              className="absolute -top-4 -translate-x-1/2 whitespace-nowrap text-micro tabular-nums text-accent"
-              style={{ left: `${priceLeft}%` }}
-            >
-              {price.toFixed(2)}
-            </span>
-            <div
-              className="absolute top-1/2 h-3.5 w-3.5 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-accent bg-bg"
-              style={{ left: `${priceLeft}%` }}
-            />
-          </>
-        )}
-      </div>
-      <div className="mt-1 flex items-center justify-between text-micro tabular-nums text-muted">
-        <span>{lo.toFixed(2)}</span>
-        <span>{hi.toFixed(2)}</span>
-      </div>
-    </div>
-  );
-}
-
 export default function LevelsCard({ ticker, bridgeRow }: LevelsCardProps) {
   const [accountSize, setAccountSize] = useLocalStorage(STATIC_KEYS.riskAccountSize, 10000);
   const [riskPct, setRiskPct] = useLocalStorage(STATIC_KEYS.riskPct, 1);
@@ -143,8 +80,8 @@ export default function LevelsCard({ ticker, bridgeRow }: LevelsCardProps) {
   return (
     <section className="rounded-md border border-line bg-elevated">
       <div className="flex items-center gap-2 border-b border-line px-4 py-3">
-        <span className="tick text-title text-foreground">Trade levels</span>
-        <InfoTip content="Entry, stop and target from the live scorer. Context, not a mechanical exit system." label="How these levels are set" />
+        <span className="tick text-title text-foreground">Trade plan</span>
+        <InfoTip content="Entry, stop and target from the live scorer, drawn on the chart. Context, not a mechanical exit system." label="How these levels are set" />
       </div>
 
       {!valid ? (
@@ -194,37 +131,9 @@ export default function LevelsCard({ ticker, bridgeRow }: LevelsCardProps) {
             )}
           </div>
 
-          <div className="grid grid-cols-4 gap-2 text-center">
-            <div>
-              <p className="mb-0.5 text-micro text-muted">Entry</p>
-              <p className="text-data text-foreground">{entry!.toFixed(2)}</p>
-            </div>
-            <div>
-              <p className="mb-0.5 text-micro text-muted">Stop</p>
-              <p className="text-data text-neg">{stop!.toFixed(2)}</p>
-            </div>
-            <div>
-              <p className="mb-0.5 text-micro text-muted">Target</p>
-              <p className="text-data text-pos">{target!.toFixed(2)}</p>
-            </div>
-            <div>
-              <p className="mb-0.5 text-micro text-muted">R:R</p>
-              <p
-                className={`text-data ${
-                  risk_reward != null && risk_reward >= 2
-                    ? "text-model"
-                    : risk_reward != null && risk_reward < 1
-                      ? "text-warn"
-                      : "text-foreground"
-                }`}
-              >
-                {rrLabel}
-              </p>
-            </div>
-          </div>
-
-          <PriceRail stop={stop!} entry={entry!} target={target!} price={livePrice} />
-
+          {/* Entry, stop and target are drawn on the chart to the left as
+              titled price lines. A four-cell grid and a rail restating them was
+              the same three numbers a third and a fourth time (TK-02). */}
           {distToEntry !== null && (
             <p className="text-data text-muted">
               price{" "}

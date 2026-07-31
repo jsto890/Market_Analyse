@@ -85,7 +85,8 @@ describe("ScreenerPage verdict badge (SC-04)", () => {
     const user = userEvent.setup();
     await user.click(screen.getByRole("button", { name: "Full universe" }));
     await screen.findByText("NVDA");
-    const badge = screen.getByText("LONG");
+    const badge = screen.getByText("Long");
+    expect(badge).toHaveAttribute("data-value", "LONG");
     expect(badge.className).toContain("bg-model");
     expect(badge.className).not.toMatch(/(bg|text)-(pos|neg)\b/);
   });

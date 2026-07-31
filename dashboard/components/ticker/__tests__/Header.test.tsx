@@ -1,4 +1,5 @@
 import { describe, it, expect } from "vitest";
+import { fireEvent } from "@testing-library/react";
 import { render, screen } from "@/test/render";
 import { mockFetchJson } from "@/test/fetchMock";
 import Header from "@/components/ticker/Header";
@@ -63,7 +64,9 @@ describe("Header glossary and prices (TH-01, TH-04, TH-05)", () => {
   it("moves the HC glossary off the page body onto the chip that needs it (TH-01)", () => {
     render(<Header ticker="NVDA" bridgeRow={bridgeRow()} signalHistory={[]} lastClose={null} />);
     expect(screen.queryByText(/consensus, not edge/i)).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /what hc means/i })).toBeInTheDocument();
+    // A Gloss, not a hover tooltip: the chip itself is the focusable trigger.
+    fireEvent.click(screen.getByRole("button", { name: "HC" }));
+    expect(screen.getByRole("note")).toHaveTextContent(/consensus, not edge/i);
   });
 
   it("prices the call off the same number it prints, and names its basis (TH-04)", async () => {
@@ -105,6 +108,36 @@ describe("Header glossary and prices (TH-01, TH-04, TH-05)", () => {
     expect(screen.getByText("This call")).toBeInTheDocument();
     expect(screen.getByText("Cohort")).toBeInTheDocument();
   });
+
+  it("states the comparison between the call and its cohort rather than leaving it to the reader (TH-09)", () => {
+    render(
+      <Header
+        ticker="NVDA"
+        bridgeRow={bridgeRow()}
+        signalHistory={[{ date: isoIn(-3), report_group: null, action_label: null, combined_score: null, entry: 100 }]}
+        lastClose={110}
+        medianPeakPct={20}
+        medianDaysToPeak={7}
+      />
+    );
+    expect(screen.getByText("Read")).toBeInTheDocument();
+    // +10% against a +20% median peak, on day 3 of a ~7-day window.
+    expect(screen.getByText(/50% of the cohort's median peak, ~4d of that window left\./)).toBeInTheDocument();
+  });
+
+  it("reads a call that has run past the cohort's peak and out of its window", () => {
+    render(
+      <Header
+        ticker="NVDA"
+        bridgeRow={bridgeRow()}
+        signalHistory={[{ date: isoIn(-30), report_group: null, action_label: null, combined_score: null, entry: 100 }]}
+        lastClose={140}
+        medianPeakPct={20}
+        medianDaysToPeak={7}
+      />
+    );
+    expect(screen.getByText(/Past the cohort's median peak, past that window\./)).toBeInTheDocument();
+  });
 });
 
 describe("Header earnings and identity (TH-03, TH-08)", () => {
@@ -142,5 +175,35 @@ describe("Header earnings and identity (TH-03, TH-08)", () => {
     expect(screen.getByText(/1\.5× ADV/)).toBeInTheDocument();
     expect(screen.getByText(/52w 100\.00–200\.00/)).toBeInTheDocument();
     expect(screen.getByText(/50% of range/)).toBeInTheDocument();
+  });
+
+  it("carries five verbs, each with a destination (TH-07)", () => {
+    render(<Header ticker="NVDA" bridgeRow={bridgeRow()} signalHistory={[]} lastClose={null} />);
+    expect(screen.getByRole("link", { name: "Alert" })).toHaveAttribute("href", "/alerts?symbol=NVDA");
+    expect(screen.getByRole("link", { name: "Options ↓" })).toHaveAttribute("href", "#options");
+    expect(screen.getByRole("link", { name: "Compare" })).toHaveAttribute(
+      "href",
+      "/screener?symbols=NVDA"
+    );
+    expect(screen.getByRole("button", { name: "Copy" })).toBeInTheDocument();
+  });
+
+  it("prices the day off the same bar as the close, not off a second feed", () => {
+    render(
+      <Header
+        ticker="NVDA"
+        bridgeRow={bridgeRow()}
+        signalHistory={[]}
+        lastClose={148.2}
+        dayHigh={151.9}
+        dayLow={146.4}
+      />
+    );
+    expect(screen.getByText(/day 146\.40–151\.90/)).toBeInTheDocument();
+  });
+
+  it("renders no day range when there are no bars to take one from", () => {
+    render(<Header ticker="NVDA" bridgeRow={bridgeRow()} signalHistory={[]} lastClose={null} />);
+    expect(screen.queryByText(/^day /)).not.toBeInTheDocument();
   });
 });

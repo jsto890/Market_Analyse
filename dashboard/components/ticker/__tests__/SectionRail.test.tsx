@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { act } from "@testing-library/react";
 import { render, screen } from "@/test/render";
-import TickerSubNav, { TICKER_SECTIONS, tickerSections } from "@/components/ticker/TickerSubNav";
+import SectionRail, { TICKER_SECTIONS, tickerSections } from "@/components/ticker/SectionRail";
 
 let ioCallback: IntersectionObserverCallback | null = null;
 class FakeIntersectionObserver {
@@ -27,40 +27,48 @@ beforeEach(() => {
   global.IntersectionObserver = FakeIntersectionObserver;
 });
 
-describe("TickerSubNav", () => {
-  it("renders one link per section, in order, with correct href and label", () => {
-    render(<TickerSubNav hasGamma />);
+describe("SectionRail", () => {
+  it("renders one link per section, in order, with correct href and name", () => {
+    render(<SectionRail hasGamma />);
     const links = screen.getAllByRole("link");
     expect(links.map((l) => l.getAttribute("href"))).toEqual(
       TICKER_SECTIONS.map((s) => `#${s.id}`)
     );
-    expect(links.map((l) => l.textContent)).toEqual(TICKER_SECTIONS.map((s) => s.label));
+    // The icon is decorative; the label is the accessible name.
+    expect(links.map((l) => l.getAttribute("aria-label"))).toEqual(
+      TICKER_SECTIONS.map((s) => s.label)
+    );
   });
 
-  it("anchors the left column — chart, options and gamma — not just the sidebar (TN-02)", () => {
-    render(<TickerSubNav hasGamma />);
+  it("reaches every anchored section on the page, both columns (TN-02)", () => {
+    render(<SectionRail hasGamma />);
     const hrefs = screen.getAllByRole("link").map((l) => l.getAttribute("href"));
-    expect(hrefs).toEqual(expect.arrayContaining(["#chart", "#options", "#gamma"]));
+    // #sentiment had no entry at all in the bar this replaced.
+    expect(hrefs).toEqual(
+      expect.arrayContaining([
+        "#chart",
+        "#options",
+        "#gamma",
+        "#levels",
+        "#why",
+        "#catalysts",
+        "#news",
+        "#sentiment",
+        "#history",
+        "#ai",
+      ])
+    );
   });
 
-  it("drops the gamma tab for names that have no gamma card", () => {
-    render(<TickerSubNav />);
+  it("drops the gamma entry for names that have no gamma card", () => {
+    render(<SectionRail />);
     const hrefs = screen.getAllByRole("link").map((l) => l.getAttribute("href"));
     expect(hrefs).not.toContain("#gamma");
     expect(tickerSections(false).map((s) => s.id)).not.toContain("gamma");
   });
 
-  it("does not simply echo the panel headings below it (TN-01)", () => {
-    const labels = TICKER_SECTIONS.map((s) => s.label);
-    // These panel titles used to be repeated verbatim 40px lower.
-    expect(labels).not.toContain("Levels");
-    expect(labels).not.toContain("Why");
-    expect(labels).not.toContain("News");
-    expect(labels).not.toContain("Sentiment");
-  });
-
   it("marks the section as the current location, not the current page (TN-05)", () => {
-    render(<TickerSubNav />);
+    render(<SectionRail />);
     act(() => {
       ioCallback!([entry("why", 200)], {} as IntersectionObserver);
     });
@@ -72,7 +80,7 @@ describe("TickerSubNav", () => {
   });
 
   it("activates the topmost intersecting section, whatever order the callback reports (TN-04)", () => {
-    render(<TickerSubNav />);
+    render(<SectionRail />);
     act(() => {
       // catalysts is reported first but sits lower on screen than levels.
       ioCallback!([entry("catalysts", 640), entry("levels", 120)], {} as IntersectionObserver);
@@ -84,14 +92,31 @@ describe("TickerSubNav", () => {
     expect(screen.getByRole("link", { name: "Catalysts" })).not.toHaveAttribute("aria-current");
   });
 
+  it("names the section you are in, and no other (TN-06)", () => {
+    render(<SectionRail />);
+    // Tailwind isn't applied in jsdom, so read the class that does the hiding.
+    const shown = () =>
+      screen
+        .getAllByRole("link")
+        .map((l) => l.querySelector("span")!)
+        .filter((s) => !s.className.includes("hidden"));
+
+    // Before anything crosses the observer's band you are at the top, which is
+    // the first section — one word, not zero and not ten.
+    expect(shown()).toHaveLength(1);
+    expect(shown()[0]).toHaveTextContent("Price");
+    act(() => {
+      ioCallback!([entry("why", 200)], {} as IntersectionObserver);
+    });
+    expect(shown()).toHaveLength(1);
+    expect(shown()[0]).toHaveTextContent("Rationale");
+  });
+
   it("ignores sections that have scrolled out of view", () => {
-    render(<TickerSubNav />);
+    render(<SectionRail />);
     act(() => {
       ioCallback!([entry("chart", -400, false), entry("news", 90)], {} as IntersectionObserver);
     });
-    expect(screen.getByRole("link", { name: "News & tone" })).toHaveAttribute(
-      "aria-current",
-      "location"
-    );
+    expect(screen.getByRole("link", { name: "News" })).toHaveAttribute("aria-current", "location");
   });
 });

@@ -34,8 +34,11 @@ const EDGE: Record<string, string> = {
   ERROR: "border-warn/45 bg-warn/[0.12] text-warn",
 };
 
-/** Display copy for the raw enums. Dense tables keep the enum; prose surfaces
- *  (the ticker header) pass `label={BADGE_LABEL[value]}` (TH-02). */
+/** Display copy for the raw enums, applied by default wherever a Badge renders
+ *  (TH-02). Mapping here rather than at each call site is what stops
+ *  `STANDARD_LONG` reaching the screen: a site that forgets to ask for display
+ *  copy gets it anyway. The copy is no wider than the enum, so dense tables pay
+ *  nothing for it. */
 export const BADGE_LABEL: Record<string, string> = {
   PRIME_LONG: "Prime long",
   BREAKOUT_LONG: "Breakout long",
@@ -50,11 +53,12 @@ export const BADGE_LABEL: Record<string, string> = {
 interface BadgeProps {
   variant: "tier" | "verdict" | "style" | "flag" | "edge";
   value: string;
-  /** Visible text when the raw enum is too terse to read as copy. Defaults to `value`. */
+  /** Overrides the display copy. Defaults to `BADGE_LABEL[value]`, then `value`. */
   label?: string;
 }
 
 export default function Badge({ variant, value, label }: BadgeProps) {
+  const copy = label ?? BADGE_LABEL[value];
   let cls = "";
 
   if (variant === "tier") {
@@ -74,9 +78,11 @@ export default function Badge({ variant, value, label }: BadgeProps) {
     // mouse-only documentation, which this overhaul bans outright.
     <span
       data-value={value}
-      className={`inline-flex cursor-default select-none items-center rounded border px-[7px] py-[3px] font-mono text-micro font-semibold leading-tight tabular-nums ${cls}`}
+      className={`inline-flex cursor-default select-none items-center rounded border px-[7px] py-[3px] font-mono text-micro font-semibold leading-tight tabular-nums ${
+        copy ? "normal-case" : ""
+      } ${cls}`}
     >
-      {label ?? value}
+      {copy ?? value}
     </span>
   );
 }

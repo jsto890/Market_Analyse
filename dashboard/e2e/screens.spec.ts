@@ -173,7 +173,7 @@ test("state: options strikes — live mode, and scrolled right", async ({ page }
   });
 });
 
-test("state: ticker page — sticky sub-nav and lower sections", async ({ page }) => {
+test("state: ticker page — sticky section rail and lower sections", async ({ page }) => {
   await page.setViewportSize(LAPTOP);
   await page.goto("/t/AAPL");
   await freeze(page);
@@ -181,9 +181,9 @@ test("state: ticker page — sticky sub-nav and lower sections", async ({ page }
 
   const scroller = page.locator("#main");
 
-  // Scrolled just far enough that the sub-nav pins under the global nav —
-  // this is where the duplicated labels (tab + panel title) both show.
-  await step("sticky subnav", async () => {
+  // Scrolled far enough that the rail pins under the global nav and tracks a
+  // section — where the old bar printed its labels a second time.
+  await step("sticky section rail", async () => {
     await scroller.evaluate((el) => { el.scrollTop = 420; });
     await page.waitForTimeout(400);
     await shot(page, "state--ticker-subnav-sticky");
@@ -208,6 +208,9 @@ test("state: ticker page — sticky sub-nav and lower sections", async ({ page }
 });
 
 test("state: today — filters active, and Everything else open", async ({ page }) => {
+  // Four full page loads in one test; the 120s default is not enough for it
+  // under a loaded dev server.
+  test.setTimeout(240_000);
   await page.setViewportSize(LAPTOP);
   await page.goto("/");
   await freeze(page);
@@ -582,6 +585,71 @@ test("contract: Phase 3 — Today is one masthead, one tape, one caveat", async 
     .waitFor({ timeout: 30_000 })
     .catch(() => {});
   if ((await tape.count()) < 1) violations.push("/: no tape on the page");
+
+  expect(violations, violations.join("\n")).toEqual([]);
+});
+
+test("contract: Phase 3.2 — the ticker page names each thing once", async ({ page }) => {
+  test.setTimeout(120_000);
+  await page.setViewportSize(LAPTOP);
+
+  const violations: string[] = [];
+
+  const res = await page.goto("/t/AAPL");
+  if (res?.status() !== 200) violations.push(`/t/AAPL: HTTP ${res?.status()}`);
+  await settle(page, 2500);
+
+  // The section index names the section you are in and no other, so it can't
+  // restate the seven panel titles it points at.
+  const rail = page.locator('nav[aria-label="Ticker page sections"]');
+  const rails = await rail.count();
+  if (rails !== 1) violations.push(`/t/AAPL: ${rails} section rails, expected 1`);
+  if (rails === 1) {
+    const labels = ((await rail.innerText()) ?? "")
+      .split("\n")
+      .map((s) => s.trim())
+      .filter(Boolean);
+    if (labels.length > 1) {
+      violations.push(`/t/AAPL: ${labels.length} rail labels visible at rest: ${labels.join(", ")}`);
+    }
+    if ((await rail.locator('a[href="#sentiment"]').count()) === 0) {
+      violations.push("/t/AAPL: sentiment is unreachable from the rail");
+    }
+  }
+
+  // No panel title printed twice within one scroll.
+  const dupeTitles = await page.evaluate(() => {
+    const seen = new Map<string, number>();
+    for (const el of Array.from(document.querySelectorAll<HTMLElement>("#main .tick.text-title"))) {
+      const t = (el.textContent ?? "").trim();
+      if (t) seen.set(t, (seen.get(t) ?? 0) + 1);
+    }
+    return Array.from(seen)
+      .filter(([, n]) => n > 1)
+      .map(([t, n]) => `${t} ×${n}`);
+  });
+  if (dupeTitles.length > 0) {
+    violations.push(`/t/AAPL: title repeated: ${dupeTitles.join(", ")}`);
+  }
+
+  // Tier enums are internal. Badge maps them to display copy by default, so a
+  // hit here means a surface printed the raw column instead of rendering one.
+  const rawTier = await page.getByText(/\b(PRIME|BREAKOUT|STANDARD)_LONG\b/).count();
+  if (rawTier > 0) {
+    violations.push(`/t/AAPL: raw tier enum printed ${rawTier}×`);
+  }
+
+  // The header says what the name is, not only what it costs. Both come from
+  // the fundamentals endpoint, so a failure here is either the header or yfinance.
+  if ((await page.getByText(/mkt cap /).count()) === 0) {
+    violations.push("/t/AAPL: header exposes no market cap");
+  }
+
+  // One earnings date, one basis, one place.
+  const earnings = await page.getByText(/earnings (today|tomorrow|in \d+d|\d+d ago)/).count();
+  if (earnings > 1) {
+    violations.push(`/t/AAPL: earnings stated ${earnings}×, expected at most once`);
+  }
 
   expect(violations, violations.join("\n")).toEqual([]);
 });

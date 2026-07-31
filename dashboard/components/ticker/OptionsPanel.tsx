@@ -31,11 +31,7 @@ interface UnusualRow {
   volume?: unknown;        // yfinance field name
   oi?: unknown;
   openInterest?: unknown;  // yfinance field name
-  type?: unknown;
   lastPrice?: unknown;
-  bid?: unknown;
-  ask?: unknown;
-  percentChange?: unknown;
   score?: unknown;
   basis?: unknown;
   [key: string]: unknown;
@@ -64,19 +60,13 @@ function UnusualTable({ rows, label }: { rows: unknown[]; label: string }) {
             {hasScores && <th className="pb-1 pr-3 font-medium">σ</th>}
             <th className="pb-1 pr-3 font-medium">Strike</th>
             <th className="pb-1 pr-3 font-medium text-right">Last</th>
-            <th className="pb-1 pr-3 font-medium text-right">Bid×Ask</th>
-            <th className="pb-1 pr-3 font-medium text-right">Δ%</th>
             <th className="pb-1 pr-3 font-medium text-right">Vol</th>
-            <th className="pb-1 pr-3 font-medium text-right">OI</th>
-            <th className="pb-1 font-medium">Type</th>
+            <th className="pb-1 font-medium text-right">OI</th>
           </tr>
         </thead>
         <tbody>
           {valid.map((row, i) => {
             const last = num(row.lastPrice);
-            const bid = num(row.bid);
-            const ask = num(row.ask);
-            const chg = num(row.percentChange);
             const vol = num(row.vol) ?? num(row.volume);
             const oi = num(row.oi) ?? num(row.openInterest);
             const score = num(row.score);
@@ -95,15 +85,8 @@ function UnusualTable({ rows, label }: { rows: unknown[]; label: string }) {
                 )}
                 <td className="py-1 pr-3 text-foreground">{String(row.strike ?? "—")}</td>
                 <td className="py-1 pr-3 text-right text-foreground">{last !== null ? last.toFixed(2) : "—"}</td>
-                <td className="py-1 pr-3 text-right text-muted">
-                  {bid !== null && ask !== null ? `${bid.toFixed(2)}×${ask.toFixed(2)}` : "—"}
-                </td>
-                <td className={`py-1 pr-3 text-right ${chg === null ? "text-muted" : chg >= 0 ? "text-pos" : "text-neg"}`}>
-                  {chg !== null ? `${chg >= 0 ? "+" : ""}${chg.toFixed(0)}%` : "—"}
-                </td>
                 <td className="py-1 pr-3 text-right text-muted">{vol !== null ? vol.toLocaleString() : "—"}</td>
-                <td className="py-1 pr-3 text-right text-muted">{oi !== null ? oi.toLocaleString() : "—"}</td>
-                <td className="py-1 text-muted">{String(row.type ?? "—")}</td>
+                <td className="py-1 text-right text-muted">{oi !== null ? oi.toLocaleString() : "—"}</td>
               </tr>
             );
           })}
@@ -227,18 +210,21 @@ export default function OptionsPanel({ ticker }: { ticker: string }) {
               <td className="py-1 pr-4 text-right text-foreground">{fmt(data.summary.call_vol)}</td>
               <td className="py-1 text-right text-foreground">{fmt(data.summary.put_vol)}</td>
             </tr>
-            <tr className="border-t border-line">
-              <td className="py-1 text-muted">P/C OI</td>
-              <td className="py-1 pr-4 text-right text-muted">—</td>
-              <td className="py-1 text-right text-foreground">{data.summary.pcr_oi.toFixed(2)}</td>
-            </tr>
-            <tr className="border-t border-line">
-              <td className="py-1 text-muted">P/C Vol</td>
-              <td className="py-1 pr-4 text-right text-muted">—</td>
-              <td className="py-1 text-right text-foreground">{data.summary.pcr_vol.toFixed(2)}</td>
-            </tr>
           </tbody>
           </table>
+          {/* Ratios, not per-side figures. Inside the Calls/Puts grid each one
+              had to print a dash on the call side, which reads as a missing
+              number rather than as a ratio of the two columns above. */}
+          <div className="mt-2 flex flex-wrap gap-4 text-data">
+            <span>
+              <span className="text-muted">P/C OI </span>
+              <span className="text-foreground">{data.summary.pcr_oi.toFixed(2)}</span>
+            </span>
+            <span>
+              <span className="text-muted">P/C vol </span>
+              <span className="text-foreground">{data.summary.pcr_vol.toFixed(2)}</span>
+            </span>
+          </div>
         </div>
 
         {/* IV row */}

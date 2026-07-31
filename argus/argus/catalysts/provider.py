@@ -29,17 +29,25 @@ def _default_past(sym): import yfinance as yf; return yf.Ticker(sym).earnings_da
 def _default_history(sym, **k): return get_history(sym, period="1y")
 
 
-def _next_earnings(cal) -> Optional[str]:
+def _next_earnings(cal, today: str) -> Optional[str]:
+    """First calendar date on or after `today`. yfinance lists the surrounding
+    window, so `ed[0]` is as often the last report as the next one — the UI then
+    renders a past date under a "next earnings" label."""
     if not cal:
         return None
     ed = cal.get("Earnings Date") if hasattr(cal, "get") else None
-    if not ed:
+    if ed is None or (hasattr(ed, "__len__") and len(ed) == 0):
         return None
-    d = ed[0] if isinstance(ed, (list, tuple)) and ed else ed
-    try:
-        return pd.Timestamp(d).date().isoformat()
-    except Exception:
-        return None
+    candidates = list(ed) if isinstance(ed, (list, tuple)) else [ed]
+    t = pd.Timestamp(today).normalize()
+    for c in candidates:
+        try:
+            d = _naive(c).normalize()
+        except Exception:
+            continue
+        if d >= t:
+            return d.date().isoformat()
+    return None
 
 
 def _last_earnings(past_df, hist, today: str) -> Optional[dict]:
@@ -103,7 +111,7 @@ def build_catalysts(symbol: str, today: Optional[str] = None,
     past = _try(past_earnings, "past_earnings", sym)
 
     return {"symbol": sym,
-            "next_earnings": _next_earnings(cal),
+            "next_earnings": _next_earnings(cal, today),
             "last_earnings": _last_earnings(past, hist, today),
             "analyst": _analyst(up, today),
             "degraded": degraded}

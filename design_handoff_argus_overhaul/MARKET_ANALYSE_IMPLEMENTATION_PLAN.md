@@ -272,6 +272,7 @@ Keep the controls and states as they are — abort, cancel, cached/fresh, re-run
 - **Rails keep every block** — Futures, US Equity, Forex, What's Next, Macro gauges, same order. Restyle only: values 13px, labels 11px, importance as a visible rank.
 - Rails collapsible with persistence. On 1440 they consume ~460px of a 1240px content budget, which is why the ladder runs full-bleed and masks its own overflow.
 - News rail: group by hour, mark breaking, tag which watchlist names each item touches.
+- **The news rail and the ticker page's News card are the same content twice**, ~1400px apart — the duplication class §3.2 removed from the sub-nav. Decide which one owns it: the rail is cross-cutting and always present, the card is scoped to the ticker. Whichever loses stops rendering; it doesn't get a shorter version. (Found while auditing §3.2.)
 - `ContextStrip` gets one job: market clock, session phase, global data freshness.
 
 ### 4.8 Learn

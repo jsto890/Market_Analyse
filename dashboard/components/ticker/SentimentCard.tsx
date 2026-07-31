@@ -13,6 +13,22 @@ interface SentimentCardProps {
   lastSeen: string | null;
 }
 
+/** What the three numbers add up to. Tone says which way the chatter leans,
+ *  breadth says whether it is a crowd or one account posting twenty times. */
+function sentimentRead(score: number, mentions: number, accounts: number): string {
+  const tone =
+    score >= 0.3 ? "Positive tone" : score <= -0.3 ? "Negative tone" : "Mixed tone";
+  if (accounts < 1 || mentions < 1) return `${tone}, on too little chatter to read breadth.`;
+  const perAccount = mentions / accounts;
+  const breadth =
+    accounts <= 3
+      ? `from ${accounts} account${accounts === 1 ? "" : "s"} — one voice, not a crowd`
+      : perAccount >= 4
+        ? `concentrated in ${accounts} accounts at ~${perAccount.toFixed(1)} posts each`
+        : `spread across ${accounts} accounts`;
+  return `${tone} ${breadth}. Chatter surfaced this name; the technical read decides it.`;
+}
+
 export default function SentimentCard({ bridgeRow, lastSeen }: SentimentCardProps) {
   if (!bridgeRow) {
     return (
@@ -57,6 +73,8 @@ export default function SentimentCard({ bridgeRow, lastSeen }: SentimentCardProp
             ))}
           </div>
         )}
+
+        <p className="text-body text-2">{sentimentRead(sentiment_score, mentions, accounts)}</p>
       </div>
     </Panel>
   );

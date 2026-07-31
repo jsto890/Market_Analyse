@@ -15,7 +15,7 @@ export const HEADER_GLOSS: Record<string, string> = {
   L: "Long votes — number of agents in the ensemble voting long on this ticker.",
   S: "Short votes — number of agents voting short.",
   W: "Wait votes — number of agents voting no direction (wait).",
-  HC: "High conviction — this call passes the ensemble's tightened agreement/R:R/catalyst gates.",
+  HC: "High conviction — ≥75% of the indicator ensemble agrees and the verdict isn't WAIT. That is consensus, not edge: it says the signals line up, not that the trade is better.",
   "Agree%": "Agreement — share of voting agents aligned with the ensemble's final verdict direction.",
   "R:R": "Risk:reward — modeled target distance divided by modeled stop distance from entry.",
   "◉": "Quadrant — Leading / Improving / Weakening / Lagging (JdK RRG rotation quadrant). Hover/focus the dot for the current quadrant.",

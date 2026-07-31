@@ -28,7 +28,15 @@ function isErrorResponse(r: ApiResponse): r is { error: string } {
 
 export default function ScreenerPage() {
   const router = useRouter();
-  const [tickerInput, setTickerInput] = useState("");
+  // `?symbols=` seeds the box — the ticker page's Compare action arrives here
+  // with the name you came from, ready for you to add its peers. Read off
+  // `location` rather than `useSearchParams` so the page needs no Suspense
+  // boundary, matching how this component already reads localStorage.
+  const [tickerInput, setTickerInput] = useState(() =>
+    typeof window === "undefined"
+      ? ""
+      : (new URLSearchParams(window.location.search).get("symbols") ?? "")
+  );
   const [minScore, setMinScore] = useState("0.3");
   const [results, setResults] = useState<ScreenerResult[] | null>(() => {
     if (typeof window === "undefined") return null;

@@ -74,3 +74,40 @@ describe("SentimentCard score bar", () => {
     expect(track).toHaveStyle({ width: "100px" });
   });
 });
+
+describe("SentimentCard read (TK-10)", () => {
+  it("says what the score and the counts add up to, like every other card", () => {
+    render(
+      <SentimentCard
+        bridgeRow={makeBridgeRow({ sentiment_score: 0.7, mentions: 274, accounts: 130 })}
+        lastSeen={null}
+      />
+    );
+    expect(
+      screen.getByText(/Positive tone spread across 130 accounts\./)
+    ).toBeInTheDocument();
+    expect(screen.getByText(/the technical read decides it/)).toBeInTheDocument();
+  });
+
+  it("separates a crowd from one account posting twenty times", () => {
+    render(
+      <SentimentCard
+        bridgeRow={makeBridgeRow({ sentiment_score: 0.7, mentions: 40, accounts: 2 })}
+        lastSeen={null}
+      />
+    );
+    expect(screen.getByText(/from 2 accounts — one voice, not a crowd/)).toBeInTheDocument();
+  });
+
+  it("calls out chatter concentrated in a handful of accounts", () => {
+    render(
+      <SentimentCard
+        bridgeRow={makeBridgeRow({ sentiment_score: 0.1, mentions: 100, accounts: 10 })}
+        lastSeen={null}
+      />
+    );
+    expect(
+      screen.getByText(/Mixed tone concentrated in 10 accounts at ~10\.0 posts each/)
+    ).toBeInTheDocument();
+  });
+});

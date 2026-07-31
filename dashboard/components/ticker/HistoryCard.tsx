@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Panel from "@/components/ui/Panel";
 import Empty from "@/components/ui/Empty";
+import { BADGE_LABEL } from "@/components/ui/Badge";
 
 interface SignalRow {
   date: string;
@@ -67,7 +68,9 @@ export default function HistoryCard({ rows, lastClose }: HistoryCardProps) {
                 <tr key={`${r.date}-${i}`} className="border-t border-line">
                   <td className="py-1 pr-3 text-muted">{r.date}</td>
                   <td className="py-1 pr-3 text-foreground">{r.report_group ?? "—"}</td>
-                  <td className="py-1 pr-3 text-muted">{r.action_label ?? "—"}</td>
+                  <td className="py-1 pr-3 text-muted">
+                    {r.action_label ? (BADGE_LABEL[r.action_label] ?? r.action_label) : "—"}
+                  </td>
                   <td className="py-1 pr-3 text-right text-foreground">
                     {r.combined_score != null ? r.combined_score.toFixed(2) : "—"}
                   </td>

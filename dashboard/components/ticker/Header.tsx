@@ -5,6 +5,7 @@ import Link from "next/link";
 import useSWR from "swr";
 import Badge, { BADGE_LABEL } from "@/components/ui/Badge";
 import ConvictionDot from "@/components/ui/ConvictionDot";
+import Gloss from "@/components/ui/Gloss";
 import InfoTip from "@/components/ui/InfoTip";
 import PinToggle from "@/components/ui/PinToggle";
 import type { BridgeRow, Conviction } from "@/types/bridge";
@@ -25,12 +26,16 @@ interface HeaderProps {
   bridgeRow: BridgeRow | null;
   signalHistory: SignalRow[];
   lastClose: number | null; // from server-fetched history bars
+  /** High/low of the same bar `lastClose` came from — one basis for both. */
+  dayHigh?: number | null;
+  dayLow?: number | null;
+  /** Bar-derived 52-week range, used when yfinance fundamentals are unavailable.
+   *  The chart info strip used to carry this; the header is now its only home. */
+  week52LowBars?: number | null;
+  week52HighBars?: number | null;
   medianPeakPct?: number;
   medianDaysToPeak?: number;
 }
-
-const HC_TOOLTIP =
-  "High conviction: ≥75% of the indicator ensemble agrees. That is consensus, not edge — it says the signals line up, not that the trade is better.";
 
 const catalystsFetcher = (url: string) =>
   fetch(url).then((r) => {
@@ -59,6 +64,26 @@ function Meta({ children }: { children: React.ReactNode }) {
   return <span className="whitespace-nowrap">{children}</span>;
 }
 
+/**
+ * The comparison the two lines above it leave the reader to do. The cohort
+ * number is a *peak*, so a call sitting at 40% of it hasn't failed — it may not
+ * have run yet, which is what the window clause is for.
+ */
+function cohortRead(pct: number, days: number, peakPct: number, peakDays: number): string {
+  const left = peakDays - days;
+  const window = left > 0 ? `~${left}d of that window left` : "past that window";
+  if (pct <= 0) return `Behind the cohort from the entry, ${window}.`;
+  if (pct >= peakPct) return `Past the cohort's median peak, ${window}.`;
+  return `${Math.round((pct / peakPct) * 100)}% of the cohort's median peak, ${window}.`;
+}
+
+/** One zone of the header. Each fact belongs to exactly one (TH-08). */
+function Zone({ divide = true, children }: { divide?: boolean; children: React.ReactNode }) {
+  return (
+    <div className={`min-w-0 ${divide ? "border-l border-line pl-5" : ""}`}>{children}</div>
+  );
+}
+
 function CopyButton({ ticker }: { ticker: string }) {
   const [done, setDone] = useState(false);
   return (
@@ -85,6 +110,10 @@ export default function Header({
   bridgeRow,
   signalHistory,
   lastClose,
+  dayHigh = null,
+  dayLow = null,
+  week52LowBars = null,
+  week52HighBars = null,
   medianPeakPct = 23,
   medianDaysToPeak = 7,
 }: HeaderProps) {
@@ -130,8 +159,8 @@ export default function Header({
             ? `earnings in ${earnDays}d`
             : `earnings ${Math.abs(earnDays)}d ago`;
 
-  const w52h = fundamentals?.week52_high ?? null;
-  const w52l = fundamentals?.week52_low ?? null;
+  const w52h = fundamentals?.week52_high ?? week52HighBars;
+  const w52l = fundamentals?.week52_low ?? week52LowBars;
   const rangePos =
     mark !== null && w52h !== null && w52l !== null && w52h > w52l
       ? Math.min(100, Math.max(0, ((mark - w52l) / (w52h - w52l)) * 100))
@@ -143,54 +172,119 @@ export default function Header({
 
   return (
     <div className="px-4 py-3.5">
-      {/* Row 1 — identity and price. Three type sizes, not five (TH-06). */}
-      <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1.5">
-        <span className="text-display leading-none text-foreground">{ticker}</span>
-
-        <span className="text-title font-mono tabular-nums leading-none text-foreground">
-          {mark !== null ? mark.toFixed(2) : "—"}
-        </span>
-        {changePct !== null && (
-          <span className={`text-data ${posNeg}`}>
-            {changePct >= 0 ? "+" : ""}
-            {changePct.toFixed(2)}%
-          </span>
-        )}
-        {markBasis && (
-          <InfoTip
-            content="The basis for the price shown here and for every percentage on this page."
-            label="Price basis"
-          >
-            <span className="text-micro text-muted-2">{markBasis}</span>
-          </InfoTip>
-        )}
-
-        {bridgeRow && (
-          <div className="flex flex-wrap items-center gap-1.5">
-            {bridgeRow.argus_verdict === "SHORT" ? (
-              <Badge
-                variant="verdict"
-                value={bridgeRow.argus_verdict}
-                label={BADGE_LABEL[bridgeRow.argus_verdict]}
-              />
-            ) : (
-              <Badge
-                variant="tier"
-                value={bridgeRow.action_label}
-                label={BADGE_LABEL[bridgeRow.action_label]}
-              />
+      {/* Three zones — who it is, what it costs, what the model says — then the
+          verbs. Each fact sits in exactly one zone (TH-08). */}
+      <div className="flex flex-wrap items-start gap-x-5 gap-y-3">
+        {/* Identity */}
+        <Zone divide={false}>
+          <span className="block text-display leading-none text-foreground">{ticker}</span>
+          <p className="mt-1.5 flex flex-wrap items-center gap-x-2.5 gap-y-1 text-data text-muted">
+            {companyName && <span className="max-w-[280px] truncate">{companyName}</span>}
+            {fundamentals?.sector && <Meta>{fundamentals.sector}</Meta>}
+            {fundamentals?.industry && (
+              <Meta>
+                <span className="text-muted-2">{fundamentals.industry}</span>
+              </Meta>
             )}
-            <ConvictionDot value={bridgeRow.conviction as Conviction} />
-            {bridgeRow.high_conviction && (
-              // The glossary used to sit under the header as body copy on every
-              // ticker; it belongs on the chip it explains (TH-01).
-              <InfoTip content={HC_TOOLTIP} label="What HC means">
-                <span className="inline-flex items-center rounded border border-model/50 bg-model/10 px-1.5 py-px text-micro text-model">
-                  HC
-                </span>
+            {fundamentals?.market_cap != null && (
+              <Meta>mkt cap {compactNumber(fundamentals.market_cap)}</Meta>
+            )}
+          </p>
+        </Zone>
+
+        {/* Price */}
+        <Zone>
+          <div className="flex flex-wrap items-baseline gap-x-2.5 gap-y-1">
+            <span className="text-title font-mono tabular-nums leading-none text-foreground">
+              {mark !== null ? mark.toFixed(2) : "—"}
+            </span>
+            {changePct !== null && (
+              <span className={`text-data ${posNeg}`}>
+                {changePct >= 0 ? "+" : ""}
+                {changePct.toFixed(2)}%
+              </span>
+            )}
+            {markBasis && (
+              <InfoTip
+                content="The basis for the price shown here and for every percentage on this page."
+                label="Price basis"
+              >
+                <span className="text-micro text-muted-2">{markBasis}</span>
               </InfoTip>
             )}
           </div>
+          <p className="mt-1.5 flex flex-wrap items-center gap-x-2.5 gap-y-1 text-data text-muted">
+            {dayLow !== null && dayHigh !== null && (
+              // Same daily bar `lastClose` comes from, so the basis chip above
+              // qualifies this too.
+              <Meta>
+                day {dayLow.toFixed(2)}–{dayHigh.toFixed(2)}
+              </Meta>
+            )}
+            {volVsAdv !== null && (
+              <Meta>
+                vol {compactNumber(vol)}{" "}
+                <span className={volVsAdv >= 1.5 ? "text-warn" : "text-muted-2"}>
+                  ({volVsAdv.toFixed(1)}× ADV)
+                </span>
+              </Meta>
+            )}
+            {w52l !== null && w52h !== null && (
+              <Meta>
+                52w {w52l.toFixed(2)}–{w52h.toFixed(2)}
+                {rangePos !== null && (
+                  <span className="ml-1 text-muted-2">({Math.round(rangePos)}% of range)</span>
+                )}
+              </Meta>
+            )}
+          </p>
+        </Zone>
+
+        {/* Verdict. No rule: this is the zone that wraps to a second line on a
+            laptop, and a rule left hanging at the start of a row reads as an
+            indent rather than a divider. */}
+        {(bridgeRow || earnLabel) && (
+          <Zone divide={false}>
+            {bridgeRow && (
+              <div className="flex flex-wrap items-center gap-1.5">
+                {bridgeRow.argus_verdict === "SHORT" ? (
+                  <Badge
+                    variant="verdict"
+                    value={bridgeRow.argus_verdict}
+                    label={BADGE_LABEL[bridgeRow.argus_verdict]}
+                  />
+                ) : (
+                  <Badge
+                    variant="tier"
+                    value={bridgeRow.action_label}
+                    label={BADGE_LABEL[bridgeRow.action_label]}
+                  />
+                )}
+                <ConvictionDot value={bridgeRow.conviction as Conviction} />
+                {bridgeRow.high_conviction && (
+                  // The glossary used to sit under the header as body copy on
+                  // every ticker; it belongs on the chip it explains (TH-01).
+                  <span className="inline-flex items-center rounded border border-model/50 bg-model/10 px-1.5 py-px text-micro text-model">
+                    <Gloss term="HC" />
+                  </span>
+                )}
+              </div>
+            )}
+            {earnLabel && (
+              <p className="mt-1.5 text-data text-muted">
+                <span
+                  className={
+                    earnDays !== null && earnDays >= 0 && earnDays <= 10
+                      ? "rounded border border-warn/50 bg-warn/10 px-1.5 py-px text-warn"
+                      : ""
+                  }
+                >
+                  {earnLabel}
+                  {nextEarnings ? ` · ${fmtDay(nextEarnings)}` : ""}
+                </span>
+              </p>
+            )}
+          </Zone>
         )}
 
         {/* Actions (TH-07) */}
@@ -209,54 +303,20 @@ export default function Header({
           >
             Options ↓
           </Link>
+          {/* The screener is the only surface that scores several names side by
+              side, so Compare opens it seeded with this one. */}
+          <Link
+            href={`/screener?symbols=${ticker}`}
+            className="rounded border border-line px-1.5 py-0.5 text-micro text-muted transition-colors hover:border-line-strong hover:text-foreground"
+          >
+            Compare
+          </Link>
         </div>
       </div>
 
-      {/* Row 2 — identity context (TH-08) */}
-      <p className="mt-2 flex flex-wrap items-center gap-x-2.5 gap-y-1 text-data text-muted">
-        {companyName && <span className="max-w-[280px] truncate text-muted">{companyName}</span>}
-        {fundamentals?.sector && <Meta>{fundamentals.sector}</Meta>}
-        {fundamentals?.industry && (
-          <Meta>
-            <span className="text-muted-2">{fundamentals.industry}</span>
-          </Meta>
-        )}
-        {fundamentals?.market_cap != null && (
-          <Meta>mkt cap {compactNumber(fundamentals.market_cap)}</Meta>
-        )}
-        {volVsAdv !== null && (
-          <Meta>
-            vol {compactNumber(vol)}{" "}
-            <span className={volVsAdv >= 1.5 ? "text-warn" : "text-muted-2"}>
-              ({volVsAdv.toFixed(1)}× ADV)
-            </span>
-          </Meta>
-        )}
-        {w52l !== null && w52h !== null && (
-          <Meta>
-            52w {w52l.toFixed(2)}–{w52h.toFixed(2)}
-            {rangePos !== null && (
-              <span className="ml-1 text-muted-2">({Math.round(rangePos)}% of range)</span>
-            )}
-          </Meta>
-        )}
-        {earnLabel && (
-          <Meta>
-            <span
-              className={
-                earnDays !== null && earnDays >= 0 && earnDays <= 10
-                  ? "rounded border border-warn/50 bg-warn/10 px-1.5 py-px text-warn"
-                  : "text-muted"
-              }
-            >
-              {earnLabel}
-              {nextEarnings ? ` · ${fmtDay(nextEarnings)}` : ""}
-            </span>
-          </Meta>
-        )}
-      </p>
-
-      {/* Row 3 — this call, then the cohort it belongs to. Two claims, two lines (TH-05, TH-09). */}
+      {/* This call, the cohort it belongs to, and the comparison between them —
+          three claims, three lines, none of them left for the reader to compute
+          (TH-05, TH-09). */}
       {cs && (
         <div className="mt-2 border-t border-line pt-2 text-data">
           <p className="text-foreground/85">
@@ -279,6 +339,12 @@ export default function Header({
             median pick peaks +{medianPeakPct}% @ ~{medianDaysToPeak}d — a base rate for calls like
             this one, not a target for this one.
           </p>
+          {cs.pct !== null && (
+            <p className="text-muted">
+              <span className="mr-2 inline-block w-[78px] whitespace-nowrap text-micro text-muted-2">Read</span>
+              {cohortRead(cs.pct, cs.days, medianPeakPct, medianDaysToPeak)}
+            </p>
+          )}
         </div>
       )}
     </div>

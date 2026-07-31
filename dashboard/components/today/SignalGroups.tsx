@@ -22,6 +22,7 @@ import Gloss from "@/components/ui/Gloss";
 import Loading from "@/components/ui/Loading";
 import Button from "@/components/ui/Button";
 import { setTickerNav } from "@/lib/tickerNav";
+import { catalystText, parseCatalysts } from "@/lib/catalysts";
 
 const FILTERS_KEY = "dash:today:filters";
 
@@ -173,28 +174,15 @@ function RowFlags({ ext, earnDays }: { ext: boolean; earnDays: number | null }) 
   );
 }
 
-/** The feed writes `contract+, earnings_beat+` — comma-separated tokens, each
- *  suffixed with the direction it cuts, and a literal `nan` when there are
- *  none. Splitting on the sign instead of the separator left a leading comma
- *  on every token after the first. */
-function splitCatalysts(value: string | null): string[] {
-  if (!value) return [];
-  return value
-    .split(/[,;]/)
-    .map((s) => s.replace(/["]/g, "").trim())
-    .filter((s) => s && s.toLowerCase() !== "nan")
-    .map((s) => s.replace(/\+$/, " ▲").replace(/-$/, " ▼").replace(/_/g, " "));
-}
-
 function CatalystCount({ value }: { value: string | null }) {
-  const list = splitCatalysts(value);
+  const list = parseCatalysts(value);
   if (list.length === 0) return <span className="text-muted">—</span>;
   return (
     <InfoTip
       content={
         <ul className="space-y-0.5">
           {list.map((c) => (
-            <li key={c}>{c}</li>
+            <li key={c.label}>{catalystText(c)}</li>
           ))}
         </ul>
       }
@@ -358,7 +346,7 @@ function SignalCard({
   isNew: boolean;
   onOpen: () => void;
 }) {
-  const catalysts = splitCatalysts(row.catalysts);
+  const catalysts = parseCatalysts(row.catalysts);
   return (
     <article className="flex flex-col gap-2 rounded-md border border-line bg-raised px-3 py-2.5">
       <div className="flex items-baseline justify-between gap-2">
@@ -386,7 +374,9 @@ function SignalCard({
       </div>
 
       {catalysts.length > 0 && (
-        <p className="text-body text-2">{catalysts.slice(0, 3).join(" · ")}</p>
+        <p className="text-body text-2">
+          {catalysts.slice(0, 3).map(catalystText).join(" · ")}
+        </p>
       )}
 
       <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 text-data">

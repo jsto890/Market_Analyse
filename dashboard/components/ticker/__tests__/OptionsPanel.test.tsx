@@ -39,4 +39,25 @@ describe("OptionsPanel", () => {
     expect(screen.getByText("Implied Volatility")).toBeInTheDocument();
     expect(screen.getByText("Unusual Calls")).toBeInTheDocument();
   });
+
+  it("drops the columns nothing populates (TK-08)", async () => {
+    render(<OptionsPanel ticker="AAPL" />);
+    await waitFor(() => expect(screen.getByText("Unusual Calls")).toBeInTheDocument());
+    // Bid×Ask, Δ% and Type were em-dashes on every row of both tables.
+    expect(screen.queryByText("Bid×Ask")).not.toBeInTheDocument();
+    expect(screen.queryByText("Δ%")).not.toBeInTheDocument();
+    expect(screen.queryByText("Type")).not.toBeInTheDocument();
+    expect(screen.getAllByText("Vol").length).toBeGreaterThan(0);
+  });
+
+  it("states the put/call ratios outside the calls-vs-puts grid (TK-09)", async () => {
+    render(<OptionsPanel ticker="AAPL" />);
+    await waitFor(() => expect(screen.getByText("P/C Summary")).toBeInTheDocument());
+    // A ratio has no call side, so inside that grid it had to print a dash in
+    // one of the two columns — which reads as a missing number.
+    const oi = screen.getByText("P/C OI");
+    expect(oi.closest("table")).toBeNull();
+    expect(oi.parentElement).toHaveTextContent("0.80");
+    expect(screen.getByText("P/C vol").parentElement).toHaveTextContent("0.60");
+  });
 });
