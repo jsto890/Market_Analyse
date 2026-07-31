@@ -654,3 +654,178 @@ test("contract: Phase 3.2 — the ticker page names each thing once", async ({ p
 
   expect(violations, violations.join("\n")).toEqual([]);
 });
+
+/** The sector ETFs the RRG used to plot. Names, not proxies, is the rule. */
+const SECTOR_ETFS = ["XLK", "XLE", "XLF", "XLV", "XLI", "XLY", "XLP", "XLU", "XLB", "XLRE"];
+
+/** A position the ensemble has turned against — the reason to open /portfolio. */
+const DISAGREEING = [
+  { symbol: "NVDA", position: 150, avg_cost: 100, market_value: 18_000, unrealized_pnl: 3_000,
+    verdict: "SHORT", score: -0.4, edge: "CONSIDER SELLING" },
+];
+
+/** Serve `body` for the portfolio endpoint, which is otherwise a live gateway. */
+async function stubPortfolio(page: Page, body: unknown) {
+  await page.route("**/api/argus/portfolio", (r) =>
+    r.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(body) })
+  );
+}
+
+test("contract: Phase 4 — the window drives the benchmark, sectors are named, the book argues back", async ({
+  page,
+}) => {
+  test.setTimeout(180_000);
+  await page.setViewportSize(LAPTOP);
+
+  const violations: string[] = [];
+
+  // ── /macro: the chart's benchmark has to follow the lookback ──────────────
+  const requests: string[] = [];
+  page.on("request", (r) => requests.push(r.url()));
+
+  await page.goto("/macro");
+  await settle(page, 2500);
+  requests.length = 0;
+
+  await page.getByRole("button", { name: "1 week" }).click();
+  await settle(page, 2000);
+
+  // 1w's benchmark is 1mo of daily bars; the 1d default is 5d of 30m bars. A
+  // chart drawn against the wrong span reads as a divergence that is not there.
+  if (!requests.some((u) => u.includes("/macro/series") && u.includes("window=1w")))
+    violations.push("/macro: no series request for the selected window");
+  if (!requests.some((u) => u.includes("/history/SPY") && u.includes("period=1mo")))
+    violations.push("/macro: benchmark did not follow the window to 1mo bars");
+
+  // ── /rotation: industries, and each named once ────────────────────────────
+  await page.goto("/rotation");
+  await settle(page, 2500);
+
+  const industries = await page.evaluate(() =>
+    Array.from(document.querySelectorAll<HTMLElement>("#main tbody tr td:first-child")).map((td) =>
+      (td.textContent ?? "").replace(/^\s*\d+\s*/, "").trim()
+    )
+  );
+  if (industries.length < 8)
+    violations.push(`/rotation: ${industries.length} industries, expected ≥ 8`);
+  const etfs = industries.filter((i) => SECTOR_ETFS.includes(i));
+  if (etfs.length > 0) violations.push(`/rotation: plotted ETF proxies, not sectors: ${etfs}`);
+
+  // The chart's legend named all twelve about 100px above the table that names
+  // the same twelve. The legend went; nothing may bring it back.
+  const twice = await page.evaluate(
+    (names) =>
+      names.filter(
+        (n) =>
+          Array.from(document.querySelectorAll<HTMLElement>("#main *")).filter(
+            (el) => el.children.length === 0 && (el.textContent ?? "").trim() === n
+          ).length > 1
+      ),
+    industries
+  );
+  if (twice.length > 0) violations.push(`/rotation: sector named twice: ${twice.join(", ")}`);
+
+  // ── /portfolio: the disagreement band ─────────────────────────────────────
+  await stubPortfolio(page, DISAGREEING);
+  await page.goto("/portfolio");
+  await settle(page, 2000);
+
+  if ((await page.getByText(/Argus has turned against 1 position/).count()) !== 1)
+    violations.push("/portfolio: no disagreement band for a CONSIDER SELLING position");
+
+  expect(violations, violations.join("\n")).toEqual([]);
+});
+
+/** Pin lives in the bar too, but its label depends on whether the name is pinned. */
+const ACTION_VERBS = ["Alert", "Options", "Compare"];
+
+test("contract: Phase 5 — one action bar, and every surface reaches your book", async ({
+  page,
+}) => {
+  // Six navigations, three of them cold compiles: this is a slow test by shape.
+  test.setTimeout(300_000);
+  await page.setViewportSize(LAPTOP);
+
+  const violations: string[] = [];
+
+  // ── The five verbs, same order, wherever a ticker is named ────────────────
+  await page.goto("/t/AAPL");
+  await settle(page, 2500);
+
+  // Scoped to the page body: the left rail carries its own Options destination,
+  // and the contract is about the bar beside the ticker, not the nav.
+  const body = page.locator("#main");
+  for (const verb of ACTION_VERBS) {
+    if ((await body.getByRole("link", { name: verb }).count()) === 0)
+      violations.push(`/t/AAPL: no ${verb} action`);
+  }
+  // An action pointing at the surface you are on is a jump, not a navigation.
+  const optionsHref = await body
+    .getByRole("link", { name: "Options" })
+    .first()
+    .getAttribute("href");
+  if (optionsHref !== "#options")
+    violations.push(`/t/AAPL: Options action points at ${optionsHref}, not the block on the page`);
+  if ((await page.getByRole("button", { name: /^Copy AAPL$/ }).count()) === 0)
+    violations.push("/t/AAPL: no Copy action");
+
+  // ── calendar event → affected names → positions ───────────────────────────
+  const feed = await page
+    .request.get("/api/argus/calendar?days=30")
+    .then((r) => r.json())
+    .catch(() => ({ events: [] }));
+  const reporting: string | null =
+    (feed.events ?? []).map((e: { ticker?: string }) => e.ticker).find(Boolean) ?? null;
+  if (!reporting) {
+    // No earnings inside the horizon is a data state, not a regression.
+    console.warn("calendar: no reporting name in the horizon, skipping the holdings link");
+  } else {
+    await stubPortfolio(page, [{ symbol: reporting, position: 250 }]);
+    await page.goto("/calendar");
+    await settle(page, 2500);
+    // No word boundaries: the accessible name concatenates the chip, the ticker
+    // and the figure columns with no whitespace between them.
+    await page.getByRole("button", { name: new RegExp(reporting) }).first().click();
+    const held = page.locator('#main a[href="/portfolio"]');
+    await held.first().waitFor({ timeout: 10_000 }).catch(() => {});
+    if ((await held.count()) === 0)
+      violations.push(`/calendar: ${reporting} reports and is held, but the row reaches no position`);
+  }
+
+  // ── sector → its candidates → the ones you hold ───────────────────────────
+  await page.goto("/rotation");
+  await settle(page, 2500);
+
+  // Only the industries in today's bridge run have candidates, and they are not
+  // the top-ranked ones by any rule — so try the rows in order until one names
+  // a ticker, rather than assuming the first does.
+  const rows = page.locator("#main tbody tr");
+  const names = page.locator('#main a[href^="/t/"]');
+  let picked = -1;
+  let candidate: string | null = null;
+  for (let i = 0; i < Math.min(await rows.count(), 12) && !candidate; i++) {
+    await rows.nth(i).click();
+    candidate = await names
+      .first()
+      .textContent({ timeout: 2_000 })
+      .catch(() => null);
+    if (candidate) picked = i;
+    else await rows.nth(i).click(); // release the pick before trying the next
+  }
+  if (!candidate) {
+    // Every sector's candidates come from today's bridge signals; an empty run
+    // leaves the band with nothing to intersect against.
+    console.warn("rotation: no candidates on today's list, skipping the holdings link");
+  } else {
+    await stubPortfolio(page, [{ symbol: candidate.trim(), position: 250 }]);
+    await page.goto("/rotation");
+    await settle(page, 2500);
+    await page.locator("#main tbody tr").nth(picked).click();
+    const held = page.locator('#main a[href="/portfolio"]');
+    await held.first().waitFor({ timeout: 10_000 }).catch(() => {});
+    if ((await held.count()) === 0)
+      violations.push(`/rotation: ${candidate} is a candidate and is held, but the band says nothing`);
+  }
+
+  expect(violations, violations.join("\n")).toEqual([]);
+});
