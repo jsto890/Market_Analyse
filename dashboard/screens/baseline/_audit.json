@@ -3,18 +3,20 @@
     "status": 200,
     "consoleErrors": [],
     "metrics": {
-      "scrollHeight": 1260,
+      "scrollHeight": 1404,
       "clientHeight": 674,
       "contentWidth": 1048.5,
       "contentPadding": "24px 24px 24px 24px",
-      "tables": 2,
-      "rows": 38,
+      "tables": 1,
+      "rows": 2,
       "fontSizes": {
-        "13px": 687,
-        "11px": 122,
-        "15px": 7
+        "13px": 392,
+        "11px": 108,
+        "15px": 12,
+        "12px": 5,
+        "20px": 4
       },
-      "invisibleTips": 9,
+      "invisibleTips": 8,
       "titleAttrs": 0
     }
   },
@@ -22,15 +24,15 @@
     "status": 200,
     "consoleErrors": [],
     "metrics": {
-      "scrollHeight": 2768,
+      "scrollHeight": 2885,
       "clientHeight": 674,
       "contentWidth": 1048.5,
       "contentPadding": "24px 24px 24px 24px",
       "tables": 5,
-      "rows": 24,
+      "rows": 22,
       "fontSizes": {
-        "13px": 763,
-        "11px": 411,
+        "13px": 703,
+        "11px": 397,
         "15px": 11,
         "28px": 1
       },
@@ -49,8 +51,8 @@
       "tables": 0,
       "rows": 0,
       "fontSizes": {
-        "13px": 352,
-        "11px": 61,
+        "13px": 357,
+        "11px": 62,
         "15px": 2
       },
       "invisibleTips": 8,
@@ -68,8 +70,8 @@
       "tables": 1,
       "rows": 41,
       "fontSizes": {
-        "13px": 902,
-        "11px": 130,
+        "13px": 906,
+        "11px": 131,
         "15px": 3
       },
       "invisibleTips": 9,
@@ -87,8 +89,8 @@
       "tables": 0,
       "rows": 0,
       "fontSizes": {
-        "13px": 352,
-        "11px": 61,
+        "13px": 357,
+        "11px": 62,
         "15px": 2
       },
       "invisibleTips": 8,
@@ -106,8 +108,8 @@
       "tables": 1,
       "rows": 41,
       "fontSizes": {
-        "13px": 902,
-        "11px": 130,
+        "13px": 906,
+        "11px": 131,
         "15px": 3
       },
       "invisibleTips": 9,
@@ -125,8 +127,8 @@
       "tables": 0,
       "rows": 0,
       "fontSizes": {
-        "13px": 266,
-        "11px": 90,
+        "13px": 271,
+        "11px": 91,
         "15px": 6
       },
       "invisibleTips": 8,
@@ -144,8 +146,8 @@
       "tables": 0,
       "rows": 0,
       "fontSizes": {
-        "13px": 228,
-        "11px": 51,
+        "13px": 233,
+        "11px": 52,
         "15px": 2
       },
       "invisibleTips": 8,
@@ -163,28 +165,9 @@
       "tables": 0,
       "rows": 0,
       "fontSizes": {
-        "13px": 161,
-        "11px": 47,
+        "13px": 166,
+        "11px": 48,
         "15px": 1
-      },
-      "invisibleTips": 8,
-      "titleAttrs": 0
-    }
-  },
-  "/options/learn": {
-    "status": 200,
-    "consoleErrors": [],
-    "metrics": {
-      "scrollHeight": 1492,
-      "clientHeight": 674,
-      "contentWidth": 1048.5,
-      "contentPadding": "0px 0px 0px 0px",
-      "tables": 0,
-      "rows": 0,
-      "fontSizes": {
-        "13px": 274,
-        "11px": 47,
-        "15px": 6
       },
       "invisibleTips": 8,
       "titleAttrs": 0
@@ -194,19 +177,19 @@
     "status": 200,
     "consoleErrors": [],
     "metrics": {
-      "scrollHeight": 2318,
+      "scrollHeight": 2121,
       "clientHeight": 674,
       "contentWidth": 1048.5,
       "contentPadding": "24px 24px 24px 24px",
       "tables": 0,
       "rows": 0,
       "fontSizes": {
-        "13px": 869,
-        "11px": 451,
-        "15px": 4,
+        "13px": 805,
+        "11px": 418,
+        "15px": 3,
         "20px": 1
       },
-      "invisibleTips": 38,
+      "invisibleTips": 35,
       "titleAttrs": 0
     }
   },
@@ -214,16 +197,16 @@
     "status": 200,
     "consoleErrors": [],
     "metrics": {
-      "scrollHeight": 1706,
+      "scrollHeight": 1770,
       "clientHeight": 674,
       "contentWidth": 1048.5,
       "contentPadding": "24px 24px 24px 24px",
-      "tables": 2,
-      "rows": 32,
+      "tables": 1,
+      "rows": 31,
       "fontSizes": {
-        "13px": 715,
-        "11px": 80,
-        "15px": 3,
+        "13px": 616,
+        "11px": 72,
+        "15px": 4,
         "20px": 1
       },
       "invisibleTips": 7,
@@ -241,8 +224,8 @@
       "tables": 0,
       "rows": 0,
       "fontSizes": {
-        "13px": 140,
-        "11px": 43,
+        "13px": 148,
+        "11px": 45,
         "15px": 2,
         "20px": 1
       },
@@ -261,8 +244,8 @@
       "tables": 1,
       "rows": 1,
       "fontSizes": {
-        "13px": 154,
-        "11px": 46,
+        "13px": 150,
+        "11px": 45,
         "15px": 1,
         "20px": 1
       },
@@ -274,15 +257,15 @@
     "status": 200,
     "consoleErrors": [],
     "metrics": {
-      "scrollHeight": 838,
+      "scrollHeight": 860,
       "clientHeight": 674,
       "contentWidth": 880,
       "contentPadding": "24px 24px 24px 24px",
       "tables": 0,
       "rows": 0,
       "fontSizes": {
-        "13px": 166,
-        "11px": 43,
+        "13px": 175,
+        "11px": 44,
         "15px": 6,
         "20px": 1
       },
@@ -294,15 +277,16 @@
     "status": 200,
     "consoleErrors": [],
     "metrics": {
-      "scrollHeight": 1143,
+      "scrollHeight": 1044,
       "clientHeight": 674,
       "contentWidth": 1048.5,
       "contentPadding": "24px 24px 24px 24px",
       "tables": 1,
       "rows": 12,
       "fontSizes": {
-        "13px": 434,
+        "13px": 448,
         "11px": 117,
+        "10px": 4,
         "15px": 3,
         "20px": 1
       },
@@ -314,15 +298,15 @@
     "status": 200,
     "consoleErrors": [],
     "metrics": {
-      "scrollHeight": 1005,
+      "scrollHeight": 1045,
       "clientHeight": 674,
       "contentWidth": 1048.5,
       "contentPadding": "24px 24px 24px 24px",
       "tables": 1,
       "rows": 0,
       "fontSizes": {
-        "13px": 245,
-        "11px": 67,
+        "13px": 247,
+        "11px": 64,
         "15px": 2,
         "20px": 1
       },
@@ -334,15 +318,15 @@
     "status": 200,
     "consoleErrors": [],
     "metrics": {
-      "scrollHeight": 2263,
+      "scrollHeight": 2190,
       "clientHeight": 674,
       "contentWidth": 880,
       "contentPadding": "24px 24px 24px 24px",
       "tables": 0,
       "rows": 0,
       "fontSizes": {
-        "13px": 436,
-        "11px": 70,
+        "13px": 429,
+        "11px": 68,
         "15px": 6,
         "20px": 1
       },
@@ -350,19 +334,39 @@
       "titleAttrs": 0
     }
   },
-  "/glossary": {
+  "/learn": {
     "status": 200,
     "consoleErrors": [],
     "metrics": {
-      "scrollHeight": 3629,
+      "scrollHeight": 674,
       "clientHeight": 674,
       "contentWidth": 880,
       "contentPadding": "24px 24px 24px 24px",
       "tables": 0,
       "rows": 0,
       "fontSizes": {
-        "13px": 328,
-        "11px": 46,
+        "13px": 146,
+        "11px": 44,
+        "15px": 4,
+        "20px": 1
+      },
+      "invisibleTips": 7,
+      "titleAttrs": 0
+    }
+  },
+  "/learn/glossary": {
+    "status": 200,
+    "consoleErrors": [],
+    "metrics": {
+      "scrollHeight": 3706,
+      "clientHeight": 674,
+      "contentWidth": 880,
+      "contentPadding": "24px 24px 24px 24px",
+      "tables": 0,
+      "rows": 0,
+      "fontSizes": {
+        "13px": 336,
+        "11px": 47,
         "15px": 11,
         "20px": 1
       },
@@ -370,20 +374,40 @@
       "titleAttrs": 0
     }
   },
-  "/sources": {
+  "/learn/options": {
     "status": 200,
     "consoleErrors": [],
     "metrics": {
-      "scrollHeight": 7522,
+      "scrollHeight": 1488,
+      "clientHeight": 674,
+      "contentWidth": 880,
+      "contentPadding": "24px 24px 24px 24px",
+      "tables": 0,
+      "rows": 0,
+      "fontSizes": {
+        "13px": 252,
+        "11px": 47,
+        "15px": 6,
+        "20px": 1
+      },
+      "invisibleTips": 7,
+      "titleAttrs": 0
+    }
+  },
+  "/learn/data": {
+    "status": 200,
+    "consoleErrors": [],
+    "metrics": {
+      "scrollHeight": 7951,
       "clientHeight": 674,
       "contentWidth": 1048.5,
       "contentPadding": "24px 24px 24px 24px",
-      "tables": 2,
-      "rows": 169,
+      "tables": 3,
+      "rows": 177,
       "fontSizes": {
-        "13px": 1465,
-        "11px": 282,
-        "15px": 3,
+        "13px": 1514,
+        "11px": 289,
+        "15px": 5,
         "20px": 1
       },
       "invisibleTips": 7,
