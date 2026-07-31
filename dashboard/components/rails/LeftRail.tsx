@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { usePathname } from "next/navigation";
 import { useRailQuotes, RAIL_LABEL, type RailQuote } from "@/lib/rail-quotes";
 import { pickChangeBasis } from "@/lib/change-basis";
 import { STATE_LABEL } from "@/lib/market-clock";
@@ -109,8 +110,10 @@ function MiniItem({ symbol, changePct }: MiniItemProps) {
 }
 
 /** Collapsed-strip glyphs for blocks the 36px strip otherwise drops entirely
- * (LR-04) — one dot each for FX session, next calendar event, macro sentiment. */
-function HiddenBlockGlyphs() {
+ * (LR-04) — one dot each for FX session, next calendar event, macro sentiment.
+ * The macro dot goes when the macro page is already on screen: a compressed
+ * restatement of the same score is still the same score said twice. */
+function HiddenBlockGlyphs({ showMacro }: { showMacro: boolean }) {
   const { active, closed } = forexSessions();
   const fxLabel = closed
     ? "FX: closed"
@@ -144,9 +147,11 @@ function HiddenBlockGlyphs() {
       <InfoTip label={calLabel} content={calLabel}>
         <span aria-hidden className={`w-1.5 h-1.5 rounded-full ${calClass}`} />
       </InfoTip>
-      <InfoTip label={macroLabel} content={macroLabel}>
-        <span aria-hidden className={`w-1.5 h-1.5 rounded-full ${macroClass}`} />
-      </InfoTip>
+      {showMacro && (
+        <InfoTip label={macroLabel} content={macroLabel}>
+          <span aria-hidden className={`w-1.5 h-1.5 rounded-full ${macroClass}`} />
+        </InfoTip>
+      )}
     </div>
   );
 }
@@ -159,6 +164,9 @@ const NARROW_QUERY = "(max-width: 1279px)";
 export function LeftRail() {
   // Start expanded SSR; reconcile from localStorage/viewport on mount to avoid hydration mismatch
   const [collapsed, setCollapsed] = useState(false);
+  // The macro page shows every gauge in full; the rail's copy of the global
+  // one sits ~900px away saying the same thing. The rail is the one that loses.
+  const onMacroPage = (usePathname() ?? "").startsWith("/macro");
 
   useEffect(() => {
     const readStored = (): string | null => {
@@ -210,7 +218,7 @@ export function LeftRail() {
         <MiniItem symbol="SPY" changePct={spyQ?.change_pct} />
         <MiniItem symbol="QQQ" changePct={qqqQ?.change_pct} />
         <MiniItem symbol="^VIX" changePct={vixQ?.change_pct} />
-        <HiddenBlockGlyphs />
+        <HiddenBlockGlyphs showMacro={!onMacroPage} />
         {/* Expand button — bottom */}
         <button
           onClick={toggle}
@@ -289,7 +297,7 @@ export function LeftRail() {
 
       {/* Non-scrolling footer — always visible, no matter the viewport height (LR-05) */}
       <div className="flex-shrink-0">
-        <MacroGauges window="1d" />
+        {!onMacroPage && <MacroGauges window="1d" />}
 
         {/* Collapse button per spec §8.5 */}
         <button

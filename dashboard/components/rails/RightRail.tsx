@@ -91,17 +91,17 @@ export function RightRail() {
         {/* Expand button — top, per spec §6.2 */}
         <button
           onClick={toggle}
-          aria-label="Expand news rail"
+          aria-label="Expand chatter rail"
           className="w-9 h-9 flex items-center justify-center text-muted hover:text-foreground hover:bg-elevated"
         >
           <span className="text-body leading-none select-none">‹</span>
         </button>
-        {/* Rotated "NEWS" label per spec §6.2 */}
+        {/* Rotated label per spec §6.2 */}
         <span
           className="eyebrow tracking-[0.12em] mt-4"
           style={{ writingMode: "vertical-rl", transform: "rotate(180deg)" }}
         >
-          NEWS
+          CHATTER &amp; FLOW
         </span>
       </aside>
     );
@@ -119,12 +119,16 @@ export function RightRail() {
       <div className="sticky top-0 z-10 flex h-[26px] items-center justify-between gap-2 border-b border-line bg-surface px-2">
         <button
           onClick={toggle}
-          aria-label="Collapse news rail"
+          aria-label="Collapse chatter rail"
           className="-ml-1 flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-sm text-muted hover:bg-elevated hover:text-foreground"
         >
           <span className="text-body leading-none select-none">›</span>
         </button>
-        <span className="mr-auto eyebrow leading-none">News</span>
+        {/* Not "News": this feed is Discord chatter and whale prints, never
+         * press headlines — those live on the ticker page's News card, from a
+         * different table entirely. One label for each, so neither reads as a
+         * copy of the other. */}
+        <span className="mr-auto eyebrow leading-none">Chatter &amp; Flow</span>
         <NewsFeedHeader />
       </div>
 
@@ -198,7 +202,7 @@ function NewsFeedBody({ filter }: { filter: "all" | "mine" }) {
   if (error) {
     return (
       <Failed
-        title="News feed offline"
+        title="Chatter feed offline"
         message="The ingest service isn’t responding."
         className="m-3"
       />
@@ -219,24 +223,58 @@ function NewsFeedBody({ filter }: { filter: "all" | "mine" }) {
       <Empty
         message={
           filter === "mine"
-            ? "No news yet for the tickers on your watchlist."
-            : "No news yet — the feed starts when the ingest service runs."
+            ? "Nothing yet on the tickers on your watchlist."
+            : "No chatter or flow yet — the feed starts when the ingest service runs."
         }
       />
     );
   }
 
+  // An undifferentiated column of 60 rows reads as one blur; the hour is the
+  // unit a trader recalls in ("what came out after the open"). Rows stay in
+  // time order — the headers only say where each hour starts.
   return (
     <div>
-      {items.map((item: NewsItem) => (
-        <NewsRow key={item.id} item={item} />
+      {groupByHour(items).map(([label, group]) => (
+        <div key={label}>
+          <div className="sticky top-[26px] z-[9] border-b border-line bg-elevated px-3 py-0.5">
+            <span className="eyebrow leading-none">{label}</span>
+          </div>
+          {group.map((item: NewsItem) => (
+            <NewsRow key={item.id} item={item} onWatchlist={!!item.ticker && watchlist.has(item.ticker)} />
+          ))}
+        </div>
       ))}
     </div>
   );
 }
 
+/** Buckets an already-sorted feed by clock hour, keeping order. The date is
+ *  carried on the label only when the item is not from today — the common case
+ *  is a feed that never leaves the current session. */
+function groupByHour(items: NewsItem[]): [string, NewsItem[]][] {
+  const now = new Date();
+  const out: [string, NewsItem[]][] = [];
+  for (const item of items) {
+    const d = new Date(item.ts.replace(" ", "T"));
+    if (Number.isNaN(d.getTime())) {
+      if (out.length === 0 || out[out.length - 1][0] !== "Undated") out.push(["Undated", []]);
+      out[out.length - 1][1].push(item);
+      continue;
+    }
+    const sameDay = d.toDateString() === now.toDateString();
+    const hh = `${String(d.getHours()).padStart(2, "0")}:00`;
+    const label = sameDay
+      ? hh
+      : `${d.toLocaleDateString(undefined, { month: "short", day: "numeric" })} · ${hh}`;
+    if (out.length === 0 || out[out.length - 1][0] !== label) out.push([label, []]);
+    out[out.length - 1][1].push(item);
+  }
+  return out;
+}
+
 // ── Individual news row ───────────────────────────────────────────────────────
-function NewsRow({ item }: { item: NewsItem }) {
+function NewsRow({ item, onWatchlist }: { item: NewsItem; onWatchlist: boolean }) {
   const isBreaking = Boolean(item.is_breaking);
 
   // No per-source accent stripe: the feed is predominantly whale prints, so a
@@ -265,9 +303,14 @@ function NewsRow({ item }: { item: NewsItem }) {
           {shortSource(item.source)}
         </span>
         {item.ticker && (
+          /* A name you hold reads differently from a name you don't. The chip
+             is the only thing that separates the two in a 60-row feed. */
           <Link
             href={`/t/${item.ticker}`}
-            className="text-data text-accent leading-none ml-auto -my-1.5 py-1.5 px-1"
+            aria-label={onWatchlist ? `${item.ticker} — on your watchlist` : item.ticker}
+            className={`text-data leading-none ml-auto -my-1.5 py-1.5 px-1 ${
+              onWatchlist ? "rounded-sm bg-accent/15 text-accent font-medium" : "text-muted"
+            }`}
           >
             {item.ticker}
           </Link>

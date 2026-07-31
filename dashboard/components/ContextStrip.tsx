@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import useSWR from "swr";
 import * as Popover from "@radix-ui/react-popover";
 import { type UsMarketState } from "@/lib/market-clock";
@@ -51,10 +52,36 @@ export default function ContextStrip() {
 
   const { updatedAt: quotesUpdatedAt } = useRailQuotes();
 
+  // The chip names the session; this says how far into it you are — the
+  // difference between "RTH" and "RTH, four minutes from the close". Set on
+  // mount, never during SSR: a wall clock rendered on the server is a
+  // hydration mismatch by construction.
+  const [etTime, setEtTime] = useState<string | null>(null);
+  useEffect(() => {
+    const tick = () =>
+      setEtTime(
+        new Date().toLocaleTimeString("en-US", {
+          timeZone: "America/New_York",
+          hour: "2-digit",
+          minute: "2-digit",
+          hourCycle: "h23",
+        })
+      );
+    tick();
+    const id = setInterval(tick, 30_000);
+    return () => clearInterval(id);
+  }, []);
+
   const aggregate: DotState = data?.aggregate ?? "idle";
 
   return (
     <div className="flex items-center gap-3 text-body leading-none">
+      {etTime && (
+        <span className="font-mono text-micro text-muted select-none tabular-nums">
+          {etTime} ET
+        </span>
+      )}
+
       {/* Session chip (e.g. OVN / RTH / PRE) */}
       <span className="text-muted font-mono text-micro border border-line rounded px-1 py-px select-none">
         {sessionChip(clock)}

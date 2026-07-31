@@ -59,7 +59,7 @@ function Methodology({ window }: { window: string }) {
           <dt className="eyebrow">Corpus</dt>
           <dd className="text-2">
             Every item in the news store: the Discord feeds, RSS pulls and whale-flow alerts that
-            fill the news rail. Scored once on arrival by the aggregator, which runs every 20
+            fill the Chatter &amp; Flow rail. Scored once on arrival by the aggregator, which runs every 20
             minutes — each chart point is one of those runs.
           </dd>
         </div>
