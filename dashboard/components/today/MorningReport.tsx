@@ -202,7 +202,7 @@ export function MorningReport() {
   return (
     <section className="flex flex-col gap-3 rounded-md border border-line bg-elevated p-4">
       <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
-        <h2 className="tick text-title text-foreground">Morning brief</h2>
+        <h2 className="text-title text-foreground">Morning brief</h2>
         <span className="flex items-baseline gap-2 text-data text-muted">
           {data.weekday} {data.date}
           <Stale asOf={data.generated_at} variant="line" />

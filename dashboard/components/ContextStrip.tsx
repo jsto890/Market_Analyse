@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import useSWR from "swr";
 import * as Popover from "@radix-ui/react-popover";
-import { type UsMarketState } from "@/lib/market-clock";
+import type { UsMarketState } from "@/lib/market-clock";
 import { useMarketClock } from "@/lib/useMarketClock";
 import type { StatusPayload, DotState } from "@/lib/status";
 import { visibilityAwareInterval } from "@/lib/swr-visibility";
@@ -16,11 +16,19 @@ const fetcher = (url: string) =>
     return r.json();
   });
 
-const SESSION_CHIP: Record<UsMarketState, string> = {
+const SESSION_WORD: Record<UsMarketState, string> = {
   pre: "PRE",
-  regular: "RTH",
-  after: "AH",
+  regular: "OPEN",
+  after: "AFTER",
   closed: "CLOSED",
+};
+
+const SESSION_DOT: Record<string, string> = {
+  OPEN: "bg-pos",
+  PRE: "bg-warn",
+  AFTER: "bg-warn",
+  OVERNIGHT: "bg-muted",
+  CLOSED: "bg-muted",
 };
 
 const DOT_CLASS: Record<DotState, string> = {
@@ -30,18 +38,18 @@ const DOT_CLASS: Record<DotState, string> = {
   idle: "bg-muted",
 };
 
-const PILL_CLASS: Record<DotState, string> = {
-  ok: "border-teal text-teal",
-  warn: "border-warn text-warn",
-  down: "border-neg text-neg",
-  idle: "border-muted text-muted",
-};
-
-function sessionChip(clock: { us: UsMarketState; futures: "open" | "closed" }): string {
-  if (clock.us === "closed" && clock.futures === "open") return "OVN";
-  return SESSION_CHIP[clock.us];
+function sessionWord(clock: { us: UsMarketState; futures: "open" | "closed" }): string {
+  if (clock.us === "closed" && clock.futures === "open") return "OVERNIGHT";
+  return SESSION_WORD[clock.us];
 }
 
+/**
+ * One clock, and one only. The nav used to end in five: an ET time, a session
+ * chip, a SYS pill, the bridge age and the quote age — seven facts fighting for
+ * the same 46px, none of them read more than once a session. What stays is the
+ * session and the time. What moves in here is everything that answers "is this
+ * data current?" — a question you ask, not one that should be shouted at you.
+ */
 export default function ContextStrip() {
   const clock = useMarketClock();
   const { data } = useSWR<StatusPayload>("/api/status", fetcher, {
@@ -52,9 +60,7 @@ export default function ContextStrip() {
 
   const { updatedAt: quotesUpdatedAt } = useRailQuotes();
 
-  // The chip names the session; this says how far into it you are — the
-  // difference between "RTH" and "RTH, four minutes from the close". Set on
-  // mount, never during SSR: a wall clock rendered on the server is a
+  // Set on mount, never during SSR: a wall clock rendered on the server is a
   // hydration mismatch by construction.
   const [etTime, setEtTime] = useState<string | null>(null);
   useEffect(() => {
@@ -72,56 +78,56 @@ export default function ContextStrip() {
     return () => clearInterval(id);
   }, []);
 
+  const session = sessionWord(clock);
   const aggregate: DotState = data?.aggregate ?? "idle";
+  // The dot names the session. It only borrows the health colour when health is
+  // the more urgent fact — a dead feed outranks an open bell.
+  const dot =
+    aggregate === "down" ? "bg-neg" : aggregate === "warn" ? "bg-warn" : SESSION_DOT[session];
+  const tone = aggregate === "down" ? "text-neg" : aggregate === "warn" ? "text-warn" : "text-3";
 
   return (
-    <div className="flex items-center gap-3 text-body leading-none">
-      {etTime && (
-        <span className="font-mono text-micro text-muted select-none tabular-nums">
-          {etTime} ET
-        </span>
-      )}
-
-      {/* Session chip (e.g. OVN / RTH / PRE) */}
-      <span className="text-muted font-mono text-micro border border-line rounded px-1 py-px select-none">
-        {sessionChip(clock)}
-      </span>
-
-      {/* SYS health popover; click/Enter/Space opens service-status list */}
-      <Popover.Root>
-        <Popover.Trigger asChild>
-          <button
-            type="button"
-            aria-label="System status"
-            className={`inline-flex items-center gap-1 rounded-sm border border-line border-l-2 bg-elevated px-1.5 py-px font-mono text-micro font-semibold tracking-wide select-none ${PILL_CLASS[aggregate]}`}
-          >
-            SYS
-          </button>
-        </Popover.Trigger>
-        <Popover.Portal>
-          <Popover.Content
-            side="bottom"
-            sideOffset={4}
-            className="rounded bg-elevated border border-line px-2 py-1 text-body text-muted shadow-lg z-50 min-w-[180px]"
-          >
+    <Popover.Root>
+      <Popover.Trigger asChild>
+        <button
+          type="button"
+          aria-label="Session and data status"
+          className={`flex select-none items-center gap-1.5 font-mono text-micro leading-none tracking-normal ${tone} hover:text-foreground`}
+        >
+          <span className={`inline-block h-1.5 w-1.5 rounded-full ${dot}`} />
+          {session}
+          {etTime && <span className="tabular-nums">· {etTime} ET</span>}
+        </button>
+      </Popover.Trigger>
+      <Popover.Portal>
+        <Popover.Content
+          side="bottom"
+          align="end"
+          sideOffset={6}
+          className="z-50 min-w-[240px] rounded-md border border-line bg-elevated p-2.5 text-body text-muted shadow-lg"
+        >
+          <div className="flex flex-col gap-1.5">
             {(data?.services ?? []).map((s) => (
-              <div key={s.name} className="flex items-center gap-1.5 py-0.5">
-                <span className={`inline-block w-1.5 h-1.5 rounded-full ${DOT_CLASS[s.state]}`} />
+              <div key={s.name} className="flex items-center gap-1.5">
+                <span className={`inline-block h-1.5 w-1.5 rounded-full ${DOT_CLASS[s.state]}`} />
                 <span className="font-mono">{s.name}</span> — {s.detail}
               </div>
             ))}
             {!data && <div>status unavailable</div>}
-            <Popover.Arrow className="fill-elevated" />
-          </Popover.Content>
-        </Popover.Portal>
-      </Popover.Root>
-
-      {data?.bridgeTime && (
-        <Stale asOf={data.bridgeTime} source="bridge" variant="line" expectStale className="select-none" />
-      )}
-      {quotesUpdatedAt !== null && (
-        <Stale asOf={quotesUpdatedAt} source="quotes" variant="line" className="select-none" />
-      )}
-    </div>
+            {(data?.bridgeTime || quotesUpdatedAt !== null) && (
+              <div className="mt-0.5 flex flex-col gap-1 border-t border-line pt-1.5">
+                {data?.bridgeTime && (
+                  <Stale asOf={data.bridgeTime} source="bridge" variant="line" expectStale />
+                )}
+                {quotesUpdatedAt !== null && (
+                  <Stale asOf={quotesUpdatedAt} source="quotes" variant="line" />
+                )}
+              </div>
+            )}
+          </div>
+          <Popover.Arrow className="fill-elevated" />
+        </Popover.Content>
+      </Popover.Portal>
+    </Popover.Root>
   );
 }

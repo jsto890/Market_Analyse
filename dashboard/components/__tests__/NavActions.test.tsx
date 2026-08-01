@@ -4,14 +4,21 @@ import userEvent from "@testing-library/user-event";
 import NavActions from "@/components/NavActions";
 
 describe("NavActions", () => {
-  it("has a persistent '?' button that dispatches helpoverlay:open (G-02)", async () => {
-    const onHelpOpen = vi.fn();
-    window.addEventListener("helpoverlay:open", onHelpOpen);
+  it("opens the command palette from the ⌘K affordance (G-02)", async () => {
+    const onOpen = vi.fn();
+    window.addEventListener("commandk:open", onOpen);
 
     render(<NavActions />);
-    await userEvent.click(screen.getByRole("button", { name: "Show keyboard shortcuts" }));
+    await userEvent.click(screen.getByRole("button", { name: "Open command palette" }));
 
-    expect(onHelpOpen).toHaveBeenCalledTimes(1);
-    window.removeEventListener("helpoverlay:open", onHelpOpen);
+    expect(onOpen).toHaveBeenCalledTimes(1);
+    window.removeEventListener("commandk:open", onOpen);
+  });
+
+  it("carries Learn and nothing else beside the status cluster — one clock per page (G1)", () => {
+    render(<NavActions />);
+    expect(screen.getByRole("link", { name: "Learn" })).toHaveAttribute("href", "/learn");
+    // The '?' button is gone; the key still opens the overlay globally.
+    expect(screen.queryByRole("button", { name: "Show keyboard shortcuts" })).toBeNull();
   });
 });

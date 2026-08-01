@@ -1,9 +1,9 @@
 "use client";
 
-import { isEarnings, type CalEvent } from "@/lib/calendar";
+import { isEarnings, sessionsUntil, type CalEvent } from "@/lib/calendar";
 import { eventShortName } from "@/lib/eventMeta";
 
-/** "6 Aug" — a strip entry is a marker on a horizon, not a full date. */
+/** "6 Aug" — a marker on a horizon, not a full date. */
 function shortDate(date: string): string {
   return new Date(date + "T00:00:00").toLocaleDateString(undefined, {
     day: "numeric",
@@ -11,10 +11,14 @@ function shortDate(date: string): string {
   });
 }
 
+/** Near enough that a name reporting is something you plan around now, rather
+ *  than something that is merely on the horizon. */
+const SOON_SESSIONS = 8;
+
 /**
- * The month ahead in one line: every top-tier macro print, plus a count of the
- * watchlist earnings sharing each date. The week spine below answers "what is
- * on Thursday"; this answers "what is coming at all", which was previously only
+ * The month ahead in one card: the top-tier macro prints by name and date, and
+ * how many tracked names report. The week spine below answers "what is on
+ * Thursday"; this answers "what is coming at all", which was otherwise only
  * reachable by scrolling the whole list.
  */
 export default function MonthStrip({
@@ -26,54 +30,55 @@ export default function MonthStrip({
   today: string;
   watchlist: Set<string>;
 }) {
-  const macro = events.filter((e) => !isEarnings(e) && e.importance === "high");
-  const earningsByDate = new Map<string, number>();
+  const macro = events
+    .filter((e) => !isEarnings(e) && e.importance === "high")
+    .sort((a, b) => a.date.localeCompare(b.date));
+
+  // Earliest print per name: a ticker with two dates in the horizon is one name
+  // reporting, and it is the nearer date that decides whether it is imminent.
+  const firstPrint = new Map<string, string>();
   for (const e of events) {
-    if (!isEarnings(e)) continue;
-    if (e.ticker == null || !watchlist.has(e.ticker.toUpperCase())) continue;
-    earningsByDate.set(e.date, (earningsByDate.get(e.date) ?? 0) + 1);
+    if (!isEarnings(e) || e.ticker == null) continue;
+    const t = e.ticker.toUpperCase();
+    if (!watchlist.has(t)) continue;
+    const seen = firstPrint.get(t);
+    if (!seen || e.date < seen) firstPrint.set(t, e.date);
   }
+  const names = firstPrint.size;
+  const soon = Array.from(firstPrint.values()).filter(
+    (d) => sessionsUntil(today, d) <= SOON_SESSIONS
+  ).length;
 
-  if (macro.length === 0 && earningsByDate.size === 0) return null;
-
-  const dates = Array.from(
-    new Set([...macro.map((e) => e.date), ...Array.from(earningsByDate.keys())])
-  ).sort();
+  if (macro.length === 0 && names === 0) return null;
 
   return (
-    <div className="overflow-x-auto rounded-md border border-line bg-surface">
-      <ol className="flex min-w-max items-stretch">
-        {dates.map((date) => {
-          const prints = macro.filter((e) => e.date === date);
-          const earnings = earningsByDate.get(date) ?? 0;
-          return (
-            <li
-              key={date}
-              className={`min-w-[104px] max-w-[168px] border-r border-line px-2.5 py-2 last:border-r-0 ${
-                date === today ? "bg-accent/5" : ""
-              }`}
-            >
-              <p
-                className={`text-micro font-semibold uppercase tracking-[0.08em] ${
-                  date === today ? "text-accent" : "text-muted"
-                }`}
-              >
-                {date === today ? "Today" : shortDate(date)}
-              </p>
-              {prints.map((e, i) => (
-                <p key={`${e.event}-${i}`} className="truncate text-body text-foreground">
-                  {eventShortName(e.event, e.category, e.ticker)}
-                </p>
+    <div className="rounded-md border border-line bg-elevated px-4 py-3">
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+        <p className="eyebrow shrink-0">Month ahead</p>
+        {macro.length > 0 && (
+          <>
+            <span className="shrink-0 text-body text-2">
+              {macro.length} top-tier {macro.length === 1 ? "print" : "prints"}:
+            </span>
+            <div className="flex flex-wrap items-center gap-1.5">
+              {macro.map((e, i) => (
+                <span
+                  key={`${e.event}-${e.date}-${i}`}
+                  className="whitespace-nowrap rounded border border-neg/40 px-1.5 py-0.5 font-mono text-label font-semibold text-neg"
+                >
+                  {eventShortName(e.event, e.category, e.ticker)} · {shortDate(e.date)}
+                </span>
               ))}
-              {earnings > 0 && (
-                <p className="text-body text-accent">
-                  {earnings} watchlist {earnings === 1 ? "print" : "prints"}
-                </p>
-              )}
-            </li>
-          );
-        })}
-      </ol>
+            </div>
+          </>
+        )}
+        {names > 0 && (
+          <span className="ml-auto shrink-0 text-body text-3">
+            {names} watchlist {names === 1 ? "name reports" : "names report"}
+            {soon > 0 && ` · ${soon} in the next ${SOON_SESSIONS} sessions`}
+          </span>
+        )}
+      </div>
     </div>
   );
 }

@@ -45,7 +45,11 @@ describe("PinToggle", () => {
   it("text variant: renders an inline Pin/Unpin link with aria-pressed", async () => {
     mockFetchJson({ "/api/watchlist": { watchlist: [] } });
     render(withProvider(<PinToggle symbol="AAPL" variant="text" />));
-    const btn = await screen.findByRole("button", { name: "Pin" });
+    // Named with the symbol, not just "Pin": on the watchlist this control sits
+    // once per row, and a screen reader reading four identical "Pin" buttons
+    // cannot tell you which row it is on.
+    const btn = await screen.findByRole("button", { name: "Pin AAPL" });
+    expect(btn).toHaveTextContent("Pin");
     expect(btn).toHaveAttribute("aria-pressed", "false");
   });
 });

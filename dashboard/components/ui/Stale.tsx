@@ -72,6 +72,11 @@ export default function Stale({
   const detail =
     ms === null ? (
       <span className="text-muted">no timestamp</span>
+    ) : isStale && now !== null ? (
+      // Once it is stale, how old it is is the whole story. The wall-clock time
+      // it was produced is a third fact to read that changes nothing about what
+      // you do next, and five days ago it is not even a time you recognise.
+      <span className="text-muted">{age(ms, now)}</span>
     ) : (
       <>
         <span className="text-muted">as of </span>

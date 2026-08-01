@@ -97,7 +97,7 @@ function PositionCard({ r }: { r: PositionRow }) {
           <p className="mt-1 text-body text-2">{PORTFOLIO_EDGE_LABEL[r.edge]}</p>
         </div>
       )}
-      <ActionBar symbol={r.symbol} className="mt-2" />
+      <ActionBar symbol={r.symbol} fill className="mt-2" />
     </div>
   );
 }

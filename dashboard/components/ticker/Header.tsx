@@ -265,8 +265,14 @@ export default function Header({
         )}
 
         {/* Actions (TH-07). The options block is on this page, so that one is a
-            jump rather than a navigation. */}
-        <ActionBar symbol={ticker} optionsHref="#options" className="ml-auto" />
+            jump rather than a navigation. Compare and Copy live here and only
+            here: they are things you do to a name you are already reading. */}
+        <ActionBar
+          symbol={ticker}
+          actions={["pin", "alert", "options", "compare", "copy"]}
+          optionsHref="#options"
+          className="ml-auto"
+        />
       </div>
 
       {/* This call, the cohort it belongs to, and the comparison between them —

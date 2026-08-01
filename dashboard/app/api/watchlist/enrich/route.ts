@@ -15,6 +15,9 @@ export interface EnrichedTicker {
   /** Close 5 and 21 sessions back — the 1W and 1M reference points. */
   w5: number | null;
   m21: number | null;
+  /** The last 12 closes, oldest first. Already inside the six months of bars
+   *  this route fetches to compute w5/m21 — it was being thrown away. */
+  spark: number[];
   /** Most recent report date this ticker appeared on, when asked for. */
   lastSignal?: string | null;
 }
@@ -37,9 +40,9 @@ async function history(ticker: string): Promise<EnrichedTicker> {
       signal: AbortSignal.timeout(15000),
     });
     const cs = closes(await res.json());
-    return { last: back(cs, 0), w5: back(cs, 5), m21: back(cs, 21) };
+    return { last: back(cs, 0), w5: back(cs, 5), m21: back(cs, 21), spark: cs.slice(-12) };
   } catch {
-    return { last: null, w5: null, m21: null };
+    return { last: null, w5: null, m21: null, spark: [] };
   }
 }
 

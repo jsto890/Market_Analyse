@@ -19,7 +19,7 @@ export const HEADER_GLOSS: Record<string, string> = {
   HC: "High conviction — ≥75% of the indicator ensemble agrees and the verdict isn't WAIT. That is consensus, not edge: it says the signals line up, not that the trade is better.",
   "Agree%": "Agreement — share of voting agents aligned with the ensemble's final verdict direction.",
   "R:R": "Risk:reward — modeled target distance divided by modeled stop distance from entry.",
-  "◉": "Quadrant — Leading / Improving / Weakening / Lagging (JdK RRG rotation quadrant). Hover/focus the dot for the current quadrant.",
+  Quadrant: "Which JdK RRG quadrant the sector sits in — Leading (strong and still gaining), Improving (weak but gaining), Weakening (strong but losing) or Lagging (weak and still losing).",
   Δrank: "Change in rank since the prior session. ~72% of ±1-place moves are noise — treat single-step changes with caution.",
 };
 

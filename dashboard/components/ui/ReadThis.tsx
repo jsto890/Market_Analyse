@@ -5,13 +5,12 @@ import type { ReactNode } from "react";
  * for and what would make you act. Not a tooltip, not collapsible, not a
  * caveat repeated four times — one strip, at the bottom, above the panel edge.
  *
- * 12px is deliberate and lives only here: the strip is panel chrome sitting
- * under 13px content, and the design specifies it explicitly. Nothing else in
- * the app may declare a 12px size.
+ * 12px is deliberate: the strip is panel chrome sitting under 13px content.
+ * That size is the `label` role, so it is named rather than declared.
  */
 export default function ReadThis({ children }: { children: ReactNode }) {
   return (
-    <p className="m-0 border-t border-line px-4 py-2.5 text-[12px] leading-[1.5] text-muted">
+    <p className="m-0 border-t border-line px-4 py-2.5 text-label leading-[1.5] text-muted">
       <span className="text-2">Read this</span> — {children}
     </p>
   );

@@ -80,7 +80,7 @@ export default function LevelsCard({ ticker, bridgeRow }: LevelsCardProps) {
   return (
     <section className="rounded-md border border-line bg-elevated">
       <div className="flex items-center gap-2 border-b border-line px-4 py-3">
-        <span className="tick text-title text-foreground">Trade plan</span>
+        <span className="text-title text-foreground">Trade plan</span>
         <InfoTip content="Entry, stop and target from the live scorer, drawn on the chart. Context, not a mechanical exit system." label="How these levels are set" />
       </div>
 

@@ -18,8 +18,12 @@ describe("RotationPage header (RO-08)", () => {
     render(<RotationPage />);
 
     expect(screen.getByText("Sector Rotation")).toBeInTheDocument();
-    expect(screen.getByText(/as of/)).toBeInTheDocument();
-    expect(screen.getByText(/run_daily/)).toBeInTheDocument();
+    // Stale by a mile at a 1440-minute threshold, so the age is the whole
+    // staleness statement — no wall clock beside it, and no cron-job name.
+    expect(screen.getByText("Stale")).toBeInTheDocument();
+    expect(screen.getByText(/ago$/)).toBeInTheDocument();
+    expect(screen.queryByText(/as of/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/run_daily/)).not.toBeInTheDocument();
   });
 
   it("shows the warn banner and no timestamp when the rotation file is missing", () => {

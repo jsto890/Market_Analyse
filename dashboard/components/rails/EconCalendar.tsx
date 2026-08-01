@@ -1,25 +1,17 @@
 "use client";
 
 import Link from "next/link";
-import { useCalendar, dayLabel, importanceChipClass, importanceMeta, type CalEvent } from "@/lib/calendar";
+import { useCalendar, dayLabel, type CalEvent } from "@/lib/calendar";
 import { eventShortName } from "@/lib/eventMeta";
-
-/** Visible one-letter rank — the dot alone was hover-only, so two 08:30 events read identically (MAC-04). */
-const RANK_LETTER: Record<string, string> = { high: "H", medium: "M", low: "L" };
+import RankText from "@/components/ui/RankText";
 
 function Row({ ev, today }: { ev: CalEvent; today: string }) {
   const isToday = ev.date === today;
-  const meta = importanceMeta(ev.importance);
   return (
     <div className={`px-3 py-1 flex items-center gap-1.5 ${isToday ? "bg-accent/5" : ""}`}>
-      <span
-        // No native title: it repeated the sr-only label mouse-only, once per
-        // row. The H/M/L key sits in the section header instead.
-        className={`flex-shrink-0 rounded-sm border px-1 font-mono text-micro leading-[14px] ${importanceChipClass(ev.importance)}`}
-      >
-        {RANK_LETTER[ev.importance] ?? "·"}
-        <span className="sr-only"> {meta.label}</span>
-      </span>
+      {/* Same rank in the same slot as the calendar page — one glyph, one
+          meaning, wherever a release is listed. */}
+      <RankText importance={ev.importance} className="leading-[14px]" />
       <span className={`text-data w-12 flex-shrink-0 ${isToday ? "text-foreground" : "text-muted"}`}>
         {dayLabel(ev.date, today)}
       </span>
@@ -42,7 +34,7 @@ export function EconCalendar({ days = 7, max = 6 }: { days?: number; max?: numbe
     <div className="border-t border-line-strong">
       <div className="h-[24px] flex items-center justify-between gap-2 px-3">
         <span className="eyebrow leading-none">What&rsquo;s Next</span>
-        <span className="font-mono text-micro leading-none text-muted">H·M·L impact</span>
+        <span className="font-mono text-micro leading-none text-muted">impact</span>
       </div>
       {events.length === 0
         ? <p className="px-3 py-1 text-body text-muted">No events scheduled.</p>

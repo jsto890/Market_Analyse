@@ -45,17 +45,32 @@ describe("WatchlistClient pinned cards (WL-06)", () => {
       "/api/signals/recent?days=14": [],
       "/api/signals/dates": [],
       "/api/watchlist/enrich?tickers=NVDA,AMD&signals=1": {
-        NVDA: { last: 110, w5: null, m21: null, lastSignal: "2026-07-30" },
-        AMD: { last: 90, w5: null, m21: null, lastSignal: null },
+        NVDA: { last: 110, w5: null, m21: null, spark: [], lastSignal: "2026-07-30" },
+        AMD: { last: 90, w5: null, m21: null, spark: [], lastSignal: null },
       },
     });
     render(<WatchlistClient medianDaysToPeak={12} />);
-    expect(await screen.findByText("+10.0%")).toBeInTheDocument();
-    expect(screen.getByText("-10.0%")).toBeInTheDocument();
-    expect(screen.getByText("Last on a report 2026-07-30")).toBeInTheDocument();
+    // NVDA's +10% is the card, the best chip and — with two names — the median
+    // chip too; AMD's -10% is the card and the worst chip.
+    expect(await screen.findAllByText("+10.0%")).toHaveLength(3);
+    expect(screen.getAllByText("-10.0%")).toHaveLength(2);
   });
 
-  it("filters the grid from the summary strip's own counts", async () => {
+  it("draws the card's sparkline from the same twelve closes the change reads", async () => {
+    mockFetchJson({
+      ...baseMocks(),
+      "/api/watchlist/enrich?tickers=NVDA&signals=1": {
+        NVDA: { last: 130, w5: null, m21: null, spark: [100, 101, 99, 102, 104, 103, 106, 108, 107, 110, 125, 130] },
+      },
+    });
+    render(<WatchlistClient medianDaysToPeak={12} />);
+    // Twelve bars, and the day change is the last close against the one before
+    // it — 125 → 130 — not a separate feed that could disagree with the bars.
+    await screen.findByText("+4.0%");
+    expect(document.querySelectorAll("div[aria-hidden] > span").length).toBe(12);
+  });
+
+  it("names the ends of the list and isolates the names with a print due", async () => {
     mockFetchJson({
       "/api/watchlist": {
         watchlist: [
@@ -66,16 +81,27 @@ describe("WatchlistClient pinned cards (WL-06)", () => {
       "/api/bridge": { signals: [] },
       "/api/signals/recent?days=14": [],
       "/api/signals/dates": [],
+      "/api/argus/calendar?days=30": {
+        today: "2026-08-01",
+        days: 30,
+        events: [
+          { date: "2026-08-03", time_et: null, event: "AMD earnings", category: "earnings",
+            importance: "high", source: "seed", ticker: "AMD" },
+        ],
+      },
       "/api/watchlist/enrich?tickers=NVDA,AMD&signals=1": {
-        NVDA: { last: 110, w5: null, m21: null, lastSignal: null },
-        AMD: { last: 90, w5: null, m21: null, lastSignal: null },
+        NVDA: { last: 110, w5: null, m21: null, spark: [] },
+        AMD: { last: 90, w5: null, m21: null, spark: [] },
       },
     });
     const user = userEvent.setup();
     render(<WatchlistClient medianDaysToPeak={12} />);
-    await screen.findByText("+10.0%");
+    await screen.findAllByText("+10.0%");
 
-    await user.click(screen.getByRole("button", { name: /down since pin/ }));
+    expect(screen.getByText("best · NVDA")).toBeInTheDocument();
+    expect(screen.getByText("worst · AMD")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: /earnings/ }));
     expect(screen.queryByRole("link", { name: "NVDA" })).not.toBeInTheDocument();
     expect(screen.getByRole("link", { name: "AMD" })).toBeInTheDocument();
 

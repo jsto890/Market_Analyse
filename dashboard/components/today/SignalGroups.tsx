@@ -392,16 +392,7 @@ function SignalCard({
         <span className="text-2">{fmtNum(row.risk_reward, 1)}x</span>
       </div>
 
-      <div className="flex flex-wrap items-center gap-3">
-        <ActionBar symbol={row.ticker} />
-        <Link
-          href={`/t/${row.ticker}`}
-          onClick={onOpen}
-          className="text-body text-accent hover:underline"
-        >
-          Open →
-        </Link>
-      </div>
+      <ActionBar symbol={row.ticker} onOpen={onOpen} fill />
     </article>
   );
 }

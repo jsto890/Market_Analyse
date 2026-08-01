@@ -112,7 +112,7 @@ def build_report(now: datetime, gauges: list[dict], events: list[dict],
             {"ticker": h["ticker"], "headline": h["headline"]}
             for h in headlines
             if h.get("ticker") and h["ticker"].upper() in watchlist
-        ],
+        ][:limit],
     }
     return {
         "day_ahead": day_ahead,
@@ -190,8 +190,14 @@ def generate(conn=None, now: datetime | None = None, limit: int = 6,
         ensure_news_schema(conn)
         gauges = [dict(r) for r in latest_macro(conn)]
         events = [dict(r) for r in calendar_upcoming(conn, now.strftime("%Y-%m-%d"), days)]
-        # newest headlines first
-        headlines = [dict(r) for r in reversed(fetch_latest(conn, max(8, limit)))]
+        # Newest headlines first, press only. A whale print is flow, not a
+        # headline — it has the options surface — and it arrives often enough
+        # that the newest eight rows were all whale, which left the brief's
+        # headline list and its watchlist chips reading as option strings.
+        # The window is wide because watchlist-tagged press is sparse: the chips
+        # filter it down to a handful, and eight rows rarely contain any.
+        headlines = [dict(r) for r in reversed(
+            fetch_latest(conn, max(200, limit), exclude_sources=("whale",)))]
         futures = _futures_snapshot()
         return build_report(now, gauges, events, headlines, futures,
                             watchlist=_watchlist_tickers(),

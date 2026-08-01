@@ -36,13 +36,21 @@ def fetch_after(conn, after_id: int = 0, limit: int = 200) -> list:
         (after_id, limit)).fetchall()
 
 
-def fetch_latest(conn, limit: int = 60) -> list:
+def fetch_latest(conn, limit: int = 60, exclude_sources: tuple[str, ...] = ()) -> list:
     """The newest `limit` items, returned in ASCENDING id order (so a feed that
     reverses for display shows newest-first). The rail's display window — distinct
-    from fetch_after's forward cursor pagination."""
+    from fetch_after's forward cursor pagination.
+
+    `exclude_sources` drops whole feeds before the limit applies, so a caller that
+    wants press does not have to over-fetch past the flow rows and filter after."""
+    where, params = "", []
+    if exclude_sources:
+        where = f"WHERE source NOT IN ({','.join('?' * len(exclude_sources))}) "
+        params.extend(exclude_sources)
+    params.append(limit)
     return conn.execute(
-        "SELECT * FROM (SELECT * FROM news_items ORDER BY id DESC LIMIT ?) ORDER BY id ASC",
-        (limit,)).fetchall()
+        f"SELECT * FROM (SELECT * FROM news_items {where}ORDER BY id DESC LIMIT ?) "
+        "ORDER BY id ASC", params).fetchall()
 
 
 def fetch_for_ticker(conn, ticker: str, limit: int = 30) -> list:

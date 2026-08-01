@@ -48,11 +48,13 @@ export const IMPORTANCE_RANK: Record<string, string> = {
   low: "LOW",
 };
 
-/** Text tone for the importance chip — a visible rank, not a hover-only dot (MAC-04). */
+/** Tone for the importance rank — bare text, no box. A border and a fill around
+ *  a three-letter code is furniture repeated on every row of a 28-row day; the
+ *  colour alone carries the tier (MAC-04). */
 export function importanceChipClass(importance: string): string {
-  if (importance === "high") return "border-warn/50 bg-warn/10 text-warn";
-  if (importance === "medium") return "border-accent/40 bg-accent/10 text-accent";
-  return "border-line bg-raised text-muted";
+  if (importance === "high") return "text-neg";
+  if (importance === "medium") return "text-warn";
+  return "text-muted";
 }
 
 /** Offset (ms) between a timezone's wall clock and UTC at a given instant. */
@@ -186,4 +188,60 @@ export function fullDayLabel(date: string): string {
   return new Date(date + "T00:00:00").toLocaleDateString(undefined, {
     weekday: "long", day: "numeric", month: "short",
   });
+}
+
+/** "Fri 31" — the day spine. The month is already on the week heading above it,
+ *  so repeating it in every cell prints the same label thirty times.
+ *
+ *  Weekday and number are composed rather than left to `Intl`: given both parts
+ *  a day-first locale returns "31 Fri", which reads as a number and a word. */
+export function shortDayLabel(date: string): string {
+  const d = new Date(date + "T00:00:00");
+  return `${d.toLocaleDateString(undefined, { weekday: "short" })} ${d.getDate()}`;
+}
+
+/**
+ * Trading sessions from `from` (exclusive) to `to` (inclusive). A weekday count:
+ * no feed we carry lists market holidays, so this is deliberately the simple
+ * version rather than one that pretends to know about Thanksgiving.
+ */
+export function sessionsUntil(from: string, to: string): number {
+  const end = new Date(to + "T00:00:00").getTime();
+  const d = new Date(from + "T00:00:00");
+  let n = 0;
+  while (d.getTime() < end) {
+    d.setDate(d.getDate() + 1);
+    if (d.getDay() !== 0 && d.getDay() !== 6) n++;
+  }
+  return n;
+}
+
+function dayMonth(date: string): string {
+  return new Date(date + "T00:00:00").toLocaleDateString(undefined, {
+    day: "numeric", month: "short",
+  });
+}
+
+function addDays(date: string, n: number): string {
+  const d = new Date(date + "T00:00:00");
+  d.setDate(d.getDate() + n);
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  return `${d.getFullYear()}-${mm}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+/**
+ * "28 Jul – 1 Aug · 1 session left" — the span a spine heading covers. A named
+ * week is its own Mon–Fri whether or not every day of it has an event; the
+ * collapsed tail runs from its first event to its last, because it is not a week.
+ */
+export function weekRangeLabel(week: CalWeek, today: string): string {
+  const tail = week.label.startsWith("Later");
+  const dates = week.events.map((e) => e.date).sort();
+  const from = tail ? dates[0] ?? week.start : week.start;
+  const to = tail ? dates[dates.length - 1] ?? week.start : addDays(week.start, 4);
+  const range = `${dayMonth(from)} – ${dayMonth(to)}`;
+  if (week.label !== "This week") return range;
+  const dow = new Date(today + "T00:00:00").getDay();
+  const left = sessionsUntil(today, to) + (dow !== 0 && dow !== 6 ? 1 : 0);
+  return left > 0 ? `${range} · ${left} session${left === 1 ? "" : "s"} left` : range;
 }

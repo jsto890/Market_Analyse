@@ -93,9 +93,11 @@ function MiniItem({ symbol, changePct }: MiniItemProps) {
       : changePct > 0
       ? "text-pos"
       : "text-neg";
+  // One decimal, not two: at 11px mono `+0.72%` is six characters in a 36px
+  // strip and the `%` falls off the edge. The strip is a glance, not a quote.
   const pctStr =
     changePct !== undefined
-      ? `${changePct >= 0 ? "+" : ""}${changePct.toFixed(2)}%`
+      ? `${changePct >= 0 ? "+" : ""}${changePct.toFixed(1)}%`
       : "—";
 
   return (
@@ -160,7 +162,7 @@ function HiddenBlockGlyphs({ showMacro }: { showMacro: boolean }) {
 const LS_KEY = "rail-left-collapsed";
 const NARROW_QUERY = "(max-width: 1279px)";
 
-export function LeftRail() {
+export function LeftRail({ dense = false }: { dense?: boolean }) {
   // Start expanded SSR; reconcile from localStorage/viewport on mount to avoid hydration mismatch
   const [collapsed, setCollapsed] = useState(false);
   // The macro page shows every gauge in full; the rail's copy of the global
@@ -168,6 +170,13 @@ export function LeftRail() {
   const onMacroPage = (usePathname() ?? "").startsWith("/macro");
 
   useEffect(() => {
+    // Off Today the rail is a strip, whatever was stored: those routes centre a
+    // single column and the tape is furniture beside it, not the subject.
+    if (dense) {
+      setCollapsed(true);
+      return;
+    }
+
     const readStored = (): string | null => {
       try {
         return window.localStorage.getItem(LS_KEY);
@@ -190,7 +199,7 @@ export function LeftRail() {
     };
     mql.addEventListener("change", onChange);
     return () => mql.removeEventListener("change", onChange);
-  }, []);
+  }, [dense]);
 
   const toggle = () => {
     setCollapsed((prev) => {
@@ -213,7 +222,7 @@ export function LeftRail() {
     const vixQ = data?.quotes.find((q) => q.symbol === "^VIX");
 
     return (
-      <aside className="w-9 flex-shrink-0 order-1 flex flex-col items-center py-1 gap-0 border-r border-line bg-surface sticky top-[var(--nav-h)] h-[calc(100vh-var(--nav-h))] overflow-y-auto font-mono">
+      <aside className="w-[var(--rail-collapsed)] flex-shrink-0 order-1 flex flex-col items-center py-1 gap-0 border-r border-line bg-surface sticky top-[var(--nav-h)] h-[calc(100vh-var(--nav-h))] overflow-y-auto font-mono">
         <MiniItem symbol="SPY" changePct={spyQ?.change_pct} />
         <MiniItem symbol="QQQ" changePct={qqqQ?.change_pct} />
         <MiniItem symbol="^VIX" changePct={vixQ?.change_pct} />
@@ -262,7 +271,7 @@ export function LeftRail() {
 
   return (
     <aside
-      className="w-[200px] flex-shrink-0 order-1 bg-surface border-r border-line font-mono sticky top-[var(--nav-h)] h-[calc(100vh-var(--nav-h))] flex flex-col"
+      className="w-[var(--rail-l)] flex-shrink-0 order-1 bg-surface border-r border-line font-mono sticky top-[var(--nav-h)] h-[calc(100vh-var(--nav-h))] flex flex-col"
     >
       <div className="pt-1 flex-1 min-h-0 overflow-y-auto">
         {error && (

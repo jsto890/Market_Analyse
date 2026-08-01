@@ -4,7 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { mockFetchJson } from "@/test/fetchMock";
 import ContextStrip from "@/components/ContextStrip";
 
-describe("ContextStrip SYS pill", () => {
+describe("ContextStrip status cluster", () => {
   it("is real button, closed default, opened on click — not hover-only (G-06)", async () => {
     mockFetchJson({
       "/api/status": {
@@ -15,7 +15,7 @@ describe("ContextStrip SYS pill", () => {
     });
 
     render(<ContextStrip />);
-    const trigger = await screen.findByRole("button", { name: "System status" });
+    const trigger = await screen.findByRole("button", { name: "Session and data status" });
     expect(trigger).toHaveAttribute("aria-expanded", "false");
     expect(screen.queryByText("bridge")).not.toBeInTheDocument();
 
@@ -25,7 +25,7 @@ describe("ContextStrip SYS pill", () => {
     expect(await screen.findByText("bridge")).toBeInTheDocument();
   });
 
-  it("shows bridge time and quotes age so staleness is visible at a glance (G-07)", async () => {
+  it("keeps the two staleness facts behind the cluster, not in the nav bar (G1)", async () => {
     mockFetchJson({
       "/api/status": {
         aggregate: "ok",
@@ -41,8 +41,13 @@ describe("ContextStrip SYS pill", () => {
 
     render(<ContextStrip />);
 
-    // Both freshness readouts now go through the shared `Stale` idiom, which
-    // prints provenance and age rather than a hand-rolled "bridge HH:MM" string.
+    // One clock on the page: the ages are a click away, never printed beside it.
+    expect(screen.queryByText("· bridge")).not.toBeInTheDocument();
+
+    await userEvent.click(await screen.findByRole("button", { name: "Session and data status" }));
+
+    // Both freshness readouts go through the shared `Stale` idiom, which prints
+    // provenance and age rather than a hand-rolled "bridge HH:MM" string.
     const bridge = await screen.findByText("· bridge");
     expect(bridge.parentElement!.textContent).toMatch(/as of \d{1,2}:\d{2} · \d+m ago/);
 
@@ -52,17 +57,18 @@ describe("ContextStrip SYS pill", () => {
 });
 
 describe("ContextStrip market clock", () => {
-  it("states the exchange time, not just which session it is", async () => {
+  it("states the session and the exchange time in one cluster", async () => {
     mockFetchJson({ "/api/status": { aggregate: "ok", services: [], bridgeTime: null } });
     render(<ContextStrip />);
-    const clock = await screen.findByText(/^\d{2}:\d{2} ET$/);
-    // Same wall clock the session chip is derived from, so the two never disagree.
+    const trigger = await screen.findByRole("button", { name: "Session and data status" });
+    // Same wall clock the session word is derived from, so the two never disagree.
     const et = new Date().toLocaleTimeString("en-US", {
       timeZone: "America/New_York",
       hour: "2-digit",
       minute: "2-digit",
       hourCycle: "h23",
     });
-    expect(clock).toHaveTextContent(`${et} ET`);
+    expect(trigger).toHaveTextContent(`${et} ET`);
+    expect(trigger.textContent).toMatch(/^(OPEN|PRE|AFTER|OVERNIGHT|CLOSED)/);
   });
 });

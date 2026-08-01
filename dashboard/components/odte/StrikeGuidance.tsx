@@ -80,7 +80,7 @@ export default function StrikeGuidance({ spot, zeroGamma, callWall, putWall, atm
   return (
     <section className="rounded-md border border-line bg-elevated">
       <div className="flex flex-wrap items-center gap-2 px-4 py-2.5">
-        <span className="tick text-title text-foreground">Strike guidance</span>
+        <span className="text-title text-foreground">Strike guidance</span>
         <span className="text-body text-3">levels → what to actually trade</span>
         <span
           className={`ml-auto inline-flex items-center gap-1 rounded border px-1.5 py-px font-mono text-micro ${

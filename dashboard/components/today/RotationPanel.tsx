@@ -1,7 +1,6 @@
 "use client";
 
 import { useMemo } from "react";
-import * as Tooltip from "@radix-ui/react-tooltip";
 import Panel from "@/components/ui/Panel";
 import DataTable, { type Column } from "@/components/ui/DataTable";
 import InfoTip from "@/components/ui/InfoTip";
@@ -36,26 +35,17 @@ interface RotationPanelProps {
 }
 
 
-function QuadrantDot({ quadrant }: { quadrant: string }) {
+/** Dot plus word. The dot keys the row to its colour on the RRG above; the word
+ *  is what the column actually says, and a colour alone said it only to people
+ *  who hovered it and could tell four hues apart. */
+function QuadrantCell({ quadrant }: { quadrant: string }) {
   const color = QUADRANT_COLOR[quadrant] ?? "var(--muted)";
   const label = QUADRANT_LABEL[quadrant as keyof typeof QUADRANT_LABEL] ?? quadrant;
   return (
-    <Tooltip.Root>
-      <Tooltip.Trigger asChild>
-        <span className="inline-flex cursor-default items-center justify-center">
-          <span className="block h-2.5 w-2.5 rounded-full" style={{ background: color }} />
-        </span>
-      </Tooltip.Trigger>
-      <Tooltip.Portal>
-        <Tooltip.Content
-          className="rounded bg-elevated px-2 py-1 text-body text-2 shadow-lg border border-line z-50"
-          sideOffset={4}
-        >
-          {label}
-          <Tooltip.Arrow className="fill-elevated" />
-        </Tooltip.Content>
-      </Tooltip.Portal>
-    </Tooltip.Root>
+    <span className="inline-flex items-center gap-1.5 whitespace-nowrap">
+      <span aria-hidden className="block h-2 w-2 shrink-0 rounded-full" style={{ background: color }} />
+      {label}
+    </span>
   );
 }
 
@@ -117,9 +107,8 @@ const columns: Column<RotationRow>[] = [
   },
   {
     key: "quadrant",
-    header: <Gloss term="◉" />,
-    align: "center",
-    render: (r) => <QuadrantDot quadrant={r.quadrant} />,
+    header: <Gloss term="Quadrant" />,
+    render: (r) => <QuadrantCell quadrant={r.quadrant} />,
   },
   {
     key: "rs_ratio",

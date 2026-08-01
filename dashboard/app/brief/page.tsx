@@ -5,11 +5,12 @@ import Failed from "@/components/ui/Failed";
 import Loading from "@/components/ui/Loading";
 import Stale from "@/components/ui/Stale";
 import Panel from "@/components/ui/Panel";
-import { fullDayLabel, importanceChipClass } from "@/lib/calendar";
-import { CATEGORY_LABEL, IMPORTANCE_LABEL, eventShortName } from "@/lib/eventMeta";
+import { fullDayLabel } from "@/lib/calendar";
+import { CATEGORY_LABEL, eventShortName } from "@/lib/eventMeta";
 import { NEUTRAL_BAND, toneClass, toneLabel } from "@/lib/macro";
 import { groupNewsByTicker, useMorningReport, plain, type MorningEvent } from "@/lib/report";
 import Page from "@/components/ui/Page";
+import RankText from "@/components/ui/RankText";
 
 function Gauge({ label, value }: { label: string; value: number | null | undefined }) {
   if (value === null || value === undefined) {
@@ -32,11 +33,7 @@ function EventList({ events, today }: { events: MorningEvent[]; today: string })
     <ul className="space-y-1">
       {events.map((e, i) => (
         <li key={`${e.event}-${e.date}-${i}`} className="flex flex-wrap items-baseline gap-x-2">
-          <span
-            className={`rounded border px-1 py-px font-mono text-micro uppercase ${importanceChipClass(e.importance)}`}
-          >
-            {IMPORTANCE_LABEL[e.importance] ?? e.importance}
-          </span>
+          <RankText importance={e.importance} />
           <span className="text-data text-muted">
             {e.date === today ? "today" : fullDayLabel(e.date)}
           </span>

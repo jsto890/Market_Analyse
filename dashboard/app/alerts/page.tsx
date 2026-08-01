@@ -262,7 +262,7 @@ function AlertsBody() {
         {/* New rule */}
         <section className="rounded-md border border-line bg-elevated">
           <div className="border-b border-line px-4 py-2.5">
-            <span className="tick text-title text-foreground">New alert</span>
+            <span className="text-title text-foreground">New alert</span>
           </div>
           {/* A sentence, not a form. The rule reads as one in the list below;
               writing it in four stacked labelled boxes made you assemble the
@@ -336,7 +336,7 @@ function AlertsBody() {
         {/* Active rules */}
         <section className="rounded-md border border-line bg-elevated">
           <div className="border-b border-line px-4 py-2.5">
-            <span className="tick text-title text-foreground">
+            <span className="text-title text-foreground">
               Active rules ({rules.length})
             </span>
           </div>
@@ -387,7 +387,7 @@ function AlertsBody() {
         {/* Recent fires */}
         <section className="rounded-md border border-line bg-elevated">
           <div className="border-b border-line px-4 py-2.5 flex flex-wrap items-center gap-2">
-            <span className="tick text-title text-foreground">Recent fires</span>
+            <span className="text-title text-foreground">Recent fires</span>
             {fireSymbols.length > 1 && (
               <Select
                 aria-label="Filter fires by symbol"

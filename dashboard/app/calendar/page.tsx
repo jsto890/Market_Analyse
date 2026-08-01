@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useMemo } from "react";
 import Empty from "@/components/ui/Empty";
 import Failed from "@/components/ui/Failed";
@@ -9,10 +8,11 @@ import EventRow from "@/components/calendar/EventRow";
 import MonthStrip from "@/components/calendar/MonthStrip";
 import SegmentedControl from "@/components/ui/SegmentedControl";
 import {
-  fullDayLabel,
   groupBySpine,
   isEarnings,
+  shortDayLabel,
   useCalendar,
+  weekRangeLabel,
   type CalEvent,
 } from "@/lib/calendar";
 import { useWatchlistTickers } from "@/lib/watchlist";
@@ -22,17 +22,18 @@ import { STATIC_KEYS } from "@/lib/storageKeys";
 import Page from "@/components/ui/Page";
 
 const HORIZONS = [
-  { key: 30, label: "30d", blurb: "the next month" },
-  { key: 60, label: "60d", blurb: "the next two months" },
+  { key: 30, label: "30d" },
+  { key: 60, label: "60d" },
 ] as const;
 
 /** Filters on one axis — what is on the calendar — rather than the old mix of
  * source and ownership, which made "macro only" and "my watchlist" read as
- * alternatives to each other rather than to "everything". */
+ * alternatives to each other rather than to "everything". Each option says what
+ * it does; an option needing a sentence beside it would be misnamed. */
 const SHOW = [
-  { key: "all", label: "All", blurb: "every scheduled release and tracked earnings date" },
-  { key: "high", label: "High impact", blurb: "the prints that move the whole tape" },
-  { key: "watchlist", label: "Watchlist earnings", blurb: "only names you hold or track" },
+  { key: "all", label: "All" },
+  { key: "high", label: "High impact" },
+  { key: "watchlist", label: "Watchlist earnings" },
 ] as const;
 type ShowMode = (typeof SHOW)[number]["key"];
 
@@ -65,28 +66,39 @@ export default function CalendarPage() {
   }, [all, show, watchlist]);
 
   const weeks = useMemo(() => groupBySpine(filtered, today), [filtered, today]);
-  const macroCount = filtered.filter((e) => !isEarnings(e)).length;
-  const earningsCount = filtered.length - macroCount;
+  // Consensus, prior and actual need a paid feed that isn't wired yet. Until one
+  // is, every cell of all three columns is empty — that is three columns to
+  // drop, not ninety dashes to print.
+  const showFigures = useMemo(
+    () => all.some((e) => e.actual != null || e.consensus != null || e.prior != null),
+    [all]
+  );
 
   return (
     <Page width="wide">
       <Page.Header
-        title="Economic Calendar"
-        subtitle={`Scheduled US macro releases and tracked-name earnings on one timeline — the next ${horizon} days, all times US Eastern with your local time alongside.`}
+        title="Calendar"
+        subtitle={`Economic releases and watchlist earnings, next ${horizon} days — with what each one moves.`}
         actions={
-          <Link href="/macro" className="text-body text-muted hover:text-accent">
-            Macro sentiment ›
-          </Link>
+          <div className="flex items-center gap-3">
+            <SegmentedControl
+              label="Horizon"
+              labelHidden
+              value={horizon}
+              options={HORIZONS}
+              onChange={setHorizon}
+            />
+            <SegmentedControl
+              label="Show"
+              labelHidden
+              variant="pills"
+              value={show}
+              options={SHOW}
+              onChange={setShow}
+            />
+          </div>
         }
       />
-
-      <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
-        <SegmentedControl label="Horizon" value={horizon} options={HORIZONS} onChange={setHorizon} />
-        <SegmentedControl label="Show" value={show} options={SHOW} onChange={setShow} />
-        <span className="text-data text-muted">
-          {macroCount} macro · {earningsCount} earnings
-        </span>
-      </div>
 
       {data && <MonthStrip events={filtered} today={today} watchlist={watchlist} />}
 
@@ -104,7 +116,14 @@ export default function CalendarPage() {
       <div className="space-y-6">
         {weeks.map((week) => (
           <section key={week.start}>
-            <h2 className="tick mb-2 text-title text-foreground">{week.label}</h2>
+            {/* The rule carries the heading to the right edge, so a section
+               reads as a band across the page rather than a stray line of text
+               above a box. */}
+            <div className="mb-2 flex items-center gap-2">
+              <h2 className="eyebrow shrink-0 text-foreground">{week.label}</h2>
+              <span className="shrink-0 text-label text-3">{weekRangeLabel(week, today)}</span>
+              <span aria-hidden className="h-px flex-1 bg-line" />
+            </div>
             {/* Day beside its events, not stacked above them: the date is the
                spine you scan down, so it holds one column of its own rather
                than interrupting the run of rows every few lines. */}
@@ -112,19 +131,17 @@ export default function CalendarPage() {
               {byDay(week.events).map(([date, evs]) => (
                 <div key={date} className="grid grid-cols-1 sm:grid-cols-[104px_1fr]">
                   <div
-                    className={`flex items-baseline gap-2 px-3 py-2 sm:flex-col sm:items-start sm:gap-0.5 sm:border-r sm:border-line ${
+                    className={`flex items-baseline gap-2 px-3 py-2 sm:flex-col sm:items-start sm:gap-0 sm:border-r sm:border-line ${
                       date === today ? "bg-accent/5" : "bg-elevated/40"
                     }`}
                   >
-                    <span
-                      className={`text-body font-medium ${
-                        date === today ? "text-accent" : "text-foreground"
-                      }`}
-                    >
-                      {fullDayLabel(date)}
-                    </span>
-                    <span className="text-micro text-3">
-                      {date === today ? "today" : `${evs.length} ${evs.length === 1 ? "event" : "events"}`}
+                    {date === today && (
+                      <span className="eyebrow shrink-0 text-accent">Today</span>
+                    )}
+                    {/* One line. "Wednesday, Aug 5" wrapped to two in 104px and
+                       repeated the month on every row of the month it heads. */}
+                    <span className="font-mono text-title text-foreground">
+                      {shortDayLabel(date)}
                     </span>
                   </div>
                   <div className="min-w-0 divide-y divide-line">
@@ -134,6 +151,7 @@ export default function CalendarPage() {
                         ev={ev}
                         isWatchlist={ev.ticker != null && watchlist.has(ev.ticker.toUpperCase())}
                         held={held}
+                        showFigures={showFigures}
                       />
                     ))}
                   </div>

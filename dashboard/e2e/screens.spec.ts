@@ -380,17 +380,78 @@ test("audit: console errors, computed layout, contrast inputs", async ({ page })
 // every later phase builds on, so a regression here has to fail the run rather
 // than show up as a pixel a human might not look at.
 
-/** Six type roles + ReadThis's 12px, plus headroom for SVG chart ticks. */
+/** Seven type roles, plus headroom for SVG chart ticks. */
 const MAX_FONT_SIZES = 8;
-/** prose 880 / wide 1240 / full fluid. */
-const MAX_CONTENT_WIDTHS = 3;
+/** The two capped roles, in px. `full` is fluid and has no number to pin. */
+const CONTENT_CAP: Record<string, number> = { prose: 880, wide: 1180 };
+
+// ── Source contract: colour and type stay in the token layer ────────────────
+//
+// Everything else in this file measures the rendered page. This one reads the
+// source, because the hole it closes is invisible from the browser: the capture
+// suite counts font sizes and content widths but never colour, and `tsc` does
+// not read class strings. A stray `#1e2634` in a component renders exactly like
+// the token it duplicates — right up until the token moves.
+
+/** Where a colour is allowed to be spelled out. */
+const TOKEN_FILES = ["app/globals.css", "tailwind.config.ts"];
+
+/** Canvas and SVG libraries take colour strings, not CSS custom properties, so
+ *  the chart layer resolves tokens to literals at runtime and needs literal
+ *  fallbacks to do it. Everything under these paths is exempt for that reason
+ *  alone — not because it is allowed to invent colours. */
+const CHART_PATHS = ["components/charts/", "lib/chartConventions.ts"];
+
+function sourceFiles(dir: string, out: string[] = []): string[] {
+  for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
+    const p = path.join(dir, e.name);
+    if (e.isDirectory()) {
+      if (e.name === "__tests__" || e.name === "node_modules") continue;
+      sourceFiles(p, out);
+    } else if (/\.(ts|tsx|css)$/.test(e.name)) {
+      out.push(p);
+    }
+  }
+  return out;
+}
+
+test("contract: no hex literals or off-scale type outside the token layer", () => {
+  const root = process.cwd();
+  const violations: string[] = [];
+  const hex = /#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})\b/g;
+  const px = /text-\[\d+(?:\.\d+)?px\]/g;
+
+  const files = [...sourceFiles(path.join(root, "app")), ...sourceFiles(path.join(root, "components")),
+    ...sourceFiles(path.join(root, "lib"))]
+    .map((p) => path.relative(root, p))
+    .filter((p) => !TOKEN_FILES.includes(p))
+    .filter((p) => !CHART_PATHS.some((c) => p.startsWith(c)));
+
+  for (const rel of files) {
+    const lines = fs.readFileSync(path.join(root, rel), "utf8").split("\n");
+    lines.forEach((line, i) => {
+      for (const m of line.match(hex) ?? []) {
+        violations.push(`${rel}:${i + 1}: hex ${m} — name the token instead`);
+      }
+      for (const m of line.match(px) ?? []) {
+        violations.push(`${rel}:${i + 1}: ${m} — use one of the seven roles`);
+      }
+    });
+  }
+
+  expect(violations, violations.join("\n")).toEqual([]);
+});
 
 test("contract: Phase 1 substrate holds on every route", async ({ page }) => {
   test.setTimeout(180_000);
   await page.setViewportSize(LAPTOP);
 
   const fontSizes = new Set<string>();
-  const contentWidths = new Set<number>();
+  // Keyed by role, not a flat set of numbers. `full` is fluid, so its measured
+  // width follows the rails — 952 beside Today's open rails, 1368 beside the
+  // 36px strips everywhere else. Both are correct; counting them as two
+  // separate caps is what makes a flat set useless here.
+  const contentWidths = new Map<string, Set<number>>();
   const violations: string[] = [];
 
   for (const route of ROUTES) {
@@ -443,7 +504,11 @@ test("contract: Phase 1 substrate holds on every route", async ({ page }) => {
     });
 
     m.fontSizes.forEach((s) => fontSizes.add(s));
-    if (m.contentWidth !== null) contentWidths.add(m.contentWidth);
+    if (m.contentWidth !== null && m.pageWidthAttr) {
+      const seen = contentWidths.get(m.pageWidthAttr) ?? new Set<number>();
+      seen.add(m.contentWidth);
+      contentWidths.set(m.pageWidthAttr, seen);
+    }
 
     if (!m.pageWidthAttr) violations.push(`${route.path}: not rendered inside <Page>`);
     if (m.titleAttrs) violations.push(`${route.path}: ${m.titleAttrs} title= attribute(s)`);
@@ -458,7 +523,9 @@ test("contract: Phase 1 substrate holds on every route", async ({ page }) => {
     JSON.stringify(
       {
         fontSizes: Array.from(fontSizes).sort((a, b) => parseFloat(a) - parseFloat(b)),
-        contentWidths: Array.from(contentWidths).sort((a, b) => a - b),
+        contentWidths: Object.fromEntries(
+          Array.from(contentWidths, ([role, w]) => [role, Array.from(w).sort((a, b) => a - b)]),
+        ),
         violations,
       },
       null,
@@ -471,9 +538,19 @@ test("contract: Phase 1 substrate holds on every route", async ({ page }) => {
     MAX_FONT_SIZES,
   );
   expect(
-    contentWidths.size,
-    `content widths: ${Array.from(contentWidths).join(", ")}`,
-  ).toBeLessThanOrEqual(MAX_CONTENT_WIDTHS);
+    Array.from(contentWidths.keys()).filter((r) => r !== "full" && !(r in CONTENT_CAP)),
+    "unknown page width role",
+  ).toEqual([]);
+  // A cap is a ceiling, not a width: Today's two open rails take 488px out of
+  // 1440, so a `wide` page there measures 952 and is still conformant. What the
+  // contract pins is that the ceiling itself is the token, and that nothing
+  // ever exceeds it.
+  for (const [role, cap] of Object.entries(CONTENT_CAP)) {
+    const seen = Array.from(contentWidths.get(role) ?? []);
+    expect(seen.length, `${role}: no route measured`).toBeGreaterThan(0);
+    expect(Math.max(...seen), `${role} cap`).toEqual(cap);
+    expect(seen.filter((w) => w > cap), `${role} over cap`).toEqual([]);
+  }
 });
 
 // ── 5. Phase 2 contract — /calendar and the options split ────────────────────
@@ -509,11 +586,15 @@ test("contract: Phase 2 — calendar has events and every options tab resolves",
     violations.push(`/calendar: ${events} events, expected ≥ ${MIN_CALENDAR_EVENTS}`);
 
   // The rail's overflow link is the only route into the full calendar from a
-  // page that is not the calendar.
+  // page that is not the calendar — and the rail is only open on Today, so that
+  // is where the link has to exist. Bounded: an absent element here used to sit
+  // on the default unlimited locator timeout and eat the whole test budget.
+  await page.goto("/");
+  await settle(page, 1500);
   const railHref = await page
     .locator('aside a[href="/calendar"]')
     .first()
-    .getAttribute("href")
+    .getAttribute("href", { timeout: 5_000 })
     .catch(() => null);
   if (railHref !== "/calendar") violations.push(`rail overflow href: ${railHref}`);
 

@@ -1004,7 +1004,7 @@ export default function OptionsLadderPage() {
         <Collapsible
           persistKey="strikes-how-to-read"
           trigger={
-            <span className="tick text-title text-foreground">
+            <span className="text-title text-foreground">
               How to read this ladder
             </span>
           }

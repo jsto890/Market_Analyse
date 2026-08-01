@@ -96,7 +96,7 @@ function ResultCard({ r }: { r: ScreenerResult }) {
       </div>
 
       {/* No Compare: this page is the comparison. */}
-      <ActionBar symbol={r.symbol} actions={["pin", "alert", "options", "copy"]} className="mt-2" />
+      <ActionBar symbol={r.symbol} actions={["pin", "alert", "open"]} fill className="mt-2" />
     </div>
   );
 }
@@ -384,12 +384,13 @@ export default function ScreenerPage() {
               Full universe
             </Button>
           </div>
-        </div>
 
         {/* A screen is the ticker list and the cutoff together — re-typing both
-            from memory was the only way to come back to one. */}
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="eyebrow">Screens</span>
+            from memory was the only way to come back to one. It lives in the
+            same box as the two controls it stores; on its own row above the
+            results it was a labelled strip belonging to nothing. */}
+        <div className="flex w-full flex-wrap items-center gap-2 border-t border-line pt-2">
+          {screens.length > 0 && <span className="eyebrow">Screens</span>}
           {screens.map((s) => (
             <span
               key={s.name}
@@ -432,6 +433,7 @@ export default function ScreenerPage() {
               Save screen
             </Button>
           )}
+          </div>
         </div>
 
         {/* States */}

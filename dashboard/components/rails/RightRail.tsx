@@ -12,16 +12,22 @@ const LS_KEY = "rail-right-collapsed";
 
 const NARROW_QUERY = "(max-width: 1279px)";
 
-export function RightRail() {
+export function RightRail({ dense = false }: { dense?: boolean }) {
   // Start expanded SSR; reconcile from localStorage/viewport on mount to avoid hydration mismatch
   const [collapsed, setCollapsed] = useState(false);
-  const [filter, setFilter] = useState<"all" | "mine">("all");
   const scrollRef = useRef<HTMLElement | null>(null);
   const [lastSeenId, setLastSeenId] = useState<number | null>(null);
   const [atTop, setAtTop] = useState(true);
   const { data } = useNewsFeed();
 
   useEffect(() => {
+    // News is Today's third band, and Today's alone. Everywhere else it is a
+    // firehose beside a page you came to read — a strip, not a column.
+    if (dense) {
+      setCollapsed(true);
+      return;
+    }
+
     const readStored = (): string | null => {
       try {
         return window.localStorage.getItem(LS_KEY);
@@ -33,9 +39,7 @@ export function RightRail() {
     const stored = readStored();
     if (stored === "1") setCollapsed(true);
     else if (stored === "0") setCollapsed(false);
-    // Default closed at every width: the feed is ambient, and 260px of
-    // permanent chrome is the single largest tax on the content column.
-    else setCollapsed(true);
+    else setCollapsed(window.innerWidth < 1280);
 
     if (typeof window.matchMedia !== "function") return;
     const mql = window.matchMedia(NARROW_QUERY);
@@ -46,7 +50,7 @@ export function RightRail() {
     };
     mql.addEventListener("change", onChange);
     return () => mql.removeEventListener("change", onChange);
-  }, []);
+  }, [dense]);
 
   const toggle = () => {
     setCollapsed((prev) => {
@@ -87,11 +91,11 @@ export function RightRail() {
   // ── Minimised strip (36px) per spec §6.2 ─────────────────────────────────
   if (collapsed) {
     return (
-      <aside className="order-3 w-9 flex-shrink-0 flex flex-col items-center py-1 border-l border-line bg-surface sticky top-[var(--nav-h)] h-[calc(100vh-var(--nav-h))] font-mono">
+      <aside className="order-3 w-[var(--rail-collapsed)] flex-shrink-0 flex flex-col items-center py-1 border-l border-line bg-surface sticky top-[var(--nav-h)] h-[calc(100vh-var(--nav-h))] font-mono">
         {/* Expand button — top, per spec §6.2 */}
         <button
           onClick={toggle}
-          aria-label="Expand chatter rail"
+          aria-label="Expand news rail"
           className="w-9 h-9 flex items-center justify-center text-muted hover:text-foreground hover:bg-elevated"
         >
           <span className="text-body leading-none select-none">‹</span>
@@ -101,7 +105,7 @@ export function RightRail() {
           className="eyebrow tracking-[0.12em] mt-4"
           style={{ writingMode: "vertical-rl", transform: "rotate(180deg)" }}
         >
-          CHATTER &amp; FLOW
+          NEWS
         </span>
       </aside>
     );
@@ -112,40 +116,20 @@ export function RightRail() {
     <aside
       ref={scrollRef}
       onScroll={handleScroll}
-      className="order-3 w-[260px] flex-shrink-0 bg-surface border-l border-line font-mono sticky top-[var(--nav-h)] h-[calc(100vh-var(--nav-h))] overflow-y-auto"
+      className="order-3 w-[var(--rail-r)] flex-shrink-0 bg-surface border-l border-line font-mono sticky top-[var(--nav-h)] h-[calc(100vh-var(--nav-h))] overflow-y-auto"
     >
       {/* Header row — collapse control lives here, not at the bottom of a
        * scrolling column where a long feed pushes it out of reach. */}
       <div className="sticky top-0 z-10 flex h-[26px] items-center justify-between gap-2 border-b border-line bg-surface px-2">
         <button
           onClick={toggle}
-          aria-label="Collapse chatter rail"
+          aria-label="Collapse news rail"
           className="-ml-1 flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-sm text-muted hover:bg-elevated hover:text-foreground"
         >
           <span className="text-body leading-none select-none">›</span>
         </button>
-        {/* Not "News": this feed is Discord chatter and whale prints, never
-         * press headlines — those live on the ticker page's News card, from a
-         * different table entirely. One label for each, so neither reads as a
-         * copy of the other. */}
-        <span className="mr-auto eyebrow leading-none">Chatter &amp; Flow</span>
+        <span className="mr-auto eyebrow leading-none">News</span>
         <NewsFeedHeader />
-      </div>
-
-      {/* All / My tickers filter chips (RR-03) */}
-      <div className="flex items-center gap-1 px-3 py-1 border-b border-line">
-        {(["all", "mine"] as const).map((f) => (
-          <button
-            key={f}
-            onClick={() => setFilter(f)}
-            aria-pressed={filter === f}
-            className={`px-1.5 py-px font-mono font-medium leading-none ${
-              filter === f ? "bg-accent/15 text-accent" : "bg-elevated text-muted hover:text-foreground"
-            }`}
-          >
-            {f === "all" ? "All" : "My tickers"}
-          </button>
-        ))}
       </div>
 
       {/* "N new" pill — shows once scrolled away from top when newer items arrive */}
@@ -159,7 +143,7 @@ export function RightRail() {
       )}
 
       {/* Live feed body */}
-      <NewsFeedBody filter={filter} />
+      <NewsFeedBody />
     </aside>
   );
 }
@@ -195,14 +179,14 @@ function NewsFeedHeader() {
 }
 
 // ── Feed body ─────────────────────────────────────────────────────────────────
-function NewsFeedBody({ filter }: { filter: "all" | "mine" }) {
+function NewsFeedBody() {
   const { data, error } = useNewsFeed();
   const watchlist = useWatchlistTickers();
 
   if (error) {
     return (
       <Failed
-        title="Chatter feed offline"
+        title="News feed offline"
         message="The ingest service isn’t responding."
         className="m-3"
       />
@@ -213,20 +197,11 @@ function NewsFeedBody({ filter }: { filter: "all" | "mine" }) {
     return <Loading variant="lines" count={3} label="Loading news" className="px-3 pt-4" />;
   }
 
-  const sorted = sortNewsByTs(data.items);
-  const items = filter === "mine"
-    ? sorted.filter((i) => i.ticker && watchlist.has(i.ticker))
-    : sorted;
+  const items = sortNewsByTs(data.items);
 
   if (items.length === 0) {
     return (
-      <Empty
-        message={
-          filter === "mine"
-            ? "Nothing yet on the tickers on your watchlist."
-            : "No chatter or flow yet — the feed starts when the ingest service runs."
-        }
-      />
+      <Empty message="No headlines yet — the feed starts when the ingest service runs." />
     );
   }
 
@@ -289,48 +264,52 @@ function NewsRow({ item, onWatchlist }: { item: NewsItem; onWatchlist: boolean }
         .filter(Boolean)
         .join(" ")}
     >
-      {/* Top meta line */}
-      <div className="flex items-center gap-1.5 mb-0.5">
+      {/* Top meta line — when it broke, and who says so. */}
+      <div className="mb-1 flex items-center gap-1.5">
         {isBreaking && (
-          <span className="text-micro font-medium text-neg mr-1 leading-none">
-            BREAKING
-          </span>
+          <span className="text-micro font-semibold leading-none text-neg">BREAKING</span>
         )}
-        <span className="text-data text-muted leading-none">
-          {relTime(item.ts)}
+        <span className="font-mono text-micro leading-none tracking-normal text-muted">
+          {relTime(item.ts)} · {shortSource(item.source)}
         </span>
-        <span className="eyebrow leading-none">
-          {shortSource(item.source)}
-        </span>
-        {item.ticker && (
-          /* A name you hold reads differently from a name you don't. The chip
-             is the only thing that separates the two in a 60-row feed. */
-          <Link
-            href={`/t/${item.ticker}`}
-            aria-label={onWatchlist ? `${item.ticker} — on your watchlist` : item.ticker}
-            className={`text-data leading-none ml-auto -my-1.5 py-1.5 px-1 ${
-              onWatchlist ? "rounded-sm bg-accent/15 text-accent font-medium" : "text-muted"
-            }`}
-          >
-            {item.ticker}
-          </Link>
-        )}
       </div>
 
-      {/* Headline */}
+      {/* The headline is prose, so it is set in the reading face — the rail's
+          mono is for times, tickers and figures. */}
       {item.url ? (
         <a
           href={item.url}
           target="_blank"
           rel="noreferrer"
-          className="text-body text-foreground leading-snug block"
+          className="block font-sans text-label leading-relaxed text-foreground"
         >
           {item.headline}
         </a>
       ) : (
-        <p className="text-body text-foreground leading-snug">
-          {item.headline}
-        </p>
+        <p className="font-sans text-label leading-relaxed text-foreground">{item.headline}</p>
+      )}
+
+      {item.ticker && (
+        /* A name you hold reads differently from a name you don't. The chip is
+           the only thing that separates the two in a 60-row feed. */
+        <div className="mt-1.5 flex gap-1">
+          <Link
+            href={`/t/${item.ticker}`}
+            aria-label={onWatchlist ? `${item.ticker} — on your watchlist` : item.ticker}
+            className={`rounded-sm border px-1.5 py-1 text-micro leading-none ${
+              onWatchlist
+                ? "border-accent/40 bg-accent/15 text-accent"
+                : "border-line text-accent"
+            }`}
+          >
+            {item.ticker}
+          </Link>
+          {onWatchlist && (
+            <span className="rounded-sm border border-model/40 px-1.5 py-1 text-micro leading-none text-model">
+              pinned
+            </span>
+          )}
+        </div>
       )}
     </div>
   );

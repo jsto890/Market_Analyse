@@ -18,7 +18,7 @@ export default function SectorStrip({ rows }: { rows: RotationRow[] }) {
     <section className="rounded-md border border-line bg-elevated">
       <div className="flex flex-wrap items-baseline justify-between gap-2 px-4 py-2.5">
         <div className="flex min-w-0 items-baseline gap-2">
-          <span className="tick truncate text-title text-foreground">Sector rotation</span>
+          <span className="truncate text-title text-foreground">Sector rotation</span>
           <span className="truncate text-body text-3">{rotationSummary(rows)}</span>
         </div>
         <Link href="/rotation" className="shrink-0 text-body text-muted hover:text-accent">

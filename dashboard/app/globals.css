@@ -18,6 +18,8 @@
   --red: #f85149;
   --amber: #d29922;
   --teal: #2dd4bf;
+  /* Also the mark that stands in for a value that does not exist yet — quieter
+   * than the label beside it, so an empty cell reads as empty, not as data. */
   --muted-2: #737b8c;
   /* Puts. They previously borrowed --red, which also means "down" — so a rising
    * put read red for two contradictory reasons. */
@@ -34,6 +36,8 @@
   --nav-h: 46px;
   --rail-l: 200px;
   --rail-r: 288px;
+  /* Both rails minimise to the same strip, so the width is stated once. */
+  --rail-collapsed: 36px;
   /* Six type roles. Declared here for non-Tailwind consumers (charts, canvas
    * labels) so they can't drift from the utility classes. 11px is an eyebrow
    * and column-header size only — it is not a content size. */
@@ -45,13 +49,13 @@
   --fs-display: 28px;
   /* Page rhythm. Declared in px, not rem: the 14px root would render Tailwind's
    * py-6/space-y-5 as 21px/17.5px. `Page` is the only consumer. */
-  --page-x: 24px;
+  --page-x: 28px;
   --page-y: 24px;
   --stack: 20px; /* between page sections */
   --stack-tight: 12px; /* within a section */
   /* Content caps. Three, and only three. */
   --w-prose: 880px;
-  --w-wide: 1240px;
+  --w-wide: 1180px;
   /* Aliases so Tailwind's background/foreground tokens resolve. */
   --background: var(--bg);
   --foreground: var(--text);
@@ -174,12 +178,6 @@ select {
   .eyebrow {
     @apply text-micro font-medium uppercase text-muted;
     font-family: var(--font-mono), ui-monospace, monospace;
-  }
-  /* Accent tick preceding a section title. */
-  .tick::before {
-    content: "";
-    @apply mr-2 inline-block h-3 w-[3px] translate-y-[1px] rounded-sm;
-    background: var(--accent);
   }
   /* Card surface used across panels/boxes. */
   .card {

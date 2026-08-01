@@ -43,10 +43,12 @@ const config: Config = {
       },
       // Six roles, declared in px so the 14px root font-size can't rescale them
       // (rem-based sizes render 10.5px/12.25px here — never use text-xs/sm).
-      // 11px is an eyebrow/column-header size; it is not a content size. The
-      // 12px step is deliberately absent — small content moves up to 13px.
+      // 11px is an eyebrow/column-header size; it is not a content size.
       fontSize: {
         micro: ["11px", { lineHeight: "1.35", letterSpacing: "0.08em", fontWeight: "500" }],
+        // `label` names a value: chip captions, card verbs, the word beside a
+        // figure. Sentence case — `micro` is the uppercase role, this is not.
+        label: ["12px", { lineHeight: "1.45", fontWeight: "400" }],
         body: ["13px", { lineHeight: "1.5", fontWeight: "400" }],
         // `data`'s mono family + tabular figures are applied in globals.css —
         // a fontSize tuple cannot express font-family.

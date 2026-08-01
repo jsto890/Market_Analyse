@@ -27,7 +27,7 @@ describe("RotationPanel table", () => {
 
   it("renders all ten column headers", () => {
     render(<RotationPanel rows={rows} />);
-    ["Industry", "Δrank", "◉", "RS-Ratio", "RS-Mom", "Breadth", "n", "1W", "1M", "3M"].forEach((h) => {
+    ["Industry", "Δrank", "Quadrant", "RS-Ratio", "RS-Mom", "Breadth", "n", "1W", "1M", "3M"].forEach((h) => {
       expect(screen.getByRole("columnheader", { name: h })).toBeInTheDocument();
     });
   });
@@ -53,7 +53,7 @@ describe("DRank (RO-02)", () => {
 describe("Header glosses (RO-04)", () => {
   it("wraps RS-Ratio, RS-Mom, n, and the quadrant header in a keyboard-focusable InfoTip", () => {
     render(<RotationPanel rows={rows} />);
-    ["RS-Ratio", "RS-Mom", "n", "◉"].forEach((label) => {
+    ["RS-Ratio", "RS-Mom", "n", "Quadrant"].forEach((label) => {
       const trigger = screen.getByRole("button", { name: new RegExp(`^${label}$`) });
       expect(trigger).toBeInTheDocument();
     });

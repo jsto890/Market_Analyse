@@ -25,7 +25,6 @@ const GROUPS = [
     { href: "/portfolio", label: "Portfolio" },
     { href: "/alerts", label: "Alerts" },
   ],
-  [{ href: "/learn", label: "Learn" }],
 ] as const;
 
 export default function NavLinks() {

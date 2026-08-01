@@ -64,7 +64,7 @@ describe("RightRail error vs empty states (RR-01)", () => {
     } as any);
     render(<RightRail />);
     const alert = screen.getByRole("alert");
-    expect(alert).toHaveTextContent("Chatter feed offline");
+    expect(alert).toHaveTextContent("News feed offline");
     expect(alert.querySelector("svg")).not.toBeNull();
     expect(screen.getByText("offline")).toHaveClass("text-warn");
   });
@@ -74,7 +74,7 @@ describe("RightRail error vs empty states (RR-01)", () => {
       data: { items: [] }, error: undefined,
     } as any);
     render(<RightRail />);
-    const empty = screen.getByText(/No chatter or flow yet/);
+    const empty = screen.getByText(/No headlines yet/);
     expect(empty.className).not.toContain("text-warn");
     expect(screen.queryByRole("alert")).toBeNull();
   });
@@ -86,7 +86,7 @@ describe("RightRail visual order (G-11)", () => {
       data: { items: [] }, error: undefined,
     } as any);
     render(<RightRail />);
-    expect(screen.getByLabelText("Collapse chatter rail").closest("aside")).toHaveClass("order-3");
+    expect(screen.getByLabelText("Collapse news rail").closest("aside")).toHaveClass("order-3");
   });
 });
 
@@ -108,27 +108,6 @@ describe("RightRail feed order (RR-02)", () => {
   });
 });
 
-describe("RightRail ticker filter (RR-03)", () => {
-  it("filters to My tickers via chip, matching only watchlist symbols", () => {
-    vi.mocked(watchlistLib.useWatchlistTickers).mockReturnValue(new Set(["AAPL"]));
-    vi.mocked(newsLib.useNewsFeed).mockReturnValue({
-      data: {
-        items: [
-          mkItem(1, "2026-07-28 09:00:00", "AAPL", "aapl news"),
-          mkItem(2, "2026-07-28 10:00:00", "TSLA", "tsla news"),
-        ],
-      },
-      error: undefined,
-    } as any);
-    render(<RightRail />);
-    expect(screen.getByText("aapl news")).toBeInTheDocument();
-    expect(screen.getByText("tsla news")).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "My tickers" }));
-    expect(screen.getByText("aapl news")).toBeInTheDocument();
-    expect(screen.queryByText("tsla news")).toBeNull();
-  });
-});
-
 describe("RightRail new-items pill (RR-03)", () => {
   it("shows an N new pill after scrolling away when new items arrive, scroll-to-top clears it", () => {
     vi.mocked(watchlistLib.useWatchlistTickers).mockReturnValue(new Set());
@@ -140,7 +119,7 @@ describe("RightRail new-items pill (RR-03)", () => {
     } as any);
     const { rerender } = render(<RightRail />);
 
-    const aside = screen.getByLabelText("Collapse chatter rail").closest("aside") as HTMLElement;
+    const aside = screen.getByLabelText("Collapse news rail").closest("aside") as HTMLElement;
     fireEvent.scroll(aside, { target: { scrollTop: 100 } });
 
     vi.mocked(newsLib.useNewsFeed).mockReturnValue({
@@ -172,8 +151,8 @@ describe("NewsRow whale source (RR-04)", () => {
       error: undefined,
     } as any);
     render(<RightRail />);
-    expect(screen.getByText("whl")).toBeInTheDocument();
-    expect(screen.queryByText("🐋")).toBeNull();
+    expect(screen.getByText(/· whl$/)).toBeInTheDocument();
+    expect(screen.queryByText(/🐋/)).toBeNull();
   });
 });
 
@@ -207,21 +186,21 @@ describe("NewsRow ticker link hit area (RR-06)", () => {
     } as any);
     render(<RightRail />);
     const link = screen.getByRole("link", { name: "AAPL" });
-    expect(link.className).toContain("py-1.5");
-    expect(link.className).toContain("px-1");
+    expect(link.className).toContain("py-1");
+    expect(link.className).toContain("px-1.5");
   });
 });
 
 describe("RightRail names what it actually carries", () => {
-  it("labels the rail Chatter & Flow — press headlines live on the ticker page, from another feed", () => {
+  it("labels the rail News — the flow firehose lives on /options/flow, not beside every page", () => {
     vi.mocked(watchlistLib.useWatchlistTickers).mockReturnValue(new Set());
     vi.mocked(newsLib.useNewsFeed).mockReturnValue({
       data: { items: [mkItem(1, "2026-07-28 09:00:00")] },
       error: undefined,
     } as any);
     render(<RightRail />);
-    expect(screen.getByText("Chatter & Flow")).toBeInTheDocument();
-    expect(screen.queryByText("News")).not.toBeInTheDocument();
+    expect(screen.getByText("News")).toBeInTheDocument();
+    expect(screen.queryByText("Chatter & Flow")).not.toBeInTheDocument();
   });
 
   it("carries the same name down the collapsed strip", () => {
@@ -229,7 +208,7 @@ describe("RightRail names what it actually carries", () => {
     vi.mocked(watchlistLib.useWatchlistTickers).mockReturnValue(new Set());
     vi.mocked(newsLib.useNewsFeed).mockReturnValue({ data: { items: [] }, error: undefined } as any);
     render(<RightRail />);
-    expect(screen.getByText("CHATTER & FLOW")).toBeInTheDocument();
+    expect(screen.getByText("NEWS")).toBeInTheDocument();
   });
 });
 
@@ -294,7 +273,7 @@ describe("RightRail watchlist tagging", () => {
 });
 
 describe("RightRail default state", () => {
-  it("starts collapsed with no stored preference, at any viewport width", () => {
+  it("opens on Today, where the feed is a band of the page and not an interruption", () => {
     vi.mocked(window.localStorage.getItem).mockReturnValue(null);
     vi.mocked(watchlistLib.useWatchlistTickers).mockReturnValue(new Set());
     vi.mocked(newsLib.useNewsFeed).mockReturnValue({
@@ -302,7 +281,19 @@ describe("RightRail default state", () => {
       error: undefined,
     } as any);
     render(<RightRail />);
-    expect(screen.getByLabelText("Expand chatter rail")).toBeInTheDocument();
+    expect(screen.getByLabelText("Collapse news rail")).toBeInTheDocument();
+    expect(screen.getByText("headline")).toBeInTheDocument();
+  });
+
+  it("is a strip on every other route, so the content column keeps the width", () => {
+    vi.mocked(window.localStorage.getItem).mockReturnValue(null);
+    vi.mocked(watchlistLib.useWatchlistTickers).mockReturnValue(new Set());
+    vi.mocked(newsLib.useNewsFeed).mockReturnValue({
+      data: { items: [mkItem(1, "2026-07-28 09:00:00", "AAPL", "headline")] },
+      error: undefined,
+    } as any);
+    render(<RightRail dense />);
+    expect(screen.getByLabelText("Expand news rail")).toBeInTheDocument();
     expect(screen.queryByText("headline")).not.toBeInTheDocument();
   });
 
@@ -313,7 +304,7 @@ describe("RightRail default state", () => {
       error: undefined,
     } as any);
     render(<RightRail />);
-    const header = screen.getByLabelText("Collapse chatter rail").parentElement!;
+    const header = screen.getByLabelText("Collapse news rail").parentElement!;
     expect(header.className).toContain("sticky");
     expect(header.className).toContain("top-0");
   });

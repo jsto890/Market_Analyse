@@ -7,7 +7,7 @@ export type PageWidth = "prose" | "wide" | "full";
  * but lets the ladder and the ticker header use the whole viewport. */
 const WIDTH_CLASS: Record<PageWidth, string> = {
   prose: "max-w-[var(--w-prose)]", // 880px — /alerts, /learn/*
-  wide: "max-w-[var(--w-wide)]", // 1240px — /, /watchlist, /screener, /portfolio, /rotation, /macro, /calendar
+  wide: "max-w-[var(--w-wide)]", // 1180px — /, /watchlist, /screener, /portfolio, /rotation, /macro, /calendar
   full: "max-w-none", // fluid — /t/[ticker], /options/ladder
 };
 
@@ -75,7 +75,7 @@ function Header({ title, subtitle, status, actions, breadcrumb }: PageHeaderProp
           </nav>
         )}
         <div className="flex items-baseline gap-2.5">
-          <h1 className="tick truncate text-headline text-foreground">{title}</h1>
+          <h1 className="truncate text-headline tracking-[-0.01em] text-foreground">{title}</h1>
           {status && <div className="flex shrink-0 items-center gap-2">{status}</div>}
         </div>
         {subtitle && <p className="mt-1 text-body text-3">{subtitle}</p>}

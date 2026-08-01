@@ -86,7 +86,9 @@ export default function RotationPage() {
     <Page width="wide">
       <Page.Header
         title="Sector Rotation"
-        status={<Stale asOf={mtime} source="run_daily" staleAfterMins={1440} />}
+        // No source: `run_daily` is the name of a cron job, not a data
+        // provider — it tells a reader nothing that `IBKR` or `yfinance` would.
+        status={<Stale asOf={mtime} staleAfterMins={1440} />}
         actions={
           // Price strength by sector and news tone by sector are the same
           // question read off two different feeds — they belong one click apart.

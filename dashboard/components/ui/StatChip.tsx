@@ -11,6 +11,9 @@ interface StatChipProps {
    *  read-out sitting next to controls that do the same thing. */
   onClick?: () => void;
   pressed?: boolean;
+  /** Box skin. `lead` lifts the one chip a summary row is actually about;
+   *  `warn` is for a count that is a deadline, not a statistic. */
+  variant?: "default" | "lead" | "warn";
 }
 
 const TONE_CLASS: Record<string, string> = {
@@ -20,10 +23,24 @@ const TONE_CLASS: Record<string, string> = {
   muted: "text-muted",
 };
 
-export default function StatChip({ label, value, tone, tooltip, onClick, pressed }: StatChipProps) {
+const VARIANT_CLASS: Record<string, string> = {
+  default: "border-line bg-surface",
+  lead: "border-line-strong bg-elevated",
+  warn: "border-warn/40 bg-warn/10",
+};
+
+export default function StatChip({
+  label,
+  value,
+  tone,
+  tooltip,
+  onClick,
+  pressed,
+  variant = "default",
+}: StatChipProps) {
   const valueClass = tone ? TONE_CLASS[tone] : "text-foreground";
   const box = `inline-flex items-center gap-1 rounded border px-2 py-0.5 ${
-    pressed ? "border-accent bg-accent/10" : "border-line bg-surface"
+    pressed ? "border-accent bg-accent/10" : VARIANT_CLASS[variant]
   }`;
   const body = (
     <>

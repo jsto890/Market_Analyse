@@ -17,8 +17,10 @@ function Gauge({ g }: { g: MacroGauge }) {
           {g.score >= 0 ? "+" : ""}{g.score.toFixed(2)}
         </span>
       </div>
-      <div className="relative h-1 mt-0.5 bg-elevated rounded-full overflow-hidden">
-        <span className="absolute left-1/2 top-0 h-full w-px bg-line" />
+      <div className="relative h-1 mt-0.5 bg-elevated overflow-hidden">
+        {/* The zero tick has to read against the track it sits in, so it takes
+         * line-strong; `line` is the same value the track edge already carries. */}
+        <span className="absolute left-1/2 top-0 h-full w-px bg-line-strong" />
         <span
           className="absolute top-0 h-full bg-model"
           style={{ left: pos ? "50%" : `${50 + pct}%`, width: `${Math.abs(pct)}%` }}

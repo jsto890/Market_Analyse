@@ -2,34 +2,17 @@
 
 import Link from "next/link";
 import Collapsible from "@/components/ui/Collapsible";
+import InfoTip from "@/components/ui/InfoTip";
+import RankText from "@/components/ui/RankText";
+import ValueCell from "@/components/ui/ValueCell";
 import {
-  IMPORTANCE_RANK,
   earningsSession,
-  importanceChipClass,
   isEarnings,
   localTimeLabel,
   type CalEvent,
 } from "@/lib/calendar";
-import {
-  CATEGORY_LABEL,
-  IMPORTANCE_LABEL,
-  eventMeta,
-  eventShortName,
-} from "@/lib/eventMeta";
+import { CATEGORY_LABEL, eventMeta, eventShortName } from "@/lib/eventMeta";
 import { HeldChips } from "@/lib/positions";
-
-/** One of the three figure columns. Held at 96px so consensus, prior and actual
- * line up down the whole day, which is the comparison the row exists to make. */
-function Figure({ label, value }: { label: string; value: string | null | undefined }) {
-  return (
-    <span className="hidden w-24 shrink-0 flex-col text-right sm:flex">
-      <span className="text-micro uppercase tracking-[0.08em] text-3">{label}</span>
-      <span className={value ? "text-data text-foreground" : "text-data text-muted"}>
-        {value || "—"}
-      </span>
-    </span>
-  );
-}
 
 function Chain({ label, text, tone }: { label: string; text: string; tone: string }) {
   return (
@@ -44,12 +27,17 @@ export default function EventRow({
   ev,
   isWatchlist,
   held,
+  showFigures = true,
 }: {
   ev: CalEvent;
   isWatchlist: boolean;
   /** Your open positions, fetched once by the page. The row already names the
    *  tickers a print moves; this is what closes the loop to your own book. */
   held?: Map<string, number>;
+  /** Whether actual/consensus/prior exist anywhere in the horizon. Only the
+   *  page can know that, and a column of dashes on every row of every day is
+   *  three empty columns, not three unknown figures. */
+  showFigures?: boolean;
 }) {
   const meta = eventMeta(ev.event, ev.category, ev.ticker);
   const earnings = isEarnings(ev);
@@ -62,24 +50,26 @@ export default function EventRow({
      so a day's worth of events reads as columns rather than as ragged
      sentences. The chevron is Collapsible's own 20px slot. */
   const header = (
-    <div className="flex min-w-0 flex-1 items-center gap-2.5">
+    <div
+      className={`grid min-w-0 flex-1 grid-cols-[62px_26px_1fr] items-center gap-[12px] ${
+        showFigures ? "sm:grid-cols-[62px_26px_1fr_96px_96px_96px]" : ""
+      }`}
+    >
       {/* The track holds its width whether or not there is a time, so the
           columns still line up. A field with no feed renders nothing — no
           earnings row has ever carried a time, so "TBA" printed on all of
-          them and said only that the row was an earnings row. */}
-      <span className="w-[62px] shrink-0 text-data leading-tight text-muted">
-        {ev.time_et && `${ev.time_et} ET`}
-        {local && <span className="block text-micro text-3">{local}</span>}
-      </span>
-      <span
-        className={`w-[38px] shrink-0 rounded border py-px text-center font-mono text-micro tracking-wide ${importanceChipClass(
-          ev.importance
-        )}`}
-      >
-        <span className="sr-only">{IMPORTANCE_LABEL[ev.importance] ?? ev.importance} importance</span>
-        <span aria-hidden>{IMPORTANCE_RANK[ev.importance] ?? ev.importance}</span>
-      </span>
-      <span className="min-w-0 flex-1 truncate text-body font-medium text-foreground">
+          them and said only that the row was an earnings row. One line: the
+          local conversion quadrupled the row height to restate the same
+          instant, so it moved onto the tooltip. */}
+      {ev.time_et ? (
+        <InfoTip content={`${ev.time_et} ET${local ? ` · ${local} local` : ""}`} className="text-data text-muted">
+          {ev.time_et}
+        </InfoTip>
+      ) : (
+        <span />
+      )}
+      <RankText importance={ev.importance} />
+      <span className="min-w-0 truncate text-body font-medium text-foreground">
         {earnings && ev.ticker ? <span className="font-mono">{ev.ticker}</span> : name}
         {earnings && (
           <span className="ml-1.5 text-body text-muted">
@@ -99,9 +89,13 @@ export default function EventRow({
           </span>
         )}
       </span>
-      <Figure label="cons" value={ev.consensus} />
-      <Figure label="prior" value={ev.prior} />
-      <Figure label="actual" value={ev.actual} />
+      {showFigures && (
+        <>
+          <ValueCell label="act" value={ev.actual} strong className="hidden sm:block" />
+          <ValueCell label="cons" value={ev.consensus} className="hidden sm:block" />
+          <ValueCell label="prior" value={ev.prior} className="hidden sm:block" />
+        </>
+      )}
     </div>
   );
 
