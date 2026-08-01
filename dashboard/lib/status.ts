@@ -105,11 +105,25 @@ export async function buildStatus(): Promise<StatusPayload> {
     argusHealth
       ? { name: "argus", state: "ok", detail: "API 8088 responding" }
       : { name: "argus", state: "down", detail: "API 8088 unreachable" },
-    odteHealth
-      ? odteHealth.ibkr_connected
-        ? { name: "ibkr", state: "ok", detail: "Gateway connected (via odte)" }
-        : { name: "ibkr", state: marketClosedNow ? "idle" : "down", detail: "Gateway not connected" }
-      : { name: "ibkr", state: marketClosedNow ? "idle" : "warn", detail: "odte backend unreachable" },
+    (() => {
+      // The Gateway's own port is the truth. odte is one consumer of it and is
+      // usually not running at all, so "odte backend unreachable" reported the
+      // health of the wrong service — the Gateway could be up and the dot down.
+      // When odte *is* up its completed handshake is the stronger signal.
+      const ibkr = (argusHealth?.ibkr ?? null) as { port?: number; listening?: boolean } | null;
+      const where = ibkr?.port ? `port ${ibkr.port}` : "its configured port";
+      if (odteHealth?.ibkr_connected)
+        return { name: "ibkr" as const, state: "ok" as const, detail: `Gateway connected on ${where}` };
+      if (ibkr?.listening)
+        return { name: "ibkr" as const, state: "ok" as const, detail: `Gateway listening on ${where}` };
+      if (!ibkr)
+        return { name: "ibkr" as const, state: "warn" as const, detail: "Argus is not reporting its IBKR port" };
+      return {
+        name: "ibkr" as const,
+        state: marketClosedNow ? ("idle" as const) : ("down" as const),
+        detail: `Nothing listening on ${where}`,
+      };
+    })(),
     (() => {
       const bridgeAgeH = bridgeTime
         ? (Date.now() - new Date(bridgeTime).getTime()) / 3_600_000

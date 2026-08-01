@@ -42,8 +42,12 @@ function isErrorSentinel(rows: PositionRow[]): boolean {
   return rows.length === 1 && rows[0].error != null && rows[0].symbol == null;
 }
 
-/** Where the money is, not what it is doing — that is the row of chips. */
-function ConnectionChip({ offline }: { offline: boolean }) {
+/** Where the money is, not what it is doing — that is the row of chips.
+ *  "connected", not "live": whether the account behind the port is a live one
+ *  or a paper one is not something the socket tells us, so the chip does not
+ *  say. The port is the one fact worth printing, because it is the thing that
+ *  differs between a Gateway you have running and one you have not. */
+function ConnectionChip({ offline, port }: { offline: boolean; port: number | null }) {
   return (
     <span
       className={`inline-flex items-center gap-1.5 rounded border px-2 py-0.5 text-micro ${
@@ -51,7 +55,7 @@ function ConnectionChip({ offline }: { offline: boolean }) {
       }`}
     >
       <span className={`h-1.5 w-1.5 rounded-full ${offline ? "bg-warn" : "bg-pos"}`} />
-      TWS · port 7496 · {offline ? "offline" : "live"}
+      IBKR{port != null && ` · port ${port}`} · {offline ? "offline" : "connected"}
     </span>
   );
 }
@@ -146,6 +150,10 @@ export default function PortfolioPage() {
     fetcher
   );
   const { data: account } = useSWR<Record<string, string>>("/api/argus/account", fetcher);
+  // The port Argus is actually dialling. It lives in argus/.env and has moved
+  // before; printing a remembered number told you where to look and was wrong.
+  const { data: health } = useSWR<{ ibkr?: { port?: number } }>("/api/argus/health", fetcher);
+  const ibkrPort = health?.ibkr?.port ?? null;
   const pinned = wl?.watchlist ?? [];
 
   const rows = isList(data) ? data : [];
@@ -178,7 +186,7 @@ export default function PortfolioPage() {
 
   return (
     <Page width="wide">
-        <Page.Header title="Portfolio" status={<ConnectionChip offline={offline} />} />
+        <Page.Header title="Portfolio" status={<ConnectionChip offline={offline} port={ibkrPort} />} />
 
         <DisagreementBand rows={disagreeing} />
 
@@ -212,7 +220,9 @@ export default function PortfolioPage() {
             fill
             icon={<PlugZap size={26} strokeWidth={1.5} />}
             title="IBKR Gateway offline"
-            message="Connect TWS on port 7496 (live) to see positions, cost basis and Argus edge. Pin tickers on the watchlist for a price-only fallback."
+            message={`Start IB Gateway or TWS and enable API access on ${
+              ibkrPort != null ? `port ${ibkrPort}` : "the port set in argus/.env"
+            } to see positions, cost basis and Argus edge. Pin tickers on the watchlist for a price-only fallback.`}
             action={
               <Button variant="secondary" onClick={() => void mutate()}>
                 Retry connection
@@ -228,7 +238,7 @@ export default function PortfolioPage() {
             <div className="space-y-2">
               <div className="flex flex-wrap items-center gap-3">
                 <p className="text-body text-warn/80">
-                  TWS is offline — showing your pinned watchlist instead of live positions ({pinned.length}).
+                  IBKR is offline — showing your pinned watchlist instead of live positions ({pinned.length}).
                 </p>
                 <Button variant="secondary" size="sm" onClick={() => void mutate()} className="ml-auto">
                   Retry
@@ -261,7 +271,7 @@ export default function PortfolioPage() {
             fill
             icon={<Briefcase size={26} strokeWidth={1.5} />}
             title="No open positions"
-            message="TWS is connected but the account holds no equity positions. Candidates from the screener and watchlist will show their Argus edge here once you're filled."
+            message="IBKR is connected but the account holds no equity positions. Candidates from the screener and watchlist will show their Argus edge here once you're filled."
             action={
               <Button variant="secondary" onClick={() => router.push("/screener")}>
                 Open screener
@@ -278,7 +288,7 @@ export default function PortfolioPage() {
               </p>
               {liveOffline && (
                 <span className="text-body text-warn/80">
-                  Price-only preview from your pinned watchlist — TWS positions unavailable
+                  Price-only preview from your pinned watchlist — IBKR positions unavailable
                 </span>
               )}
             </div>

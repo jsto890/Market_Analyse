@@ -37,7 +37,7 @@ const FEEDS: { surface: string; feed: string; cadence: string }[] = [
   },
   {
     surface: "Portfolio",
-    feed: "IBKR account summary and positions on TWS port 7496",
+    feed: "IBKR account summary and positions over the Gateway/TWS API",
     cadence: "Live while TWS is connected",
   },
   {

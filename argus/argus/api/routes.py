@@ -21,6 +21,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import socket
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Optional, List
@@ -35,6 +36,17 @@ from ..data.rail import rail_quotes
 from ..db import get_conn
 from ..options_intel.schema import ensure_schema
 from ..settings import settings
+
+
+def _port_open(host: str, port: int, timeout: float = 0.4) -> bool:
+    """Is anything accepting TCP there? A full IB handshake takes seconds and
+    burns a client id; this only answers "is the Gateway running", which is the
+    question a status dot asks."""
+    try:
+        with socket.create_connection((host, port), timeout):
+            return True
+    except OSError:
+        return False
 
 
 def _require_token(x_argus_token: str = Header(default="")):
@@ -132,7 +144,18 @@ def build_app() -> FastAPI:
 
     @app.get("/health")
     def health():
-        return {"ok": True, "ts": datetime.now(timezone.utc).isoformat()}
+        return {
+            "ok": True,
+            "ts": datetime.now(timezone.utc).isoformat(),
+            # Which port Argus is actually dialling for IBKR, and whether
+            # anything is listening there. The dashboard printed a hard-coded
+            # port and inferred the Gateway's state from a different service.
+            "ibkr": {
+                "host": settings.ibkr_host,
+                "port": settings.ibkr_port,
+                "listening": _port_open(settings.ibkr_host, settings.ibkr_port),
+            },
+        }
 
     @app.get("/api/quote/{symbol}")
     def quote(symbol: str):

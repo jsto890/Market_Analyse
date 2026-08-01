@@ -10,19 +10,22 @@ describe("PortfolioPage connection chip (PF-02)", () => {
     mockFetchJson({
       "/api/argus/portfolio": [],
       "/api/watchlist": { watchlist: [] },
+      "/api/argus/health": { ibkr: { port: 4003 } },
     });
     render(<PortfolioPage />);
-    expect(await screen.findByText(/TWS · port 7496 · live/)).toBeInTheDocument();
-    expect(screen.queryByText(/IBKR Gateway 4002/)).not.toBeInTheDocument();
+    // The port comes off Argus's own config, so moving the Gateway moves the
+    // chip. "connected", not "live" — the socket does not say which it is.
+    expect(await screen.findByText(/IBKR · port 4003 · connected/)).toBeInTheDocument();
   });
 
   it("says offline when the connection is down, rather than claiming live", async () => {
     mockFetchJson({
       "/api/argus/portfolio": { error: "IBKR not connected", ibkr_offline: true },
       "/api/watchlist": { watchlist: [] },
+      "/api/argus/health": { ibkr: { port: 4003 } },
     });
     render(<PortfolioPage />);
-    expect(await screen.findByText(/TWS · port 7496 · offline/)).toBeInTheDocument();
+    expect(await screen.findByText(/IBKR · port 4003 · offline/)).toBeInTheDocument();
   });
 });
 
@@ -31,9 +34,10 @@ describe("PortfolioPage offline state has no fake-loading skeleton (PF-03)", () 
     mockFetchJson({
       "/api/argus/portfolio": { error: "IBKR not connected", ibkr_offline: true },
       "/api/watchlist": { watchlist: [] },
+      "/api/argus/health": { ibkr: { port: 4003 } },
     });
     render(<PortfolioPage />);
-    await screen.findByText(/TWS · port 7496 · offline/);
+    await screen.findByText(/IBKR · port 4003 · offline/);
     expect(document.querySelectorAll(".animate-pulse").length).toBe(0);
   });
 });
@@ -126,7 +130,7 @@ describe("PortfolioPage offline messaging (PF-06, PF-07)", () => {
     });
     render(<PortfolioPage />);
     expect(
-      await screen.findByText(/TWS is offline — showing your pinned watchlist instead of live positions/)
+      await screen.findByText(/IBKR is offline — showing your pinned watchlist instead of live positions/)
     ).toBeInTheDocument();
   });
 
@@ -139,7 +143,7 @@ describe("PortfolioPage offline messaging (PF-06, PF-07)", () => {
     });
     render(<PortfolioPage />);
     expect(
-      await screen.findByText(/Price-only preview from your pinned watchlist — TWS positions unavailable/)
+      await screen.findByText(/Price-only preview from your pinned watchlist — IBKR positions unavailable/)
     ).toBeInTheDocument();
   });
 });
