@@ -12,16 +12,14 @@ interface QuoteRowProps {
   skeleton?: boolean;
 }
 
+/** Forex pairs carry a wider label ("EUR/USD") and a narrower change column. */
+function isForexSymbol(symbol: string): boolean {
+  return symbol.endsWith("=X");
+}
+
 /** Format price per spec: forex 4dp, ≥1000 thousands-separated no decimals, others 2dp. */
 function formatPrice(symbol: string, price: number): string {
-  const isForex =
-    symbol.endsWith("=X") ||
-    symbol === "EURUSD=X" ||
-    symbol === "USDJPY=X" ||
-    symbol === "GBPUSD=X" ||
-    symbol === "AUDUSD=X";
-
-  if (isForex) {
+  if (isForexSymbol(symbol)) {
     return price.toLocaleString("en-US", {
       minimumFractionDigits: 4,
       maximumFractionDigits: 4,
@@ -53,18 +51,24 @@ function pctColor(pct: number): string {
 
 export function QuoteRow({ symbol, price, changePct, skeleton }: QuoteRowProps) {
   const label = RAIL_LABEL[symbol] ?? symbol;
+  // Fixed tracks (R-07): the change column only reads as a column if it starts
+  // at the same x on every row, so label and change are px-fixed and the price
+  // takes the slack. Forex labels are wider ("EUR/USD"), its changes narrower.
+  const forex = isForexSymbol(symbol);
+  const labelTrack = forex ? "w-[56px]" : "w-[42px]";
+  const changeTrack = forex ? "w-[52px]" : "w-[54px]";
 
   if (skeleton) {
     // Spec §8.8 — symbol label stays, price/pct are animated bars
     return (
-      <div className="h-[26px] flex items-center px-3 gap-2" aria-hidden="true">
-        <span className="eyebrow w-12 flex-shrink-0 leading-none">
+      <div className="h-[27px] flex items-center px-3 gap-[6px]" aria-hidden="true">
+        <span className={`eyebrow ${labelTrack} flex-shrink-0 leading-none`}>
           {label}
         </span>
-        <div className="flex-1 flex justify-end">
+        <div className="flex-1 min-w-0 flex justify-end">
           <Loading variant="lines" count={1} className="w-14" />
         </div>
-        <div className="w-16 flex justify-end">
+        <div className={`${changeTrack} flex-shrink-0 flex justify-end`}>
           <Loading variant="lines" count={1} className="w-10" />
         </div>
       </div>
@@ -74,15 +78,18 @@ export function QuoteRow({ symbol, price, changePct, skeleton }: QuoteRowProps) 
   // VIX special-case (spec §11): level has NO color (text-foreground is correct — just no
   // pos/neg applied to the price). The % change column still colors normally.
   return (
-    <Link href={`/t/${symbol}`} className="h-[26px] flex items-center px-3 hover:bg-elevated">
-      <span className="eyebrow w-12 flex-shrink-0 leading-none">
+    <Link
+      href={`/t/${symbol}`}
+      className="h-[27px] flex items-center px-3 gap-[6px] hover:bg-elevated"
+    >
+      <span className={`eyebrow ${labelTrack} flex-shrink-0 leading-none`}>
         {label}
       </span>
-      <span className="flex-1 text-right text-data text-foreground leading-none">
+      <span className="flex-1 min-w-0 text-right text-data text-foreground leading-none">
         {formatPrice(symbol, price)}
       </span>
       <span
-        className={`w-16 text-right text-data font-medium leading-none ${pctColor(changePct)}`}
+        className={`${changeTrack} flex-shrink-0 text-right text-data font-medium leading-none ${pctColor(changePct)}`}
       >
         {formatPct(changePct)}
       </span>

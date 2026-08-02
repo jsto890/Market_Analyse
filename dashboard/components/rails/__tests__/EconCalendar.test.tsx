@@ -14,21 +14,27 @@ function mkEvent(i: number, importance: string) {
 }
 
 describe("EconCalendar (LR-09, A11Y-03, MAC-01, MAC-04)", () => {
-  it("points the overflow link at /calendar, not the sentiment page (MAC-01)", () => {
+  it("counts the overflow into the tail link (MAC-01)", () => {
     vi.mocked(calendarLib.useCalendar).mockReturnValue({
       data: { today: "2026-07-29", days: 7, events: [1, 2, 3, 4, 5, 6, 7, 8].map((i) => mkEvent(i, "low")) },
     } as ReturnType<typeof calendarLib.useCalendar>);
     render(<EconCalendar days={7} max={6} />);
-    const more = screen.getByText("+2 more · full calendar ›");
+    const more = screen.getByText("+2 more ›");
     expect(more.closest("a")).toHaveAttribute("href", "/calendar");
   });
 
-  it("still offers the calendar link when nothing overflows", () => {
+  it("puts the destination in the header, where the column label used to be (R-03)", () => {
     vi.mocked(calendarLib.useCalendar).mockReturnValue({
       data: { today: "2026-07-29", days: 7, events: [mkEvent(1, "low")] },
     } as ReturnType<typeof calendarLib.useCalendar>);
     render(<EconCalendar days={7} max={6} />);
-    expect(screen.getByText("full calendar ›").closest("a")).toHaveAttribute("href", "/calendar");
+    const header = screen.getByText("calendar ›");
+    expect(header.closest("a")).toHaveAttribute("href", "/calendar");
+    expect(header.className).toContain("text-accent");
+    // "impact" labelled a column the rail never rendered.
+    expect(screen.queryByText("impact")).toBeNull();
+    // Nothing overflows, so the tail link would just repeat the header.
+    expect(screen.queryByText(/more ›/)).toBeNull();
   });
 
   it("ranks importance with visible text, not a hover-only dot (MAC-04)", () => {
@@ -52,5 +58,29 @@ describe("EconCalendar (LR-09, A11Y-03, MAC-01, MAC-04)", () => {
     expect(time.className).toContain("text-data");
     expect(time.className).toContain("text-muted");
     expect(time.className).not.toContain("opacity-60");
-          });
+  });
+
+  it("gives the day and the time one slot, not two columns (R-03)", () => {
+    vi.mocked(calendarLib.useCalendar).mockReturnValue({
+      data: {
+        today: "2026-07-29",
+        days: 7,
+        events: [
+          { ...mkEvent(1, "high"), date: "2026-07-29", time_et: "09:45" },
+          { ...mkEvent(2, "high"), date: "2026-07-31", time_et: "08:30" },
+        ],
+      },
+    } as ReturnType<typeof calendarLib.useCalendar>);
+    render(<EconCalendar days={7} max={6} />);
+
+    // Today is placed by the clock; the tint already says which day it is.
+    const todayRow = screen.getByText("Event 1").parentElement!;
+    expect(todayRow.textContent).toContain("09:45");
+    expect(todayRow.textContent).not.toContain("Today");
+
+    // A later release is placed by its day — 08:30 next Friday is not a rail fact.
+    const laterRow = screen.getByText("Event 2").parentElement!;
+    expect(laterRow.textContent).toContain("Fri");
+    expect(laterRow.textContent).not.toContain("08:30");
+  });
 });

@@ -3,7 +3,9 @@
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { useNewsFeed, relTime, sortNewsByTs, type NewsItem } from "@/lib/news";
+import { useCalendar, isEarnings } from "@/lib/calendar";
 import { useWatchlistTickers } from "@/lib/watchlist";
+import InfoTip from "@/components/ui/InfoTip";
 import Loading from "@/components/ui/Loading";
 import Empty from "@/components/ui/Empty";
 import Failed from "@/components/ui/Failed";
@@ -149,21 +151,63 @@ export function RightRail({ dense = false }: { dense?: boolean }) {
 }
 
 // ── Source label map ──────────────────────────────────────────────────────────
-const SOURCE_SHORT: Record<string, string> = {
-  discord: "disc",
-  "yahoo-finance": "yf",
-  yf: "yf",
-  ibkr: "ibkr",
-  reuters: "reu",
-  bloomberg: "bb",
-  benzinga: "benz",
-  twitter: "twit",
-  x: "x",
-  whale: "whl",
+// The four-letter codes were cut for a 260px rail; the rail is 288px and the
+// names fit, so the reader no longer has to decode "reu" or "benz".
+const SOURCE_NAME: Record<string, string> = {
+  discord: "Discord",
+  "yahoo-finance": "Yahoo Finance",
+  yf: "Yahoo Finance",
+  ibkr: "IBKR",
+  reuters: "Reuters",
+  bloomberg: "Bloomberg",
+  benzinga: "Benzinga",
+  twitter: "X",
+  x: "X",
+  whale: "Whale",
 };
 
-function shortSource(s: string): string {
-  return SOURCE_SHORT[s.toLowerCase()] ?? s.slice(0, 4).toLowerCase();
+function sourceName(s: string): string {
+  const key = s.toLowerCase();
+  return SOURCE_NAME[key] ?? key.charAt(0).toUpperCase() + key.slice(1);
+}
+
+// ── Clock ─────────────────────────────────────────────────────────────────────
+// Headlines are stamped in UTC by the ingest, and read against the session the
+// market keeps. Both the row and the hour header run on ET so a row always sits
+// under the hour it belongs to.
+const ET_CLOCK = new Intl.DateTimeFormat("en-US", {
+  timeZone: "America/New_York", hour: "2-digit", minute: "2-digit", hourCycle: "h23",
+});
+
+const ET_PARTS = new Intl.DateTimeFormat("en-US", {
+  timeZone: "America/New_York",
+  year: "numeric", month: "short", day: "numeric", hour: "2-digit", hourCycle: "h23",
+});
+
+function parseTs(ts: string): Date | null {
+  const d = new Date(ts.replace(" ", "T"));
+  return Number.isNaN(d.getTime()) ? null : d;
+}
+
+/** "09:31" in ET, or "" when the stamp does not parse. */
+function etTime(ts: string): string {
+  const d = parseTs(ts);
+  return d ? ET_CLOCK.format(d) : "";
+}
+
+function etParts(d: Date): { day: string; key: string; hour: number } {
+  const p: Record<string, string> = {};
+  for (const part of ET_PARTS.formatToParts(d)) p[part.type] = part.value;
+  return { day: `${p.month} ${p.day}`, key: `${p.year}-${p.month}-${p.day}`, hour: Number(p.hour) % 24 };
+}
+
+const pad2 = (n: number) => String(n).padStart(2, "0");
+
+/** "3m ago" — the age, which is a deferral, not something to print sixty times. */
+function ageLabel(ts: string): string {
+  const rel = relTime(ts);
+  if (!rel) return "";
+  return rel === "now" ? "just now" : `${rel} ago`;
 }
 
 // ── Header right-side: item count indicator ───────────────────────────────────
@@ -184,6 +228,7 @@ function NewsFeedHeader() {
 function NewsFeedBody() {
   const { data, error } = useNewsFeed();
   const watchlist = useWatchlistTickers();
+  const reportingToday = useReportingToday();
 
   if (error) {
     return (
@@ -212,13 +257,18 @@ function NewsFeedBody() {
   // time order — the headers only say where each hour starts.
   return (
     <div>
-      {groupByHour(items).map(([label, group]) => (
-        <div key={label}>
+      {groupByHour(items).map(([label, group], i) => (
+        <div key={`${label}-${i}`}>
           <div className="sticky top-[26px] z-[9] border-b border-line bg-elevated px-3 py-0.5">
             <span className="eyebrow leading-none">{label}</span>
           </div>
           {group.map((item: NewsItem) => (
-            <NewsRow key={item.id} item={item} onWatchlist={!!item.ticker && watchlist.has(item.ticker)} />
+            <NewsRow
+              key={item.id}
+              item={item}
+              onWatchlist={!!item.ticker && watchlist.has(item.ticker)}
+              reporting={!!item.ticker && reportingToday.has(item.ticker)}
+            />
           ))}
         </div>
       ))}
@@ -226,33 +276,59 @@ function NewsFeedBody() {
   );
 }
 
-/** Buckets an already-sorted feed by clock hour, keeping order. The date is
- *  carried on the label only when the item is not from today — the common case
- *  is a feed that never leaves the current session. */
+/** Buckets an already-sorted feed by ET clock hour, keeping order. Each header
+ *  states the span it covers rather than just where it starts, so a row is
+ *  placed between two times instead of after one; the hour still running is
+ *  named for what it is. The date is carried only when the bucket is not
+ *  today's — the common case is a feed that never leaves the current session. */
 function groupByHour(items: NewsItem[]): [string, NewsItem[]][] {
   const now = new Date();
-  const out: [string, NewsItem[]][] = [];
+  const nowEt = etParts(now);
+  const buckets: { at: Date | null; items: NewsItem[] }[] = [];
+  let lastKey = "";
+
   for (const item of items) {
-    const d = new Date(item.ts.replace(" ", "T"));
-    if (Number.isNaN(d.getTime())) {
-      if (out.length === 0 || out[out.length - 1][0] !== "Undated") out.push(["Undated", []]);
-      out[out.length - 1][1].push(item);
-      continue;
+    const d = parseTs(item.ts);
+    const p = d ? etParts(d) : null;
+    const key = p ? `${p.key}|${p.hour}` : "undated";
+    if (key !== lastKey) {
+      buckets.push({ at: d, items: [] });
+      lastKey = key;
     }
-    const sameDay = d.toDateString() === now.toDateString();
-    const hh = `${String(d.getHours()).padStart(2, "0")}:00`;
-    const label = sameDay
-      ? hh
-      : `${d.toLocaleDateString(undefined, { month: "short", day: "numeric" })} · ${hh}`;
-    if (out.length === 0 || out[out.length - 1][0] !== label) out.push([label, []]);
-    out[out.length - 1][1].push(item);
+    buckets[buckets.length - 1].items.push(item);
+  }
+
+  return buckets.map(({ at, items: group }, i) => {
+    if (!at) return ["Undated", group] as [string, NewsItem[]];
+    const { day, key, hour } = etParts(at);
+    // Only the newest bucket can still be filling, and only if the clock has
+    // not left it — an 09:00 header at 14:00 must not claim to be current.
+    const live = i === 0 && key === nowEt.key && hour === nowEt.hour;
+    const span = `${pad2(hour)}:00 — ${live ? "now" : `${pad2((hour + 1) % 24)}:00`}`;
+    return [key === nowEt.key ? span : `${day} · ${span}`, group] as [string, NewsItem[]];
+  });
+}
+
+/** Names with an earnings date of today, from the calendar the rail already
+ *  loads. A headline about a company reporting tonight is a different object
+ *  from a headline about one that isn't. */
+function useReportingToday(): Set<string> {
+  const { data } = useCalendar(7);
+  const out = new Set<string>();
+  if (!data?.today) return out;
+  for (const ev of data.events) {
+    if (ev.date === data.today && ev.ticker && isEarnings(ev)) out.add(ev.ticker);
   }
   return out;
 }
 
 // ── Individual news row ───────────────────────────────────────────────────────
-function NewsRow({ item, onWatchlist }: { item: NewsItem; onWatchlist: boolean }) {
+function NewsRow(
+  { item, onWatchlist, reporting }: { item: NewsItem; onWatchlist: boolean; reporting: boolean },
+) {
   const isBreaking = Boolean(item.is_breaking);
+  const at = etTime(item.ts);
+  const age = ageLabel(item.ts);
 
   // No per-source accent stripe: the feed is predominantly whale prints, so a
   // teal border on every row carried no signal. Source is already stated in
@@ -266,13 +342,21 @@ function NewsRow({ item, onWatchlist }: { item: NewsItem; onWatchlist: boolean }
         .filter(Boolean)
         .join(" ")}
     >
-      {/* Top meta line — when it broke, and who says so. */}
+      {/* Top meta line — when it broke, and who says so. The clock is what a
+          trader reconciles against ("that was before the print"); the age is
+          one subtraction away and sits in the tooltip, where the hour header
+          has not already answered it. */}
       <div className="mb-1 flex items-center gap-1.5">
         {isBreaking && (
           <span className="text-micro font-semibold leading-none text-neg">BREAKING</span>
         )}
-        <span className="font-mono text-micro leading-none tracking-normal text-muted">
-          {relTime(item.ts)} · {shortSource(item.source)}
+        <span className="flex items-center gap-1 font-mono text-micro leading-none tracking-normal text-muted">
+          {at && (
+            age
+              ? <InfoTip content={age} className="leading-none tracking-normal">{at}</InfoTip>
+              : <span>{at}</span>
+          )}
+          <span>{at ? "· " : ""}{sourceName(item.source)}</span>
         </span>
       </div>
 
@@ -309,6 +393,11 @@ function NewsRow({ item, onWatchlist }: { item: NewsItem; onWatchlist: boolean }
           {onWatchlist && (
             <span className="rounded-sm border border-model/40 px-1.5 py-1 text-micro leading-none text-model">
               pinned
+            </span>
+          )}
+          {reporting && (
+            <span className="rounded-sm border border-warn/40 bg-warn/10 px-1.5 py-1 text-micro leading-none text-warn">
+              earnings
             </span>
           )}
         </div>

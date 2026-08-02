@@ -16,18 +16,18 @@ import { EconCalendar } from "./EconCalendar";
 
 // ─── Session badge helpers ────────────────────────────────────────────────────
 
-/** Equity session badge per spec §3.2 */
+/** Equity session badge per spec §3.2. The badge states the session, so it is
+ * coloured as a state, never as `--accent` (which is interactive-only): green
+ * open, muted either side of the bell, amber closed (R-01). */
 function EquityBadge() {
   const { us: state } = useMarketClock();
   const label = STATE_LABEL[state];
   const cls =
-    state === "pre"
-      ? "bg-accent/15 text-accent"
-      : state === "regular"
-      ? "bg-accent/25 text-accent"
-      : state === "after"
-      ? "bg-accent/10 text-accent/70"
-      : "bg-warn/10 text-warn"; // closed
+    state === "regular"
+      ? "bg-pos/12 text-pos"
+      : state === "closed"
+      ? "bg-warn/12 text-warn"
+      : "bg-muted/12 text-muted"; // pre / after
   return (
     <span className={`rounded px-1.5 py-px text-micro font-medium font-mono leading-none ${cls}`}>
       {label}
@@ -35,13 +35,20 @@ function EquityBadge() {
   );
 }
 
-/** FX session chip: single label pattern, one tone, per LR-08. */
+/** FX session chip: the session names alone — the block header two words away
+ * already says "Forex". Teal for an overlap, muted for a single session, amber
+ * when the week is shut (R-02). */
 function FxChip() {
   const { active, closed } = forexSessions();
-  const state = closed ? "CLOSED" : active.length === 0 ? "OPEN" : active.join("·");
+  const label = closed ? "CLOSED" : active.length === 0 ? "OPEN" : active.join("/");
+  const cls = closed
+    ? "bg-warn/12 text-warn"
+    : active.length > 1
+    ? "bg-teal/12 text-teal"
+    : "bg-muted/12 text-muted";
   return (
-    <span className="rounded px-1.5 py-px text-micro font-mono font-medium leading-none bg-elevated text-muted">
-      FX · {state}
+    <span className={`rounded px-1.5 py-px text-micro font-mono font-medium leading-none ${cls}`}>
+      {label}
     </span>
   );
 }
@@ -127,7 +134,10 @@ function HiddenBlockGlyphs({ showMacro }: { showMacro: boolean }) {
     : active.length === 1
     ? `FX: ${active[0]}`
     : "FX: between sessions";
-  const fxClass = closed ? "bg-warn" : active.length > 1 ? "bg-teal" : active.length === 1 ? "bg-accent" : "bg-muted";
+  // Same three-way as FxChip above — teal overlap, muted single/between, amber
+  // shut. The strip is what 20 of 21 routes render, so it cannot disagree with
+  // the expanded chip about the same fact, and state is never --accent (R-02).
+  const fxClass = closed ? "bg-warn" : active.length > 1 ? "bg-teal" : "bg-muted";
 
   const { data: macroData } = useMacro();
   const globalGauge = (macroData?.gauges ?? []).find((g) => g.scope === "global" && g.window === "1d");
@@ -140,7 +150,10 @@ function HiddenBlockGlyphs({ showMacro }: { showMacro: boolean }) {
   const { data: calData } = useCalendar(1);
   const nextEvent = calData?.events?.[0];
   const calLabel = nextEvent ? `Next: ${nextEvent.event}` : "No events today";
-  const calClass = nextEvent ? "bg-accent" : "bg-muted";
+  // "An event is scheduled" is data, not an affordance, so it cannot be
+  // --accent. Foreground/muted is the same emphasis pair EconCalendar uses to
+  // mark a today row against the rest.
+  const calClass = nextEvent ? "bg-foreground" : "bg-muted";
 
   return (
     <div className="flex flex-col items-center gap-1.5 py-1.5 border-t border-line w-full">

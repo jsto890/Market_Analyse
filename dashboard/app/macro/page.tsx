@@ -20,7 +20,7 @@ import { MacroChart, type SpxBar } from "@/components/macro/MacroChart";
 import Contributors from "@/components/macro/Contributors";
 import ScopeBand from "@/components/macro/ScopeBand";
 import ScopeTile from "@/components/macro/ScopeTile";
-import Collapsible from "@/components/ui/Collapsible";
+import Panel from "@/components/ui/Panel";
 import SegmentedControl from "@/components/ui/SegmentedControl";
 import Empty from "@/components/ui/Empty";
 import { useLocalStorage } from "@/lib/useLocalStorage";
@@ -42,20 +42,16 @@ const WINDOW_OPTIONS = WINDOWS.map((w) => ({
 function Methodology({ window }: { window: string }) {
   const meta = WINDOW_META[window];
   return (
-    <Collapsible
-      persistKey="macro-methodology"
-      className="rounded-md border border-line bg-surface"
-      triggerClassName="px-3 py-2"
-      trigger={
-        <span className="text-body font-medium text-foreground">
-          How this score is computed
-          <span className="ml-2 font-normal text-muted">
-            model, sources, decay, and what a number means
-          </span>
-        </span>
-      }
+    // Not a disclosure. Every number on this page is a model output with a
+    // lookback, a decay and a corpus behind it, and a reader who cannot see
+    // those cannot tell +0.31 from noise — so the method is the page's
+    // explanation, standing open, rather than an aside behind a chevron (O-07).
+    <Panel
+      heading="eyebrow"
+      title="How this score is computed"
+      subtitle="model, sources, decay, and what a number means"
     >
-      <dl className="grid gap-x-6 gap-y-2 border-t border-line px-3 py-3 text-body leading-relaxed sm:grid-cols-2">
+      <dl className="grid gap-x-6 gap-y-3 text-body leading-relaxed sm:grid-cols-2 lg:grid-cols-4">
         <div>
           <dt className="eyebrow">Model</dt>
           <dd className="text-2">
@@ -115,7 +111,7 @@ function Methodology({ window }: { window: string }) {
           </dd>
         </div>
       </dl>
-    </Collapsible>
+    </Panel>
   );
 }
 
@@ -185,8 +181,6 @@ function MacroPageInner() {
         }
       />
 
-      <Methodology window={win} />
-
       <SegmentedControl
         label="Lookback"
         value={win}
@@ -194,6 +188,8 @@ function MacroPageInner() {
         onChange={pickWindow}
         className="flex-wrap gap-x-3 gap-y-2"
       />
+
+      <Methodology window={win} />
 
       {resetNotice && (
         <p

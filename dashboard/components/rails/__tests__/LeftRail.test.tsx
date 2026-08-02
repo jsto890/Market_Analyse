@@ -120,17 +120,70 @@ describe("LeftRail macro suppression on /macro", () => {
   });
 });
 
-describe("FxChip (LR-08)", () => {
-  it("renders a single FX · <state> label in one tone, not per-state colors", () => {
+describe("EquityBadge session tone (R-01)", () => {
+  const renderAt = (iso: string) => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(iso));
+    window.innerWidth = 1600;
+    render(<LeftRail />);
+  };
+
+  it("is green while the bell is open — open is a state, and accent is interactive-only", () => {
+    renderAt("2026-07-28T14:00:00Z"); // Mon 10:00 ET
+    const badge = screen.getByText("REG");
+    expect(badge.className).toContain("text-pos");
+    expect(badge.className).not.toContain("accent");
+    vi.useRealTimers();
+  });
+
+  it("goes muted either side of the bell", () => {
+    renderAt("2026-07-28T12:00:00Z"); // Mon 08:00 ET — pre
+    const badge = screen.getByText("PRE");
+    expect(badge.className).toContain("text-muted");
+    expect(badge.className).not.toContain("accent");
+    vi.useRealTimers();
+  });
+
+  it("goes amber when the market is shut", () => {
+    renderAt("2026-08-01T14:00:00Z"); // Sat — equity and FX both read CLOSED
+    const shut = screen.getAllByText("CLOSED");
+    expect(shut).toHaveLength(2);
+    shut.forEach((el) => expect(el.className).toContain("text-warn"));
+    vi.useRealTimers();
+  });
+});
+
+describe("FxChip (R-02)", () => {
+  it("drops the FX prefix and goes teal on a session overlap", () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-07-28T13:00:00Z")); // Mon 13:00 UTC — LDN+NY overlap
     window.innerWidth = 1600;
     render(<LeftRail />);
-    const chip = screen.getByText("FX · LDN·NY");
-    expect(chip.className).toContain("bg-elevated");
+    expect(screen.queryByText(/^FX ·/)).not.toBeInTheDocument();
+    const chip = screen.getByText("LDN/NY");
+    expect(chip.className).toContain("text-teal");
+    vi.useRealTimers();
+  });
+
+  it("stays muted while only one session is open", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-07-28T10:00:00Z")); // Mon 10:00 UTC — LDN only
+    window.innerWidth = 1600;
+    render(<LeftRail />);
+    const chip = screen.getByText("LDN");
     expect(chip.className).toContain("text-muted");
-    expect(chip.className).not.toContain("bg-teal/15");
     expect(chip.className).not.toContain("text-teal");
+    vi.useRealTimers();
+  });
+
+  it("goes amber over the weekend", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-08-01T13:00:00Z")); // Sat
+    window.innerWidth = 1600;
+    render(<LeftRail />);
+    screen
+      .getAllByText("CLOSED")
+      .forEach((el) => expect(el.className).toContain("text-warn"));
     vi.useRealTimers();
   });
 });

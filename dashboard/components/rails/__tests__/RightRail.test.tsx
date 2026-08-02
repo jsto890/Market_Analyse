@@ -5,10 +5,16 @@ import { render, screen } from "@/test/render";
 import { RightRail } from "@/components/rails/RightRail";
 import * as newsLib from "@/lib/news";
 import * as watchlistLib from "@/lib/watchlist";
+import * as calendarLib from "@/lib/calendar";
 
 vi.mock("@/lib/news", async (importOriginal) => {
   const actual = await importOriginal<typeof newsLib>();
   return { ...actual, useNewsFeed: vi.fn() };
+});
+
+vi.mock("@/lib/calendar", async (importOriginal) => {
+  const actual = await importOriginal<typeof calendarLib>();
+  return { ...actual, useCalendar: vi.fn() };
 });
 
 vi.mock("@/lib/watchlist", async (importOriginal) => {
@@ -21,6 +27,11 @@ function mkItem(id: number, ts: string, ticker: string | null = null, headline =
 }
 
 beforeEach(() => {
+  // No calendar unless a test supplies one: the earnings chip is opt-in.
+  vi.mocked(calendarLib.useCalendar).mockReturnValue(
+    { data: undefined } as ReturnType<typeof calendarLib.useCalendar>,
+  );
+
   // The rail now defaults to collapsed at every width, so the feed tests below
   // opt in to the expanded state via the stored preference ("0" = expanded).
   // The default itself is covered by the collapse-default test at the bottom.
@@ -141,8 +152,8 @@ describe("RightRail new-items pill (RR-03)", () => {
   });
 });
 
-describe("NewsRow whale source (RR-04)", () => {
-  it("renders the WHL text code instead of the whale emoji", () => {
+describe("NewsRow whale source (RR-04, R-04)", () => {
+  it("spells the source out — no emoji, and no four-letter code to decode", () => {
     vi.mocked(watchlistLib.useWatchlistTickers).mockReturnValue(new Set());
     vi.mocked(newsLib.useNewsFeed).mockReturnValue({
       data: {
@@ -151,8 +162,65 @@ describe("NewsRow whale source (RR-04)", () => {
       error: undefined,
     } as any);
     render(<RightRail />);
-    expect(screen.getByText(/· whl$/)).toBeInTheDocument();
+    expect(screen.getByText(/·\s*Whale$/)).toBeInTheDocument();
     expect(screen.queryByText(/🐋/)).toBeNull();
+    expect(screen.queryByText(/whl/)).toBeNull();
+  });
+});
+
+describe("NewsRow clock and age (R-04)", () => {
+  it("prints the ET clock, defers the age to a tooltip, and never to a title attribute", async () => {
+    vi.mocked(watchlistLib.useWatchlistTickers).mockReturnValue(new Set());
+    // 14:31Z on 28 Jul 2026 is 10:31 in New York.
+    vi.mocked(newsLib.useNewsFeed).mockReturnValue({
+      data: {
+        items: [{ id: 1, ts: "2026-07-28T14:31:00+00:00", source: "reuters", ticker: null, headline: "pmi beats", body: null, url: null, is_breaking: 0 }],
+      },
+      error: undefined,
+    } as any);
+    render(<RightRail />);
+
+    const trigger = screen.getByText("10:31");
+    expect(screen.getByText(/·\s*Reuters$/)).toBeInTheDocument();
+    // The age is a deferral, not a printed column.
+    expect(screen.queryByText(/ago$/)).toBeNull();
+
+    const aside = trigger.closest("aside") as HTMLElement;
+    expect(aside.querySelectorAll("[title]")).toHaveLength(0);
+
+    fireEvent.focus(trigger);
+    expect(await screen.findAllByText(/ago$/)).not.toHaveLength(0);
+  });
+});
+
+describe("NewsRow earnings chip (R-05)", () => {
+  it("marks a headline about a name reporting today, in amber, and leaves the rest alone", () => {
+    vi.mocked(watchlistLib.useWatchlistTickers).mockReturnValue(new Set());
+    vi.mocked(calendarLib.useCalendar).mockReturnValue({
+      data: {
+        today: "2026-07-28",
+        days: 7,
+        events: [
+          { date: "2026-07-28", time_et: "16:30", event: "AAPL Q3", category: "earnings", importance: "high", source: "earnings", ticker: "AAPL" },
+          { date: "2026-07-30", time_et: "16:30", event: "MSFT Q4", category: "earnings", importance: "high", source: "earnings", ticker: "MSFT" },
+        ],
+      },
+    } as ReturnType<typeof calendarLib.useCalendar>);
+    vi.mocked(newsLib.useNewsFeed).mockReturnValue({
+      data: {
+        items: [
+          mkItem(1, "2026-07-28 09:00:00", "AAPL", "buyback talk"),
+          mkItem(2, "2026-07-28 09:01:00", "MSFT", "azure deal"),
+        ],
+      },
+      error: undefined,
+    } as any);
+    render(<RightRail />);
+
+    const chip = screen.getByText("earnings");
+    expect(chip.className).toContain("text-warn");
+    expect(screen.getAllByText("earnings")).toHaveLength(1);
+    expect(chip.parentElement!.textContent).toContain("AAPL");
   });
 });
 
@@ -219,36 +287,55 @@ function todayAt(hour: number, minute: number): string {
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(hour)}:${p(minute)}:00`;
 }
 
-describe("RightRail hour grouping", () => {
-  it("heads each clock hour once, leaving the rows in time order", () => {
+describe("RightRail hour grouping (R-06)", () => {
+  it("heads each ET hour once as a span, leaving the rows in time order", () => {
     vi.mocked(watchlistLib.useWatchlistTickers).mockReturnValue(new Set());
+    // 28 Jul 2026 is EDT, so 14:00Z is 10:00 in New York.
     vi.mocked(newsLib.useNewsFeed).mockReturnValue({
       data: {
         items: [
-          mkItem(1, todayAt(9, 5), null, "nine-oh-five"),
-          mkItem(2, todayAt(9, 40), null, "nine-forty"),
-          mkItem(3, todayAt(10, 10), null, "ten-ten"),
+          mkItem(1, "2026-07-28T14:00:00+00:00", null, "ten-oh-oh"),
+          mkItem(2, "2026-07-28T14:40:00+00:00", null, "ten-forty"),
+          mkItem(3, "2026-07-28T15:10:00+00:00", null, "eleven-ten"),
         ],
       },
       error: undefined,
     } as any);
     render(<RightRail />);
-    expect(screen.getAllByText("09:00")).toHaveLength(1);
-    expect(screen.getAllByText("10:00")).toHaveLength(1);
-    const text = screen.getByText("ten-ten").closest("aside")!.textContent!;
-    expect(text.indexOf("10:00")).toBeLessThan(text.indexOf("ten-ten"));
-    expect(text.indexOf("ten-ten")).toBeLessThan(text.indexOf("09:00"));
-    expect(text.indexOf("nine-oh-five")).toBeGreaterThan(text.indexOf("nine-forty"));
+
+    expect(screen.getAllByText("Jul 28 · 11:00 — 12:00")).toHaveLength(1);
+    expect(screen.getAllByText("Jul 28 · 10:00 — 11:00")).toHaveLength(1);
+    // A bucket the clock has left cannot claim to be the current one.
+    expect(screen.queryByText(/— now/)).toBeNull();
+
+    const text = screen.getByText("eleven-ten").closest("aside")!.textContent!;
+    expect(text.indexOf("11:00 — 12:00")).toBeLessThan(text.indexOf("eleven-ten"));
+    expect(text.indexOf("eleven-ten")).toBeLessThan(text.indexOf("10:00 — 11:00"));
+    expect(text.indexOf("ten-forty")).toBeLessThan(text.indexOf("ten-oh-oh"));
   });
 
-  it("dates the header once the item is not from today", () => {
+  it("names the hour still running rather than closing it off", () => {
     vi.mocked(watchlistLib.useWatchlistTickers).mockReturnValue(new Set());
+    const now = new Date();
     vi.mocked(newsLib.useNewsFeed).mockReturnValue({
-      data: { items: [mkItem(1, "2026-07-28 09:05:00", null, "old one")] },
+      data: { items: [mkItem(1, now.toISOString(), null, "just landed")] },
       error: undefined,
     } as any);
     render(<RightRail />);
-    expect(screen.getByText(/· 09:00$/)).toBeInTheDocument();
+    const etHour = new Intl.DateTimeFormat("en-US", {
+      timeZone: "America/New_York", hour: "2-digit", hourCycle: "h23",
+    }).format(now);
+    expect(screen.getByText(`${etHour}:00 — now`)).toBeInTheDocument();
+  });
+
+  it("dates the header once the bucket is not today's", () => {
+    vi.mocked(watchlistLib.useWatchlistTickers).mockReturnValue(new Set());
+    vi.mocked(newsLib.useNewsFeed).mockReturnValue({
+      data: { items: [mkItem(1, "2026-07-28T13:05:00+00:00", null, "old one")] },
+      error: undefined,
+    } as any);
+    render(<RightRail />);
+    expect(screen.getByText("Jul 28 · 09:00 — 10:00")).toBeInTheDocument();
   });
 });
 

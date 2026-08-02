@@ -22,6 +22,12 @@ fs.mkdirSync(OUT, { recursive: true });
 
 const LAPTOP = { width: 1440, height: 900 };
 const DESKTOP = { width: 1920, height: 1080 };
+/** The audit's own width. It used to inherit Playwright's `Desktop Chrome`
+ * default, so every width in `_audit.json` was a 1280 number that nothing in
+ * this file declared and a config edit could silently move. Pinned here so the
+ * numbers mean something; the review width is `LAPTOP`, which the substrate
+ * contract below measures. */
+const AUDIT = { width: 1280, height: 720 };
 
 /** Kill animations/transitions and caret blink so captures are deterministic. */
 async function freeze(page: Page) {
@@ -70,6 +76,36 @@ async function settle(page: Page, ms = 2500) {
     .waitForLoadState("networkidle", { timeout: 6000 })
     .catch(() => {}); // polling pages (live ladder, 5s health) never go idle
   await page.waitForTimeout(ms);
+}
+
+/**
+ * Wait until the rails have reached the geometry this route is supposed to have.
+ *
+ * `LeftRail`/`RightRail` render expanded during SSR and collapse in a `useEffect`
+ * keyed on `dense`, to keep hydration clean. So `#main` is viewport−488 until
+ * hydration runs and viewport−72 after it — anything that measures width off a
+ * fixed timeout is racing that effect and will report the wrong number on a slow
+ * machine. Assert the state instead of hoping the settle beat won.
+ *
+ * `RailShell` opens both rails on `/` alone (`dense = pathname !== "/"`).
+ */
+async function waitForRails(page: Page, routePath: string) {
+  const dense = routePath !== "/";
+  await page.waitForFunction(
+    (isDense) => {
+      const rails = Array.from(document.querySelectorAll<HTMLElement>("#main ~ aside"));
+      if (rails.length !== 2) return false;
+      const css = getComputedStyle(document.documentElement);
+      const px = (name: string) => parseFloat(css.getPropertyValue(name));
+      const want = isDense
+        ? [px("--rail-collapsed"), px("--rail-collapsed")]
+        : [px("--rail-l"), px("--rail-r")];
+      // DOM order is left then right; `order-1`/`order-3` only move them visually.
+      return rails.every((r, i) => Math.abs(r.getBoundingClientRect().width - want[i]) <= 1);
+    },
+    dense,
+    { timeout: 15_000 },
+  );
 }
 
 async function shot(page: Page, name: string, opts: { full?: boolean } = {}) {
@@ -335,6 +371,7 @@ test("audit: console errors, computed layout, contrast inputs", async ({ page })
   // One navigation + 1.5s settle per route, over every route in ROUTES — the
   // 30s default is a coin flip on a cold dev server.
   test.setTimeout(120_000);
+  await page.setViewportSize(AUDIT);
   const report: Record<string, unknown> = {};
 
   for (const route of ROUTES) {
@@ -344,6 +381,8 @@ test("audit: console errors, computed layout, contrast inputs", async ({ page })
 
     const res = await page.goto(route.path).catch(() => null);
     await settle(page, 1500);
+    // Rails first: every width below is measured off the space they leave.
+    await waitForRails(page, route.path);
 
     report[route.path] = {
       status: res?.status() ?? "no response",
@@ -351,12 +390,21 @@ test("audit: console errors, computed layout, contrast inputs", async ({ page })
       // The measurements the code review can only guess at:
       metrics: await page.evaluate(() => {
         const main = document.querySelector("#main");
-        const content = main?.firstElementChild as HTMLElement | null;
+        // The element that owns the cap, not whatever happens to be first.
+        // `#main`'s first child is the options sub-shell wrapper on seven
+        // routes and the `<Page>` itself on the rest, so the old reading
+        // compared two different DOM levels and produced a fourth width that
+        // no page declared. `data-page-width` is `Page`'s own marker.
+        const owner = main?.querySelector("main[data-page-width]") as HTMLElement | null;
+        const content = owner ?? (main?.firstElementChild as HTMLElement | null);
         const cs = content ? getComputedStyle(content) : null;
         return {
           scrollHeight: main?.scrollHeight ?? null,
           clientHeight: main?.clientHeight ?? null,
           contentWidth: content?.getBoundingClientRect().width ?? null,
+          // Which element the width above came from. A route on `fallback` has
+          // no `<Page>` at all — that is a finding, not a measurement.
+          contentSource: owner ? (owner.getAttribute("data-page-width") ?? "page") : "fallback",
           // Content width alone cannot say whether a route is narrow because
           // its rails are open or because its own shell caps it. `mainWidth` is
           // the space the rails left; the gap between the two is the page's
@@ -412,8 +460,28 @@ test("audit: console errors, computed layout, contrast inputs", async ({ page })
 
   // Cross-route rollup — the three numbers the conformance pass is judged on.
   const metrics = Object.values(report).map((r) => (r as { metrics: Record<string, number> }).metrics);
+  // The width a route reported is only meaningful next to the rung it came
+  // from: `wide` reads 1180 where the cap binds and less where the open rails
+  // beat it to it. Same rung, less room — not a fourth cap.
+  const byRung = Object.entries(report).reduce<Record<string, Record<string, string[]>>>(
+    (acc, [routePath, r]) => {
+      const m = (r as { metrics: { contentWidth: number | null; contentSource: string } }).metrics;
+      const rung = (acc[m.contentSource] ??= {});
+      (rung[String(m.contentWidth)] ??= []).push(routePath);
+      return acc;
+    },
+    {},
+  );
   report._summary = {
+    viewport: AUDIT,
     distinctContentWidths: Array.from(new Set(metrics.map((m) => m.contentWidth))).sort((a, b) => a - b),
+    // The ladder the pages actually declare, which is the thing the criterion is
+    // about. Pixel widths are downstream of it and of the rails.
+    distinctPageWidthRungs: Object.keys(byRung).sort(),
+    contentWidthsByRung: byRung,
+    routesWithoutPage: Object.entries(report)
+      .filter(([, r]) => (r as { metrics: { contentSource: string } }).metrics.contentSource === "fallback")
+      .map(([k]) => k),
     minFontSize: Math.min(...metrics.map((m) => m.minFontSize ?? Infinity)),
     totalTitleAttrs: metrics.reduce((n, m) => n + (m.titleAttrs ?? 0), 0),
     routesWithHexInMarkup: Object.entries(report)
@@ -510,10 +578,15 @@ test("contract: Phase 1 substrate holds on every route", async ({ page }) => {
   for (const route of ROUTES) {
     await page.goto(route.path);
     await settle(page, 1500);
+    // Same race as the audit: the rails collapse in an effect, so a width read
+    // before that lands is a pre-hydration number.
+    await waitForRails(page, route.path);
 
     const m = await page.evaluate(() => {
       const main = document.querySelector("#main");
-      const page_ = main?.querySelector("main") ?? (main?.firstElementChild as HTMLElement | null);
+      const page_ =
+        (main?.querySelector("main[data-page-width]") as HTMLElement | null) ??
+        (main?.firstElementChild as HTMLElement | null);
 
       const sizes = new Set<string>();
       document.querySelectorAll<HTMLElement>("#main *").forEach((el) => {

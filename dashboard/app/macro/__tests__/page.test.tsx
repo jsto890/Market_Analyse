@@ -100,6 +100,17 @@ describe("MacroPage header + legend (MC-04, MAC-06)", () => {
     expect(screen.getByText(/half-life of 12 hours/)).toBeInTheDocument();
     expect(screen.getByText(/before decay weighting/)).toBeInTheDocument();
   });
+
+  it("keeps the method on the page rather than behind a disclosure (O-07)", async () => {
+    searchParamsMock.current = "";
+    mockMacroFetch();
+    render(<MacroPage />);
+    const heading = screen.getByText(/How this score is computed/);
+    expect(heading.closest("[aria-expanded]")).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: /How this score is computed/ })
+    ).not.toBeInTheDocument();
+  });
 });
 
 describe("MacroPage tiles (MAC-07)", () => {

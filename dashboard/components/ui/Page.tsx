@@ -4,7 +4,13 @@ import Link from "next/link";
 export type PageWidth = "prose" | "wide" | "full";
 
 /** Three content caps and no others. `full` is fluid — it keeps the 24px gutter
- * but lets the ladder and the ticker header use the whole viewport. */
+ * but lets the ladder and the ticker header use the whole viewport.
+ *
+ * `full` was re-tried at `wide` and put back (X-02). At 1440 the 188px costs
+ * the ticker page its "Why this is flagged" panel title, which clips, and wraps
+ * the ladder's control row onto a second line while insetting its full-bleed
+ * chrome bars 94px inside the options tab bar directly above them. Two rungs
+ * 28px apart is only what it looks like at the audit's 1280. */
 const WIDTH_CLASS: Record<PageWidth, string> = {
   prose: "max-w-[var(--w-prose)]", // 880px — /alerts, /learn/*
   wide: "max-w-[var(--w-wide)]", // 1180px — /, /watchlist, /screener, /portfolio, /rotation, /macro, /calendar
