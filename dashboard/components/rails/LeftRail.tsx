@@ -24,10 +24,10 @@ function EquityBadge() {
   const label = STATE_LABEL[state];
   const cls =
     state === "regular"
-      ? "bg-pos/12 text-pos"
+      ? "bg-pos/15 text-pos"
       : state === "closed"
-      ? "bg-warn/12 text-warn"
-      : "bg-muted/12 text-muted"; // pre / after
+      ? "bg-warn/15 text-warn"
+      : "bg-muted/15 text-muted"; // pre / after
   return (
     <span className={`rounded px-1.5 py-px text-micro font-medium font-mono leading-none ${cls}`}>
       {label}
@@ -42,10 +42,10 @@ function FxChip() {
   const { active, closed } = forexSessions();
   const label = closed ? "CLOSED" : active.length === 0 ? "OPEN" : active.join("/");
   const cls = closed
-    ? "bg-warn/12 text-warn"
+    ? "bg-warn/15 text-warn"
     : active.length > 1
-    ? "bg-teal/12 text-teal"
-    : "bg-muted/12 text-muted";
+    ? "bg-teal/15 text-teal"
+    : "bg-muted/15 text-muted";
   return (
     <span className={`rounded px-1.5 py-px text-micro font-mono font-medium leading-none ${cls}`}>
       {label}
