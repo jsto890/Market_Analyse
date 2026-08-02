@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { deriveLevels, deriveFlow, deriveShape } from "../odte-verdicts";
+import { deriveLevels, deriveFlow, deriveShape, flowTilt } from "../odte-verdicts";
 
 describe("deriveLevels", () => {
   it("above zero-gamma with positive GEX -> good/supportive", () => {
@@ -36,6 +36,25 @@ describe("deriveFlow", () => {
     expect(v.sentence).toContain("5 unusual");
   });
   it("missing -> null", () => expect(deriveFlow({ pcrVol: null, pcrOi: null, unusualCount: 0 })).toBeNull());
+});
+
+// The flow tiles and the flow-tilt prose both word a put/call ratio. They read
+// these boundaries rather than restating them, so the boundaries are asserted
+// once, here, and a page that drifts from them is a defect.
+describe("flowTilt", () => {
+  it("classifies either side of the boundaries", () => {
+    expect(flowTilt(0.79)).toBe("call-heavy");
+    expect(flowTilt(0.8)).toBe("balanced");
+    expect(flowTilt(1.2)).toBe("balanced");
+    expect(flowTilt(1.21)).toBe("put-heavy");
+  });
+  it("agrees with the verdict deriveFlow reaches", () => {
+    for (const r of [0.5, 0.8, 1.0, 1.2, 1.6]) {
+      expect(deriveFlow({ pcrVol: r, pcrOi: null, unusualCount: 0 })!.sentence).toContain(
+        flowTilt(r)
+      );
+    }
+  });
 });
 
 describe("deriveShape", () => {

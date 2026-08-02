@@ -12,7 +12,13 @@ import {
   type UnusualPayload,
 } from "@/lib/odteCompanion";
 import { useRailQuotes } from "@/lib/rail-quotes";
-import { deriveLevels, deriveFlow, deriveShape, type Verdict } from "@/lib/odte-verdicts";
+import {
+  deriveLevels,
+  deriveFlow,
+  deriveShape,
+  type Verdict,
+  type VerdictStatus,
+} from "@/lib/odte-verdicts";
 import GexCard from "@/components/odte/GexCard";
 import UnusualCard from "@/components/odte/UnusualCard";
 import PcrCard from "@/components/odte/PcrCard";
@@ -26,6 +32,143 @@ const jsonFetcher = (url: string) =>
     if (!r.ok) throw new Error(`${r.status}`);
     return r.json();
   });
+
+/** Named input to the session read: the card it belongs to, and its verdict. */
+type Voter = { name: string; verdict: Verdict };
+
+/** Bar and text tone per verdict status — the same teal / amber / quiet triple
+ * the verdict cards already use for their left border. */
+const STATUS_BAR: Record<VerdictStatus, string> = {
+  good: "bg-teal",
+  neutral: "bg-muted",
+  caution: "bg-warn",
+};
+
+const listJoin = (items: string[]) =>
+  items.length <= 1
+    ? items[0] ?? ""
+    : `${items.slice(0, -1).join(", ")} and ${items[items.length - 1]}`;
+
+/** One tick on the expected-move band, with its label above (or below, for the
+ * taller spot mark, so the two rows never collide). */
+function Mark({
+  x,
+  label,
+  barClass,
+  textClass,
+  below = false,
+}: {
+  x: number;
+  label: string;
+  barClass: string;
+  textClass: string;
+  below?: boolean;
+}) {
+  return (
+    <>
+      <div
+        className={`absolute w-[2px] ${below ? "top-[14px] h-[24px]" : "top-[18px] h-[16px]"} ${barClass}`}
+        style={{ left: `${x}%` }}
+      />
+      <div
+        className={`absolute ${below ? "top-[40px] font-semibold" : "top-0"} -translate-x-1/2 whitespace-nowrap text-data leading-none ${textClass}`}
+        style={{ left: `${x}%` }}
+      >
+        {label}
+      </div>
+    </>
+  );
+}
+
+/**
+ * Today's box: the expected move drawn as a band, with the put wall, zero-gamma,
+ * spot and call wall marked on it. Without a spot and an expected move there is
+ * no band to draw, so the section renders nothing rather than an empty track.
+ */
+function ExpectedMoveBox({
+  spot,
+  emPct,
+  expiry,
+  zeroGamma,
+  callWall,
+  putWall,
+}: {
+  spot: number | null;
+  emPct: number | null;
+  expiry?: string;
+  zeroGamma: number | null;
+  callWall: number | null;
+  putWall: number | null;
+}) {
+  if (spot == null || emPct == null) return null;
+  const move = (spot * emPct) / 100;
+  const lo = spot - move;
+  const hi = spot + move;
+  const levels = [putWall, zeroGamma, callWall].filter((v): v is number => v != null);
+  const domainLo = Math.min(lo, ...levels);
+  const domainHi = Math.max(hi, ...levels);
+  if (domainHi <= domainLo) return null;
+  const pad = (domainHi - domainLo) * 0.12;
+  const from = domainLo - pad;
+  const to = domainHi + pad;
+  const pos = (v: number) => ((v - from) / (to - from)) * 100;
+
+  return (
+    <section className="rounded-[8px] border border-line bg-surface p-[14px_20px_12px]">
+      <div className="mb-4 flex items-baseline justify-between gap-2">
+        <span className="eyebrow">Today&apos;s box</span>
+        <span className="text-data text-muted">
+          expected move ±{emPct.toFixed(2)}%{expiry ? ` · ${expiry}` : ""}
+        </span>
+      </div>
+      <div className="relative h-[56px]">
+        <div className="absolute inset-x-0 top-[22px] h-[8px] rounded-[4px] bg-elevated" />
+        <div
+          className="absolute top-[22px] h-[8px] rounded-[4px] bg-raised"
+          style={{ left: `${pos(lo)}%`, width: `${pos(hi) - pos(lo)}%` }}
+        />
+        {putWall != null && (
+          <Mark x={pos(putWall)} label={`put wall ${putWall}`} barClass="bg-put" textClass="text-put" />
+        )}
+        {zeroGamma != null && (
+          <Mark
+            x={pos(zeroGamma)}
+            label={`zero-γ ${zeroGamma}`}
+            barClass="bg-teal"
+            textClass="text-teal"
+          />
+        )}
+        {callWall != null && (
+          <Mark
+            x={pos(callWall)}
+            label={`call wall ${callWall}`}
+            barClass="bg-teal"
+            textClass="text-teal"
+          />
+        )}
+        <Mark
+          x={pos(spot)}
+          label={`spot ${spot.toFixed(2)}`}
+          barClass="bg-foreground"
+          textClass="text-foreground"
+          below
+        />
+        <div
+          className="absolute top-[40px] -translate-x-1/2 whitespace-nowrap text-data leading-none text-muted-2"
+          style={{ left: `${pos(lo)}%` }}
+        >
+          {lo.toFixed(2)}
+        </div>
+        <div
+          className="absolute top-[40px] -translate-x-1/2 whitespace-nowrap text-data leading-none text-muted-2"
+          style={{ left: `${pos(hi)}%` }}
+        >
+          {hi.toFixed(2)}
+        </div>
+      </div>
+    </section>
+  );
+}
 
 export default function OptionsOverviewPage() {
   const [activeSymbol] = useOdteSymbol();
@@ -87,6 +230,41 @@ export default function OptionsOverviewPage() {
         }
       : null;
 
+  // The session read counts the four verdicts already derived above — the modal
+  // status is the read, everything outside it is named as dissent. No second
+  // derivation: `lib/odte-verdicts.ts` stays the only place the logic lives.
+  const voters: Voter[] = (
+    [
+      { name: "Spot / Regime", verdict: spotVerdict },
+      { name: "Levels", verdict: levelsVerdict },
+      { name: "Shape / Skew", verdict: shapeVerdict },
+      { name: "Flow / Stats", verdict: flowVerdict },
+    ] as { name: string; verdict: Verdict | null }[]
+  ).filter((v): v is Voter => v.verdict != null);
+
+  const tally = voters.reduce<Record<string, number>>((acc, v) => {
+    acc[v.verdict.status] = (acc[v.verdict.status] ?? 0) + 1;
+    return acc;
+  }, {});
+  // Ties break on card order, so the read never flickers between two equal counts.
+  const readStatus = voters.reduce<VerdictStatus | null>(
+    (best, v) => (best == null || tally[v.verdict.status] > tally[best] ? v.verdict.status : best),
+    null
+  );
+  const agreeing = voters.filter((v) => v.verdict.status === readStatus);
+  const dissenting = voters.filter((v) => v.verdict.status !== readStatus);
+
+  const boxClause =
+    putWall != null && callWall != null ? `, with the box between ${putWall} and ${callWall}` : "";
+  const sessionRead =
+    levelsVerdict == null
+      ? null
+      : levelsVerdict.status === "good"
+        ? `Dealer hedging is absorbing moves while spot holds above zero-gamma${boxClause}.`
+        : levelsVerdict.status === "caution"
+          ? `Dealer hedging is extending moves while spot sits below zero-gamma${boxClause}.`
+          : `Spot is pinned at zero-gamma, so hedging flow cuts both ways${boxClause}.`;
+
   const nearestWallDist =
     spot != null && (callWall != null || putWall != null)
       ? [callWall, putWall]
@@ -97,6 +275,57 @@ export default function OptionsOverviewPage() {
 
   return (
     <Page width="wide">
+      {voters.length > 0 && (
+        <section className="rounded-[8px] border border-line-strong bg-elevated p-[18px_20px]">
+          <div className="mb-2.5 flex items-baseline justify-between gap-3">
+            <span className="eyebrow">Session read</span>
+            <span className="flex shrink-0 items-center gap-2">
+              <span className="text-label text-muted">
+                {agreeing.length} of {voters.length} inputs agree
+              </span>
+              <span aria-hidden className="flex gap-[3px]">
+                {voters.map((v, i) => (
+                  <span
+                    key={v.name}
+                    className={`h-[4px] w-[22px] rounded-[2px] ${
+                      i < agreeing.length && readStatus ? STATUS_BAR[readStatus] : "bg-line-strong"
+                    }`}
+                  />
+                ))}
+              </span>
+            </span>
+          </div>
+          {sessionRead && (
+            <p className="mb-2.5 text-headline leading-[1.35] tracking-[-0.01em] [text-wrap:pretty]">
+              {sessionRead}
+            </p>
+          )}
+          <p className="max-w-[920px] text-body leading-[1.6] text-3 [text-wrap:pretty]">
+            {listJoin(agreeing.map((v) => v.name))}{" "}
+            {agreeing.length === 1 ? "carries the read" : "read the same way"}.
+            {dissenting.length > 0 && (
+              <>
+                {" "}
+                {listJoin(dissenting.map((v) => v.name))}{" "}
+                {dissenting.length === 1
+                  ? "is the dissenting input"
+                  : "are the dissenting inputs"}
+                : {dissenting.map((v) => v.verdict.sentence).join("; ")}.
+              </>
+            )}
+          </p>
+        </section>
+      )}
+
+      <ExpectedMoveBox
+        spot={spot}
+        emPct={firstExpiry?.expected_move_pct ?? null}
+        expiry={firstExpiry?.expiry}
+        zeroGamma={zeroGamma}
+        callWall={callWall}
+        putWall={putWall}
+      />
+
       <section className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
         <VerdictCard
           title="Spot / Regime"
@@ -174,14 +403,6 @@ export default function OptionsOverviewPage() {
           <span className="text-muted">nearest wall </span>
           <span className="text-foreground">
             {nearestWallDist != null ? nearestWallDist.toFixed(2) : "—"}
-          </span>
-        </span>
-        <span>
-          <span className="text-muted">expected move </span>
-          <span className="text-foreground">
-            {firstExpiry?.expected_move_pct != null
-              ? `${firstExpiry.expected_move_pct.toFixed(2)}%`
-              : "—"}
           </span>
         </span>
         <Link href="/options/ladder" className="ml-auto text-teal hover:underline">
