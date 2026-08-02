@@ -38,6 +38,23 @@ export function deriveLevels(i: {
   };
 }
 
+/** The one place a put/call ratio becomes a tilt. Every surface that words a
+ *  ratio — the overview verdict, the flow tiles, the flow-tilt prose — reads
+ *  its boundaries from here rather than restating 0.8 / 1.2 locally. */
+export type FlowTilt = "call-heavy" | "balanced" | "put-heavy";
+
+export function flowTilt(ratio: number): FlowTilt {
+  if (ratio < 0.8) return "call-heavy";
+  if (ratio <= 1.2) return "balanced";
+  return "put-heavy";
+}
+
+const TILT_STATUS: Record<FlowTilt, VerdictStatus> = {
+  "call-heavy": "good",
+  balanced: "neutral",
+  "put-heavy": "caution",
+};
+
 export function deriveFlow(i: {
   pcrVol: number | null;
   pcrOi: number | null;
@@ -45,21 +62,10 @@ export function deriveFlow(i: {
 }): Verdict | null {
   if (i.pcrVol == null) return null;
   const unusual = i.unusualCount > 0 ? `; ${i.unusualCount} unusual prints` : "";
-  if (i.pcrVol < 0.8) {
-    return {
-      status: "good",
-      sentence: `Flow: call-heavy — P/C vol ${i.pcrVol.toFixed(2)}${unusual}`,
-    };
-  }
-  if (i.pcrVol <= 1.2) {
-    return {
-      status: "neutral",
-      sentence: `Flow: balanced — P/C vol ${i.pcrVol.toFixed(2)}${unusual}`,
-    };
-  }
+  const tilt = flowTilt(i.pcrVol);
   return {
-    status: "caution",
-    sentence: `Flow: put-heavy — P/C vol ${i.pcrVol.toFixed(2)}${unusual}`,
+    status: TILT_STATUS[tilt],
+    sentence: `Flow: ${tilt} — P/C vol ${i.pcrVol.toFixed(2)}${unusual}`,
   };
 }
 

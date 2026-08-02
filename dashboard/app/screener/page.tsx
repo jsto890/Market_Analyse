@@ -51,9 +51,16 @@ function loadScreens(): SavedScreen[] {
  * and the returns at a size you can read without tracking across a row — and
  * the five names you are actually going to act on are worth that space.
  */
-function ResultCard({ r }: { r: ScreenerResult }) {
+function ResultCard({ r, lead }: { r: ScreenerResult; lead: boolean }) {
   return (
-    <div className="rounded-md border border-line bg-surface p-3">
+    // The list is ranked, so the top card is the one the page is recommending:
+    // it gets the lifted surface and the stronger hairline, the rest recede to
+    // the quiet resting card. Same ladder the watchlist's pinned grid uses.
+    <div
+      className={`rounded-md border p-3 ${
+        lead ? "border-line-strong bg-elevated" : "border-line bg-surface"
+      }`}
+    >
       <div className="flex items-center gap-2">
         <Link href={`/t/${r.symbol}`} className="text-data text-title font-medium text-accent hover:underline">
           {r.symbol}
@@ -71,7 +78,7 @@ function ResultCard({ r }: { r: ScreenerResult }) {
 
       <div className="mt-2">
         <VoteBar long={r.long_votes} short={r.short_votes} wait={r.wait_votes} className="w-full" />
-        <p className="mt-1 text-micro text-muted">
+        <p className="mt-1 text-data text-muted">
           {r.long_votes}L · {r.short_votes}S · {r.wait_votes}W
         </p>
       </div>
@@ -503,8 +510,8 @@ export default function ScreenerPage() {
                 {/* Top five in full, the tail in a table. The names you act on
                     and the names you scan are not the same reading job. */}
                 <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                  {lead.map((r) => (
-                    <ResultCard key={r.symbol} r={r} />
+                  {lead.map((r, i) => (
+                    <ResultCard key={r.symbol} r={r} lead={i === 0} />
                   ))}
                 </div>
                 {rest.length > 0 && (

@@ -10,11 +10,13 @@ import type { StrikeLevel } from "@/lib/optionsLive";
 
 /** Counted in strikes, not percent of spot: ±6% is 76 strikes on SPY and 4 on a
  * $20 name, so a percent band means a different ladder on every symbol. */
+/* `strikes`, not `count`: these feed `SegmentedControl`, whose own `count` is
+ * the badge printed beside a segment's label. "±10" already says 10. */
 export const DENSITY_OPTIONS = [
-  { key: "n10", label: "±10", count: 10, blurb: "10 strikes either side of spot" },
-  { key: "n20", label: "±20", count: 20, blurb: "20 strikes either side of spot" },
-  { key: "n40", label: "±40", count: 40, blurb: "40 strikes either side of spot" },
-  { key: "all", label: "All", count: null, blurb: "every strike the chain returned" },
+  { key: "n10", label: "±10", strikes: 10, blurb: "10 strikes either side of spot" },
+  { key: "n20", label: "±20", strikes: 20, blurb: "20 strikes either side of spot" },
+  { key: "n40", label: "±40", strikes: 40, blurb: "40 strikes either side of spot" },
+  { key: "all", label: "All", strikes: null, blurb: "every strike the chain returned" },
 ] as const;
 
 export type DensityKey = (typeof DENSITY_OPTIONS)[number]["key"];
@@ -31,7 +33,7 @@ export function normalizeDensity(key: string): DensityKey {
 
 export function densityCount(key: string): number | null {
   const found = DENSITY_OPTIONS.find((d) => d.key === key);
-  return found ? found.count : 20;
+  return found ? found.strikes : 20;
 }
 
 /**

@@ -53,6 +53,26 @@ describe("OptionsOverviewPage", () => {
     }
   });
 
+  it("leads with a session read: one sentence, the agreement count, and the dissent named (O-05)", async () => {
+    render(<OptionsOverviewPage />);
+    // spot and flow read neutral, levels good, skew caution — two of four agree.
+    expect(await screen.findByText("2 of 4 inputs agree")).toBeInTheDocument();
+    expect(screen.getByText(/absorbing moves while spot holds above zero-gamma/)).toBeInTheDocument();
+    const dissent = screen.getByText(/dissenting inputs/);
+    expect(dissent).toHaveTextContent("Shape / Skew");
+    expect(dissent).toHaveTextContent("Levels");
+    expect(dissent).toHaveTextContent(/put skew rich/);
+  });
+
+  it("draws the expected-move band with the walls, zero-gamma and spot on it (O-05)", async () => {
+    render(<OptionsOverviewPage />);
+    expect(await screen.findByText("expected move ±0.80% · 0DTE")).toBeInTheDocument();
+    expect(screen.getByText("put wall 555")).toBeInTheDocument();
+    expect(screen.getByText("zero-γ 560")).toBeInTheDocument();
+    expect(screen.getByText("call wall 570")).toBeInTheDocument();
+    expect(screen.getByText("spot 565.00")).toBeInTheDocument();
+  });
+
   it("routes onward into the split tree rather than the old strikes page (OPT-07)", async () => {
     render(<OptionsOverviewPage />);
     await screen.findByText("Levels");

@@ -1,6 +1,5 @@
 "use client";
 import Badge from "@/components/ui/Badge";
-import StatChip from "@/components/ui/StatChip";
 import Empty from "@/components/ui/Empty";
 import Loading from "@/components/ui/Loading";
 import Button from "@/components/ui/Button";
@@ -42,6 +41,26 @@ function isErrorSentinel(rows: PositionRow[]): boolean {
   return rows.length === 1 && rows[0].error != null && rows[0].symbol == null;
 }
 
+/** One number in the summary band, with the word for it above. Rendered only
+ *  when the caller has a value: a slot whose feed is missing renders nothing at
+ *  all, because a dash here would claim the account holds zero (O-08). */
+function Slot({ label, value, tone }: { label: string; value: string; tone?: string }) {
+  return (
+    <div>
+      <div className="eyebrow">{label}</div>
+      <div className={`mt-[5px] text-data ${tone ?? "text-foreground"}`}>{value}</div>
+    </div>
+  );
+}
+
+/** Account money, whole dollars. Cents on a six-figure NLV are noise, and a
+ *  signed net liquidation value would imply a direction it does not have. */
+function money(v: number, signed = false): string {
+  const body = `$${Math.round(Math.abs(v)).toLocaleString("en-US")}`;
+  if (!signed) return body;
+  return `${v >= 0 ? "+" : "-"}${body}`;
+}
+
 /** Where the money is, not what it is doing — that is the row of chips.
  *  "connected", not "live": whether the account behind the port is a live one
  *  or a paper one is not something the socket tells us, so the chip does not
@@ -50,7 +69,7 @@ function isErrorSentinel(rows: PositionRow[]): boolean {
 function ConnectionChip({ offline, port }: { offline: boolean; port: number | null }) {
   return (
     <span
-      className={`inline-flex items-center gap-1.5 rounded border px-2 py-0.5 text-micro ${
+      className={`inline-flex items-center gap-1.5 rounded border px-2 py-0.5 text-label ${
         offline ? "border-warn/40 text-warn" : "border-line text-muted"
       }`}
     >
@@ -166,9 +185,13 @@ export default function PortfolioPage() {
     (r) => r.edge === "CONSIDER SELLING" || r.edge === "CONSIDER COVERING"
   );
 
-  // Two of the five come off the account summary and three off the positions
-  // themselves; each renders only if its input arrived. IBKR's summary carries
-  // no day P&L, so the band has none — a dash there would claim a feed.
+  // Two slots come off the account summary and the rest off the positions
+  // themselves; each renders only if its input arrived. Two of the mock's six
+  // have no feed at all and so render nothing: IBKR's `accountSummary` carries
+  // no day P&L (that is `reqPnL`, which Argus does not subscribe to), and
+  // `portfolio_items` carries no sector, so there is no sector to concentrate
+  // in. The sixth slot holds the concentration the data *can* answer — the
+  // largest single line as a share of gross — under a label that says so.
   const num = (v: string | undefined) => {
     const n = Number(v);
     return v == null || Number.isNaN(n) ? null : n;
@@ -191,21 +214,25 @@ export default function PortfolioPage() {
         <DisagreementBand rows={disagreeing} />
 
         {(nlv !== null || unrealised !== null || cash !== null || exposure !== null) && (
-          <div className="flex flex-wrap gap-2">
-            {nlv !== null && <StatChip label="NLV" value={signedCurrency(nlv)} />}
+          <div className="grid grid-cols-2 gap-[12px] rounded-md border border-line bg-elevated p-[14px_18px] sm:grid-cols-3 lg:grid-cols-6">
+            {nlv !== null && <Slot label="Net liq" value={money(nlv)} />}
             {unrealised !== null && (
-              <StatChip
+              <Slot
                 label="Unrealised"
-                value={signedCurrency(unrealised)}
-                tone={unrealised >= 0 ? "pos" : "neg"}
+                value={money(unrealised, true)}
+                tone={unrealised >= 0 ? "text-pos" : "text-neg"}
               />
             )}
-            {cash !== null && <StatChip label="Cash" value={signedCurrency(cash)} />}
+            {cash !== null && <Slot label="Cash" value={money(cash)} tone="text-2" />}
             {exposure !== null && (
-              <StatChip label="Exposure" value={pctWhole(exposure * 100, "percent")} />
+              <Slot label="Exposure" value={pctWhole(exposure * 100, "percent")} tone="text-2" />
             )}
             {concentration !== null && (
-              <StatChip label="Largest" value={pctWhole(concentration * 100, "percent")} />
+              <Slot
+                label="Largest line"
+                value={pctWhole(concentration * 100, "percent")}
+                tone="text-2"
+              />
             )}
           </div>
         )}

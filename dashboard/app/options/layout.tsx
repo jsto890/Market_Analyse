@@ -74,7 +74,7 @@ function OptionsChrome({ children }: { children: React.ReactNode }) {
               ? "Live data — streaming quotes and greeks"
               : "End-of-day data — showing the daily snapshot"}
           </p>
-          <span className={`rounded px-2 py-0.5 text-micro ${toneClass[badge.tone]}`}>{badge.label}</span>
+          <span className={`rounded px-2 py-0.5 text-label ${toneClass[badge.tone]}`}>{badge.label}</span>
           <InfoTip
             label="What does this status mean?"
             content="Connection status polls the backend every 5s and won't retry automatically on failure — if IBKR drops mid-session this badge can sit stale until the next scheduled poll succeeds."

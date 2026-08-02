@@ -5,6 +5,9 @@ describe("resolveChartTokens", () => {
   it("reads CSS custom properties off the given element", () => {
     const el = document.createElement("div");
     el.style.setProperty("--bg", "#111111");
+    el.style.setProperty("--surface", "#151515");
+    el.style.setProperty("--elevated", "#181818");
+    el.style.setProperty("--raised", "#1c1c1c");
     el.style.setProperty("--text", "#eeeeee");
     el.style.setProperty("--muted", "#999999");
     el.style.setProperty("--line", "#222222");
@@ -18,7 +21,8 @@ describe("resolveChartTokens", () => {
     document.body.appendChild(el);
     const tokens = resolveChartTokens(el);
     expect(tokens).toEqual({
-      bg: "#111111", text: "#eeeeee", muted: "#999999", line: "#222222",
+      bg: "#111111", surface: "#151515", elevated: "#181818", raised: "#1c1c1c",
+      text: "#eeeeee", muted: "#999999", line: "#222222",
       lineStrong: "#333333", green: "#00ff00", red: "#ff0000",
       accent: "#0000ff", amber: "#ffaa00", teal: "#00ffff", model: "#9d7cf5",
     });

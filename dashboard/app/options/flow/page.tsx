@@ -3,17 +3,18 @@
 import { useMemo } from "react";
 import useSWR from "swr";
 import { useLadder, useOdteSymbol } from "@/lib/odte";
-import { densityCount, withinStrikes } from "@/lib/optionsAnalytics";
 import { useOptionsUi } from "@/lib/optionsUi";
+import { flowTilt, type FlowTilt } from "@/lib/odte-verdicts";
 import type { PcrPayload } from "@/lib/odteCompanion";
-import { deriveFlow } from "@/lib/odte-verdicts";
-import PcrCard from "@/components/odte/PcrCard";
-import UnusualCard from "@/components/odte/UnusualCard";
-import Panel from "@/components/ui/Panel";
-import InfoTip from "@/components/ui/InfoTip";
-import Empty from "@/components/ui/Empty";
+import FlowRatioTile, { RatioGauge, SideSegments } from "@/components/odte/FlowRatioTile";
+import FlowTiltCard from "@/components/odte/FlowTiltCard";
+import UnusualPrintsTable, {
+  isCall,
+  strikeLabel,
+  type UnusualFlowPayload,
+} from "@/components/odte/UnusualPrintsTable";
+import VolumeVsOiBars from "@/components/odte/VolumeVsOiBars";
 import Page from "@/components/ui/Page";
-import { compactNumber } from "@/lib/format";
 
 const jsonFetcher = (url: string) =>
   fetch(url).then((r) => {
@@ -21,98 +22,131 @@ const jsonFetcher = (url: string) =>
     return r.json();
   });
 
+/** The tile's own wording for the shared tilt — the mock words the tile
+ *  "Call-leaning" and the prose card "call-heavy". Only the label differs;
+ *  the boundaries come from `lib/odte-verdicts.ts`. */
+const TILT_WORD: Record<FlowTilt, string> = {
+  "call-heavy": "Call-leaning",
+  balanced: "Balanced",
+  "put-heavy": "Put-leaning",
+};
+
 export default function OptionsFlowPage() {
   const [activeSymbol] = useOdteSymbol();
-  const { density, expiry } = useOptionsUi();
-  const count = densityCount(density);
+  const { expiry } = useOptionsUi();
 
   const { data: pcr } = useSWR<PcrPayload>(`/api/odte/pcr?symbol=${activeSymbol}`, jsonFetcher, {
     refreshInterval: 60_000,
   });
+  const { data: unusual } = useSWR<UnusualFlowPayload>(
+    `/api/odte/unusual?symbol=${activeSymbol}`,
+    jsonFetcher,
+    { refreshInterval: 60_000 }
+  );
   const { data: ladder } = useLadder(activeSymbol, 4, 0.5);
 
   const idx = Math.max(0, (ladder?.expiries ?? []).findIndex((e) => e.expiry === expiry));
-  const rows = useMemo(
-    () => withinStrikes(ladder?.expiries?.[idx]?.rows ?? [], ladder?.spot ?? null, count),
-    [ladder, idx, count]
-  );
+  const ladderRows = ladder?.expiries?.[idx]?.rows ?? [];
+  const prints = useMemo(() => unusual?.rows ?? [], [unusual]);
 
-  const { callVol, putVol, callOi, putOi, busiest } = useMemo(() => {
-    let cv = 0,
-      pv = 0,
-      co = 0,
-      po = 0;
-    let top: { strike: number; vol: number } | null = null;
-    for (const r of rows) {
-      cv += r.call?.vol ?? 0;
-      pv += r.put?.vol ?? 0;
-      co += r.call?.oi ?? 0;
-      po += r.put?.oi ?? 0;
-      const vol = (r.call?.vol ?? 0) + (r.put?.vol ?? 0);
-      if (!top || vol > top.vol) top = { strike: r.strike, vol };
+  const { callPrints, topStrike, topStrikeCount } = useMemo(() => {
+    const byStrike = new Map<number, number>();
+    for (const p of prints) byStrike.set(p.strike, (byStrike.get(p.strike) ?? 0) + 1);
+    let strike: number | null = null;
+    let n = 0;
+    for (const [k, v] of Array.from(byStrike.entries())) {
+      if (v > n) {
+        strike = k;
+        n = v;
+      }
     }
-    return { callVol: cv, putVol: pv, callOi: co, putOi: po, busiest: top };
-  }, [rows]);
+    return {
+      callPrints: prints.filter((p) => isCall(p.side)).length,
+      topStrike: strike,
+      topStrikeCount: n,
+    };
+  }, [prints]);
 
-  const verdict = deriveFlow({
-    pcrVol: pcr?.pcr_vol ?? null,
-    pcrOi: pcr?.pcr_oi ?? null,
-    unusualCount: 0,
-  });
-
-  const totalVol = callVol + putVol;
-  const callShare = totalVol > 0 ? (callVol / totalVol) * 100 : null;
+  const pcrVol = pcr?.pcr_vol ?? null;
+  const pcrOi = pcr?.pcr_oi ?? null;
 
   return (
     <Page width="wide">
-      {verdict && (
-        <p className="rounded border border-line bg-elevated px-3 py-2 text-body text-2">
-          {verdict.sentence}
-        </p>
-      )}
+      <div className="grid grid-cols-1 gap-[12px] md:grid-cols-3">
+        {pcrVol != null && (
+          <FlowRatioTile
+            label="Put / call · volume"
+            value={pcrVol.toFixed(2)}
+            legend={
+              <>
+                <span>call-heavy</span>
+                <span>1.0</span>
+                <span>put-heavy</span>
+              </>
+            }
+            sentence={`${TILT_WORD[flowTilt(pcrVol)]}: ${Math.round(pcrVol * 100)} puts traded today for every 100 calls.`}
+          >
+            <RatioGauge ratio={pcrVol} />
+          </FlowRatioTile>
+        )}
 
-      <div className="grid gap-3 lg:grid-cols-2">
-        <Panel
-          title="Today's tape"
-          subtitle={`${count === null ? "All" : `±${count}`} strikes · ${rows.length} shown`}
-          actions={
-            <InfoTip
-              label="Where these totals come from"
-              content="Summed across the strikes currently in view, so the density control changes them. Volume is today's trading; open interest is positions still on the book from previous sessions."
+        {pcrOi != null && (
+          <FlowRatioTile
+            label="Put / call · open interest"
+            value={pcrOi.toFixed(2)}
+            legend={
+              <>
+                <span>call-heavy</span>
+                <span>1.0</span>
+                <span>put-heavy</span>
+              </>
+            }
+            sentence={`${Math.round(pcrOi * 100)} puts stand open for every 100 calls${
+              pcrVol != null && flowTilt(pcrOi) !== flowTilt(pcrVol)
+                ? `, so the book on the table disagrees with today's flow`
+                : ""
+            }.`}
+          >
+            <RatioGauge ratio={pcrOi} />
+          </FlowRatioTile>
+        )}
+
+        {unusual && (
+          <FlowRatioTile
+            label="Unusual prints"
+            value={String(prints.length)}
+            valueTone={prints.length > 0 ? "text-warn" : "text-foreground"}
+            legend={
+              prints.length > 0 ? (
+                <>
+                  <span>{callPrints} call side</span>
+                  <span>{prints.length - callPrints} put side</span>
+                </>
+              ) : undefined
+            }
+            sentence={
+              topStrike != null && topStrikeCount > 1
+                ? `${topStrikeCount} of them land on the ${strikeLabel(topStrike)} strike.`
+                : undefined
+            }
+          >
+            {/* Grouped, not in score order: the segments are a split, and the legend under them names the two groups. */}
+            <SideSegments
+              sides={[
+                ...Array(callPrints).fill("C"),
+                ...Array(prints.length - callPrints).fill("P"),
+              ]}
             />
-          }
-        >
-          {totalVol === 0 ? (
-            <Empty message="No volume in this band yet." />
-          ) : (
-            <div className="space-y-2 text-data">
-              <div className="flex h-2 overflow-hidden rounded bg-raised">
-                <div className="bg-call/60" style={{ width: `${callShare ?? 0}%` }} />
-                <div className="bg-put/60" style={{ width: `${100 - (callShare ?? 0)}%` }} />
-              </div>
-              <div className="flex justify-between">
-                <span className="text-call">calls {compactNumber(callVol)}</span>
-                <span className="text-muted">
-                  {callShare != null ? `${callShare.toFixed(0)}% of volume is calls` : ""}
-                </span>
-                <span className="text-put">puts {compactNumber(putVol)}</span>
-              </div>
-              <div className="flex justify-between text-muted">
-                <span>call OI {compactNumber(callOi)}</span>
-                <span>put OI {compactNumber(putOi)}</span>
-              </div>
-              {busiest && (
-                <p className="text-body text-2">
-                  Busiest strike {busiest.strike} on {compactNumber(busiest.vol)} contracts — where
-                  today&apos;s argument is actually being had.
-                </p>
-              )}
-            </div>
-          )}
-        </Panel>
+          </FlowRatioTile>
+        )}
+      </div>
 
-        <PcrCard symbol={activeSymbol} />
-        <UnusualCard symbol={activeSymbol} />
+      <div className="grid gap-[16px] lg:grid-cols-[1fr_360px]">
+        <UnusualPrintsTable rows={prints} asOf={unusual?.as_of} />
+        <div className="flex flex-col gap-[12px]">
+          <VolumeVsOiBars rows={ladderRows} spot={ladder?.spot ?? null} />
+          <FlowTiltCard pcrVol={pcrVol} pcrOi={pcrOi} prints={prints} />
+        </div>
       </div>
     </Page>
   );

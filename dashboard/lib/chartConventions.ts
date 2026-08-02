@@ -4,7 +4,8 @@
  *  "Chart Conventions Spec" for the full rationale. */
 
 export interface ChartTokens {
-  bg: string; text: string; muted: string; line: string; lineStrong: string;
+  bg: string; surface: string; elevated: string; raised: string;
+  text: string; muted: string; line: string; lineStrong: string;
   green: string; red: string; accent: string; amber: string; teal: string;
   /** Model output (scores, conviction) — never --accent, which means
    *  "interactive", and never green/red, which mean money direction. */
@@ -15,11 +16,13 @@ export interface ChartTokens {
  *  resolves empty (defends against calling this before the stylesheet is
  *  attached; should not happen since callers only invoke this from a
  *  mount-time effect). */
-const FALLBACK: ChartTokens = {
-  bg: "#06090f", text: "#eef1f6", muted: "#7d8698", line: "#1e2634",
+export const FALLBACK_CHART_TOKENS: ChartTokens = {
+  bg: "#06090f", surface: "#0c1017", elevated: "#12171f", raised: "#1a212c",
+  text: "#eef1f6", muted: "#7d8698", line: "#1e2634",
   lineStrong: "#2c3648", green: "#3fb950", red: "#f85149",
   accent: "#4c8dff", amber: "#d29922", teal: "#2dd4bf", model: "#9d7cf5",
 };
+const FALLBACK = FALLBACK_CHART_TOKENS;
 
 function readVar(style: CSSStyleDeclaration, name: string, fallback: string): string {
   const v = style.getPropertyValue(name).trim();
@@ -34,6 +37,9 @@ export function resolveChartTokens(el: HTMLElement = document.documentElement): 
   const style = getComputedStyle(el);
   return {
     bg: readVar(style, "--bg", FALLBACK.bg),
+    surface: readVar(style, "--surface", FALLBACK.surface),
+    elevated: readVar(style, "--elevated", FALLBACK.elevated),
+    raised: readVar(style, "--raised", FALLBACK.raised),
     text: readVar(style, "--text", FALLBACK.text),
     muted: readVar(style, "--muted", FALLBACK.muted),
     line: readVar(style, "--line", FALLBACK.line),
@@ -57,6 +63,46 @@ export function hexWithAlpha(hex: string, alpha: number): string {
 /** One responsive height for every chart — replaces every hardcoded pixel
  *  height (RRGChart's 420, MacroChart's 320). See spec §5. */
 export const CHART_HEIGHT = "clamp(320px, 42vh, 640px)";
+
+/** Every colour `CandleChart` paints on the canvas, named as the token it
+ *  stands for rather than as the hex it happens to resolve to. The chart used
+ *  to carry a second, undocumented palette (`#0b0e14`, `#8b93a3`, `#161b24`,
+ *  `#222936`) that shadowed the token layer; this is the one place the mapping
+ *  is now stated, and `resolveChartTokens` turns it into literals at mount. */
+export const CANDLE_CHART_PALETTE = {
+  /** The panel the canvas sits inside, so the chart has no seam against it. */
+  background: "elevated",
+  text: "muted",
+  grid: "line",
+  border: "line",
+  up: "green",
+  down: "red",
+  marker: "accent",
+  ema20: "accent",
+  ema50: "amber",
+  ema200: "muted",
+} as const satisfies Record<string, keyof ChartTokens>;
+
+/** Volume bars sit behind price, so they take the same up/down tokens at a
+ *  fraction of their weight. */
+export const VOLUME_FILL_ALPHA = 0.4;
+
+/** The four horizontal lines a price chart carries: the three levels the call
+ *  was formed on, and where price actually is. */
+export type PriceLineKind = "entry" | "stop" | "target" | "last";
+
+/** How each price line is drawn and labelled. The thesis levels are dashed and
+ *  their right-edge chip carries a letter; the last price is solid and carries
+ *  only the number, on `--raised` rather than a tint. */
+export const PRICE_LINE_STYLE = {
+  target: { token: "green", dashed: true, prefix: "T" },
+  entry: { token: "accent", dashed: true, prefix: "E" },
+  stop: { token: "red", dashed: true, prefix: "S" },
+  last: { token: "text", dashed: false, prefix: "" },
+} as const satisfies Record<
+  PriceLineKind,
+  { token: keyof ChartTokens; dashed: boolean; prefix: string }
+>;
 
 /** SVG/Recharts axis + grid + reference-line token colors — one place, so
  *  every Recharts-based chart resolves the same way instead of hand-rolling

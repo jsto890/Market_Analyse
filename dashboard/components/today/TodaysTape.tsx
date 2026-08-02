@@ -1,6 +1,6 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { Fragment, type ReactNode } from "react";
 import Link from "next/link";
 import Panel from "@/components/ui/Panel";
 import { ReadThisTerm } from "@/components/ui/ReadThis";
@@ -17,7 +17,15 @@ import {
   tapeFraction,
 } from "@/lib/tape";
 
+/** Band geometry, in px. Earnings lanes · the `now` lane · the axis · the
+ *  release lanes stack to ~150px on a normal day (one lane up, three down).
+ *  `now` owns the 22px directly above the axis so its pill can never land on
+ *  the same row as an event label. */
 const LANE_H = 22;
+const NOW_H = 22;
+const AXIS_H = 24;
+/** Air between the axis and the first release lane, which the connector spans. */
+const TICK_GAP = 8;
 /** Past this fraction a left-anchored label runs off the right edge. */
 const FLIP_AT = 0.72;
 
@@ -43,39 +51,81 @@ function toMark(e: MorningEvent, i: number, minutes: number): Mark {
   };
 }
 
-function Positioned({ mark, lane, side }: { mark: Mark; lane: number; side: "above" | "below" }) {
+/** Earnings sit above the axis as amber chips — single-name event risk should
+ *  not look like a scheduled macro print. The connector drops past the `now`
+ *  lane to the top of the axis. */
+function EarningsMark({ mark, lane }: { mark: Mark; lane: number }) {
   const f = tapeFraction(mark.minutes);
   const flip = f > FLIP_AT;
+  const chip = `inline-flex items-baseline gap-1.5 whitespace-nowrap rounded-[4px] border border-warn/50 bg-warn/10 px-[7px] py-[3px] text-micro font-semibold text-warn ${
+    flip ? "-translate-x-full" : ""
+  }`;
+  const inner = (
+    <>
+      <span>{fmtEtClock(mark.minutes)}</span>
+      <span>{mark.label}</span>
+    </>
+  );
+  return (
+    <div
+      className="absolute"
+      style={{ left: `${f * 100}%`, bottom: `${lane * LANE_H}px`, height: `${LANE_H}px` }}
+    >
+      <span
+        className="absolute left-0 w-px bg-warn/50"
+        style={{ top: `${LANE_H}px`, height: `${lane * LANE_H + NOW_H}px` }}
+      />
+      <span className="flex h-full items-center">
+        {mark.ticker ? (
+          <Link href={`/t/${mark.ticker}`} className={`${chip} hover:bg-warn/20`}>
+            {inner}
+          </Link>
+        ) : (
+          <span className={chip}>{inner}</span>
+        )}
+      </span>
+    </div>
+  );
+}
+
+/** Releases sit below the axis as text on a connector: a 1px drop from the axis
+ *  to the label's lane, then an 8px tick into the label, so a 10:00 print reads
+ *  against 10:00 on the bar rather than floating near it. */
+function ReleaseMark({ mark, lane }: { mark: Mark; lane: number }) {
+  const f = tapeFraction(mark.minutes);
+  const flip = f > FLIP_AT;
+  const high = mark.importance === "high";
+  const rule = high ? "bg-warn/50" : "bg-line-strong";
+  const drop = TICK_GAP + lane * LANE_H;
+  const tick = <span className={`h-px w-[8px] shrink-0 ${rule}`} />;
   const body = (
     <span
-      className={`flex items-baseline gap-1.5 whitespace-nowrap ${
-        flip ? "-translate-x-full border-r pr-1.5" : "border-l pl-1.5"
-      } ${mark.importance === "high" ? "border-warn" : "border-line-strong"}`}
+      className={`flex items-center gap-1.5 whitespace-nowrap ${flip ? "-translate-x-full" : ""}`}
     >
+      {!flip && tick}
       <span className="text-data text-muted">{fmtEtClock(mark.minutes)}</span>
-      <span
-        className={mark.importance === "high" ? "text-body text-foreground" : "text-body text-2"}
-      >
-        {mark.label}
-      </span>
+      <span className={high ? "text-body text-warn" : "text-body text-3"}>{mark.label}</span>
+      {flip && tick}
     </span>
   );
   return (
     <div
       className="absolute"
-      style={{
-        left: `${f * 100}%`,
-        [side === "above" ? "bottom" : "top"]: `${lane * LANE_H}px`,
-        height: `${LANE_H}px`,
-      }}
+      style={{ left: `${f * 100}%`, top: `${lane * LANE_H}px`, height: `${LANE_H}px` }}
     >
-      {mark.ticker ? (
-        <Link href={`/t/${mark.ticker}`} className="hover:text-accent">
-          {body}
-        </Link>
-      ) : (
-        body
-      )}
+      <span
+        className={`absolute left-0 w-px ${rule}`}
+        style={{ top: `-${drop}px`, height: `${drop + LANE_H / 2}px` }}
+      />
+      <span className="flex h-full items-center">
+        {mark.ticker ? (
+          <Link href={`/t/${mark.ticker}`} className="hover:text-accent">
+            {body}
+          </Link>
+        ) : (
+          body
+        )}
+      </span>
     </div>
   );
 }
@@ -149,6 +199,7 @@ export function TapeBand({
   return (
     <Panel
       title="Today’s tape"
+      heading="eyebrow"
       subtitle={nothingTimed ? undefined : "all times ET"}
       actions={actions}
       readThis={
@@ -186,51 +237,73 @@ export function TapeBand({
             {aboveH > 0 && (
               <div className="relative" style={{ height: `${aboveH}px` }}>
                 {aboveLanes.map((m) => (
-                  <Positioned key={m.key} mark={m} lane={m.lane} side="above" />
+                  <EarningsMark key={m.key} mark={m} lane={m.lane} />
                 ))}
               </div>
             )}
 
-            {/* the axis */}
-            <div className="relative h-5">
+            {/* `now` gets a lane to itself — a pill sharing the axis row collides
+                with the REGULAR label between 09:30 and 10:00. */}
+            <div className="relative" style={{ height: `${NOW_H}px` }}>
+              {showNow && (
+                <span
+                  className="absolute bottom-0 -translate-x-1/2 whitespace-nowrap rounded-[3px] bg-accent px-1.5 py-0.5 text-micro font-semibold normal-case text-bg"
+                  style={{ left: `${nowF * 100}%` }}
+                >
+                  now {fmtEtClock(nowMin)} ET
+                </span>
+              )}
+            </div>
+
+            {/* The trading day as one bar: pre and after on the track, the
+                regular session lifted between two edges. The track is
+                `--surface`, a step *below* the panel it sits in rather than the
+                mock's step above — the panel is already `--elevated`, so an
+                elevated track would have been invisible against it and the pre
+                and after wings would have read as empty space. Recessed, the
+                wings are legible and the regular session still lifts clear. */}
+            <div
+              className="relative overflow-hidden rounded-[4px] bg-surface"
+              style={{ height: `${AXIS_H}px` }}
+            >
               {TAPE_SESSIONS.map((s) => {
                 const left = tapeFraction(s.startMin) * 100;
                 const width = (tapeFraction(s.endMin) - tapeFraction(s.startMin)) * 100;
+                const regular = s.key === "regular";
                 return (
-                  <div
-                    key={s.key}
-                    className={`absolute top-0 h-full border-l border-line ${
-                      s.key === "regular" ? "bg-raised" : ""
-                    }`}
-                    style={{ left: `${left}%`, width: `${width}%` }}
-                  >
-                    <span className="absolute left-1 top-0.5 eyebrow">
-                      {s.label} {fmtEtClock(s.startMin)}
+                  <Fragment key={s.key}>
+                    <div
+                      className={`absolute inset-y-0 ${
+                        regular ? "border-x border-line-strong bg-raised" : ""
+                      }`}
+                      style={{ left: `${left}%`, width: `${width}%` }}
+                    />
+                    <span
+                      className={`absolute top-1/2 -translate-y-1/2 whitespace-nowrap text-micro font-semibold ${
+                        regular ? "text-muted" : "text-muted-2"
+                      }`}
+                      style={{ left: `calc(${left}% + 8px)` }}
+                    >
+                      {s.label} · {fmtEtClock(s.startMin)}
                     </span>
-                  </div>
+                  </Fragment>
                 );
               })}
-              <div className="absolute inset-x-0 bottom-0 border-b border-line-strong" />
               {showNow && (
                 <div
-                  className="absolute top-0 h-full border-l border-accent"
+                  className="absolute inset-y-0 w-[2px] bg-accent"
                   style={{ left: `${nowF * 100}%` }}
-                >
-                  <span
-                    className={`absolute top-0.5 whitespace-nowrap text-data text-accent ${
-                      nowF > FLIP_AT ? "right-1" : "left-1"
-                    }`}
-                  >
-                    now {fmtEtClock(nowMin)} ET
-                  </span>
-                </div>
+                />
               )}
             </div>
 
             {belowH > 0 && (
-              <div className="relative mt-1" style={{ height: `${belowH}px` }}>
+              <div
+                className="relative"
+                style={{ height: `${belowH}px`, marginTop: `${TICK_GAP}px` }}
+              >
                 {belowLanes.map((m) => (
-                  <Positioned key={m.key} mark={m} lane={m.lane} side="below" />
+                  <ReleaseMark key={m.key} mark={m} lane={m.lane} />
                 ))}
               </div>
             )}

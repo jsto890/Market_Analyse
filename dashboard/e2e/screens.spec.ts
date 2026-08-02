@@ -22,6 +22,12 @@ fs.mkdirSync(OUT, { recursive: true });
 
 const LAPTOP = { width: 1440, height: 900 };
 const DESKTOP = { width: 1920, height: 1080 };
+/** The audit's own width. It used to inherit Playwright's `Desktop Chrome`
+ * default, so every width in `_audit.json` was a 1280 number that nothing in
+ * this file declared and a config edit could silently move. Pinned here so the
+ * numbers mean something; the review width is `LAPTOP`, which the substrate
+ * contract below measures. */
+const AUDIT = { width: 1280, height: 720 };
 
 /** Kill animations/transitions and caret blink so captures are deterministic. */
 async function freeze(page: Page) {
@@ -70,6 +76,36 @@ async function settle(page: Page, ms = 2500) {
     .waitForLoadState("networkidle", { timeout: 6000 })
     .catch(() => {}); // polling pages (live ladder, 5s health) never go idle
   await page.waitForTimeout(ms);
+}
+
+/**
+ * Wait until the rails have reached the geometry this route is supposed to have.
+ *
+ * `LeftRail`/`RightRail` render expanded during SSR and collapse in a `useEffect`
+ * keyed on `dense`, to keep hydration clean. So `#main` is viewport−488 until
+ * hydration runs and viewport−72 after it — anything that measures width off a
+ * fixed timeout is racing that effect and will report the wrong number on a slow
+ * machine. Assert the state instead of hoping the settle beat won.
+ *
+ * `RailShell` opens both rails on `/` alone (`dense = pathname !== "/"`).
+ */
+async function waitForRails(page: Page, routePath: string) {
+  const dense = routePath !== "/";
+  await page.waitForFunction(
+    (isDense) => {
+      const rails = Array.from(document.querySelectorAll<HTMLElement>("#main ~ aside"));
+      if (rails.length !== 2) return false;
+      const css = getComputedStyle(document.documentElement);
+      const px = (name: string) => parseFloat(css.getPropertyValue(name));
+      const want = isDense
+        ? [px("--rail-collapsed"), px("--rail-collapsed")]
+        : [px("--rail-l"), px("--rail-r")];
+      // DOM order is left then right; `order-1`/`order-3` only move them visually.
+      return rails.every((r, i) => Math.abs(r.getBoundingClientRect().width - want[i]) <= 1);
+    },
+    dense,
+    { timeout: 15_000 },
+  );
 }
 
 async function shot(page: Page, name: string, opts: { full?: boolean } = {}) {
@@ -147,14 +183,23 @@ test("state: options strikes — live mode, and scrolled right", async ({ page }
   await settle(page);
 
   await step("live toggle", async () => {
-    const toggle = page.getByRole("switch", { name: /live options ladder/i });
+    // The unlabelled `switch` became the named "Data" segmented control
+    // (OPT-03), so live is a radio you select, not a toggle you flip.
+    const toggle = page.getByRole("radio", { name: "Live" });
     await toggle.click({ timeout: 5000 });
     await page.waitForTimeout(3000); // let the 500ms poller land a snapshot
     await shot(page, "state--strikes-live-mode");
 
     // The 23-column table past the sticky Strike column: can you still tell
     // which side (calls vs puts) you are reading?
-    const scroller = page.locator("div.overflow-auto").filter({ has: page.locator("table") }).first();
+    // The ladder scrolls on `overflow-x-auto overflow-y-auto`, not the shorthand
+    // — match both, and wait with a short timeout so a miss is reported by
+    // `step` in seconds rather than eating the whole 120s test budget.
+    const scroller = page
+      .locator("div.overflow-auto, div.overflow-x-auto")
+      .filter({ has: page.locator("table") })
+      .first();
+    await scroller.waitFor({ state: "attached", timeout: 5000 });
     await scroller.evaluate((el) => { el.scrollLeft = el.scrollWidth; });
     await page.waitForTimeout(300);
     await shot(page, "state--strikes-live-scrolled-right");
@@ -218,7 +263,11 @@ test("state: today — filters active, and Everything else open", async ({ page 
   await settle(page);
 
   await step("HC filter", async () => {
-    await page.getByRole("button", { name: /^HC only$/i }).click({ timeout: 4000 });
+    // The toggle folded into the conviction select (T-12) — same filter, one
+    // fewer control on the toolbar row.
+    await page
+      .getByRole("combobox", { name: "Filter by conviction" })
+      .selectOption("hc", { timeout: 4000 });
     await page.waitForTimeout(400);
     await shot(page, "state--today-hc-filter");
   });
@@ -322,6 +371,7 @@ test("audit: console errors, computed layout, contrast inputs", async ({ page })
   // One navigation + 1.5s settle per route, over every route in ROUTES — the
   // 30s default is a coin flip on a cold dev server.
   test.setTimeout(120_000);
+  await page.setViewportSize(AUDIT);
   const report: Record<string, unknown> = {};
 
   for (const route of ROUTES) {
@@ -331,6 +381,8 @@ test("audit: console errors, computed layout, contrast inputs", async ({ page })
 
     const res = await page.goto(route.path).catch(() => null);
     await settle(page, 1500);
+    // Rails first: every width below is measured off the space they leave.
+    await waitForRails(page, route.path);
 
     report[route.path] = {
       status: res?.status() ?? "no response",
@@ -338,12 +390,26 @@ test("audit: console errors, computed layout, contrast inputs", async ({ page })
       // The measurements the code review can only guess at:
       metrics: await page.evaluate(() => {
         const main = document.querySelector("#main");
-        const content = main?.firstElementChild as HTMLElement | null;
+        // The element that owns the cap, not whatever happens to be first.
+        // `#main`'s first child is the options sub-shell wrapper on seven
+        // routes and the `<Page>` itself on the rest, so the old reading
+        // compared two different DOM levels and produced a fourth width that
+        // no page declared. `data-page-width` is `Page`'s own marker.
+        const owner = main?.querySelector("main[data-page-width]") as HTMLElement | null;
+        const content = owner ?? (main?.firstElementChild as HTMLElement | null);
         const cs = content ? getComputedStyle(content) : null;
         return {
           scrollHeight: main?.scrollHeight ?? null,
           clientHeight: main?.clientHeight ?? null,
           contentWidth: content?.getBoundingClientRect().width ?? null,
+          // Which element the width above came from. A route on `fallback` has
+          // no `<Page>` at all — that is a finding, not a measurement.
+          contentSource: owner ? (owner.getAttribute("data-page-width") ?? "page") : "fallback",
+          // Content width alone cannot say whether a route is narrow because
+          // its rails are open or because its own shell caps it. `mainWidth` is
+          // the space the rails left; the gap between the two is the page's
+          // own doing, and that is the half X-02 can actually fix.
+          mainWidth: main?.getBoundingClientRect().width ?? null,
           contentPadding: cs ? `${cs.paddingTop} ${cs.paddingRight} ${cs.paddingBottom} ${cs.paddingLeft}` : null,
           tables: document.querySelectorAll("table").length,
           rows: document.querySelectorAll("tbody tr").length,
@@ -362,6 +428,29 @@ test("audit: console errors, computed layout, contrast inputs", async ({ page })
           // tooltip-only affordances: triggers with no visible content
           invisibleTips: document.querySelectorAll(".sr-only").length,
           titleAttrs: document.querySelectorAll("[title]").length,
+          // the smallest size any text actually rendered at — 11px is the floor
+          minFontSize: (() => {
+            let min = Infinity;
+            document.querySelectorAll<HTMLElement>("body *").forEach((el) => {
+              if (!el.textContent?.trim()) return;
+              const s = parseFloat(getComputedStyle(el).fontSize);
+              if (s > 0 && s < min) min = s;
+            });
+            return Number.isFinite(min) ? min : null;
+          })(),
+          // a colour spelled out in markup rather than taken from the token layer
+          hexInMarkup: (() => {
+            const hex = /#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})\b/;
+            const hits: string[] = [];
+            document.querySelectorAll<HTMLElement>("body *").forEach((el) => {
+              const cls = typeof el.className === "string" ? el.className : "";
+              const style = el.getAttribute("style") ?? "";
+              if (hex.test(cls) || hex.test(style)) {
+                hits.push(`${el.tagName.toLowerCase()}: ${(cls + " " + style).trim().slice(0, 80)}`);
+              }
+            });
+            return hits.slice(0, 10);
+          })(),
         };
       }),
     };
@@ -369,9 +458,41 @@ test("audit: console errors, computed layout, contrast inputs", async ({ page })
     page.removeAllListeners("pageerror");
   }
 
+  // Cross-route rollup — the three numbers the conformance pass is judged on.
+  const metrics = Object.values(report).map((r) => (r as { metrics: Record<string, number> }).metrics);
+  // The width a route reported is only meaningful next to the rung it came
+  // from: `wide` reads 1180 where the cap binds and less where the open rails
+  // beat it to it. Same rung, less room — not a fourth cap.
+  const byRung = Object.entries(report).reduce<Record<string, Record<string, string[]>>>(
+    (acc, [routePath, r]) => {
+      const m = (r as { metrics: { contentWidth: number | null; contentSource: string } }).metrics;
+      const rung = (acc[m.contentSource] ??= {});
+      (rung[String(m.contentWidth)] ??= []).push(routePath);
+      return acc;
+    },
+    {},
+  );
+  report._summary = {
+    viewport: AUDIT,
+    distinctContentWidths: Array.from(new Set(metrics.map((m) => m.contentWidth))).sort((a, b) => a - b),
+    // The ladder the pages actually declare, which is the thing the criterion is
+    // about. Pixel widths are downstream of it and of the rails.
+    distinctPageWidthRungs: Object.keys(byRung).sort(),
+    contentWidthsByRung: byRung,
+    routesWithoutPage: Object.entries(report)
+      .filter(([, r]) => (r as { metrics: { contentSource: string } }).metrics.contentSource === "fallback")
+      .map(([k]) => k),
+    minFontSize: Math.min(...metrics.map((m) => m.minFontSize ?? Infinity)),
+    totalTitleAttrs: metrics.reduce((n, m) => n + (m.titleAttrs ?? 0), 0),
+    routesWithHexInMarkup: Object.entries(report)
+      .filter(([, r]) => ((r as { metrics: { hexInMarkup: string[] } }).metrics.hexInMarkup ?? []).length > 0)
+      .map(([k]) => k),
+  };
+
   fs.writeFileSync(path.join(OUT, "_audit.json"), JSON.stringify(report, null, 2));
   console.log(`\n  ✓ screens/_audit.json`);
-  expect(Object.keys(report).length).toBe(ROUTES.length);
+  console.log(`    ${JSON.stringify(report._summary)}`);
+  expect(Object.keys(report).length).toBe(ROUTES.length + 1);
 });
 
 // ── 4. Phase 1 substrate contract ────────────────────────────────────────────
@@ -457,10 +578,15 @@ test("contract: Phase 1 substrate holds on every route", async ({ page }) => {
   for (const route of ROUTES) {
     await page.goto(route.path);
     await settle(page, 1500);
+    // Same race as the audit: the rails collapse in an effect, so a width read
+    // before that lands is a pre-hydration number.
+    await waitForRails(page, route.path);
 
     const m = await page.evaluate(() => {
       const main = document.querySelector("#main");
-      const page_ = main?.querySelector("main") ?? (main?.firstElementChild as HTMLElement | null);
+      const page_ =
+        (main?.querySelector("main[data-page-width]") as HTMLElement | null) ??
+        (main?.firstElementChild as HTMLElement | null);
 
       const sizes = new Set<string>();
       document.querySelectorAll<HTMLElement>("#main *").forEach((el) => {
@@ -721,14 +847,25 @@ test("contract: Phase 3.2 — the ticker page names each thing once", async ({ p
     violations.push(`/t/AAPL: raw tier enum printed ${rawTier}×`);
   }
 
-  // The header says what the name is, not only what it costs. Both come from
-  // the fundamentals endpoint, so a failure here is either the header or yfinance.
-  if ((await page.getByText(/mkt cap /).count()) === 0) {
+  // The header says what the name is, not only what it costs. Market cap is now
+  // a bare compact figure in the identity line beside the sector and the
+  // industry — "Technology · Consumer Electronics · $4.98T" — so there is no
+  // "mkt cap" label left to match on. Assert the figure itself, scoped to the
+  // header, so the check still fails if the cap stops rendering. Both facts come
+  // from the fundamentals endpoint: a miss here is the header or yfinance.
+  const cap = await page
+    .locator("#main section")
+    .first()
+    .getByText(/^\$\d+(\.\d+)?[MBT]$/)
+    .count();
+  if (cap === 0) {
     violations.push("/t/AAPL: header exposes no market cap");
   }
 
-  // One earnings date, one basis, one place.
-  const earnings = await page.getByText(/earnings (today|tomorrow|in \d+d|\d+d ago)/).count();
+  // One earnings date, one basis, one place. Case-insensitive: the chip's copy
+  // is sentence case now, and a guard that quietly stops matching is worse than
+  // one that fails.
+  const earnings = await page.getByText(/earnings (today|tomorrow|in \d+d|\d+d ago)/i).count();
   if (earnings > 1) {
     violations.push(`/t/AAPL: earnings stated ${earnings}×, expected at most once`);
   }
@@ -768,7 +905,9 @@ test("contract: Phase 4 — the window drives the benchmark, sectors are named, 
   await settle(page, 2500);
   requests.length = 0;
 
-  await page.getByRole("button", { name: "1 week" }).click();
+  // The lookback switch is a `SegmentedControl` now (X-03), so its segments are
+  // radios in a radiogroup, not buttons. Same label, same click, stated role.
+  await page.getByRole("radio", { name: "1 week" }).click();
   await settle(page, 2000);
 
   // 1w's benchmark is 1mo of daily bars; the 1d default is 5d of 30m bars. A

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import ReadThis from "@/components/ui/ReadThis";
 
 interface Props {
   spot: number | null;
@@ -78,10 +79,10 @@ export default function StrikeGuidance({ spot, zeroGamma, callWall, putWall, atm
   const live = phase !== "closed" && phase !== "pre";
 
   return (
-    <section className="rounded-md border border-line bg-elevated">
+    <section className="rounded-[8px] border border-line bg-surface">
       <div className="flex flex-wrap items-center gap-2 px-4 py-2.5">
-        <span className="text-title text-foreground">Strike guidance</span>
-        <span className="text-body text-3">levels → what to actually trade</span>
+        <span className="text-title text-foreground">If you&apos;re trading this</span>
+        <span className="text-data text-3">candidates only · not orders</span>
         <span
           className={`ml-auto inline-flex items-center gap-1 rounded border px-1.5 py-px font-mono text-micro ${
             live ? "border-teal/50 bg-teal/10 text-teal" : "border-line text-muted"
@@ -91,10 +92,6 @@ export default function StrikeGuidance({ spot, zeroGamma, callWall, putWall, atm
           {PHASE_LABEL[phase]}
         </span>
       </div>
-
-      <p className="border-t border-line px-4 py-1.5 text-body text-muted">
-        Advisory only, not financial advice — context for your own decision, not a signal to execute.
-      </p>
 
       <div className="space-y-3 border-t border-line px-4 py-3 text-body leading-relaxed">
         <p className="text-2">
@@ -170,6 +167,19 @@ export default function StrikeGuidance({ spot, zeroGamma, callWall, putWall, atm
           <span className="text-foreground">{PHASE_LABEL[phase]}:</span> {PHASE_NOTE[phase]}
         </p>
       </div>
+
+      <ReadThis>
+        these are the strikes the current regime argues for — candidates for you to size and judge,
+        not recommendations. The read flips at zero-gamma{" "}
+        <span className="text-data">{n2(zeroGamma)}</span>: below it hedging extends moves instead of
+        absorbing them, and the bullish side stops being the trade. When spot, the walls or the
+        expected move have no feed, no candidate survives — a blank strike is no trade, not a cheap
+        one.{" "}
+        <span>
+          Advisory only, not financial advice — context for your own decision, not a signal to
+          execute.
+        </span>
+      </ReadThis>
     </section>
   );
 }

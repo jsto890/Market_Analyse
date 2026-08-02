@@ -8,8 +8,8 @@ import type { BridgeRow } from "@/types/bridge";
 import { tierSort } from "@/lib/groups";
 import DataTable, { Column } from "@/components/ui/DataTable";
 import Empty from "@/components/ui/Empty";
-import ReadThis from "@/components/ui/ReadThis";
 import ActionBar from "@/components/ui/ActionBar";
+import SegmentedControl from "@/components/ui/SegmentedControl";
 import { heatBg } from "@/lib/heat";
 import Badge, { BADGE_LABEL } from "@/components/ui/Badge";
 import ConvictionDot from "@/components/ui/ConvictionDot";
@@ -72,12 +72,14 @@ interface GroupedRows {
 
 interface Filters {
   search: string;
-  hcOnly: boolean;
-  conviction: string; // "" | "high" | "med" | "low"
+  /** "" | "hc" | "high" | "med" | "low". `hc` reads the `high_conviction`
+   *  agreement flag; the other three match the `conviction` tier. One control,
+   *  two fields — see the toolbar for why. */
+  conviction: string;
   sector: string; // "" | sector name
 }
 
-const DEFAULT_FILTERS: Filters = { search: "", hcOnly: false, conviction: "", sector: "" };
+const DEFAULT_FILTERS: Filters = { search: "", conviction: "", sector: "" };
 
 const GROUP_META: { key: keyof GroupedRows; title: string; rationale: string }[] = [
   {
@@ -119,7 +121,7 @@ function TickerCell({ row, isNew }: { row: BridgeRow; isNew: boolean }) {
       className="text-data font-medium text-accent hover:underline"
     >
       {row.ticker}
-      {isNew && <sup className="ml-0.5 text-micro font-semibold text-warn">NEW</sup>}
+      {isNew && <sup className="ml-0.5 text-label font-semibold text-warn">NEW</sup>}
     </Link>
   );
 }
@@ -130,6 +132,32 @@ function LegBars({ s, t, f }: { s: number; t: number; f: number }) {
       <MicroBar value={s} />
       <MicroBar value={t} />
       <MicroBar value={f} />
+    </span>
+  );
+}
+
+/** The card's three legs: the README's component-bar idiom — 7px wide, 3px
+ *  apart, flex-end on a shared baseline in a 16px box. Flex divs, never a
+ *  chart. The fill is `--model` and not the mock's green: a leg score is model
+ *  output, and green/red on this page mean money direction (same reasoning as
+ *  `MicroBar`, which the table's copy of this row already follows). */
+const LEG_BOX_PX = 16;
+
+function legHeight(v: number): string {
+  const clamped = Math.max(-1, Math.min(1, Number.isFinite(v) ? v : 0));
+  return `${Math.max(2, Math.round(((clamped + 1) / 2) * LEG_BOX_PX))}px`;
+}
+
+function CardLegs({ s, t, f }: { s: number; t: number; f: number }) {
+  return (
+    <span className="flex h-[16px] items-end gap-[3px]">
+      {[s, t, f].map((v, i) => (
+        <span
+          key={i}
+          className="w-[7px] rounded-[1px] bg-model"
+          style={{ height: legHeight(v) }}
+        />
+      ))}
     </span>
   );
 }
@@ -158,14 +186,14 @@ function RowFlags({ ext, earnDays }: { ext: boolean; earnDays: number | null }) 
   return (
     <span className="inline-flex items-center gap-1">
       {ext && (
-        <span className="rounded border border-line px-1 py-px text-micro text-muted">ext</span>
+        <span className="rounded border border-line px-1 py-px text-label text-muted">ext</span>
       )}
       {showEarn && (
         <InfoTip
           content={`earnings in ${earnDays}d — inside typical hold window`}
           label={`Earnings in ${earnDays} days`}
         >
-          <span className="rounded border border-warn/50 bg-warn/10 px-1 py-px text-micro font-medium text-warn">
+          <span className="rounded border border-warn/50 bg-warn/10 px-1 py-px text-data font-medium text-warn">
             E{earnDays}d
           </span>
         </InfoTip>
@@ -188,7 +216,7 @@ function CatalystCount({ value }: { value: string | null }) {
       }
       label={`${list.length} catalysts`}
     >
-      <span className="inline-flex cursor-default items-center rounded border border-line px-1.5 py-px font-mono text-micro tabular-nums text-muted">
+      <span className="inline-flex cursor-default items-center rounded border border-line px-1.5 py-px text-data text-muted">
         {list.length}
       </span>
     </InfoTip>
@@ -335,8 +363,13 @@ function ExpandedRow({ row }: { row: BridgeRow }) {
 // ---------- cards ----------
 
 /** The top names of the active group, read in full instead of squeezed into a
- *  table row. Everything on the card comes off the bridge row — there is no
- *  per-name narrative feed, so the card says nothing where the mock has prose. */
+ *  table row. The name is the biggest thing on the card — the caveat line
+ *  directly above says the score is not the thing to read first, so the score
+ *  does not get to be the headline (T-14).
+ *
+ *  Padding, radius and the rules below are written in exact px rather than on
+ *  the Tailwind scale: the root font-size here is 14px, so `p-3.5` would render
+ *  12.25px and `rounded-lg` 7px, not the mock's 14px and 8px. */
 function SignalCard({
   row,
   isNew,
@@ -346,50 +379,74 @@ function SignalCard({
   isNew: boolean;
   onOpen: () => void;
 }) {
-  const catalysts = parseCatalysts(row.catalysts);
+  const ret = row.ret_1d;
+  const hasRet = ret !== null && ret !== undefined && Number.isFinite(ret);
+  // `RowFlags` prints a dash when a *table* row has no flag, to keep the column
+  // aligned. A card has no column to align to, so it renders nothing.
+  const earnDays = row.earnings_in_days;
+  const hasFlags =
+    row.is_extended || (earnDays !== null && Number.isFinite(earnDays) && earnDays <= 10);
   return (
-    <article className="flex flex-col gap-2 rounded-md border border-line bg-raised px-3 py-2.5">
-      <div className="flex items-baseline justify-between gap-2">
-        <span className="flex min-w-0 items-baseline gap-2">
-          <Link href={`/t/${row.ticker}`} className="text-title text-accent hover:underline">
-            {row.ticker}
-          </Link>
-          {isNew && <span className="eyebrow text-warn">new</span>}
-          {row.industry && <span className="truncate text-body text-3">{row.industry}</span>}
+    <article className="flex flex-col gap-[11px] rounded-[8px] border border-line-strong bg-elevated p-[14px]">
+      <div className="flex items-start justify-between gap-2">
+        <span className="flex min-w-0 flex-col gap-[3px]">
+          <span className="flex items-baseline gap-2">
+            <Link
+              href={`/t/${row.ticker}`}
+              className="text-headline font-mono text-foreground hover:text-accent"
+            >
+              {row.ticker}
+            </Link>
+            {isNew && <span className="eyebrow text-warn">new</span>}
+          </span>
+          {row.industry && <span className="truncate text-label text-muted">{row.industry}</span>}
         </span>
-        <Badge variant="tier" value={row.action_label} label={BADGE_LABEL[row.action_label]} />
+        <span className="flex shrink-0 flex-col items-end gap-[5px]">
+          <Badge variant="tier" value={row.action_label} label={BADGE_LABEL[row.action_label]} />
+          <span className="font-mono text-label tabular-nums text-model">
+            {fmtNum(row.combined_score)} <span className="text-muted">score</span>
+          </span>
+        </span>
       </div>
 
-      <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
-        <span className="flex items-baseline gap-1.5">
-          <span className="text-headline font-mono text-model">{fmtNum(row.combined_score)}</span>
-          <span className="eyebrow">score</span>
-        </span>
-        <span className="flex items-baseline gap-1.5">
-          <LegBars s={row.sentiment_score} t={row.tech_score} f={row.catalyst_score} />
-          <span className="eyebrow">sent · tech · fund</span>
-        </span>
-        <Ret v={row.ret_1d} />
-        <RowFlags ext={row.is_extended} earnDays={row.earnings_in_days} />
+      <div className="flex items-center gap-[10px]">
+        <CardLegs s={row.sentiment_score} t={row.tech_score} f={row.catalyst_score} />
+        <span className="font-mono text-micro text-muted">sent · tech · fund</span>
+        {hasFlags && <RowFlags ext={row.is_extended} earnDays={earnDays} />}
+        {hasRet && (
+          <span
+            className={`ml-auto font-mono text-micro tabular-nums ${
+              ret >= 0 ? "text-pos" : "text-neg"
+            }`}
+          >
+            {ret >= 0 ? "+" : ""}
+            {ret.toFixed(1)}%
+          </span>
+        )}
       </div>
 
-      {catalysts.length > 0 && (
-        <p className="text-body text-2">
-          {catalysts.slice(0, 3).map(catalystText).join(" · ")}
-        </p>
-      )}
+      {/* The mock's one-line reason has no feed behind it — nothing in the
+       * bridge row writes a sentence about a name. Rather than paraphrase the
+       * three bars directly above it, or dress catalyst text up as narrative,
+       * the row is left out. Empty means empty. */}
 
-      <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 text-data">
+      <div className="flex gap-[12px] border-t border-line pt-[10px] font-mono text-label tabular-nums">
         <span>
-          <span className="text-muted">E</span> {fmtNum(row.entry)}
+          <span className="text-muted">E </span>
+          {fmtNum(row.entry)}
         </span>
         <span>
-          <span className="text-muted">S</span> {fmtNum(row.stop)}
+          <span className="text-muted">S </span>
+          {fmtNum(row.stop)}
         </span>
         <span>
-          <span className="text-muted">T</span> {fmtNum(row.target)}
+          <span className="text-muted">T </span>
+          {fmtNum(row.target)}
         </span>
-        <span className="text-2">{fmtNum(row.risk_reward, 1)}x</span>
+        {/* "—x" is not a value; a missing R:R renders nothing. */}
+        {row.risk_reward !== null && Number.isFinite(row.risk_reward) && (
+          <span className="ml-auto text-3">{fmtNum(row.risk_reward, 1)}x</span>
+        )}
       </div>
 
       <ActionBar symbol={row.ticker} onOpen={onOpen} fill />
@@ -414,8 +471,9 @@ function loadFilters(): Filters {
 }
 
 function matchesFilters(row: BridgeRow, f: Filters): boolean {
-  if (f.hcOnly && !row.high_conviction) return false;
-  if (f.conviction && row.conviction !== f.conviction) return false;
+  if (f.conviction === "hc") {
+    if (!row.high_conviction) return false;
+  } else if (f.conviction && row.conviction !== f.conviction) return false;
   if (f.sector && (row.industry ?? "") !== f.sector) return false;
   if (f.search) {
     const q = f.search.toLowerCase();
@@ -435,7 +493,14 @@ function columnsFor(newSet: Set<string>): Column<BridgeRow>[] {
     {
       key: "tier",
       header: "Signal",
-      render: (r) => <Badge variant="tier" value={r.action_label} />,
+      // A badge per row is thirty boxes in a thirty-row table. The tier is the
+      // model's own word, so it reads as plain --model text (T-16); the badge
+      // stays on the cards, where there are three of them.
+      render: (r) => (
+        <span className="text-label text-model">
+          {BADGE_LABEL[r.action_label] ?? r.action_label}
+        </span>
+      ),
     },
     {
       key: "legs",
@@ -566,143 +631,125 @@ export default function SignalGroups({
   const rest = rows.slice(CARD_COUNT);
 
   return (
-    <div className="space-y-3">
-      {/* Filters toolbar */}
-      <div className="flex flex-wrap items-center gap-2 rounded-md border border-line bg-elevated px-3 py-2">
-        <Input
-          icon={<Search size={13} />}
-          type="text"
-          value={active.search}
-          onChange={(e) => update({ search: e.target.value })}
-          placeholder="Search ticker…"
-          className="w-52"
+    <div className="flex flex-col gap-[12px]">
+      {/* Groups and filters share one row: the filters act on the group you are
+       * looking at, so they are not a bar of their own above it (T-12). */}
+      <div className="flex flex-wrap items-center gap-2">
+        <SegmentedControl
+          as="tablist"
+          label="Signal groups"
+          labelHidden
+          value={tab}
+          onChange={setTab}
+          options={GROUP_META.map((g) => ({
+            key: g.key,
+            label: g.title,
+            count: sorted[g.key].length,
+            id: `signals-tab-${g.key}`,
+            controls: `signals-panel-${g.key}`,
+          }))}
         />
-        <span className="inline-flex items-center gap-1">
-          <button
-            type="button"
-            onClick={() => update({ hcOnly: !active.hcOnly })}
-            aria-pressed={active.hcOnly}
-            className={`inline-flex h-8 items-center gap-1 rounded border px-2.5 text-body font-medium transition-colors ${
-              active.hcOnly
-                ? "border-accent bg-accent-dim text-accent"
-                : "border-line bg-raised text-muted hover:text-foreground"
-            }`}
-          >
-            HC only
-          </button>
-          <InfoTip content="High-conviction — ≥75% indicator agreement. Consensus, not edge." label="Conviction filter info" />
-        </span>
-        <Select
-          aria-label="Filter by conviction"
-          value={active.conviction}
-          onChange={(e) => update({ conviction: e.target.value })}
-          className="w-32"
-          options={[
-            { value: "", label: "All conviction" },
-            { value: "high", label: "High" },
-            { value: "med", label: "Med" },
-            { value: "low", label: "Low" },
-          ]}
-        />
-        <Select
-          aria-label="Filter by sector"
-          value={active.sector}
-          onChange={(e) => update({ sector: e.target.value })}
-          className="w-40"
-          options={[
-            { value: "", label: "All sectors" },
-            ...sectors.map((s) => ({ value: s, label: s })),
-          ]}
-        />
-        {(active.search || active.hcOnly || active.conviction || active.sector) && (
-          <Button variant="ghost" size="sm" icon={<X size={12} />} onClick={() => update({ search: "", hcOnly: false, conviction: "", sector: "" })}>
-            Clear filters
-          </Button>
-        )}
-      </div>
-
-      <section className="rounded-md border border-line bg-elevated">
-        {/* Four stacked tables meant the third was never scrolled to. */}
-        <div role="tablist" aria-label="Signal groups" className="flex flex-wrap gap-1 px-2 pt-2">
-          {GROUP_META.map((g) => {
-            const selected = g.key === tab;
-            return (
-              <button
-                key={g.key}
-                type="button"
-                role="tab"
-                id={`signals-tab-${g.key}`}
-                aria-selected={selected}
-                aria-controls={`signals-panel-${g.key}`}
-                onClick={() => setTab(g.key)}
-                className={`flex items-baseline gap-1.5 rounded-t border-b-2 px-3 py-1.5 text-body transition-colors ${
-                  selected
-                    ? "border-accent text-foreground"
-                    : "border-transparent text-muted hover:text-foreground"
-                }`}
-              >
-                {g.title}
-                <span className="font-mono text-micro tabular-nums text-muted">
-                  {sorted[g.key].length}
-                </span>
-              </button>
-            );
-          })}
-        </div>
-
-        <div
-          role="tabpanel"
-          id={`signals-panel-${tab}`}
-          aria-labelledby={`signals-tab-${tab}`}
-          className="border-t border-line px-4 py-3"
-        >
-          <p className="text-body text-2">
-            {meta.rationale}
-            {hidden > 0 && (
-              <span className="text-3"> {hidden} hidden by filters.</span>
-            )}
-          </p>
-
-          {rows.length === 0 ? (
-            <Empty
-              title="Nothing in this group"
-              message={
-                hidden > 0
-                  ? "Every name here is filtered out. Clear the filters to see them."
-                  : "No name cleared this group's bar in today's run."
-              }
+        <div className="ml-auto flex flex-wrap items-center gap-2">
+          <Input
+            icon={<Search size={13} />}
+            type="text"
+            value={active.search}
+            onChange={(e) => update({ search: e.target.value })}
+            placeholder="Search ticker…"
+            className="w-44"
+          />
+          {/* One conviction control, not a toggle beside a dropdown (T-12).
+              The two are still two axes — `high_conviction` is the ≥75%
+              agreement flag, `conviction` is the tier — so the copy names the
+              flag by what it measures and prefixes the tiers with the word
+              "Tier". They share a control because they answer the same
+              question; they keep separate labels because they are not the
+              same test. The InfoTip carries the definition the old toggle's
+              tooltip did. */}
+          <span className="inline-flex items-center gap-1">
+            <Select
+              aria-label="Filter by conviction"
+              value={active.conviction}
+              onChange={(e) => update({ conviction: e.target.value })}
+              className="w-44"
+              options={[
+                { value: "", label: "All conviction" },
+                { value: "hc", label: "High conviction only" },
+                { value: "high", label: "Tier: High" },
+                { value: "med", label: "Tier: Med" },
+                { value: "low", label: "Tier: Low" },
+              ]}
             />
-          ) : (
-            <>
-              {cards.length > 0 && (
-                <div className="mt-3 grid gap-2 lg:grid-cols-3">
-                  {cards.map((r) => (
-                    <SignalCard
-                      key={r.ticker}
-                      row={r}
-                      isNew={newSet.has(r.ticker)}
-                      onOpen={() => onOpen(r, meta.title, rows)}
-                    />
-                  ))}
-                </div>
-              )}
-              {rest.length > 0 && (
-                <div className="mt-3">
-                  <GroupTable
-                    rows={rest}
-                    newSet={newSet}
-                    onOpen={(r) => onOpen(r, meta.title, rows)}
-                    persistKey={`today-${tab}`}
-                  />
-                </div>
-              )}
-            </>
+            <InfoTip content="High-conviction — ≥75% indicator agreement. Consensus, not edge. The tiers are a separate read." label="Conviction filter info" />
+          </span>
+          <Select
+            aria-label="Filter by sector"
+            value={active.sector}
+            onChange={(e) => update({ sector: e.target.value })}
+            className="w-40"
+            options={[
+              { value: "", label: "All sectors" },
+              ...sectors.map((s) => ({ value: s, label: s })),
+            ]}
+          />
+          {(active.search || active.conviction || active.sector) && (
+            <Button variant="ghost" size="sm" icon={<X size={12} />} onClick={() => update({ search: "", conviction: "", sector: "" })}>
+              Clear filters
+            </Button>
           )}
         </div>
+      </div>
 
-        {/* Printed once. It used to print above all four tables. */}
-        <ReadThis>{CAVEAT_LINE}</ReadThis>
-      </section>
+      <div
+        role="tabpanel"
+        id={`signals-panel-${tab}`}
+        aria-labelledby={`signals-tab-${tab}`}
+        className="flex flex-col gap-[12px]"
+      >
+        {/* The one caveat line, and deliberately at the head rather than in a
+         * `ReadThis` foot: it qualifies the cards immediately below it, and a
+         * reader who has already picked a name off a card does not go back for
+         * a footnote. This is the documented exception to the
+         * read-this-at-the-foot rule (T-13) — do not "fix" it back. */}
+        <p className="text-label text-muted">
+          {meta.rationale} {CAVEAT_LINE}
+          {hidden > 0 && <span className="text-3"> {hidden} hidden by filters.</span>}
+        </p>
+
+        {rows.length === 0 ? (
+          <Empty
+            title="Nothing in this group"
+            message={
+              hidden > 0
+                ? "Every name here is filtered out. Clear the filters to see them."
+                : "No name cleared this group's bar in today's run."
+            }
+          />
+        ) : (
+          <>
+            {cards.length > 0 && (
+              <div className="grid gap-[12px] lg:grid-cols-3">
+                {cards.map((r) => (
+                  <SignalCard
+                    key={r.ticker}
+                    row={r}
+                    isNew={newSet.has(r.ticker)}
+                    onOpen={() => onOpen(r, meta.title, rows)}
+                  />
+                ))}
+              </div>
+            )}
+            {rest.length > 0 && (
+              <GroupTable
+                rows={rest}
+                newSet={newSet}
+                onOpen={(r) => onOpen(r, meta.title, rows)}
+                persistKey={`today-${tab}`}
+              />
+            )}
+          </>
+        )}
+      </div>
     </div>
   );
 }

@@ -160,7 +160,7 @@ export default function BriefPage() {
               )}
               <span className="min-w-0 flex-1 text-body text-foreground">{h.headline}</span>
               {Boolean(h.is_breaking) && (
-                <span className="shrink-0 text-micro text-warn">breaking</span>
+                <span className="shrink-0 text-label text-warn">breaking</span>
               )}
             </li>
           ))}

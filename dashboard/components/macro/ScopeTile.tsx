@@ -46,7 +46,7 @@ export default function ScopeTile({
       <div className="flex items-end justify-between gap-2">
         <span className={`text-data ${toneClass(tile.score)}`}>
           {signed(tile.score)}
-          {inBand && <span className="ml-1 text-micro text-muted">in band</span>}
+          {inBand && <span className="ml-1 text-label text-muted">in band</span>}
         </span>
         <Sparkline
           values={tile.spark}

@@ -61,9 +61,9 @@ function QuadrantLabel({
       {width > 100 && (
         <text
           x={tx}
-          y={ty + 12}
+          y={ty + 14}
           textAnchor={right ? "end" : "start"}
-          fontSize={10}
+          fontSize={11}
           fill={CHART_AXIS_STYLE.tick}
         >
           {QUADRANT_GLOSS[quadrant]}

@@ -100,6 +100,17 @@ describe("MacroPage header + legend (MC-04, MAC-06)", () => {
     expect(screen.getByText(/half-life of 12 hours/)).toBeInTheDocument();
     expect(screen.getByText(/before decay weighting/)).toBeInTheDocument();
   });
+
+  it("keeps the method on the page rather than behind a disclosure (O-07)", async () => {
+    searchParamsMock.current = "";
+    mockMacroFetch();
+    render(<MacroPage />);
+    const heading = screen.getByText(/How this score is computed/);
+    expect(heading.closest("[aria-expanded]")).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: /How this score is computed/ })
+    ).not.toBeInTheDocument();
+  });
 });
 
 describe("MacroPage tiles (MAC-07)", () => {
@@ -136,16 +147,16 @@ describe("MacroPage lookback control (MC-06, MAC-08, MAC-10)", () => {
     searchParamsMock.current = "window=1w";
     mockMacroFetch();
     render(<MacroPage />);
-    const activeWindow = await screen.findByRole("button", { name: "1 week" });
-    expect(activeWindow.className).toMatch(/bg-accent\/20/);
+    const activeWindow = await screen.findByRole("radio", { name: "1 week" });
+    expect(activeWindow).toHaveAttribute("aria-checked", "true");
   });
 
   it("defaults to 1d and labels the control rather than showing bare codes (MAC-10)", async () => {
     searchParamsMock.current = "";
     mockMacroFetch();
     render(<MacroPage />);
-    const activeWindow = await screen.findByRole("button", { name: "1 day" });
-    expect(activeWindow.className).toMatch(/bg-accent\/20/);
+    const activeWindow = await screen.findByRole("radio", { name: "1 day" });
+    expect(activeWindow).toHaveAttribute("aria-checked", "true");
     expect(screen.getByText("Lookback")).toBeInTheDocument();
     expect(screen.getByText(/previous 24 hours/)).toBeInTheDocument();
   });
@@ -171,7 +182,7 @@ describe("MacroPage lookback control (MC-06, MAC-08, MAC-10)", () => {
     expect(calls.some((u) => u === "/api/argus/history/SPY?period=5d&interval=30m")).toBe(true);
     expect(calls.some((u) => u.includes("period=1mo&interval=1d"))).toBe(false);
 
-    await userEvent.click(screen.getByRole("button", { name: "1 hour" }));
+    await userEvent.click(screen.getByRole("radio", { name: "1 hour" }));
     await vi.waitFor(() =>
       expect(calls.some((u) => u === "/api/argus/history/SPY?period=5d&interval=15m")).toBe(true)
     );
@@ -188,7 +199,7 @@ describe("MacroPage scope reconciliation (MC-02, MAC-11)", () => {
     await userEvent.click(sectorCard);
     expect(await screen.findByText(/AI \/ Compute · 1 day lookback/)).toBeInTheDocument();
 
-    await userEvent.click(screen.getByRole("button", { name: "1 hour" }));
+    await userEvent.click(screen.getByRole("radio", { name: "1 hour" }));
 
     expect(await screen.findByText(/GLOBAL · 1 hour lookback/)).toBeInTheDocument();
     expect(screen.getByRole("status").textContent).toMatch(

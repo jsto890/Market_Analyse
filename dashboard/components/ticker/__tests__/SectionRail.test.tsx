@@ -40,24 +40,25 @@ describe("SectionRail", () => {
     );
   });
 
-  it("reaches every anchored section on the page, both columns (TN-02)", () => {
+  it("reaches every anchored section on the page, in document order (TN-02, K-10)", () => {
     render(<SectionRail hasGamma />);
     const hrefs = screen.getAllByRole("link").map((l) => l.getAttribute("href"));
+    // Exact, not `arrayContaining`: the page renders the chart column, then the
+    // two panels beside it, then the full-width band below the fold, and uses no
+    // `order` overrides. The rail is not allowed to disagree with that sequence.
     // #sentiment had no entry at all in the bar this replaced.
-    expect(hrefs).toEqual(
-      expect.arrayContaining([
-        "#chart",
-        "#options",
-        "#gamma",
-        "#levels",
-        "#why",
-        "#catalysts",
-        "#news",
-        "#sentiment",
-        "#history",
-        "#ai",
-      ])
-    );
+    expect(hrefs).toEqual([
+      "#chart",
+      "#options",
+      "#gamma",
+      "#why",
+      "#catalysts",
+      // Below the fold from here.
+      "#news",
+      "#sentiment",
+      "#history",
+      "#ai",
+    ]);
   });
 
   it("drops the gamma entry for names that have no gamma card", () => {
@@ -82,10 +83,10 @@ describe("SectionRail", () => {
   it("activates the topmost intersecting section, whatever order the callback reports (TN-04)", () => {
     render(<SectionRail />);
     act(() => {
-      // catalysts is reported first but sits lower on screen than levels.
-      ioCallback!([entry("catalysts", 640), entry("levels", 120)], {} as IntersectionObserver);
+      // catalysts is reported first but sits lower on screen than why.
+      ioCallback!([entry("catalysts", 640), entry("why", 120)], {} as IntersectionObserver);
     });
-    expect(screen.getByRole("link", { name: "Trade plan" })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: "Rationale" })).toHaveAttribute(
       "aria-current",
       "location"
     );

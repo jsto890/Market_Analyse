@@ -7,18 +7,19 @@ import RankText from "@/components/ui/RankText";
 
 function Row({ ev, today }: { ev: CalEvent; today: string }) {
   const isToday = ev.date === today;
+  // One right-hand slot, not two columns: today's rows are already marked by the
+  // tint, so the clock is the only thing left to say; a later row is placed by
+  // its day, and the exact minute of next Friday is not what the rail is for.
+  const when = isToday ? ev.time_et : dayLabel(ev.date, today);
   return (
     <div className={`px-3 py-1 flex items-center gap-1.5 ${isToday ? "bg-accent/5" : ""}`}>
       {/* Same rank in the same slot as the calendar page — one glyph, one
           meaning, wherever a release is listed. */}
       <RankText importance={ev.importance} className="leading-[14px]" />
-      <span className={`text-data w-12 flex-shrink-0 ${isToday ? "text-foreground" : "text-muted"}`}>
-        {dayLabel(ev.date, today)}
-      </span>
-      <span className="text-body text-foreground truncate flex-1">
+      <span className={`text-body truncate flex-1 ${isToday ? "text-foreground" : "text-2"}`}>
         {eventShortName(ev.event, ev.category, ev.ticker)}
       </span>
-      {ev.time_et && <span className="text-data text-muted flex-shrink-0">{ev.time_et}</span>}
+      {when && <span className="text-data text-muted flex-shrink-0">{when}</span>}
     </div>
   );
 }
@@ -34,14 +35,20 @@ export function EconCalendar({ days = 7, max = 6 }: { days?: number; max?: numbe
     <div className="border-t border-line-strong">
       <div className="h-[24px] flex items-center justify-between gap-2 px-3">
         <span className="eyebrow leading-none">What&rsquo;s Next</span>
-        <span className="font-mono text-micro leading-none text-muted">impact</span>
+        {/* The right slot carried the word "impact" — a column label for a
+            column that isn't there. The block's own destination belongs here. */}
+        <Link href="/calendar" className="text-label leading-none text-accent hover:underline">
+          calendar ›
+        </Link>
       </div>
       {events.length === 0
         ? <p className="px-3 py-1 text-body text-muted">No events scheduled.</p>
         : events.map((ev, i) => <Row key={`${ev.event}-${ev.date}-${i}`} ev={ev} today={today} />)}
-      <Link href="/calendar" className="block px-3 py-1 text-micro font-mono text-muted hover:text-accent">
-        {remaining > 0 ? `+${remaining} more · full calendar ›` : "full calendar ›"}
-      </Link>
+      {remaining > 0 && (
+        <Link href="/calendar" className="block px-3 py-1 text-body text-muted hover:text-accent">
+          +{remaining} more ›
+        </Link>
+      )}
     </div>
   );
 }

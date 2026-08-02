@@ -95,7 +95,10 @@ describe("SignalGroups filter feedback (TD-02)", () => {
     render(<SignalGroups groups={groups} newTickers={[]} sectors={SECTORS} />);
 
     await screen.findByText("NVDA");
-    await user.click(screen.getByRole("button", { name: "HC only" }));
+    await user.selectOptions(
+      screen.getByRole("combobox", { name: "Filter by conviction" }),
+      "hc"
+    );
 
     // The tab stays, its count goes to zero, and the panel says where the row went.
     expect(await screen.findByRole("tab", { name: /Aligned\s*0/ })).toBeInTheDocument();
@@ -104,7 +107,7 @@ describe("SignalGroups filter feedback (TD-02)", () => {
     expect(screen.queryByText("NVDA")).not.toBeInTheDocument();
   });
 
-  it("leaves the HC filter off until it is pressed, and its InfoTip does not toggle it", async () => {
+  it("leaves the conviction filter unset until it is chosen, and its InfoTip does not set it", async () => {
     resetLocalStorage();
     const user = userEvent.setup();
     const groups = {
@@ -118,10 +121,7 @@ describe("SignalGroups filter feedback (TD-02)", () => {
     await screen.findByText("NVDA");
     await user.click(screen.getByRole("button", { name: "Conviction filter info" }));
 
-    expect(screen.getByRole("button", { name: "HC only" })).toHaveAttribute(
-      "aria-pressed",
-      "false",
-    );
+    expect(screen.getByRole("combobox", { name: "Filter by conviction" })).toHaveValue("");
     expect(screen.getByText("NVDA")).toBeInTheDocument();
   });
 
@@ -157,6 +157,41 @@ describe("SignalGroups — cards then table", () => {
     expect(screen.getAllByRole("link", { name: "Open →" })).toHaveLength(3);
     // The fourth name is tabular, not a card.
     expect(screen.getByRole("cell", { name: "Semiconductors" })).toBeInTheDocument();
+  });
+
+  it("gives the table's Signal cell plain model text, not a badge per row (T-16)", async () => {
+    resetLocalStorage();
+    mockFetchJson({});
+    const groups = {
+      // Every row carries the tier, so the one that lands in the table does too
+      // whichever way tierSort orders them.
+      aligned: [...fillers(), row({ ticker: "NVDA" })].map((r) => ({
+        ...r,
+        action_label: "STANDARD_LONG",
+      })),
+      pullback: [],
+      tech_fund: [],
+      other: [],
+    };
+    render(<SignalGroups groups={groups} newTickers={[]} sectors={SECTORS} />);
+    await screen.findByText("NVDA");
+    const cell = screen.getByRole("cell", { name: "Standard long" });
+    // Thirty rows of badges is thirty boxes; only Badge carries data-value.
+    expect(cell.querySelector("[data-value]")).toBeNull();
+  });
+
+  it("leaves the card's reason line out rather than passing catalyst text off as one (T-15)", async () => {
+    resetLocalStorage();
+    const groups = {
+      aligned: [row({ ticker: "NVDA", catalysts: "Guidance raise; Buyback" })],
+      pullback: [],
+      tech_fund: [],
+      other: [],
+    };
+    render(<SignalGroups groups={groups} newTickers={[]} sectors={SECTORS} />);
+    await screen.findByText("NVDA");
+    // There is no per-name narrative feed, so the row renders nothing at all.
+    expect(screen.queryByText(/Guidance raise/)).not.toBeInTheDocument();
   });
 });
 
@@ -242,7 +277,7 @@ describe("SignalGroups — row-encoding diet (TD-03/04/05/06)", () => {
 });
 
 describe("SignalGroups — visible caveats (TD-07/TD-14)", () => {
-  it("prints the honest-voice disclaimer once, at the foot, without requiring a hover", async () => {
+  it("prints the group rationale and the disclaimer as one line above the cards", async () => {
     resetLocalStorage();
     const groups = {
       aligned: [row({ ticker: "NVDA" })],
@@ -252,10 +287,17 @@ describe("SignalGroups — visible caveats (TD-07/TD-14)", () => {
     };
     render(<SignalGroups groups={groups} newTickers={[]} sectors={SECTORS} />);
     await screen.findByText("NVDA");
-    // It used to print above each of the four tables.
+    // It used to print above each of the four tables, then once at the foot.
+    // T-13 puts it at the head, merged into the group's own rationale, because
+    // it qualifies the cards directly below it.
     expect(
       screen.getAllByText(/score magnitude does not predict returns \(r≈0\)/)
     ).toHaveLength(1);
+    expect(
+      screen.getByText(
+        /Sentiment, technical and fundamental all bullish\.\s*Levels are indicative, not orders/
+      )
+    ).toBeInTheDocument();
   });
 
   it("explains why a ticker lands in Everything else", async () => {

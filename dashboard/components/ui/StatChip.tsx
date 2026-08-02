@@ -44,7 +44,7 @@ export default function StatChip({
   }`;
   const body = (
     <>
-      <span className="text-micro text-muted">{label}</span>
+      <span className="text-label text-muted">{label}</span>
       <span className={`text-data ${valueClass}`}>{value}</span>
     </>
   );

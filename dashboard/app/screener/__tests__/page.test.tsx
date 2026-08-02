@@ -230,6 +230,20 @@ describe("ScreenerPage result cards and cutoff slider (SC-10)", () => {
     expect(table.querySelectorAll("tbody tr")).toHaveLength(2);
   });
 
+  it("lifts the top-ranked card and lets the rest recede (O-09)", async () => {
+    resetLocalStorage();
+    mount();
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("button", { name: "Full universe" }));
+    await screen.findByText("TSM");
+    const card = (t: string) =>
+      screen.getByRole("link", { name: t }).closest("div.rounded-md")!.className;
+    expect(card("NVDA")).toContain("border-line-strong");
+    expect(card("NVDA")).toContain("bg-elevated");
+    expect(card("AMD")).toContain("bg-surface");
+    expect(card("AMD")).not.toContain("bg-elevated");
+  });
+
   it("says how many names the cutoff keeps, and drops them as it is raised", async () => {
     resetLocalStorage();
     mount();

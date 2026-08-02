@@ -1,8 +1,6 @@
 import { type Bar, type Marker } from "@/components/charts/CandleChart";
-import Panel from "@/components/ui/Panel";
 import ChartInfoStrip from "@/components/ticker/ChartInfoStrip";
 import Header from "@/components/ticker/Header";
-import LevelsCard from "@/components/ticker/LevelsCard";
 import TickerChartSection from "@/components/ticker/TickerChartSection";
 import WhyPanel from "@/components/ticker/WhyPanel";
 import CatalystsCard from "@/components/ticker/CatalystsCard";
@@ -11,11 +9,9 @@ import HistoryCard from "@/components/ticker/HistoryCard";
 import OptionsPanel from "@/components/ticker/OptionsPanel";
 import GexCard from "@/components/ticker/GexCard";
 import AiPanel from "@/components/ticker/AiPanel";
-import CatalystStrip from "@/components/ticker/CatalystStrip";
 import NewsCard from "@/components/ticker/NewsCard";
 import SectionRail from "@/components/ticker/SectionRail";
 import TickerNav from "@/components/ticker/TickerNav";
-import { range52w } from "@/lib/bar-stats";
 import { loadBridgeSignals } from "@/lib/bridge";
 import { signalHistory } from "@/lib/signals";
 import { MEDIAN_PEAK_PCT, MEDIAN_DAYS_TO_PEAK } from "@/lib/perf-constants";
@@ -83,7 +79,6 @@ export default async function TickerPage({
   // Last close from history bars (same-basis as chart)
   const lastBar = bars.length > 0 ? bars[bars.length - 1] : null;
   const lastClose = lastBar?.close ?? null;
-  const bars52w = range52w(bars);
 
   // Last-seen social signal date (max date in SQLite rows; null when none)
   const lastSeen =
@@ -98,46 +93,47 @@ export default async function TickerPage({
   return (
     <Page width="full">
       <TickerNav ticker={ticker} />
-      {/* Header: server-rendered shell, client SWR for quote */}
-      <section className="rounded-lg border border-line bg-surface">
-        <Header
-          ticker={ticker}
-          bridgeRow={bridgeRow}
-          signalHistory={history}
-          lastClose={lastClose}
-          dayHigh={lastBar?.high ?? null}
-          dayLow={lastBar?.low ?? null}
-          week52LowBars={bars52w?.lo ?? null}
-          week52HighBars={bars52w?.hi ?? null}
-          medianPeakPct={MEDIAN_PEAK_PCT}
-          medianDaysToPeak={MEDIAN_DAYS_TO_PEAK}
-        />
-        <CatalystStrip ticker={ticker} />
-      </section>
+      {/* Header: server-rendered shell, client SWR for quote. It draws its own
+          card — the three bands are one surface, so the page must not wrap it in
+          a second one. */}
+      <Header
+        ticker={ticker}
+        bridgeRow={bridgeRow}
+        signalHistory={history}
+        lastClose={lastClose}
+        dayHigh={lastBar?.high ?? null}
+        dayLow={lastBar?.low ?? null}
+        medianPeakPct={MEDIAN_PEAK_PCT}
+        medianDaysToPeak={MEDIAN_DAYS_TO_PEAK}
+      />
 
-      {/* The rail indexes both columns, so it sits beside the grid rather than
-          above one of them. */}
+      {/* The rail indexes both bands, so it sits beside all of the content
+          rather than beside one column of it. */}
       <div className="flex gap-3">
         <SectionRail hasGamma={INDEX_ETFS.includes(ticker)} />
 
-        {/* Two-column layout. No `order` overrides: below 1100px the columns stack
-            in document order, so reading order, tab order and the rail agree (TN-03). */}
-        <div className="grid min-w-0 flex-1 grid-cols-[62fr_38fr] gap-4 max-[1100px]:grid-cols-1">
+        {/* Above the fold: chart beside the two panels the design puts there.
+            Below it: everything else, full width. No `order` overrides anywhere —
+            below 1100px the columns stack in document order, so reading order,
+            tab order and the rail agree (TN-03). */}
+        <div className="min-w-0 flex-1 space-y-4">
+        <div className="grid grid-cols-[62fr_38fr] gap-4 max-[1100px]:grid-cols-1">
         {/* Left: chart + options */}
         <div className="space-y-4">
           <div id="chart" className="min-h-[420px] scroll-mt-[calc(var(--nav-h)+12px)] 2xl:min-h-[560px]">
-            <Panel title="Price & signals">
-              <TickerChartSection
-                ticker={ticker}
-                bridgeRow={bridgeRow}
-                initialBars={bars}
-                initialStatus={historyResult.status}
-                markers={markers}
-                height={420}
-                className="min-h-[420px] 2xl:min-h-[560px]"
-              />
+            {/* The panel is inside `TickerChartSection` — the range switch is a
+                header action, so the header has to be where the period state is. */}
+            <TickerChartSection
+              ticker={ticker}
+              bridgeRow={bridgeRow}
+              initialBars={bars}
+              initialStatus={historyResult.status}
+              markers={markers}
+              height={420}
+              className="min-h-[420px] 2xl:min-h-[560px]"
+            >
               <ChartInfoStrip ticker={ticker} bars={bars} />
-            </Panel>
+            </TickerChartSection>
           </div>
           <div id="options" className="scroll-mt-[calc(var(--nav-h)+12px)]">
             <OptionsPanel ticker={ticker} />
@@ -149,17 +145,24 @@ export default async function TickerPage({
           )}
         </div>
 
-        {/* Right: Levels → Why → Catalysts → Sentiment → History → AI */}
+        {/* Right: Why → Catalysts, the two panels the design draws beside the
+            chart. Entry, stop and target are drawn on the chart now, so there is
+            no levels card and no `#levels` anchor. */}
         <div className="space-y-4">
-          <div id="levels" className="scroll-mt-[calc(var(--nav-h)+12px)]">
-            {bridgeRow && <LevelsCard ticker={ticker} bridgeRow={bridgeRow} />}
-          </div>
           <div id="why" className="scroll-mt-[calc(var(--nav-h)+12px)]">
             <WhyPanel ticker={ticker} />
           </div>
           <div id="catalysts" className="scroll-mt-[calc(var(--nav-h)+12px)]">
             <CatalystsCard ticker={ticker} bridgeRow={bridgeRow} />
           </div>
+        </div>
+        </div>
+
+        {/* Below the fold: the rest of the dossier at full width. These were a
+            300px stack running off the bottom of a 900px window; two wide
+            columns give the news list and the track record their own room and
+            halve the scroll. Document order still matches the rail. */}
+        <div className="grid grid-cols-2 gap-4 max-[1100px]:grid-cols-1">
           <div id="news" className="scroll-mt-[calc(var(--nav-h)+12px)]">
             <NewsCard ticker={ticker} />
           </div>

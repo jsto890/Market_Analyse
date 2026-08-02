@@ -2074,13 +2074,13 @@
               <p style="margin:0; font-size:12px; line-height:1.55; color:#7d8698">Positive above 636 — every move forces a hedge in the opposite direction, which is what compresses the range.</p>
             </div>
             <div style="border:1px solid #1e2634; border-radius:8px; background:#12171f; padding:14px 16px">
-              <div style="display:flex; align-items:baseline; justify-content:space-between; margin-bottom:6px"><span style="font-family:'Fira Code',monospace; font-size:13px; font-weight:600; color:#c8cede">Vanna</span><span style="font-family:'Fira Code',monospace; font-size:18px; color:#f85149">−1.1M</span></div>
-              <div style="font-size:12px; color:#9aa3b4; margin-bottom:7px">delta per 1 vol point</div>
-              <p style="margin:0; font-size:12px; line-height:1.55; color:#7d8698">Falling VIX is quietly adding to dealer length. If vol reverses, that support unwinds fast.</p>
+              <div style="display:flex; align-items:baseline; justify-content:space-between; margin-bottom:6px"><span style="font-family:'Fira Code',monospace; font-size:13px; font-weight:600; color:#c8cede">ν Vega</span><span style="font-family:'Fira Code',monospace; font-size:18px; color:#f85149">−1.1M</span></div>
+              <div style="font-size:12px; color:#9aa3b4; margin-bottom:7px">$ per 1 vol point</div>
+              <p style="margin:0; font-size:12px; line-height:1.55; color:#7d8698">Dealers are net short vol. A VIX pop costs them, and the hedge is to buy protection — which widens the range.</p>
             </div>
             <div style="border:1px solid #1e2634; border-radius:8px; background:#12171f; padding:14px 16px">
-              <div style="display:flex; align-items:baseline; justify-content:space-between; margin-bottom:6px"><span style="font-family:'Fira Code',monospace; font-size:13px; font-weight:600; color:#c8cede">Charm</span><span style="font-family:'Fira Code',monospace; font-size:18px; color:#d29922">−340k</span></div>
-              <div style="font-size:12px; color:#9aa3b4; margin-bottom:7px">delta per day</div>
+              <div style="display:flex; align-items:baseline; justify-content:space-between; margin-bottom:6px"><span style="font-family:'Fira Code',monospace; font-size:13px; font-weight:600; color:#c8cede">Θ Theta</span><span style="font-family:'Fira Code',monospace; font-size:18px; color:#d29922">−340k</span></div>
+              <div style="font-size:12px; color:#9aa3b4; margin-bottom:7px">$ decay per day</div>
               <p style="margin:0; font-size:12px; line-height:1.55; color:#7d8698">0DTE decay bleeds dealer length through the session — the pin tightens into the close.</p>
             </div>
           </div>
@@ -2201,7 +2201,7 @@
       </div>
       <div style="border-left:2px solid #4c8dff; padding:2px 0 2px 12px">
         <div style="font-size:12px; font-weight:600; margin-bottom:4px">Greeks, aggregate before per-strike</div>
-        <p style="margin:0; font-size:12px; line-height:1.55; color:#7d8698">Net dealer Δ, Γ, vanna and charm each with one line on what they do to today's tape — then the per-strike table in the same mirrored layout as the ladder, so the muscle memory carries. Skew and term structure explain the payrolls kink.</p>
+        <p style="margin:0; font-size:12px; line-height:1.55; color:#7d8698">Net dealer Δ, Γ, ν and Θ — the first-order greeks the feed actually carries — each with one line on what they do to today's tape — then the per-strike table in the same mirrored layout as the ladder, so the muscle memory carries. Skew and term structure explain the payrolls kink.</p>
       </div>
     </div>
     </sc-if>

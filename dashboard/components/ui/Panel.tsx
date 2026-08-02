@@ -9,6 +9,10 @@ interface PanelProps {
   /** Optional count chip rendered next to the title, e.g. Panel's own row/section count. Replaces the old `` `${title}  (${count})` `` string-concat pattern. */
   count?: number;
   subtitle?: string;
+  /** How the band is introduced. `"title"` (default) is the 15px panel/card
+   * title used on the ticker page's body cards; `"eyebrow"` is the 11px mono
+   * label the Today bands use, with `subtitle` pushed to the right edge. */
+  heading?: "eyebrow" | "title";
   collapsible?: boolean;
   defaultOpen?: boolean;
   persistKey?: string;
@@ -23,6 +27,7 @@ export default function Panel({
   title,
   count,
   subtitle,
+  heading = "title",
   collapsible,
   defaultOpen = false,
   persistKey,
@@ -65,15 +70,34 @@ export default function Panel({
     }
   }
 
+  const isEyebrow = heading === "eyebrow";
+
   const Title = (
     <>
-      <span className="truncate text-title text-foreground">{title}</span>
+      <span
+        className={
+          isEyebrow ? "eyebrow truncate" : "truncate text-title text-foreground"
+        }
+      >
+        {title}
+      </span>
       {count !== undefined && (
-        <span className="rounded bg-elevated px-1.5 py-px font-mono text-micro tabular-nums text-muted">
+        <span
+          className={
+            isEyebrow
+              ? "font-mono text-micro tabular-nums text-muted"
+              : "rounded bg-elevated px-1.5 py-px font-mono text-micro tabular-nums text-muted"
+          }
+        >
           {count}
         </span>
       )}
-      {subtitle && <span className="truncate text-body text-3">{subtitle}</span>}
+      {subtitle &&
+        (isEyebrow ? (
+          <span className="ml-auto shrink-0 truncate text-label text-muted">{subtitle}</span>
+        ) : (
+          <span className="truncate text-body text-3">{subtitle}</span>
+        ))}
     </>
   );
 

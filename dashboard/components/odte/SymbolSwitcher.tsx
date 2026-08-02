@@ -1,5 +1,6 @@
 "use client";
 
+import SegmentedControl, { type SegmentedOption } from "@/components/ui/SegmentedControl";
 import { odteEtfSymbols, odteIndexSymbols } from "@/lib/odte";
 import type { OdteSymbol } from "@/lib/odte-core";
 
@@ -9,42 +10,22 @@ export interface SymbolSwitcherProps {
   className?: string;
 }
 
-function Group({
-  label,
-  symbols,
-  active,
-  onChange,
-}: {
-  label: string;
-  symbols: readonly OdteSymbol[];
-  active: OdteSymbol;
-  onChange: (symbol: OdteSymbol) => void;
-}) {
-  return (
-    <div className="flex items-center gap-2 px-2">
-      <span className="eyebrow">{label}</span>
-      {symbols.map((symbol) => (
-        <button
-          key={symbol}
-          type="button"
-          onClick={() => onChange(symbol)}
-          className={`px-2 py-0.5 text-data ${
-            symbol === active ? "bg-accent-dim text-accent" : "text-muted hover:text-foreground"
-          }`}
-        >
-          {symbol}
-        </button>
-      ))}
-    </div>
-  );
-}
+const toOptions = (symbols: readonly OdteSymbol[]): SegmentedOption<OdteSymbol>[] =>
+  symbols.map((symbol) => ({ key: symbol, label: symbol }));
 
+const ETF_OPTIONS = toOptions(odteEtfSymbols);
+const INDEX_OPTIONS = toOptions(odteIndexSymbols);
+
+/**
+ * Underlying switch for the whole options group. Two `SegmentedControl`s rather
+ * than one: the mock draws five segments, but the app answers for eight
+ * underlyings and the ETF/index split is the axis that separates them.
+ */
 export default function SymbolSwitcher({ active, onChange, className }: SymbolSwitcherProps) {
   return (
-    <div className={`flex rounded border border-line overflow-hidden ${className ?? ""}`}>
-      <Group label="ETF" symbols={odteEtfSymbols} active={active} onChange={onChange} />
-      <span className="w-px h-4 bg-line mx-1 self-center" />
-      <Group label="INDEX" symbols={odteIndexSymbols} active={active} onChange={onChange} />
+    <div className={`flex items-center gap-3 ${className ?? ""}`}>
+      <SegmentedControl label="ETF" value={active} options={ETF_OPTIONS} onChange={onChange} />
+      <SegmentedControl label="Index" value={active} options={INDEX_OPTIONS} onChange={onChange} />
     </div>
   );
 }

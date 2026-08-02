@@ -4,14 +4,16 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 /**
- * Nine equal-weight links in one row made you read the whole list to find any
- * of them. They are not equals: three are the daily loop, four are the context
+ * Ten equal-weight links in one row made you read the whole list to find any
+ * of them. They are not equals: four are the daily loop, four are the context
  * you consult while deciding, two are your own book, and one explains the rest.
  * Same links, same order — a rule between the groups is the entire change.
+ * Brief sits beside Today because it is the same morning read, one level down.
  */
 const GROUPS = [
   [
     { href: "/", label: "Today" },
+    { href: "/brief", label: "Brief" },
     { href: "/watchlist", label: "Watchlist" },
     { href: "/screener", label: "Screener" },
   ],

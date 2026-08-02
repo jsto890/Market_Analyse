@@ -58,7 +58,7 @@ describe("PortfolioPage position cards (PF-04, PF-05)", () => {
 });
 
 describe("PortfolioPage band (PF-01)", () => {
-  it("states where the account stands: NLV, unrealised, cash, exposure, concentration", async () => {
+  it("states where the account stands: net liq, unrealised, cash, exposure, concentration", async () => {
     mockFetchJson({
       "/api/argus/portfolio": [
         { symbol: "AAPL", position: 10, avg_cost: 180.5, verdict: "LONG", score: 0.6, edge: "HOLD/ADD",
@@ -71,24 +71,31 @@ describe("PortfolioPage band (PF-01)", () => {
     });
     render(<PortfolioPage />);
     await screen.findByRole("link", { name: "AAPL" });
-    expect(screen.getByText("NLV")).toBeInTheDocument();
-    expect(screen.getByText("+$5,080.00")).toBeInTheDocument();
+    expect(screen.getByText("Net liq")).toBeInTheDocument();
+    // Whole dollars, and unsigned: a net liquidation value has no direction.
+    expect(screen.getByText("$5,080")).toBeInTheDocument();
+    expect(screen.getByText("Cash")).toBeInTheDocument();
+    expect(screen.getByText("$2,540")).toBeInTheDocument();
     // 1905 + 635 = 2540 gross against 5080 NLV; AAPL is 75% of the book.
     expect(screen.getByText("Exposure")).toBeInTheDocument();
     expect(screen.getByText("50%")).toBeInTheDocument();
+    expect(screen.getByText("Largest line")).toBeInTheDocument();
     expect(screen.getByText("75%")).toBeInTheDocument();
-    expect(screen.getByText("+$70.00")).toBeInTheDocument();
+    expect(screen.getByText("+$70")).toBeInTheDocument();
   });
 
-  it("carries no day P&L chip — the IBKR account summary has no such feed", async () => {
+  it("carries no day P&L or top-sector slot — neither has a feed, so neither renders", async () => {
     mockFetchJson({
       "/api/argus/portfolio": [],
       "/api/watchlist": { watchlist: [] },
       "/api/argus/account": { NetLiquidation: "5080.00", TotalCashValue: "2540.00" },
     });
     render(<PortfolioPage />);
-    await screen.findByText("NLV");
+    const band = (await screen.findByText("Net liq")).closest("div")!.parentElement!;
     expect(screen.queryByText(/day p&l/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/top sector/i)).not.toBeInTheDocument();
+    // Empty means empty: the two slots with no feed leave no dash behind.
+    expect(band.textContent).not.toMatch(/—|TBA/);
   });
 });
 

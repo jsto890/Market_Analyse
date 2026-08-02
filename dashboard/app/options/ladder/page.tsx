@@ -524,9 +524,12 @@ export default function OptionsLadderPage() {
           </button>
         </div>
 
-        <div className="flex items-center gap-1">
-          <label htmlFor="jump-strike" className="eyebrow shrink-0">
-            Jump
+        {/* The two navigation controls read as one pair at the right of the bar.
+           The jump field carries its own name in the placeholder, so the eyebrow
+           beside it would have said the same words twice. */}
+        <div className="ml-auto flex items-center gap-2">
+          <label htmlFor="jump-strike" className="sr-only">
+            Jump to strike
           </label>
           <input
             id="jump-strike"
@@ -536,8 +539,8 @@ export default function OptionsLadderPage() {
             onKeyDown={(e) => {
               if (e.key === "Enter") jumpToStrike();
             }}
-            placeholder="strike"
-            className="w-20 rounded border border-line bg-raised px-2 py-1 text-data text-foreground placeholder:text-muted"
+            placeholder="Jump to strike…"
+            className="w-[132px] rounded border border-line bg-raised px-2 py-1 text-data text-foreground placeholder:text-muted"
           />
           <button
             onClick={jumpToStrike}
@@ -545,15 +548,14 @@ export default function OptionsLadderPage() {
           >
             Go
           </button>
+          <button
+            type="button"
+            onClick={centerOnSpot}
+            className="shrink-0 px-2 py-1 text-body text-teal hover:underline"
+          >
+            Centre on spot
+          </button>
         </div>
-
-        <button
-          type="button"
-          onClick={centerOnSpot}
-          className="ml-auto shrink-0 px-2 py-1 text-body text-teal hover:underline"
-        >
-          Center on spot
-        </button>
       </div>
 
       {showLive && (

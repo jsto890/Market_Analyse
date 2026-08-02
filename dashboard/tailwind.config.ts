@@ -1,5 +1,32 @@
 import type { Config } from "tailwindcss";
 
+/**
+ * Every theme colour is a bare `var(--x)`, and Tailwind cannot inject an alpha
+ * channel into one — it emits no rule at all rather than failing, so
+ * `bg-teal/15`, `border-warn/50` and the other 89 tinted call sites in the app
+ * were rendering as nothing. `color-mix` gets the alpha back without moving the
+ * palette out of `globals.css` into channel triplets, which is where the hex
+ * literals the token contract test forbids would have had to go.
+ *
+ * The guard matters: for a bare utility Tailwind passes `var(--tw-bg-opacity)`
+ * rather than a number, and wrapping that in `color-mix` would make every
+ * untinted colour depend on a variable that is only sometimes set. Returning
+ * the plain `var()` there keeps all existing output byte-identical.
+ */
+const tint = (name: string) =>
+  (({ opacityValue }: { opacityValue?: string | number }) => {
+    // Tailwind hands this back in three shapes: absent for a bare utility, a
+    // number or numeric string for `/15`, and `var(--tw-bg-opacity)` on some
+    // paths. Only the numeric one can become a percentage.
+    if (opacityValue == null) return `var(${name})`;
+    const alpha = String(opacityValue);
+    if (alpha.startsWith("var(")) return `var(${name})`;
+    return `color-mix(in srgb, var(${name}) calc(${alpha} * 100%), transparent)`;
+    // Tailwind resolves a colour function at build time and accepts one
+    // wherever a colour string goes; its published `Config` type models only
+    // the string, so the cast is the narrowest way to keep tsc clean.
+  }) as unknown as string;
+
 const config: Config = {
   content: [
     "./pages/**/*.{js,ts,jsx,tsx,mdx}",
@@ -9,34 +36,34 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        background: "var(--background)",
-        foreground: "var(--foreground)",
-        bg: "var(--bg)",
-        surface: "var(--surface)",
-        elevated: "var(--elevated)",
-        raised: "var(--raised)",
-        line: "var(--line)",
-        "line-strong": "var(--line-strong)",
-        muted: "var(--muted)",
-        "muted-2": "var(--muted-2)",
-        accent: "var(--accent)",
-        "accent-dim": "var(--accent-dim)",
-        pos: "var(--green)",
-        neg: "var(--red)",
-        warn: "var(--amber)",
-        teal: "var(--teal)",
+        background: tint("--background"),
+        foreground: tint("--foreground"),
+        bg: tint("--bg"),
+        surface: tint("--surface"),
+        elevated: tint("--elevated"),
+        raised: tint("--raised"),
+        line: tint("--line"),
+        "line-strong": tint("--line-strong"),
+        muted: tint("--muted"),
+        "muted-2": tint("--muted-2"),
+        accent: tint("--accent"),
+        "accent-dim": tint("--accent-dim"),
+        pos: tint("--green"),
+        neg: tint("--red"),
+        warn: tint("--amber"),
+        teal: tint("--teal"),
         // Options side, named rather than inferred. `put` no longer shares
         // --red with "down"; `call` is the alias of --teal.
-        put: "var(--put)",
-        call: "var(--call)",
+        put: tint("--put"),
+        call: tint("--call"),
         // Model output — scores, conviction, verdicts. Never P&L green/red.
-        model: "var(--model)",
+        model: tint("--model"),
       },
       // Reading tones live on textColor only: a `2`/`3` key under `colors`
       // would also mint `border-2`/`border-3`, colliding with border widths.
       textColor: {
-        "2": "var(--text-2)",
-        "3": "var(--text-3)",
+        "2": tint("--text-2"),
+        "3": tint("--text-3"),
       },
       height: {
         nav: "var(--nav-h)",

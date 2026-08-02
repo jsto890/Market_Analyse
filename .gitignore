@@ -70,3 +70,11 @@ odte/frontend/node_modules/
 odte/backend/.venv/
 odte/**/__pycache__/
 odte/**/.pytest_cache/
+
+# The conformance handoff shipped the mock, its support script and the Playwright
+# harness alongside its own documents. All three are byte-identical to the copies
+# already tracked under design_handoff_argus_overhaul/ and dashboard/, so only the
+# documents unique to that package are committed.
+design_handoff_argus_conformance/mocks/
+design_handoff_argus_conformance/support.js
+design_handoff_argus_conformance/e2e/

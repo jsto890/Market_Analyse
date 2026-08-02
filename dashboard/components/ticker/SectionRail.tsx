@@ -10,7 +10,6 @@ import {
   MessageSquare,
   Newspaper,
   Sparkles,
-  Target,
   Zap,
   type LucideIcon,
 } from "lucide-react";
@@ -20,16 +19,24 @@ import {
  * whose words were printed again 40px below as `Panel title` — "Options" and
  * "AI" matched their panel headings exactly. Here the words appear one at a
  * time — the section you're in, plus whichever you point at — so the index can
- * never restate the headings it points at, and a single column addresses both
- * grid columns without a scrolling bar.
+ * never restate the headings it points at, and a single column addresses the
+ * whole page without a scrolling bar.
+ *
+ * The order below is the page's document order, and has to stay that way: the
+ * chart column, then the two panels beside it, then the full-width band below
+ * the fold. The page uses no `order` overrides for exactly this reason, so
+ * reading order, tab order and this index are the same sequence (TN-03).
  */
 export const TICKER_SECTIONS: { id: string; label: string; Icon: LucideIcon }[] = [
   { id: "chart", label: "Price", Icon: CandlestickChart },
   { id: "options", label: "Options", Icon: Layers },
   { id: "gamma", label: "Gamma", Icon: Activity },
-  { id: "levels", label: "Trade plan", Icon: Target },
+  // No "Trade plan" entry: entry, stop and target are drawn on the chart, so
+  // the levels card — and its `#levels` anchor — are gone. "Price" already
+  // points at them.
   { id: "why", label: "Rationale", Icon: Brain },
   { id: "catalysts", label: "Catalysts", Icon: Zap },
+  // From here down the sections sit in the full-width band below the fold.
   { id: "news", label: "News", Icon: Newspaper },
   { id: "sentiment", label: "Sentiment", Icon: MessageSquare },
   { id: "history", label: "Track record", Icon: History },
@@ -97,8 +104,8 @@ export default function SectionRail({ hasGamma = false }: { hasGamma?: boolean }
           <span
             className={
               currentId === id
-                ? "truncate text-micro"
-                : "hidden truncate text-micro group-hover:inline group-focus-visible:inline"
+                ? "truncate text-label font-medium"
+                : "hidden truncate text-label font-medium group-hover:inline group-focus-visible:inline"
             }
           >
             {label}

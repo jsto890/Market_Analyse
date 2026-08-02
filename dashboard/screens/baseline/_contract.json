@@ -8,9 +8,17 @@
     "20px",
     "28px"
   ],
-  "contentWidths": [
-    880,
-    1209
-  ],
+  "contentWidths": {
+    "wide": [
+      952,
+      1180
+    ],
+    "full": [
+      1368
+    ],
+    "prose": [
+      880
+    ]
+  },
   "violations": []
 }

@@ -21,4 +21,12 @@ describe("NavActions", () => {
     // The '?' button is gone; the key still opens the overlay globally.
     expect(screen.queryByRole("button", { name: "Show keyboard shortcuts" })).toBeNull();
   });
+
+  it("ends in Learn · clock · ⌘K — reload moved behind the palette (X-06)", () => {
+    const { container } = render(<NavActions />);
+    expect(screen.queryByRole("button", { name: "Reload" })).toBeNull();
+    // The reload button was also the last `title` attribute in the nav.
+    expect(container.querySelectorAll("[title]")).toHaveLength(0);
+    expect(container.querySelectorAll("button")).toHaveLength(1);
+  });
 });

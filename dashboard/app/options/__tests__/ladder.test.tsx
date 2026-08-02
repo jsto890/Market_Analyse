@@ -161,7 +161,7 @@ describe("OptionsLadderPage — controls (OPT-01, OPT-05)", () => {
       await waitFor(() => expect(boxes.length).toBeGreaterThan(0));
       const afterMount = boxes.length;
 
-      await user.type(screen.getByLabelText("Jump"), "566");
+      await user.type(screen.getByLabelText("Jump to strike"), "566");
       await user.click(screen.getByRole("button", { name: "Go" }));
 
       expect(boxes.length).toBe(afterMount + 1);
@@ -171,9 +171,9 @@ describe("OptionsLadderPage — controls (OPT-01, OPT-05)", () => {
     }
   });
 
-  it("still offers Center on spot, in both modes", async () => {
+  it("still offers Centre on spot, in both modes", async () => {
     render(<OptionsLadderPage />);
-    expect(await screen.findByRole("button", { name: /center on spot/i })).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: /centre on spot/i })).toBeInTheDocument();
   });
 });
 
