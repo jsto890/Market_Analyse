@@ -49,7 +49,6 @@ describe("SectionRail", () => {
         "#chart",
         "#options",
         "#gamma",
-        "#levels",
         "#why",
         "#catalysts",
         "#news",
@@ -82,10 +81,10 @@ describe("SectionRail", () => {
   it("activates the topmost intersecting section, whatever order the callback reports (TN-04)", () => {
     render(<SectionRail />);
     act(() => {
-      // catalysts is reported first but sits lower on screen than levels.
-      ioCallback!([entry("catalysts", 640), entry("levels", 120)], {} as IntersectionObserver);
+      // catalysts is reported first but sits lower on screen than why.
+      ioCallback!([entry("catalysts", 640), entry("why", 120)], {} as IntersectionObserver);
     });
-    expect(screen.getByRole("link", { name: "Trade plan" })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: "Rationale" })).toHaveAttribute(
       "aria-current",
       "location"
     );

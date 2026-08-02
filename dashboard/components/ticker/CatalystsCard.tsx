@@ -1,5 +1,7 @@
 "use client";
 
+import Link from "next/link";
+import useSWR from "swr";
 import { Zap } from "lucide-react";
 import Panel from "@/components/ui/Panel";
 import Loading from "@/components/ui/Loading";
@@ -8,6 +10,87 @@ import { useTickerData } from "@/lib/useTickerData";
 import { parseCatalysts, type Catalyst } from "@/lib/catalysts";
 
 const NEG_TOKENS = ["downgrade", "miss", "dilution", "cut", "warn", "lawsuit", "fraud"];
+
+/** The dated half of the catalysts endpoint. `next_earnings` is deliberately not
+ *  read here — the header owns the earnings countdown off this same SWR key, so
+ *  the fetch dedupes and the two can never state a different date (TH-03). */
+interface DatedFeed {
+  last_earnings: { date: string; surprise_pct: number | null; reaction_pct: number | null } | null;
+  analyst: { date: string; firm: string; to: string; action: string }[];
+}
+
+const datedFetcher = (url: string) =>
+  fetch(url).then((r) => {
+    if (!r.ok) throw new Error(`${r.status}`);
+    return r.json();
+  });
+
+function fmtDay(iso: string): string {
+  return new Date(`${iso.slice(0, 10)}T00:00:00Z`).toLocaleDateString("en-AU", {
+    day: "numeric",
+    month: "short",
+    timeZone: "UTC",
+  });
+}
+
+const ACTION_ARROW: Record<string, string> = { up: "↑", down: "↓" };
+
+/** One dated fact: when it happened in a fixed 58px slot, what happened beside
+ *  it, so the dates form a column rather than a ragged prefix (K-13). */
+function DatedRow({ when, children }: { when: string; children: React.ReactNode }) {
+  return (
+    <div className="flex items-baseline gap-2.5">
+      <span className="w-[58px] shrink-0 text-data text-muted">{when}</span>
+      <span className="min-w-0 text-body text-2">{children}</span>
+    </div>
+  );
+}
+
+/** The two dated facts the strip under the header used to carry. They moved into
+ *  this card when that strip went; the header only took the earnings countdown,
+ *  so without this the last-earnings reaction and the analyst action would have
+ *  left the page entirely. */
+function DatedCatalysts({ ticker }: { ticker: string }) {
+  const { data } = useSWR<DatedFeed>(`/api/argus/catalysts/${ticker}`, datedFetcher, {
+    refreshInterval: 3_600_000,
+    shouldRetryOnError: false,
+  });
+
+  const rows: React.ReactNode[] = [];
+
+  const last = data?.last_earnings ?? null;
+  if (last) {
+    const r = last.reaction_pct;
+    rows.push(
+      <DatedRow key="earnings" when={fmtDay(last.date)}>
+        Last earnings
+        {r !== null && (
+          <>
+            {" · stock "}
+            <span className={r >= 0 ? "text-pos" : "text-neg"}>
+              {r >= 0 ? "+" : ""}
+              {r.toFixed(1)}%
+            </span>
+            {" on the release"}
+          </>
+        )}
+      </DatedRow>
+    );
+  }
+
+  const a = data?.analyst?.[0];
+  if (a) {
+    rows.push(
+      <DatedRow key="analyst" when={fmtDay(a.date)}>
+        {a.firm} {ACTION_ARROW[a.action] ?? "→"} {a.to}
+      </DatedRow>
+    );
+  }
+
+  // No dated feed means no block — not an empty slot where two rows would be.
+  if (rows.length === 0) return null;
+  return <div className="flex flex-col gap-2 border-b border-line pb-3">{rows}</div>;
+}
 
 /** The feed states the direction in the token's suffix; the word list is only
  *  the fallback for the tokens that arrive unsigned. */
@@ -135,12 +218,24 @@ interface CatalystsCardProps {
 
 export default function CatalystsCard({ ticker, bridgeRow }: CatalystsCardProps) {
   return (
-    <Panel title="Catalysts & Fundamentals">
-      {bridgeRow ? (
-        <BridgeCatalysts bridgeRow={bridgeRow} />
-      ) : (
-        <OffBridgeCatalysts ticker={ticker} />
-      )}
+    <Panel
+      title="Catalysts & Fundamentals"
+      actions={
+        // Out of the card and onto another page, so the arrow is `→`. `›` is the
+        // product's mark for more of the same list in place.
+        <Link href="/calendar" className="text-label text-accent hover:underline">
+          Calendar →
+        </Link>
+      }
+    >
+      <div className="space-y-3">
+        <DatedCatalysts ticker={ticker} />
+        {bridgeRow ? (
+          <BridgeCatalysts bridgeRow={bridgeRow} />
+        ) : (
+          <OffBridgeCatalysts ticker={ticker} />
+        )}
+      </div>
     </Panel>
   );
 }

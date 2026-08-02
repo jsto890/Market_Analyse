@@ -353,6 +353,11 @@ test("audit: console errors, computed layout, contrast inputs", async ({ page })
           scrollHeight: main?.scrollHeight ?? null,
           clientHeight: main?.clientHeight ?? null,
           contentWidth: content?.getBoundingClientRect().width ?? null,
+          // Content width alone cannot say whether a route is narrow because
+          // its rails are open or because its own shell caps it. `mainWidth` is
+          // the space the rails left; the gap between the two is the page's
+          // own doing, and that is the half X-02 can actually fix.
+          mainWidth: main?.getBoundingClientRect().width ?? null,
           contentPadding: cs ? `${cs.paddingTop} ${cs.paddingRight} ${cs.paddingBottom} ${cs.paddingLeft}` : null,
           tables: document.querySelectorAll("table").length,
           rows: document.querySelectorAll("tbody tr").length,
@@ -765,14 +770,25 @@ test("contract: Phase 3.2 — the ticker page names each thing once", async ({ p
     violations.push(`/t/AAPL: raw tier enum printed ${rawTier}×`);
   }
 
-  // The header says what the name is, not only what it costs. Both come from
-  // the fundamentals endpoint, so a failure here is either the header or yfinance.
-  if ((await page.getByText(/mkt cap /).count()) === 0) {
+  // The header says what the name is, not only what it costs. Market cap is now
+  // a bare compact figure in the identity line beside the sector and the
+  // industry — "Technology · Consumer Electronics · $4.98T" — so there is no
+  // "mkt cap" label left to match on. Assert the figure itself, scoped to the
+  // header, so the check still fails if the cap stops rendering. Both facts come
+  // from the fundamentals endpoint: a miss here is the header or yfinance.
+  const cap = await page
+    .locator("#main section")
+    .first()
+    .getByText(/^\$\d+(\.\d+)?[MBT]$/)
+    .count();
+  if (cap === 0) {
     violations.push("/t/AAPL: header exposes no market cap");
   }
 
-  // One earnings date, one basis, one place.
-  const earnings = await page.getByText(/earnings (today|tomorrow|in \d+d|\d+d ago)/).count();
+  // One earnings date, one basis, one place. Case-insensitive: the chip's copy
+  // is sentence case now, and a guard that quietly stops matching is worse than
+  // one that fails.
+  const earnings = await page.getByText(/earnings (today|tomorrow|in \d+d|\d+d ago)/i).count();
   if (earnings > 1) {
     violations.push(`/t/AAPL: earnings stated ${earnings}×, expected at most once`);
   }

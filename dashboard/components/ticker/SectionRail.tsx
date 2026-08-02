@@ -10,7 +10,6 @@ import {
   MessageSquare,
   Newspaper,
   Sparkles,
-  Target,
   Zap,
   type LucideIcon,
 } from "lucide-react";
@@ -27,7 +26,9 @@ export const TICKER_SECTIONS: { id: string; label: string; Icon: LucideIcon }[] 
   { id: "chart", label: "Price", Icon: CandlestickChart },
   { id: "options", label: "Options", Icon: Layers },
   { id: "gamma", label: "Gamma", Icon: Activity },
-  { id: "levels", label: "Trade plan", Icon: Target },
+  // No "Trade plan" entry: entry, stop and target are drawn on the chart, so
+  // the levels card — and its `#levels` anchor — are gone. "Price" already
+  // points at them.
   { id: "why", label: "Rationale", Icon: Brain },
   { id: "catalysts", label: "Catalysts", Icon: Zap },
   { id: "news", label: "News", Icon: Newspaper },
