@@ -50,18 +50,20 @@ function Tile({
   children?: React.ReactNode;
 }) {
   return (
-    <div className="flex min-w-0 flex-col gap-1 rounded-md border border-line-strong bg-elevated px-3 py-2.5">
+    <div className="flex min-w-0 flex-col gap-2 rounded-md border border-line bg-elevated p-[12px_14px]">
       <div className="flex items-baseline justify-between gap-2">
         <span className="eyebrow">{label}</span>
         {href && (
-          <Link href={href} className="text-body text-muted hover:text-accent">
-            {linkLabel} ›
+          // `→` because the link leaves the tile for the page that owns the
+          // number; `›` stays reserved for "more of this list".
+          <Link href={href} className="text-micro normal-case text-accent hover:underline">
+            {linkLabel} →
           </Link>
         )}
       </div>
       {headline && <div className="text-title text-foreground">{headline}</div>}
       {children}
-      {detail && <p className="text-body text-2">{detail}</p>}
+      {detail && <p className="text-label text-muted">{detail}</p>}
     </div>
   );
 }
@@ -69,48 +71,30 @@ function Tile({
 /** Wide enough that a quote-to-quote wobble doesn't read as a direction. */
 const TAPE_FLAT_PCT = 0.15;
 
-/** The tape tile reads verdict → figures → read like its two neighbours, so
- *  the verdict has to come from the quotes rather than a stored word. Futures
- *  bid with vol offered is the only pairing that says risk-on; when the two
- *  disagree the tape hasn't settled on a direction yet. */
-function tapeRead(quotes: { symbol: string; change_pct: number }[]) {
+/** The tape tile reads eyebrow → figures → read: only the two tiles that link
+ *  out lead with a verdict word, so a derived one here would make all three
+ *  shout equally. Futures bid with vol offered is the only pairing that says
+ *  risk-on; when the two disagree the tape hasn't settled on a direction yet. */
+function tapeRead(quotes: { symbol: string; change_pct: number }[]): string | null {
   const es = quotes.find((q) => q.symbol === "ES=F");
   if (!es) return null;
   const dir = es.change_pct > TAPE_FLAT_PCT ? 1 : es.change_pct < -TAPE_FLAT_PCT ? -1 : 0;
   if (dir === 0) {
-    return {
-      verdict: "flat",
-      read: `S&P futures inside ±${TAPE_FLAT_PCT}% — the open is priced as a non-event.`,
-    };
+    return `S&P futures inside ±${TAPE_FLAT_PCT}% — the open is priced as a non-event.`;
   }
   const vix = quotes.find((q) => q.symbol === "^VIX");
   if (!vix) {
     return dir > 0
-      ? {
-          verdict: "bid",
-          read: "S&P futures up into the open, with no vol quote to confirm it.",
-        }
-      : {
-          verdict: "offered",
-          read: "S&P futures down into the open, with no vol quote to confirm it.",
-        };
+      ? "S&P futures up into the open, with no vol quote to confirm it."
+      : "S&P futures down into the open, with no vol quote to confirm it.";
   }
   if (dir > 0 && vix.change_pct < 0) {
-    return {
-      verdict: "risk-on",
-      read: "Futures bid and vol offered — the tape leans into the open.",
-    };
+    return "Futures bid and vol offered — the tape leans into the open.";
   }
   if (dir < 0 && vix.change_pct > 0) {
-    return {
-      verdict: "risk-off",
-      read: "Futures offered and vol bid — pressure into the open.",
-    };
+    return "Futures offered and vol bid — pressure into the open.";
   }
-  return {
-    verdict: "mixed",
-    read: "Futures and vol disagree — the direction isn’t settled yet.",
-  };
+  return "Futures and vol disagree — the direction isn’t settled yet.";
 }
 
 /** US news tone with its one-day move — a score with no delta says nothing
@@ -172,7 +156,7 @@ export function MorningReport() {
 
   if (isLoading) {
     return (
-      <section className="rounded-md border border-line bg-elevated p-4">
+      <section className="flex flex-col gap-3">
         <Loading variant="lines" count={3} label="Loading Morning Brief" />
       </section>
     );
@@ -197,24 +181,26 @@ export function MorningReport() {
     (f): f is { symbol: string; change_pct: number } => !!f,
   );
   const tape = lead.length > 0 ? lead : futures.slice(0, 3);
-  const tapeVerdict = tapeRead(futures);
+  const tapeReadLine = tapeRead(futures);
 
   return (
-    <section className="flex flex-col gap-3 rounded-md border border-line bg-elevated p-4">
+    // The brief is the page's masthead, not a card on it: no border, no fill,
+    // no padding of its own.
+    <section className="flex flex-col gap-3">
       <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
-        <h2 className="text-title text-foreground">Morning brief</h2>
-        <span className="flex items-baseline gap-2 text-data text-muted">
+        <h2 className="eyebrow">Morning brief</h2>
+        <span className="flex items-baseline gap-2 text-label font-mono text-muted">
           {data.weekday} {data.date}
           <Stale asOf={data.generated_at} variant="line" />
         </span>
       </div>
 
       {synthesis && synthesis !== "Quiet slate." && (
-        <p className="text-headline text-foreground">{synthesis}</p>
+        <p className="text-pretty text-headline text-foreground">{synthesis}</p>
       )}
 
-      <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-        <Tile label="Tape" headline={tapeVerdict?.verdict} detail={tapeVerdict?.read}>
+      <div className="grid grid-cols-3 gap-3">
+        <Tile label="Tape" detail={tapeReadLine}>
           {tape.length > 0 ? (
             <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
               {tape.map((f) => (
@@ -246,17 +232,19 @@ export function MorningReport() {
       </div>
 
       {news.length > 0 && (
-        <div className="flex flex-col gap-1">
+        <div className="flex flex-wrap gap-2">
           {news.map((n) => (
             <Link
               key={n.ticker}
               href={`/t/${n.ticker}`}
-              className="flex items-baseline gap-2 text-body text-2 hover:text-accent"
+              className="flex max-w-[340px] items-center gap-2 rounded-[5px] border border-line bg-surface p-[6px_10px] hover:border-line-strong"
             >
-              <span className="w-12 shrink-0 text-data text-accent">${n.ticker}</span>
-              <span className="min-w-0 flex-1">{n.headline}</span>
+              <span className="shrink-0 text-label font-mono font-semibold text-accent">
+                ${n.ticker}
+              </span>
+              <span className="min-w-0 truncate text-label text-2">{n.headline}</span>
               {n.extra > 0 && (
-                <span className="shrink-0 text-data text-muted">+{n.extra} more</span>
+                <span className="shrink-0 text-label font-mono text-muted">+{n.extra}</span>
               )}
             </Link>
           ))}
@@ -264,7 +252,7 @@ export function MorningReport() {
       )}
 
       <Link href="/brief" className="text-body text-muted hover:text-accent">
-        Full brief ›
+        Full brief →
       </Link>
     </section>
   );

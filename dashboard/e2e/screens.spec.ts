@@ -227,7 +227,11 @@ test("state: today — filters active, and Everything else open", async ({ page 
   await settle(page);
 
   await step("HC filter", async () => {
-    await page.getByRole("button", { name: /^HC only$/i }).click({ timeout: 4000 });
+    // The toggle folded into the conviction select (T-12) — same filter, one
+    // fewer control on the toolbar row.
+    await page
+      .getByRole("combobox", { name: "Filter by conviction" })
+      .selectOption("hc", { timeout: 4000 });
     await page.waitForTimeout(400);
     await shot(page, "state--today-hc-filter");
   });

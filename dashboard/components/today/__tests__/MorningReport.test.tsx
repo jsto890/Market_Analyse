@@ -47,6 +47,16 @@ describe("MorningReport — loading/error/collapse (TD-09)", () => {
     expect(screen.getByText(/Tuesday 2026-07-28/)).toBeInTheDocument();
   });
 
+  it("is the page's masthead, so it draws no card around itself (T-01)", async () => {
+    mockFetchJson({ "/api/argus/report/morning": baseReport });
+    const { container } = render(<MorningReport />);
+    await screen.findByRole("heading", { name: "Morning brief" });
+    const masthead = container.querySelector("section")!;
+    expect(masthead.className).not.toMatch(/\bborder\b|\bbg-elevated\b|\bp-4\b/);
+    // The title reads as an eyebrow above the synthesis, not as a card title.
+    expect(screen.getByRole("heading", { name: "Morning brief" }).className).toContain("eyebrow");
+  });
+
   it("links watchlist-news rows with next/link, not a bare <a>", async () => {
     mockFetchJson({ "/api/argus/report/morning": baseReport });
     render(<MorningReport />);
@@ -80,8 +90,19 @@ describe("MorningReport — content (MB-01..MB-09)", () => {
     });
     render(<MorningReport />);
     expect(await screen.findByText("MSFT: cloud beat")).toBeInTheDocument();
-    expect(screen.getByText("+2 more")).toBeInTheDocument();
+    // The chip has room for the count, not for the word after it (T-05).
+    expect(screen.getByText("+2")).toBeInTheDocument();
     expect(screen.getByText("AAPL: supplier cut")).toBeInTheDocument();
+  });
+
+  it("lays the news out as wrapping chips, not a stacked list (T-05)", async () => {
+    mockFetchJson({ "/api/argus/report/morning": baseReport });
+    render(<MorningReport />);
+    const chip = await screen.findByRole("link", { name: /\$NVDA/ });
+    expect(chip.className).toContain("max-w-[340px]");
+    expect(chip.parentElement?.className).toContain("flex-wrap");
+    // The headline truncates inside the chip rather than setting its width.
+    expect(screen.getByText("NVDA: guidance raise").className).toContain("truncate");
   });
 
   it("leaves the day's schedule to the tape and carries none of it itself (MB-03)", async () => {
@@ -167,7 +188,7 @@ describe("MorningReport — content (MB-01..MB-09)", () => {
     expect(screen.queryByText("^VIX")).not.toBeInTheDocument();
   });
 
-  it("gives the tape tile the same verdict → figures → read shape as its neighbours", async () => {
+  it("gives the tape tile a read, and leaves the verdict word to the tiles that link out (T-03)", async () => {
     mockFetchJson({
       "/api/argus/report/morning": {
         ...baseReport,
@@ -178,8 +199,9 @@ describe("MorningReport — content (MB-01..MB-09)", () => {
       },
     });
     render(<MorningReport />);
-    expect(await screen.findByText("risk-on")).toBeInTheDocument();
-    expect(screen.getByText(/Futures bid and vol offered/)).toBeInTheDocument();
+    expect(await screen.findByText(/Futures bid and vol offered/)).toBeInTheDocument();
+    // A 15px verdict on all three tiles makes them shout equally.
+    expect(screen.queryByText("risk-on")).not.toBeInTheDocument();
   });
 
   it("won't call a direction on futures inside the flat band", async () => {
@@ -193,7 +215,23 @@ describe("MorningReport — content (MB-01..MB-09)", () => {
       },
     });
     render(<MorningReport />);
-    expect(await screen.findByText("flat")).toBeInTheDocument();
+    expect(await screen.findByText(/priced as a non-event/)).toBeInTheDocument();
+    expect(screen.queryByText("flat")).not.toBeInTheDocument();
+  });
+
+  it("points a tile's link out of the tile, in accent (T-04)", async () => {
+    mockFetchJson({
+      "/api/argus/report/morning": {
+        ...baseReport,
+        day_ahead: { ...baseReport.day_ahead, gex_line: "SPY pinned" },
+      },
+    });
+    render(<MorningReport />);
+    const gamma = await screen.findByRole("link", { name: /gamma/ });
+    expect(gamma.textContent).toContain("→");
+    expect(gamma.textContent).not.toContain("›");
+    expect(gamma.className).toContain("text-accent");
+    expect(gamma.className).toContain("text-micro");
   });
 
   it("drops the arrow when the tone delta rounds to zero", async () => {
@@ -226,5 +264,7 @@ describe("MorningReport — content (MB-01..MB-09)", () => {
     render(<MorningReport />);
     const full = await screen.findByRole("link", { name: /Full brief/ });
     expect(full).toHaveAttribute("href", "/brief");
+    // `/brief` is a route you leave the page for, so it takes the out-arrow.
+    expect(full.textContent).toContain("→");
   });
 });

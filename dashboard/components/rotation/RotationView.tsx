@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import RRGChart, { type SectorNames } from "@/components/rotation/RRGChart";
 import RotationPanel, { type RotationRow } from "@/components/today/RotationPanel";
 import { rrgIndexByIndustry } from "@/lib/rotation";
@@ -22,7 +23,13 @@ export default function RotationView({
   namesBySector?: SectorNames;
   trails?: Record<string, TrailPoint[]>;
 }) {
-  const [selected, setSelected] = useState<string | null>(null);
+  // Today's sector strip links here as `/rotation?sector=<industry>`. Without
+  // this the link lands on the page and preselects nothing, which reads as a
+  // broken link rather than a deep one. Only the initial value comes from the
+  // URL — clicking the chart or the table after that is local state, not a
+  // navigation.
+  const sectorParam = useSearchParams()?.get("sector") ?? null;
+  const [selected, setSelected] = useState<string | null>(sectorParam);
   const rrgIndex = useMemo(() => rrgIndexByIndustry(rows), [rows]);
   const held = useHeldPositions();
 
