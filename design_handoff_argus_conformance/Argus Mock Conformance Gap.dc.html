@@ -1,0 +1,1127 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fira+Sans:wght@300;400;500;600;700&family=Fira+Code:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  body { margin: 0; background: #06090f; color: #eef1f6; font-family: "Fira Sans", system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+  * { box-sizing: border-box; font-variant-numeric: tabular-nums; }
+  a { color: #4c8dff; text-decoration: none; }
+  a:hover { color: #7aabff; }
+</style>
+</helmet>
+
+<div style="max-width:1240px; margin:0 auto; padding:56px 32px 96px">
+
+  <div style="font-family:'Fira Code',monospace; font-size:11px; font-weight:500; letter-spacing:0.1em; text-transform:uppercase; color:#7d8698; margin-bottom:10px">Conformance review · 1 Aug 2026</div>
+  <h1 style="margin:0 0 14px; font-size:28px; font-weight:600; letter-spacing:-0.015em">What separates the app from the mock</h1>
+  <p style="margin:0 0 8px; max-width:860px; font-size:14px; line-height:1.65; color:#c8cede; text-wrap:pretty">Every route, rail, panel and shared component in <span style="font-family:'Fira Code',monospace; font-size:13px">dashboard/</span> read against all fourteen screens in <span style="font-family:'Fira Code',monospace; font-size:13px">Argus Overhaul - Today + Ticker</span>. Source-level: each delta below names the file it lives in.</p>
+  <p style="margin:0; max-width:860px; font-size:14px; line-height:1.65; color:#9aa3b4; text-wrap:pretty">The headline: <span style="color:#eef1f6">the structure is done and the skin is not</span>. All fourteen routes exist, the token layer is complete, the nav is grouped, the options split shipped, <span style="font-family:'Fira Code',monospace; font-size:13px">/calendar</span> exists, and the shared kit (Page, ActionBar, StatChip, VoteBar, RankText, ReadThis, Gloss, SegmentedControl, Loading/Empty/Failed/Stale) is built. What is missing is fidelity — the mock's surfaces, sizes, arrangements and a handful of panels that were re-composed from old parts instead of rebuilt.</p>
+
+  <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin-top:28px">
+    <div style="border:1px solid #2c3648; border-radius:8px; background:#12171f; padding:14px 16px">
+      <div style="font-family:'Fira Code',monospace; font-size:11px; font-weight:500; letter-spacing:0.08em; text-transform:uppercase; color:#7d8698; margin-bottom:8px">Structure</div>
+      <div style="font-family:'Fira Code',monospace; font-size:28px; font-weight:600; color:#3fb950; line-height:1">14 / 14</div>
+      <p style="margin:8px 0 0; font-size:12px; line-height:1.55; color:#9aa3b4">Every screen in the mock has a route. Phases 0–4 landed.</p>
+    </div>
+    <div style="border:1px solid #1e2634; border-radius:8px; background:#0c1017; padding:14px 16px">
+      <div style="font-family:'Fira Code',monospace; font-size:11px; font-weight:500; letter-spacing:0.08em; text-transform:uppercase; color:#7d8698; margin-bottom:8px">Visual match</div>
+      <div style="font-family:'Fira Code',monospace; font-size:28px; font-weight:600; color:#d29922; line-height:1">4 / 14</div>
+      <p style="margin:8px 0 0; font-size:12px; line-height:1.55; color:#9aa3b4">Watchlist, Screener, Alerts and Calendar read as the mock. The rest drift.</p>
+    </div>
+    <div style="border:1px solid #1e2634; border-radius:8px; background:#0c1017; padding:14px 16px">
+      <div style="font-family:'Fira Code',monospace; font-size:11px; font-weight:500; letter-spacing:0.08em; text-transform:uppercase; color:#7d8698; margin-bottom:8px">Deltas logged</div>
+      <div style="font-family:'Fira Code',monospace; font-size:28px; font-weight:600; color:#eef1f6; line-height:1">56</div>
+      <p style="margin:8px 0 0; font-size:12px; line-height:1.55; color:#9aa3b4">17 structural · 21 drift · 18 polish. Roughly three sprints.</p>
+    </div>
+  </div>
+
+  <sc-if value="{{ showScorecard }}" hint-placeholder-val="{{ true }}">
+  <div style="display:flex; align-items:baseline; gap:12px; margin:48px 0 6px">
+    <span style="font-family:'Fira Code',monospace; font-size:11px; font-weight:500; letter-spacing:0.1em; text-transform:uppercase; color:#7d8698">Scorecard</span>
+    <span style="flex:1; height:1px; background:#1e2634"></span>
+  </div>
+
+  <div style="border:1px solid #1e2634; border-radius:8px; background:#0c1017; overflow:hidden; margin-top:14px">
+    <div style="display:grid; grid-template-columns:56px 190px 120px 1fr; gap:16px; padding:9px 16px; border-bottom:1px solid #1e2634; background:#0c1017; font-family:'Fira Code',monospace; font-size:11px; font-weight:500; letter-spacing:0.08em; text-transform:uppercase; color:#7d8698">
+      <span>Id</span><span>Route</span><span>State</span><span>What is still missing</span>
+    </div>
+
+    <div style="display:grid; grid-template-columns:56px 190px 120px 1fr; gap:16px; padding:10px 16px; border-bottom:1px solid rgba(30,38,52,0.6); align-items:baseline">
+      <span style="font-family:'Fira Code',monospace; font-size:13px; color:#4c8dff">1a</span>
+      <span style="font-family:'Fira Code',monospace; font-size:13px; color:#eef1f6">/</span>
+      <span style="font-family:'Fira Code',monospace; font-size:11px; font-weight:600; color:#d29922; border:1px solid rgba(210,153,34,0.5); background:rgba(210,153,34,0.1); border-radius:4px; padding:2px 7px; justify-self:start">PARTIAL</span>
+      <span style="font-size:12px; line-height:1.55; color:#c8cede">Brief is a card not a masthead · tape axis is a hairline not a bar · tabs aren't the segmented control · signal cards on the wrong surface</span>
+    </div>
+    <div style="display:grid; grid-template-columns:56px 190px 120px 1fr; gap:16px; padding:10px 16px; border-bottom:1px solid rgba(30,38,52,0.6); align-items:baseline">
+      <span style="font-family:'Fira Code',monospace; font-size:13px; color:#4c8dff">1b</span>
+      <span style="font-family:'Fira Code',monospace; font-size:13px; color:#eef1f6">/t/[ticker]</span>
+      <span style="font-family:'Fira Code',monospace; font-size:11px; font-weight:600; color:#f85149; border:1px solid rgba(248,81,73,0.4); background:rgba(248,81,73,0.08); border-radius:4px; padding:2px 7px; justify-self:start">SHELL</span>
+      <span style="font-size:12px; line-height:1.55; color:#c8cede">Header is not the three-zone card · price at 15px not 28px · no range/volume bars · track record is three text lines · levels still a card beside the chart · Why panel is a different component entirely</span>
+    </div>
+    <div style="display:grid; grid-template-columns:56px 190px 120px 1fr; gap:16px; padding:10px 16px; border-bottom:1px solid rgba(30,38,52,0.6); align-items:baseline">
+      <span style="font-family:'Fira Code',monospace; font-size:13px; color:#4c8dff">2a</span>
+      <span style="font-family:'Fira Code',monospace; font-size:13px; color:#eef1f6">/options/ladder</span>
+      <span style="font-family:'Fira Code',monospace; font-size:11px; font-weight:600; color:#3fb950; border:1px solid rgba(63,185,80,0.4); background:rgba(63,185,80,0.1); border-radius:4px; padding:2px 7px; justify-self:start">CLOSE</span>
+      <span style="font-size:12px; line-height:1.55; color:#c8cede">Density, mode, columns and the collapsed explainer all shipped. Verify the mirrored track widths and that Jump-to-strike / Centre-on-spot exist</span>
+    </div>
+    <div style="display:grid; grid-template-columns:56px 190px 120px 1fr; gap:16px; padding:10px 16px; border-bottom:1px solid rgba(30,38,52,0.6); align-items:baseline">
+      <span style="font-family:'Fira Code',monospace; font-size:13px; color:#4c8dff">2b</span>
+      <span style="font-family:'Fira Code',monospace; font-size:13px; color:#eef1f6">/calendar</span>
+      <span style="font-family:'Fira Code',monospace; font-size:11px; font-weight:600; color:#3fb950; border:1px solid rgba(63,185,80,0.4); background:rgba(63,185,80,0.1); border-radius:4px; padding:2px 7px; justify-self:start">CLOSE</span>
+      <span style="font-size:12px; line-height:1.55; color:#c8cede">Month strip, week spine, day grid and event rows built. Actual/consensus/prior columns were ruled out of v1 — no feed stands behind them</span>
+    </div>
+    <div style="display:grid; grid-template-columns:56px 190px 120px 1fr; gap:16px; padding:10px 16px; border-bottom:1px solid rgba(30,38,52,0.6); align-items:baseline">
+      <span style="font-family:'Fira Code',monospace; font-size:13px; color:#4c8dff">2c</span>
+      <span style="font-family:'Fira Code',monospace; font-size:13px; color:#eef1f6">/options/gamma</span>
+      <span style="font-family:'Fira Code',monospace; font-size:11px; font-weight:600; color:#f85149; border:1px solid rgba(248,81,73,0.4); background:rgba(248,81,73,0.08); border-radius:4px; padding:2px 7px; justify-self:start">SHELL</span>
+      <span style="font-size:12px; line-height:1.55; color:#c8cede">Route exists, contents are the old odte cards re-hung. No regime hero, no spot-vs-flip scale, no calibrated ±400 profile, no scenario card</span>
+    </div>
+    <div style="display:grid; grid-template-columns:56px 190px 120px 1fr; gap:16px; padding:10px 16px; border-bottom:1px solid rgba(30,38,52,0.6); align-items:baseline">
+      <span style="font-family:'Fira Code',monospace; font-size:13px; color:#4c8dff">2d</span>
+      <span style="font-family:'Fira Code',monospace; font-size:13px; color:#eef1f6">/options/flow</span>
+      <span style="font-family:'Fira Code',monospace; font-size:11px; font-weight:600; color:#f85149; border:1px solid rgba(248,81,73,0.4); background:rgba(248,81,73,0.08); border-radius:4px; padding:2px 7px; justify-self:start">SHELL</span>
+      <span style="font-size:12px; line-height:1.55; color:#c8cede">No ratio gauges, no vs-OI or aggressor columns on unusual prints, no plain-English read column, no volume-vs-OI bars, no flow-tilt card</span>
+    </div>
+    <div style="display:grid; grid-template-columns:56px 190px 120px 1fr; gap:16px; padding:10px 16px; border-bottom:1px solid rgba(30,38,52,0.6); align-items:baseline">
+      <span style="font-family:'Fira Code',monospace; font-size:13px; color:#4c8dff">2e</span>
+      <span style="font-family:'Fira Code',monospace; font-size:13px; color:#eef1f6">/options/greeks</span>
+      <span style="font-family:'Fira Code',monospace; font-size:11px; font-weight:600; color:#d29922; border:1px solid rgba(210,153,34,0.5); background:rgba(210,153,34,0.1); border-radius:4px; padding:2px 7px; justify-self:start">PARTIAL</span>
+      <span style="font-size:12px; line-height:1.55; color:#c8cede">Four aggregate cards ✓. Per-strike table is not the mirrored CALLS | Strike | PUTS layout; no skew scatter, no term structure</span>
+    </div>
+    <div style="display:grid; grid-template-columns:56px 190px 120px 1fr; gap:16px; padding:10px 16px; border-bottom:1px solid rgba(30,38,52,0.6); align-items:baseline">
+      <span style="font-family:'Fira Code',monospace; font-size:13px; color:#4c8dff">3a</span>
+      <span style="font-family:'Fira Code',monospace; font-size:13px; color:#eef1f6">/options</span>
+      <span style="font-family:'Fira Code',monospace; font-size:11px; font-weight:600; color:#d29922; border:1px solid rgba(210,153,34,0.5); background:rgba(210,153,34,0.1); border-radius:4px; padding:2px 7px; justify-self:start">PARTIAL</span>
+      <span style="font-size:12px; line-height:1.55; color:#c8cede">Four evidence cards ✓. No symbol switcher in the header, no session-read hero, no agreement-count segments, no expected-move box</span>
+    </div>
+    <div style="display:grid; grid-template-columns:56px 190px 120px 1fr; gap:16px; padding:10px 16px; border-bottom:1px solid rgba(30,38,52,0.6); align-items:baseline">
+      <span style="font-family:'Fira Code',monospace; font-size:13px; color:#4c8dff">3b</span>
+      <span style="font-family:'Fira Code',monospace; font-size:13px; color:#eef1f6">/rotation</span>
+      <span style="font-family:'Fira Code',monospace; font-size:11px; font-weight:600; color:#d29922; border:1px solid rgba(210,153,34,0.5); background:rgba(210,153,34,0.1); border-radius:4px; padding:2px 7px; justify-self:start">PARTIAL</span>
+      <span style="font-size:12px; line-height:1.55; color:#c8cede">Trails, quadrants and the sidebar are built. Confirm quadrant labels are drawn on the chart with a gloss each, and that dots carry sector names rather than ETF tickers</span>
+    </div>
+    <div style="display:grid; grid-template-columns:56px 190px 120px 1fr; gap:16px; padding:10px 16px; border-bottom:1px solid rgba(30,38,52,0.6); align-items:baseline">
+      <span style="font-family:'Fira Code',monospace; font-size:13px; color:#4c8dff">3c</span>
+      <span style="font-family:'Fira Code',monospace; font-size:13px; color:#eef1f6">/macro</span>
+      <span style="font-family:'Fira Code',monospace; font-size:11px; font-weight:600; color:#d29922; border:1px solid rgba(210,153,34,0.5); background:rgba(210,153,34,0.1); border-radius:4px; padding:2px 7px; justify-self:start">PARTIAL</span>
+      <span style="font-size:12px; line-height:1.55; color:#c8cede">Scope tiles, contributors and the chart are built. Methodology is a <span style="font-family:'Fira Code',monospace; font-size:11px">Collapsible</span> — the mock has it permanent and on the page</span>
+    </div>
+    <div style="display:grid; grid-template-columns:56px 190px 120px 1fr; gap:16px; padding:10px 16px; border-bottom:1px solid rgba(30,38,52,0.6); align-items:baseline">
+      <span style="font-family:'Fira Code',monospace; font-size:13px; color:#4c8dff">4a</span>
+      <span style="font-family:'Fira Code',monospace; font-size:13px; color:#eef1f6">/watchlist</span>
+      <span style="font-family:'Fira Code',monospace; font-size:11px; font-weight:600; color:#3fb950; border:1px solid rgba(63,185,80,0.4); background:rgba(63,185,80,0.1); border-radius:4px; padding:2px 7px; justify-self:start">CLOSE</span>
+      <span style="font-size:12px; line-height:1.55; color:#c8cede">Filtering stat chips, pinned cards with sparkline and since-pin, window-progress on recent picks — all there. Card surface tone only</span>
+    </div>
+    <div style="display:grid; grid-template-columns:56px 190px 120px 1fr; gap:16px; padding:10px 16px; border-bottom:1px solid rgba(30,38,52,0.6); align-items:baseline">
+      <span style="font-family:'Fira Code',monospace; font-size:13px; color:#4c8dff">4b</span>
+      <span style="font-family:'Fira Code',monospace; font-size:13px; color:#eef1f6">/screener</span>
+      <span style="font-family:'Fira Code',monospace; font-size:11px; font-weight:600; color:#3fb950; border:1px solid rgba(63,185,80,0.4); background:rgba(63,185,80,0.1); border-radius:4px; padding:2px 7px; justify-self:start">CLOSE</span>
+      <span style="font-size:12px; line-height:1.55; color:#c8cede">Score slider, top-3 cards and the stacked vote bar shipped. Confirm the remainder table uses the mock's eight tracks</span>
+    </div>
+    <div style="display:grid; grid-template-columns:56px 190px 120px 1fr; gap:16px; padding:10px 16px; border-bottom:1px solid rgba(30,38,52,0.6); align-items:baseline">
+      <span style="font-family:'Fira Code',monospace; font-size:13px; color:#4c8dff">4c</span>
+      <span style="font-family:'Fira Code',monospace; font-size:13px; color:#eef1f6">/portfolio</span>
+      <span style="font-family:'Fira Code',monospace; font-size:11px; font-weight:600; color:#d29922; border:1px solid rgba(210,153,34,0.5); background:rgba(210,153,34,0.1); border-radius:4px; padding:2px 7px; justify-self:start">PARTIAL</span>
+      <span style="font-size:12px; line-height:1.55; color:#c8cede">Disagreement band exists and leads ✓. The summary band is three chips in a 3-col grid, not the mock's six numbers</span>
+    </div>
+    <div style="display:grid; grid-template-columns:56px 190px 120px 1fr; gap:16px; padding:10px 16px; align-items:baseline">
+      <span style="font-family:'Fira Code',monospace; font-size:13px; color:#4c8dff">4d</span>
+      <span style="font-family:'Fira Code',monospace; font-size:13px; color:#eef1f6">/alerts</span>
+      <span style="font-family:'Fira Code',monospace; font-size:11px; font-weight:600; color:#3fb950; border:1px solid rgba(63,185,80,0.4); background:rgba(63,185,80,0.1); border-radius:4px; padding:2px 7px; justify-self:start">CLOSE</span>
+      <span style="font-size:12px; line-height:1.55; color:#c8cede">The sentence builder shipped — "Alert me when [NVDA] [verdict flips to] [Short]". Check line-height and control sizing against the mock's 14px / 2.1</span>
+    </div>
+  </div>
+  </sc-if>
+
+  <div style="display:flex; align-items:baseline; gap:12px; margin:52px 0 6px">
+    <span style="font-family:'Fira Code',monospace; font-size:11px; font-weight:500; letter-spacing:0.1em; text-transform:uppercase; color:#7d8698">Section A</span>
+    <h2 style="margin:0; font-size:20px; font-weight:600; letter-spacing:-0.01em">Drift that crosses every screen</h2>
+    <span style="font-size:13px; color:#7d8698">6 items</span>
+    <span style="flex:1; height:1px; background:#1e2634"></span>
+  </div>
+  <p style="margin:8px 0 0; max-width:860px; font-size:13px; line-height:1.6; color:#9aa3b4">Fix these first. Each one is a single edit that removes the same defect from six or eight pages at once, and every screen-level fix below assumes them.</p>
+
+  <div style="margin-top:18px">
+
+    <div style="display:grid; grid-template-columns:78px 1fr 1fr; gap:20px; padding:14px 0; border-top:1px solid #2c3648">
+      <div style="display:flex; flex-direction:column; gap:6px; align-items:flex-start">
+        <span style="font-family:'Fira Code',monospace; font-size:12px; font-weight:600; color:#eef1f6">X-01</span>
+        <span style="font-family:'Fira Code',monospace; font-size:11px; font-weight:600; color:#f85149; border:1px solid rgba(248,81,73,0.4); border-radius:3px; padding:1px 5px">STRUCT</span>
+      </div>
+      <div>
+        <div style="font-size:13px; font-weight:600; margin-bottom:5px">11px is still a content size in three places</div>
+        <p style="margin:0; font-size:12px; line-height:1.6; color:#9aa3b4">The rule the overhaul is built on: <span style="color:#c8cede">micro is eyebrows and column headers only</span>. Sentences and figures are 13px.</p>
+      </div>
+      <div>
+        <p style="margin:0 0 7px; font-size:12px; line-height:1.6; color:#9aa3b4"><span style="font-family:'Fira Code',monospace; font-size:11px; color:#c8cede">ticker/WhyPanel.tsx</span> renders its entire body at <span style="font-family:'Fira Code',monospace; font-size:11px">text-micro</span> — family rows, agent votes, notes, chips. Same in the collapsed-rail glyph labels.</p>
+        <p style="margin:0; font-size:12px; line-height:1.6; color:#4c8dff">→ Sweep <span style="font-family:'Fira Code',monospace; font-size:11px">text-micro</span> call sites; anything carrying a sentence or a number becomes <span style="font-family:'Fira Code',monospace; font-size:11px">text-body</span> / <span style="font-family:'Fira Code',monospace; font-size:11px">text-data</span>.</p>
+      </div>
+    </div>
+
+    <div style="display:grid; grid-template-columns:78px 1fr 1fr; gap:20px; padding:14px 0; border-top:1px solid #1e2634">
+      <div style="display:flex; flex-direction:column; gap:6px; align-items:flex-start">
+        <span style="font-family:'Fira Code',monospace; font-size:12px; font-weight:600; color:#eef1f6">X-02</span>
+        <span style="font-family:'Fira Code',monospace; font-size:11px; font-weight:600; color:#d29922; border:1px solid rgba(210,153,34,0.5); border-radius:3px; padding:1px 5px">DRIFT</span>
+      </div>
+      <div>
+        <div style="font-size:13px; font-weight:600; margin-bottom:5px">Cards sit one step too dark</div>
+        <p style="margin:0; font-size:12px; line-height:1.6; color:#9aa3b4">Mock card = <span style="font-family:'Fira Code',monospace; font-size:11px">#12171f</span> fill on a <span style="font-family:'Fira Code',monospace; font-size:11px">#2c3648</span> border. <span style="font-family:'Fira Code',monospace; font-size:11px">--raised</span> is for hover, inputs and the active segment — never a resting card.</p>
+      </div>
+      <div>
+        <p style="margin:0 0 7px; font-size:12px; line-height:1.6; color:#9aa3b4">Signal cards and the three brief tiles use <span style="font-family:'Fira Code',monospace; font-size:11px">bg-raised</span> + <span style="font-family:'Fira Code',monospace; font-size:11px">border-line</span>. On screen the cards recede into the page instead of lifting off it.</p>
+        <p style="margin:0; font-size:12px; line-height:1.6; color:#4c8dff">→ <span style="font-family:'Fira Code',monospace; font-size:11px">bg-elevated border-line-strong</span> for emphasised cards, <span style="font-family:'Fira Code',monospace; font-size:11px">bg-surface border-line</span> for quiet ones.</p>
+      </div>
+    </div>
+
+    <div style="display:grid; grid-template-columns:78px 1fr 1fr; gap:20px; padding:14px 0; border-top:1px solid #1e2634">
+      <div style="display:flex; flex-direction:column; gap:6px; align-items:flex-start">
+        <span style="font-family:'Fira Code',monospace; font-size:12px; font-weight:600; color:#eef1f6">X-03</span>
+        <span style="font-family:'Fira Code',monospace; font-size:11px; font-weight:600; color:#d29922; border:1px solid rgba(210,153,34,0.5); border-radius:3px; padding:1px 5px">DRIFT</span>
+      </div>
+      <div>
+        <div style="font-size:13px; font-weight:600; margin-bottom:5px">SegmentedControl is built and used twice</div>
+        <p style="margin:0; font-size:12px; line-height:1.6; color:#9aa3b4">The mock uses one segmented control for Today's groups, the ticker chart period, the macro lookback, calendar horizon, ladder mode and density.</p>
+      </div>
+      <div>
+        <p style="margin:0 0 7px; font-size:12px; line-height:1.6; color:#9aa3b4">Only <span style="font-family:'Fira Code',monospace; font-size:11px">/calendar</span> and <span style="font-family:'Fira Code',monospace; font-size:11px">/options/ladder</span> import it. Today's groups are hand-rolled underline tabs; the chart period switch is its own thing again.</p>
+        <p style="margin:0; font-size:12px; line-height:1.6; color:#4c8dff">→ Replace the four hand-rolled switchers. Add an optional inline count so Today's "Aligned 12" fits.</p>
+      </div>
+    </div>
+
+    <div style="display:grid; grid-template-columns:78px 1fr 1fr; gap:20px; padding:14px 0; border-top:1px solid #1e2634">
+      <div style="display:flex; flex-direction:column; gap:6px; align-items:flex-start">
+        <span style="font-family:'Fira Code',monospace; font-size:12px; font-weight:600; color:#eef1f6">X-04</span>
+        <span style="font-family:'Fira Code',monospace; font-size:11px; font-weight:600; color:#d29922; border:1px solid rgba(210,153,34,0.5); border-radius:3px; padding:1px 5px">DRIFT</span>
+      </div>
+      <div>
+        <div style="font-size:13px; font-weight:600; margin-bottom:5px">Panel's 15px title is used where the mock uses an eyebrow</div>
+        <p style="margin:0; font-size:12px; line-height:1.6; color:#9aa3b4">In the mock a 15px title appears only on the ticker page's body cards. Every band on Today is introduced by an 11px mono eyebrow with the detail to its right.</p>
+      </div>
+      <div>
+        <p style="margin:0 0 7px; font-size:12px; line-height:1.6; color:#9aa3b4">Today's tape and the sector strip both render through <span style="font-family:'Fira Code',monospace; font-size:11px">Panel</span>, so they shout at the same volume as the signals band.</p>
+        <p style="margin:0; font-size:12px; line-height:1.6; color:#4c8dff">→ Give <span style="font-family:'Fira Code',monospace; font-size:11px">Panel</span> a <span style="font-family:'Fira Code',monospace; font-size:11px">heading="eyebrow" | "title"</span> prop and set the Today bands to eyebrow.</p>
+      </div>
+    </div>
+
+    <div style="display:grid; grid-template-columns:78px 1fr 1fr; gap:20px; padding:14px 0; border-top:1px solid #1e2634">
+      <div style="display:flex; flex-direction:column; gap:6px; align-items:flex-start">
+        <span style="font-family:'Fira Code',monospace; font-size:12px; font-weight:600; color:#eef1f6">X-05</span>
+        <span style="font-family:'Fira Code',monospace; font-size:11px; font-weight:600; color:#7d8698; border:1px solid #2c3648; border-radius:3px; padding:1px 5px">POLISH</span>
+      </div>
+      <div>
+        <div style="font-size:13px; font-weight:600; margin-bottom:5px">Three geometry values were never reconciled</div>
+        <p style="margin:0; font-size:12px; line-height:1.6; color:#9aa3b4">Mock: left rail 208px, right rail 260px, content cap 1180px.</p>
+      </div>
+      <div>
+        <p style="margin:0 0 7px; font-size:12px; line-height:1.6; color:#9aa3b4">Tokens: <span style="font-family:'Fira Code',monospace; font-size:11px">--rail-l 200px</span>, <span style="font-family:'Fira Code',monospace; font-size:11px">--rail-r 288px</span>, <span style="font-family:'Fira Code',monospace; font-size:11px">--w-wide 1180px</span> ✓. The 28px right-rail difference is the visible one.</p>
+        <p style="margin:0; font-size:12px; line-height:1.6; color:#4c8dff">→ Ruled already: tokens win on rails, mock wins on the cap. Decide once and record it, or the next pass re-opens it.</p>
+      </div>
+    </div>
+
+    <div style="display:grid; grid-template-columns:78px 1fr 1fr; gap:20px; padding:14px 0; border-top:1px solid #1e2634; border-bottom:1px solid #1e2634">
+      <div style="display:flex; flex-direction:column; gap:6px; align-items:flex-start">
+        <span style="font-family:'Fira Code',monospace; font-size:12px; font-weight:600; color:#eef1f6">X-06</span>
+        <span style="font-family:'Fira Code',monospace; font-size:11px; font-weight:600; color:#7d8698; border:1px solid #2c3648; border-radius:3px; padding:1px 5px">POLISH</span>
+      </div>
+      <div>
+        <div style="font-size:13px; font-weight:600; margin-bottom:5px">Surfaces the mock does not have</div>
+        <p style="margin:0; font-size:12px; line-height:1.6; color:#9aa3b4">The mock's nav right cluster is exactly: Learn · session clock · ⌘K.</p>
+      </div>
+      <div>
+        <p style="margin:0 0 7px; font-size:12px; line-height:1.6; color:#9aa3b4">The app adds a Reload button in the nav and a <span style="font-family:'Fira Code',monospace; font-size:11px">/brief</span> route reached from a "Full brief ›" link under the masthead. Neither is in any screen.</p>
+        <p style="margin:0; font-size:12px; line-height:1.6; color:#4c8dff">→ Keep Reload if the Tauri shell needs it, but move it behind ⌘K. Decide whether <span style="font-family:'Fira Code',monospace; font-size:11px">/brief</span> stays; if it does it needs a place in the design.</p>
+      </div>
+    </div>
+  </div>
+
+  <div style="display:flex; align-items:baseline; gap:12px; margin:52px 0 6px">
+    <span style="font-family:'Fira Code',monospace; font-size:11px; font-weight:500; letter-spacing:0.1em; text-transform:uppercase; color:#7d8698">Section B · screen 1a</span>
+    <h2 style="margin:0; font-size:20px; font-weight:600; letter-spacing:-0.01em">Today</h2>
+    <span style="font-size:13px; color:#7d8698">18 deltas · four bands</span>
+    <span style="flex:1; height:1px; background:#1e2634"></span>
+  </div>
+
+  <div style="font-family:'Fira Code',monospace; font-size:11px; font-weight:500; letter-spacing:0.08em; text-transform:uppercase; color:#7d8698; margin:22px 0 0">Band 1 — brief masthead</div>
+  <div>
+    <div style="display:grid; grid-template-columns:78px 1fr 1fr; gap:20px; padding:14px 0; border-top:1px solid #2c3648; margin-top:8px">
+      <div style="display:flex; flex-direction:column; gap:6px; align-items:flex-start">
+        <span style="font-family:'Fira Code',monospace; font-size:12px; font-weight:600; color:#eef1f6">T-01</span>
+        <span style="font-family:'Fira Code',monospace; font-size:11px; font-weight:600; color:#f85149; border:1px solid rgba(248,81,73,0.4); border-radius:3px; padding:1px 5px">STRUCT</span>
+      </div>
+      <div>
+        <div style="font-size:13px; font-weight:600; margin-bottom:5px">The brief is a card, not a masthead</div>
+        <p style="margin:0; font-size:12px; line-height:1.6; color:#9aa3b4">No border, no fill. An eyebrow <span style="color:#c8cede">MORNING BRIEF</span> on the left, <span style="color:#c8cede">Friday 31 Jul · as of 09:42 ET</span> at 12px mono on the right, then the synthesis as a 20px heading with nothing around it.</p>
+      </div>
+      <div>
+        <p style="margin:0 0 7px; font-size:12px; line-height:1.6; color:#9aa3b4"><span style="font-family:'Fira Code',monospace; font-size:11px; color:#c8cede">today/MorningReport.tsx</span> wraps everything in <span style="font-family:'Fira Code',monospace; font-size:11px">rounded-md border border-line bg-elevated p-4</span> and titles it with a 15px "Morning brief" h2 — so the page opens with a box rather than a sentence.</p>
+        <p style="margin:0; font-size:12px; line-height:1.6; color:#4c8dff">→ Strip the section chrome. h2 → eyebrow, synthesis → <span style="font-family:'Fira Code',monospace; font-size:11px">text-headline</span>, date line to the right at 12px mono.</p>
+      </div>
+    </div>
+
+    <div style="display:grid; grid-template-columns:78px 1fr 1fr; gap:20px; padding:14px 0; border-top:1px solid #1e2634">
+      <div style="display:flex; flex-direction:column; gap:6px; align-items:flex-start">
+        <span style="font-family:'Fira Code',monospace; font-size:12px; font-weight:600; color:#eef1f6">T-02</span>
+        <span style="font-family:'Fira Code',monospace; font-size:11px; font-weight:600; color:#d29922; border:1px solid rgba(210,153,34,0.5); border-radius:3px; padding:1px 5px">DRIFT</span>
+      </div>
+      <div>
+        <div style="font-size:13px; font-weight:600; margin-bottom:5px">Tile surface and padding</div>
+        <p style="margin:0; font-size:12px; line-height:1.6; color:#9aa3b4"><span style="font-family:'Fira Code',monospace; font-size:11px">#12171f</span> on <span style="font-family:'Fira Code',monospace; font-size:11px">#1e2634</span>, radius 6, padding 12/14, three equal columns.</p>
+      </div>
+      <div>
+        <p style="margin:0 0 7px; font-size:12px; line-height:1.6; color:#9aa3b4"><span style="font-family:'Fira Code',monospace; font-size:11px">bg-raised px-3 py-2.5</span> — one surface too dark and the padding lands off-scale on the 14px rem root.</p>
+        <p style="margin:0; font-size:12px; line-height:1.6; color:#4c8dff">→ <span style="font-family:'Fira Code',monospace; font-size:11px">bg-elevated border-line</span>, padding in px.</p>
+      </div>
+    </div>
+
+    <div style="display:grid; grid-template-columns:78px 1fr 1fr; gap:20px; padding:14px 0; border-top:1px solid #1e2634">
+      <div style="display:flex; flex-direction:column; gap:6px; align-items:flex-start">
+        <span style="font-family:'Fira Code',monospace; font-size:12px; font-weight:600; color:#eef1f6">T-03</span>
+        <span style="font-family:'Fira Code',monospace; font-size:11px; font-weight:600; color:#d29922; border:1px solid rgba(210,153,34,0.5); border-radius:3px; padding:1px 5px">DRIFT</span>
+      </div>
+      <div>
+        <div style="font-size:13px; font-weight:600; margin-bottom:5px">Tape tile carries a verdict the mock doesn't give it</div>
+        <p style="margin:0; font-size:12px; line-height:1.6; color:#9aa3b4">Tape reads eyebrow → three figures → one read line. Only Positioning and Tone lead with a 15px verdict word; that asymmetry is what makes the two links look like conclusions.</p>
+      </div>
+      <div>
+        <p style="margin:0 0 7px; font-size:12px; line-height:1.6; color:#9aa3b4"><span style="font-family:'Fira Code',monospace; font-size:11px">tapeRead()</span> synthesises "risk-on" / "mixed" / "flat" and renders it at title weight, so all three tiles shout equally.</p>
+        <p style="margin:0; font-size:12px; line-height:1.6; color:#4c8dff">→ Keep the derived read as the detail sentence; drop the headline on the Tape tile only.</p>
+      </div>
+    </div>
+
+    <div style="display:grid; grid-template-columns:78px 1fr 1fr; gap:20px; padding:14px 0; border-top:1px solid #1e2634">
+      <div style="display:flex; flex-direction:column; gap:6px; align-items:flex-start">
+        <span style="font-family:'Fira Code',monospace; font-size:12px; font-weight:600; color:#eef1f6">T-04</span>
+        <span style="font-family:'Fira Code',monospace; font-size:11px; font-weight:600; color:#7d8698; border:1px solid #2c3648; border-radius:3px; padding:1px 5px">POLISH</span>
+      </div>
+      <div>
+        <div style="font-size:13px; font-weight:600; margin-bottom:5px">Tile link is the wrong glyph, size and colour</div>
+        <p style="margin:0; font-size:12px; line-height:1.6; color:#9aa3b4"><span style="color:#4c8dff">gamma →</span> at 11px accent, top-right of the tile.</p>
+      </div>
+      <div>
+        <p style="margin:0 0 7px; font-size:12px; line-height:1.6; color:#9aa3b4"><span style="font-family:'Fira Code',monospace; font-size:11px">gamma ›</span> at 13px muted.</p>
+        <p style="margin:0; font-size:12px; line-height:1.6; color:#4c8dff">→ One arrow convention across the app: <span style="font-family:'Fira Code',monospace; font-size:11px">→</span> for a link out of a tile, <span style="font-family:'Fira Code',monospace; font-size:11px">›</span> for "more of this list".</p>
+      </div>
+    </div>
+
+    <div style="display:grid; grid-template-columns:78px 1fr 1fr; gap:20px; padding:14px 0; border-top:1px solid #1e2634">
+      <div style="display:flex; flex-direction:column; gap:6px; align-items:flex-start">
+        <span style="font-family:'Fira Code',monospace; font-size:12px; font-weight:600; color:#eef1f6">T-05</span>
+        <span style="font-family:'Fira Code',monospace; font-size:11px; font-weight:600; color:#f85149; border:1px solid rgba(248,81,73,0.4); border-radius:3px; padding:1px 5px">STRUCT</span>
+      </div>
+      <div>
+        <div style="font-size:13px; font-weight:600; margin-bottom:5px">News chips are a stacked list</div>
+        <p style="margin:0; font-size:12px; line-height:1.6; color:#9aa3b4">A wrapping row of bordered chips, each capped at 340px: mono ticker in accent, headline truncated in <span style="font-family:'Fira Code',monospace; font-size:11px">#c8cede</span>, a mono <span style="font-family:'Fira Code',monospace; font-size:11px">+2</span> when the name has more. Three fit on one line under the tiles.</p>
+      </div>
+      <div>
+        <p style="margin:0 0 7px; font-size:12px; line-height:1.6; color:#9aa3b4">Rendered as full-width stacked links with a 48px ticker gutter — five rows of vertical space where the mock spends one.</p>
+        <p style="margin:0; font-size:12px; line-height:1.6; color:#4c8dff">→ <span style="font-family:'Fira Code',monospace; font-size:11px">flex-wrap</span> row of chips, <span style="font-family:'Fira Code',monospace; font-size:11px">max-w-[340px]</span>, truncate. De-dupe by ticker is already correct.</p>
+      </div>
+    </div>
+  </div>
+
+  <div style="font-family:'Fira Code',monospace; font-size:11px; font-weight:500; letter-spacing:0.08em; text-transform:uppercase; color:#7d8698; margin:32px 0 0">Band 2 — today's tape</div>
+  <div>
+    <div style="display:grid; grid-template-columns:78px 1fr 1fr; gap:20px; padding:14px 0; border-top:1px solid #2c3648; margin-top:8px">
+      <div style="display:flex; flex-direction:column; gap:6px; align-items:flex-start">
+        <span style="font-family:'Fira Code',monospace; font-size:12px; font-weight:600; color:#eef1f6">T-06</span>
+        <span style="font-family:'Fira Code',monospace; font-size:11px; font-weight:600; color:#f85149; border:1px solid rgba(248,81,73,0.4); border-radius:3px; padding:1px 5px">STRUCT</span>
+      </div>
+      <div>
+        <div style="font-size:13px; font-weight:600; margin-bottom:5px">The session axis is a hairline, not a bar</div>
+        <p style="margin:0; font-size:12px; line-height:1.6; color:#9aa3b4">A 24px filled bar, radius 4, <span style="font-family:'Fira Code',monospace; font-size:11px">#12171f</span>, with the regular session lifted to <span style="font-family:'Fira Code',monospace; font-size:11px">#1a212c</span> between two <span style="font-family:'Fira Code',monospace; font-size:11px">#2c3648</span> edges, and <span style="font-family:'Fira Code',monospace; font-size:11px">PRE · 04:00</span> / <span style="font-family:'Fira Code',monospace; font-size:11px">REGULAR · 09:30</span> / <span style="font-family:'Fira Code',monospace; font-size:11px">AFTER · 16:00</span> set inside it. The whole band is 150px.</p>
+      </div>
+      <div>
+        <p style="margin:0 0 7px; font-size:12px; line-height:1.6; color:#9aa3b4"><span style="font-family:'Fira Code',monospace; font-size:11px; color:#c8cede">today/TodaysTape.tsx</span> draws a 20px zone with <span style="font-family:'Fira Code',monospace; font-size:11px">border-l</span> dividers and no fill except a raised tint on regular. It reads as ruled space, not as a trading day.</p>
+        <p style="margin:0; font-size:12px; line-height:1.6; color:#4c8dff">→ Rebuild the axis as one rounded track with three positioned segments and inline labels.</p>
+      </div>
+    </div>
+
+    <div style="display:grid; grid-template-columns:78px 1fr 1fr; gap:20px; padding:14px 0; border-top:1px solid #1e2634">
+      <div style="display:flex; flex-direction:column; gap:6px; align-items:flex-start">
+        <span style="font-family:'Fira Code',monospace; font-size:12px; font-weight:600; color:#eef1f6">T-07</span>
+        <span style="font-family:'Fira Code',monospace; font-size:11px; font-weight:600; color:#d29922; border:1px solid rgba(210,153,34,0.5); border-radius:3px; padding:1px 5px">DRIFT</span>
+      </div>
+      <div>
+        <div style="font-size:13px; font-weight:600; margin-bottom:5px">The now marker has no lane of its own</div>
+        <p style="margin:0; font-size:12px; line-height:1.6; color:#9aa3b4">A filled accent pill reading <span style="font-family:'Fira Code',monospace; font-size:11px">now 09:42</span> sitting on its own row above the bar, plus a 2px accent stripe cutting the bar itself. It never shares a row with an event label.</p>
+      </div>
+      <div>
+        <p style="margin:0 0 7px; font-size:12px; line-height:1.6; color:#9aa3b4">A 1px accent border-left with the text beside it, in the same band as the session labels — so at 09:30–10:00 the marker and the REGULAR label collide.</p>
+        <p style="margin:0; font-size:12px; line-height:1.6; color:#4c8dff">→ Give <span style="font-family:'Fira Code',monospace; font-size:11px">now</span> its own 22px lane and render it as a filled pill.</p>
+      </div>
+    </div>
+
+    <div style="display:grid; grid-template-columns:78px 1fr 1fr; gap:20px; padding:14px 0; border-top:1px solid #1e2634">
+      <div style="display:flex; flex-direction:column; gap:6px; align-items:flex-start">
+        <span style="font-family:'Fira Code',monospace; font-size:12px; font-weight:600; color:#eef1f6">T-08</span>
+        <span style="font-family:'Fira Code',monospace; font-size:11px; font-weight:600; color:#d29922; border:1px solid rgba(210,153,34,0.5); border-radius:3px; padding:1px 5px">DRIFT</span>
+      </div>
+      <div>
+        <div style="font-size:13px; font-weight:600; margin-bottom:5px">Earnings above the line are chips, not text</div>
+        <p style="margin:0; font-size:12px; line-height:1.6; color:#9aa3b4">Amber-bordered chips on an amber tint — <span style="font-family:'Fira Code',monospace; font-size:11px">16:20 · AAPL AMC</span> — with a 20px amber connector dropping to the bar.</p>
+      </div>
+      <div>
+        <p style="margin:0 0 7px; font-size:12px; line-height:1.6; color:#9aa3b4">Plain text with a border-left tick; the amber only appears on high-importance items and never as a fill.</p>
+        <p style="margin:0; font-size:12px; line-height:1.6; color:#4c8dff">→ Earnings marks get the chip treatment; releases keep the text treatment. The two categories should not look alike.</p>
+      </div>
+    </div>
+
+    <div style="display:grid; grid-template-columns:78px 1fr 1fr; gap:20px; padding:14px 0; border-top:1px solid #1e2634">
+      <div style="display:flex; flex-direction:column; gap:6px; align-items:flex-start">
+        <span style="font-family:'Fira Code',monospace; font-size:12px; font-weight:600; color:#eef1f6">T-09</span>
+        <span style="font-family:'Fira Code',monospace; font-size:11px; font-weight:600; color:#f85149; border:1px solid rgba(248,81,73,0.4); border-radius:3px; padding:1px 5px">STRUCT</span>
+      </div>
+      <div>
+        <div style="font-size:13px; font-weight:600; margin-bottom:5px">Release rows have no connector and no result</div>
+        <p style="margin:0; font-size:12px; line-height:1.6; color:#9aa3b4">Each release drops a 1px vertical connector from the bar to its lane, meets an 8px horizontal tick, then the label — and the label carries the print: <span style="font-family:'Fira Code',monospace; font-size:11px">08:30 · Chicago PMI <span style="color:#3fb950">51.2</span> <span style="color:#5f6878">vs 49.8 est</span></span>.</p>
+      </div>
+      <div>
+        <p style="margin:0 0 7px; font-size:12px; line-height:1.6; color:#9aa3b4">Labels are lane-assigned correctly (the hard part is done) but float free of the axis, and carry only time + name. The tape can't tell you a number already came in.</p>
+        <p style="margin:0; font-size:12px; line-height:1.6; color:#4c8dff">→ Add the connector + tick. Actual-vs-consensus needs the calendar feed to carry it — same data ask as 2b, worth doing once for both.</p>
+      </div>
+    </div>
+
+    <div style="display:grid; grid-template-columns:78px 1fr 1fr; gap:20px; padding:14px 0; border-top:1px solid #1e2634">
+      <div style="display:flex; flex-direction:column; gap:6px; align-items:flex-start">
+        <span style="font-family:'Fira Code',monospace; font-size:12px; font-weight:600; color:#eef1f6">T-10</span>
+        <span style="font-family:'Fira Code',monospace; font-size:11px; font-weight:600; color:#7d8698; border:1px solid #2c3648; border-radius:3px; padding:1px 5px">POLISH</span>
+      </div>
+      <div>
+        <div style="font-size:13px; font-weight:600; margin-bottom:5px">Band heading</div>
+        <p style="margin:0; font-size:12px; line-height:1.6; color:#9aa3b4">Eyebrow <span style="color:#c8cede">TODAY'S TAPE</span> left, <span style="color:#c8cede">all times ET</span> at 11px mono right, inside a plain bordered box.</p>
+      </div>
+      <div>
+        <p style="margin:0 0 7px; font-size:12px; line-height:1.6; color:#9aa3b4">A <span style="font-family:'Fira Code',monospace; font-size:11px">Panel</span> with a 15px title and a 13px subtitle. See X-04.</p>
+        <p style="margin:0; font-size:12px; line-height:1.6; color:#4c8dff">→ Falls out of the Panel heading prop.</p>
+      </div>
+    </div>
+  </div>
+
+  <div style="font-family:'Fira Code',monospace; font-size:11px; font-weight:500; letter-spacing:0.08em; text-transform:uppercase; color:#7d8698; margin:32px 0 0">Band 3 — signals</div>
+  <div>
+    <div style="display:grid; grid-template-columns:78px 1fr 1fr; gap:20px; padding:14px 0; border-top:1px solid #2c3648; margin-top:8px">
+      <div style="display:flex; flex-direction:column; gap:6px; align-items:flex-start">
+        <span style="font-family:'Fira Code',monospace; font-size:12px; font-weight:600; color:#eef1f6">T-11</span>
+        <span style="font-family:'Fira Code',monospace; font-size:11px; font-weight:600; color:#f85149; border:1px solid rgba(248,81,73,0.4); border-radius:3px; padding:1px 5px">STRUCT</span>
+      </div>
+      <div>
+        <div style="font-size:13px; font-weight:600; margin-bottom:5px">Group tabs are underline tabs, not a segmented control</div>
+        <p style="margin:0; font-size:12px; line-height:1.6; color:#9aa3b4">One bordered pill on <span style="font-family:'Fira Code',monospace; font-size:11px">#0c1017</span> with 3px inner padding; the active segment is a <span style="font-family:'Fira Code',monospace; font-size:11px">#1a212c</span> block at radius 4, 13px/600; counts inline at 11px mono.</p>
+      </div>
+      <div>
+        <p style="margin:0 0 7px; font-size:12px; line-height:1.6; color:#9aa3b4"><span style="font-family:'Fira Code',monospace; font-size:11px; color:#c8cede">today/SignalGroups.tsx</span> uses <span style="font-family:'Fira Code',monospace; font-size:11px">border-b-2</span> tab buttons inside the panel — a second navigation idiom 40px under the real nav's underline.</p>
+        <p style="margin:0; font-size:12px; line-height:1.6; color:#4c8dff">→ Swap to <span style="font-family:'Fira Code',monospace; font-size:11px">SegmentedControl</span> with counts (X-03).</p>
+      </div>
+    </div>
+
+    <div style="display:grid; grid-template-columns:78px 1fr 1fr; gap:20px; padding:14px 0; border-top:1px solid #1e2634">
+      <div style="display:flex; flex-direction:column; gap:6px; align-items:flex-start">
+        <span style="font-family:'Fira Code',monospace; font-size:12px; font-weight:600; color:#eef1f6">T-12</span>
+        <span style="font-family:'Fira Code',monospace; font-size:11px; font-weight:600; color:#d29922; border:1px solid rgba(210,153,34,0.5); border-radius:3px; padding:1px 5px">DRIFT</span>
+      </div>
+      <div>
+        <div style="font-size:13px; font-weight:600; margin-bottom:5px">The filter toolbar is its own bar</div>
+        <p style="margin:0; font-size:12px; line-height:1.6; color:#9aa3b4">Search, conviction and sector sit on the <span style="color:#c8cede">same row as the tabs</span>, pushed right with <span style="font-family:'Fira Code',monospace; font-size:11px">margin-left:auto</span>, unboxed. Three controls, no more.</p>
+      </div>
+      <div>
+        <p style="margin:0 0 7px; font-size:12px; line-height:1.6; color:#9aa3b4">A separate bordered <span style="font-family:'Fira Code',monospace; font-size:11px">bg-elevated</span> bar above the panel, carrying five controls — the extra "HC only" toggle with its InfoTip, plus a Clear button.</p>
+        <p style="margin:0; font-size:12px; line-height:1.6; color:#4c8dff">→ Move the controls onto the tab row and unbox them. HC-only folds into the conviction select as a fourth option.</p>
+      </div>
+    </div>
+
+    <div style="display:grid; grid-template-columns:78px 1fr 1fr; gap:20px; padding:14px 0; border-top:1px solid #1e2634">
+      <div style="display:flex; flex-direction:column; gap:6px; align-items:flex-start">
+        <span style="font-family:'Fira Code',monospace; font-size:12px; font-weight:600; color:#eef1f6">T-13</span>
+        <span style="font-family:'Fira Code',monospace; font-size:11px; font-weight:600; color:#d29922; border:1px solid rgba(210,153,34,0.5); border-radius:3px; padding:1px 5px">DRIFT</span>
+      </div>
+      <div>
+        <div style="font-size:13px; font-weight:600; margin-bottom:5px">The caveat is split in two and lands at the bottom</div>
+        <p style="margin:0; font-size:12px; line-height:1.6; color:#9aa3b4">One 12px muted line directly under the toolbar and above the cards: the group's rationale, then the caveat, in the same sentence run. You read it before you read a score.</p>
+      </div>
+      <div>
+        <p style="margin:0 0 7px; font-size:12px; line-height:1.6; color:#9aa3b4">The rationale prints at the top of the tab panel; <span style="font-family:'Fira Code',monospace; font-size:11px">CAVEAT_LINE</span> prints through <span style="font-family:'Fira Code',monospace; font-size:11px">ReadThis</span> at the foot of the section, below the table. Printing it once was the fix — placement is the remainder.</p>
+        <p style="margin:0; font-size:12px; line-height:1.6; color:#4c8dff">→ Join them into one line above the cards.</p>
+      </div>
+    </div>
+
+    <div style="display:grid; grid-template-columns:78px 1fr 1fr; gap:20px; padding:14px 0; border-top:1px solid #1e2634">
+      <div style="display:flex; flex-direction:column; gap:6px; align-items:flex-start">
+        <span style="font-family:'Fira Code',monospace; font-size:12px; font-weight:600; color:#eef1f6">T-14</span>
+        <span style="font-family:'Fira Code',monospace; font-size:11px; font-weight:600; color:#f85149; border:1px solid rgba(248,81,73,0.4); border-radius:3px; padding:1px 5px">STRUCT</span>
+      </div>
+      <div>
+        <div style="font-size:13px; font-weight:600; margin-bottom:5px">Signal card hierarchy is inverted</div>
+        <p style="margin:0; font-size:12px; line-height:1.6; color:#9aa3b4">Ticker at 19px mono in <span style="font-family:'Fira Code',monospace; font-size:11px">--text</span> with the sector at 12px beneath it; the tier badge and <span style="font-family:'Fira Code',monospace; font-size:11px">0.78 score</span> stack at 12px on the right. The card's largest thing is the name.</p>
+      </div>
+      <div>
+        <p style="margin:0 0 7px; font-size:12px; line-height:1.6; color:#9aa3b4">Ticker is a 15px accent link inline with the sector; the score is 20px in a separate wrap row. The card's largest thing is a number the caveat line says not to read as one.</p>
+        <p style="margin:0; font-size:12px; line-height:1.6; color:#4c8dff">→ Ticker to <span style="font-family:'Fira Code',monospace; font-size:11px">text-headline</span> mono foreground, sector under it, badge + score stacked right at 12px.</p>
+      </div>
+    </div>
+
+    <div style="display:grid; grid-template-columns:78px 1fr 1fr; gap:20px; padding:14px 0; border-top:1px solid #1e2634">
+      <div style="display:flex; flex-direction:column; gap:6px; align-items:flex-start">
+        <span style="font-family:'Fira Code',monospace; font-size:12px; font-weight:600; color:#eef1f6">T-15</span>
+        <span style="font-family:'Fira Code',monospace; font-size:11px; font-weight:600; color:#d29922; border:1px solid rgba(210,153,34,0.5); border-radius:3px; padding:1px 5px">DRIFT</span>
+      </div>
+      <div>
+        <div style="font-size:13px; font-weight:600; margin-bottom:5px">Card body: five rows, in order</div>
+        <p style="margin:0; font-size:12px; line-height:1.6; color:#9aa3b4">Legs row (3 bars + <span style="font-family:'Fira Code',monospace; font-size:11px">sent · tech · fund</span> + 1D right-aligned) → a one-line reason at 12px in <span style="font-family:'Fira Code',monospace; font-size:11px">--text-2</span> → an E/S/T + R:R row above a 1px rule → the verb row.</p>
+      </div>
+      <div>
+        <p style="margin:0 0 7px; font-size:12px; line-height:1.6; color:#9aa3b4">Score, legs, return and flags all share one wrapping row; the E/S/T row has no rule above it; the reason line is catalyst text or nothing.</p>
+        <p style="margin:0; font-size:12px; line-height:1.6; color:#4c8dff">→ Split the rows and add the rule. The reason line has no feed behind it — either derive one sentence from the leg values or leave the row out; do not fill it with catalysts.</p>
+      </div>
+    </div>
+
+    <div style="display:grid; grid-template-columns:78px 1fr 1fr; gap:20px; padding:14px 0; border-top:1px solid #1e2634">
+      <div style="display:flex; flex-direction:column; gap:6px; align-items:flex-start">
+        <span style="font-family:'Fira Code',monospace; font-size:12px; font-weight:600; color:#eef1f6">T-16</span>
+        <span style="font-family:'Fira Code',monospace; font-size:11px; font-weight:600; color:#7d8698; border:1px solid #2c3648; border-radius:3px; padding:1px 5px">POLISH</span>
+      </div>
+      <div>
+        <div style="font-size:13px; font-weight:600; margin-bottom:5px">Table "Signal" cell is a badge</div>
+        <p style="margin:0; font-size:12px; line-height:1.6; color:#9aa3b4">Plain text — <span style="color:#9d7cf5">Standard long</span> — at 12px in <span style="font-family:'Fira Code',monospace; font-size:11px">--model</span>. In a 30-row table a badge per row is 30 boxes.</p>
+      </div>
+      <div>
+        <p style="margin:0 0 7px; font-size:12px; line-height:1.6; color:#9aa3b4">Renders <span style="font-family:'Fira Code',monospace; font-size:11px">&lt;Badge variant="tier"&gt;</span> in every row.</p>
+        <p style="margin:0; font-size:12px; line-height:1.6; color:#4c8dff">→ Badges on cards, bare model-coloured text in tables. Column tracks otherwise match the mock exactly.</p>
+      </div>
+    </div>
+  </div>
+
+  <div style="font-family:'Fira Code',monospace; font-size:11px; font-weight:500; letter-spacing:0.08em; text-transform:uppercase; color:#7d8698; margin:32px 0 0">Band 4 — rotation</div>
+  <div>
+    <div style="display:grid; grid-template-columns:78px 1fr 1fr; gap:20px; padding:14px 0; border-top:1px solid #2c3648; margin-top:8px">
+      <div style="display:flex; flex-direction:column; gap:6px; align-items:flex-start">
+        <span style="font-family:'Fira Code',monospace; font-size:12px; font-weight:600; color:#eef1f6">T-17</span>
+        <span style="font-family:'Fira Code',monospace; font-size:11px; font-weight:600; color:#d29922; border:1px solid rgba(210,153,34,0.5); border-radius:3px; padding:1px 5px">DRIFT</span>
+      </div>
+      <div>
+        <div style="font-size:13px; font-weight:600; margin-bottom:5px">Eleven cells in one row, keyed by ETF</div>
+        <p style="margin:0; font-size:12px; line-height:1.6; color:#9aa3b4">A single <span style="font-family:'Fira Code',monospace; font-size:11px">repeat(11,1fr)</span> row, 4px gaps, each cell an ETF ticker over its value on a heat fill. It is a strip you take in at a glance.</p>
+      </div>
+      <div>
+        <p style="margin:0 0 7px; font-size:12px; line-height:1.6; color:#9aa3b4"><span style="font-family:'Fira Code',monospace; font-size:11px; color:#c8cede">today/SectorStrip.tsx</span> wraps to 3/4/6 columns with two-line industry names and a quadrant dot — two or three rows of blocks, not a strip.</p>
+        <p style="margin:0; font-size:12px; line-height:1.6; color:#4c8dff">→ Fixed 11-column grid, ETF ticker as the label, industry name on hover. Keep the quadrant dot.</p>
+      </div>
+    </div>
+
+    <div style="display:grid; grid-template-columns:78px 1fr 1fr; gap:20px; padding:14px 0; border-top:1px solid #1e2634; border-bottom:1px solid #1e2634">
+      <div style="display:flex; flex-direction:column; gap:6px; align-items:flex-start">
+        <span style="font-family:'Fira Code',monospace; font-size:12px; font-weight:600; color:#eef1f6">T-18</span>
+        <span style="font-family:'Fira Code',monospace; font-size:11px; font-weight:600; color:#7d8698; border:1px solid #2c3648; border-radius:3px; padding:1px 5px">POLISH</span>
+      </div>
+      <div>
+        <div style="font-size:13px; font-weight:600; margin-bottom:5px">The whole strip is one link</div>
+        <p style="margin:0; font-size:12px; line-height:1.6; color:#9aa3b4">The band is a single anchor to <span style="font-family:'Fira Code',monospace; font-size:11px">/rotation</span> with an eyebrow and <span style="color:#4c8dff">Full RRG →</span>.</p>
+      </div>
+      <div>
+        <p style="margin:0 0 7px; font-size:12px; line-height:1.6; color:#9aa3b4">Header uses a 15px title plus a summary sentence; each cell is its own link to the same destination — twelve tab stops for one navigation.</p>
+        <p style="margin:0; font-size:12px; line-height:1.6; color:#4c8dff">→ One link around the band, or per-cell links that deep-link to that sector.</p>
+      </div>
+    </div>
+  </div>
+
+  <div style="display:flex; align-items:baseline; gap:12px; margin:52px 0 6px">
+    <span style="font-family:'Fira Code',monospace; font-size:11px; font-weight:500; letter-spacing:0.1em; text-transform:uppercase; color:#7d8698">Section C · screen 1b</span>
+    <h2 style="margin:0; font-size:20px; font-weight:600; letter-spacing:-0.01em">Ticker</h2>
+    <span style="font-size:13px; color:#7d8698">13 deltas · the widest gap in the app</span>
+    <span style="flex:1; height:1px; background:#1e2634"></span>
+  </div>
+  <p style="margin:8px 0 0; max-width:860px; font-size:13px; line-height:1.6; color:#9aa3b4">The pieces exist — <span style="font-family:'Fira Code',monospace; font-size:12px">TickerNav</span>, <span style="font-family:'Fira Code',monospace; font-size:12px">SectionRail</span>, <span style="font-family:'Fira Code',monospace; font-size:12px">ActionBar</span>, the cohort read, the HC gloss, the single earnings source. What did not happen is the header's <span style="color:#c8cede">reconstruction</span>: the mock replaces a wrapping flex row with a three-band card, and that is still a wrapping flex row.</p>
+
+  <div style="margin-top:18px">
+
+    <div style="display:grid; grid-template-columns:78px 1fr 1fr; gap:20px; padding:14px 0; border-top:1px solid #2c3648">
+      <div style="display:flex; flex-direction:column; gap:6px; align-items:flex-start">
+        <span style="font-family:'Fira Code',monospace; font-size:12px; font-weight:600; color:#eef1f6">K-01</span>
+        <span style="font-family:'Fira Code',monospace; font-size:11px; font-weight:600; color:#f85149; border:1px solid rgba(248,81,73,0.4); border-radius:3px; padding:1px 5px">STRUCT</span>
+      </div>
+      <div>
+        <div style="font-size:13px; font-weight:600; margin-bottom:5px">The header is three bands, not one row</div>
+        <p style="margin:0; font-size:12px; line-height:1.6; color:#9aa3b4">One card on <span style="font-family:'Fira Code',monospace; font-size:11px">#0c1017</span> with a <span style="font-family:'Fira Code',monospace; font-size:11px">#2c3648</span> border, holding: a <span style="font-family:'Fira Code',monospace; font-size:11px">1fr 320px 300px</span> zone grid → a rule → the action row on <span style="font-family:'Fira Code',monospace; font-size:11px">#12171f</span> → a rule → the three-column track record. Fixed zones, so the layout never reflows on a longer company name.</p>
+      </div>
+      <div>
+        <p style="margin:0 0 7px; font-size:12px; line-height:1.6; color:#9aa3b4"><span style="font-family:'Fira Code',monospace; font-size:11px; color:#c8cede">ticker/Header.tsx</span> is a <span style="font-family:'Fira Code',monospace; font-size:11px">flex-wrap</span> row with <span style="font-family:'Fira Code',monospace; font-size:11px">border-l</span> dividers, the ActionBar pushed right inside the same row, and the track record as three text lines below it. The comment in the file admits the verdict zone wraps to a second line on a laptop.</p>
+        <p style="margin:0; font-size:12px; line-height:1.6; color:#4c8dff">→ Rebuild as the three-band card. This one change carries K-02 through K-08 with it.</p>
+      </div>
+    </div>
+
+    <div style="display:grid; grid-template-columns:78px 1fr 1fr; gap:20px; padding:14px 0; border-top:1px solid #1e2634">
+      <div style="display:flex; flex-direction:column; gap:6px; align-items:flex-start">
+        <span style="font-family:'Fira Code',monospace; font-size:12px; font-weight:600; color:#eef1f6">K-02</span>
+        <span style="font-family:'Fira Code',monospace; font-size:11px; font-weight:600; color:#f85149; border:1px solid rgba(248,81,73,0.4); border-radius:3px; padding:1px 5px">STRUCT</span>
+      </div>
+      <div>
+        <div style="font-size:13px; font-weight:600; margin-bottom:5px">The price is 15px on a page about the price</div>
+        <p style="margin:0; font-size:12px; line-height:1.6; color:#9aa3b4">Last at <span style="font-family:'Fira Code',monospace; font-size:11px">display</span> — 28px mono, the same size as the symbol — then change % at 15px and the absolute change at 13px, all on one baseline.</p>
+      </div>
+      <div>
+        <p style="margin:0 0 7px; font-size:12px; line-height:1.6; color:#9aa3b4">Rendered at <span style="font-family:'Fira Code',monospace; font-size:11px">text-title</span> (15px) with change % at 13px and no absolute change. The symbol is 28px and the price is half that.</p>
+        <p style="margin:0; font-size:12px; line-height:1.6; color:#4c8dff">→ Price to <span style="font-family:'Fira Code',monospace; font-size:11px">text-display</span>; add the absolute move.</p>
+      </div>
+    </div>
+
+    <div style="display:grid; grid-template-columns:78px 1fr 1fr; gap:20px; padding:14px 0; border-top:1px solid #1e2634">
+      <div style="display:flex; flex-direction:column; gap:6px; align-items:flex-start">
+        <span style="font-family:'Fira Code',monospace; font-size:12px; font-weight:600; color:#eef1f6">K-03</span>
+        <span style="font-family:'Fira Code',monospace; font-size:11px; font-weight:600; color:#f85149; border:1px solid rgba(248,81,73,0.4); border-radius:3px; padding:1px 5px">STRUCT</span>
+      </div>
+      <div>
+        <div style="font-size:13px; font-weight:600; margin-bottom:5px">No day-range bar, no volume bar</div>
+        <p style="margin:0; font-size:12px; line-height:1.6; color:#9aa3b4">A 4px gradient track with a 2px spot marker at the day's position, low / <span style="color:#9aa3b4">day range</span> / high under it; then <span style="font-family:'Fira Code',monospace; font-size:11px">Vol 48.2M · 0.78× ADV</span> with a 40px proportional bar.</p>
+      </div>
+      <div>
+        <p style="margin:0 0 7px; font-size:12px; line-height:1.6; color:#9aa3b4">Both are text: <span style="font-family:'Fira Code',monospace; font-size:11px">day 331.02–338.90</span> and <span style="font-family:'Fira Code',monospace; font-size:11px">vol 48.2M (0.8× ADV)</span>. A 52-week range with a percent-of-range figure is there too — the mock's price zone has no 52-week line at all.</p>
+        <p style="margin:0; font-size:12px; line-height:1.6; color:#4c8dff">→ Add both bars. Move 52-week out of the header, or accept it as an addition and say so.</p>
+      </div>
+    </div>
+
+    <div style="display:grid; grid-template-columns:78px 1fr 1fr; gap:20px; padding:14px 0; border-top:1px solid #1e2634">
+      <div style="display:flex; flex-direction:column; gap:6px; align-items:flex-start">
+        <span style="font-family:'Fira Code',monospace; font-size:12px; font-weight:600; color:#eef1f6">K-04</span>
+        <span style="font-family:'Fira Code',monospace; font-size:11px; font-weight:600; color:#d29922; border:1px solid rgba(210,153,34,0.5); border-radius:3px; padding:1px 5px">DRIFT</span>
+      </div>
+      <div>
+        <div style="font-size:13px; font-weight:600; margin-bottom:5px">The verdict zone is missing its two lines</div>
+        <p style="margin:0; font-size:12px; line-height:1.6; color:#9aa3b4">Under the badge row: <span style="font-family:'Fira Code',monospace; font-size:11px; color:#9d7cf5">score 0.74 <span style="color:#7d8698">· agreement 81%</span></span>, then <span style="color:#c8cede">"Model output, not a return forecast."</span> with <span style="color:#9aa3b4; border-bottom:1px dotted #5f6878">What HC means →</span> as a gloss.</p>
+      </div>
+      <div>
+        <p style="margin:0 0 7px; font-size:12px; line-height:1.6; color:#9aa3b4">Neither line exists in the header. The HC gloss is on the chip ✓, but the score and agreement only appear much further down, inside the Why panel's title actions.</p>
+        <p style="margin:0; font-size:12px; line-height:1.6; color:#4c8dff">→ Lift score + agreement into the verdict zone; add the one-line disclaimer.</p>
+      </div>
+    </div>
+
+    <div style="display:grid; grid-template-columns:78px 1fr 1fr; gap:20px; padding:14px 0; border-top:1px solid #1e2634">
+      <div style="display:flex; flex-direction:column; gap:6px; align-items:flex-start">
+        <span style="font-family:'Fira Code',monospace; font-size:12px; font-weight:600; color:#eef1f6">K-05</span>
+        <span style="font-family:'Fira Code',monospace; font-size:11px; font-weight:600; color:#f85149; border:1px solid rgba(248,81,73,0.4); border-radius:3px; padding:1px 5px">STRUCT</span>
+      </div>
+      <div>
+        <div style="font-size:13px; font-weight:600; margin-bottom:5px">Track record is three lines, not three columns</div>
+        <p style="margin:0; font-size:12px; line-height:1.6; color:#9aa3b4">An equal three-column grid with 1px dividers: <span style="color:#c8cede">THIS CALL</span> (date, entry → mark, then the % and days) / <span style="color:#c8cede">COHORT</span> (median peak, at ~7 days) / <span style="color:#c8cede">READ</span> (the comparison in prose). Each is an eyebrow over two lines.</p>
+      </div>
+      <div>
+        <p style="margin:0 0 7px; font-size:12px; line-height:1.6; color:#9aa3b4">Three stacked paragraphs with 78px inline labels. The content is right — <span style="font-family:'Fira Code',monospace; font-size:11px">cohortRead()</span> writes the comparison properly — but it reads as a footnote instead of a band.</p>
+        <p style="margin:0; font-size:12px; line-height:1.6; color:#4c8dff">→ Same data, three columns, dividers, eyebrow headings.</p>
+      </div>
+    </div>
+
+    <div style="display:grid; grid-template-columns:78px 1fr 1fr; gap:20px; padding:14px 0; border-top:1px solid #1e2634">
+      <div style="display:flex; flex-direction:column; gap:6px; align-items:flex-start">
+        <span style="font-family:'Fira Code',monospace; font-size:12px; font-weight:600; color:#eef1f6">K-06</span>
+        <span style="font-family:'Fira Code',monospace; font-size:11px; font-weight:600; color:#d29922; border:1px solid rgba(210,153,34,0.5); border-radius:3px; padding:1px 5px">DRIFT</span>
+      </div>
+      <div>
+        <div style="font-size:13px; font-weight:600; margin-bottom:5px">The action row is not a row</div>
+        <p style="margin:0; font-size:12px; line-height:1.6; color:#9aa3b4">Its own band on <span style="font-family:'Fira Code',monospace; font-size:11px">#12171f</span> above a rule: five verbs left, and the earnings chip right-aligned reading <span style="color:#d29922">Earnings today · after close</span> — the session, not a countdown.</p>
+      </div>
+      <div>
+        <p style="margin:0 0 7px; font-size:12px; line-height:1.6; color:#9aa3b4">ActionBar floats at <span style="font-family:'Fira Code',monospace; font-size:11px">ml-auto</span> in the zone row, so on a narrow window it wraps under the verdict. Earnings prints inside the verdict zone as "earnings today · 31 Jul".</p>
+        <p style="margin:0; font-size:12px; line-height:1.6; color:#4c8dff">→ Break the action bar out as its own band and move the earnings chip to its right end.</p>
+      </div>
+    </div>
+
+    <div style="display:grid; grid-template-columns:78px 1fr 1fr; gap:20px; padding:14px 0; border-top:1px solid #1e2634">
+      <div style="display:flex; flex-direction:column; gap:6px; align-items:flex-start">
+        <span style="font-family:'Fira Code',monospace; font-size:12px; font-weight:600; color:#eef1f6">K-07</span>
+        <span style="font-family:'Fira Code',monospace; font-size:11px; font-weight:600; color:#d29922; border:1px solid rgba(210,153,34,0.5); border-radius:3px; padding:1px 5px">DRIFT</span>
+      </div>
+      <div>
+        <div style="font-size:13px; font-weight:600; margin-bottom:5px"><span style="font-family:'Fira Code',monospace; font-size:12px">CatalystStrip</span> should not survive the header</div>
+        <p style="margin:0; font-size:12px; line-height:1.6; color:#9aa3b4">The mock has no strip under the header. Its one fact — the next earnings — is the action row's chip, and the rest lives in the Catalysts card.</p>
+      </div>
+      <div>
+        <p style="margin:0 0 7px; font-size:12px; line-height:1.6; color:#9aa3b4">Still rendered inside the header section. The double-earnings contradiction was fixed at the data layer (one SWR key, one basis) but the second surface is still on screen.</p>
+        <p style="margin:0; font-size:12px; line-height:1.6; color:#4c8dff">→ Delete it; fold anything it carries that the Catalysts card doesn't into that card.</p>
+      </div>
+    </div>
+
+    <div style="display:grid; grid-template-columns:78px 1fr 1fr; gap:20px; padding:14px 0; border-top:1px solid #1e2634">
+      <div style="display:flex; flex-direction:column; gap:6px; align-items:flex-start">
+        <span style="font-family:'Fira Code',monospace; font-size:12px; font-weight:600; color:#eef1f6">K-08</span>
+        <span style="font-family:'Fira Code',monospace; font-size:11px; font-weight:600; color:#f85149; border:1px solid rgba(248,81,73,0.4); border-radius:3px; padding:1px 5px">STRUCT</span>
+      </div>
+      <div>
+        <div style="font-size:13px; font-weight:600; margin-bottom:5px">Levels belong on the chart</div>
+        <p style="margin:0; font-size:12px; line-height:1.6; color:#9aa3b4">Entry, stop and target are drawn as dashed price lines with right-edge labels — <span style="color:#3fb950">T 352.00</span>, <span style="color:#eef1f6">333.43</span>, <span style="color:#4c8dff">E 287.51</span>, <span style="color:#f85149">S 271.00</span> — and a read-this line under the chart says they're indicative.</p>
+      </div>
+      <div>
+        <p style="margin:0 0 7px; font-size:12px; line-height:1.6; color:#9aa3b4"><span style="font-family:'Fira Code',monospace; font-size:11px">LevelsCard</span> still renders as the first card in the right column, listing the same three numbers beside the chart that should be carrying them.</p>
+        <p style="margin:0; font-size:12px; line-height:1.6; color:#4c8dff">→ Draw the price lines in <span style="font-family:'Fira Code',monospace; font-size:11px">CandleChart</span> (lightweight-charts price lines), retire the card.</p>
+      </div>
+    </div>
+
+    <div style="display:grid; grid-template-columns:78px 1fr 1fr; gap:20px; padding:14px 0; border-top:1px solid #1e2634">
+      <div style="display:flex; flex-direction:column; gap:6px; align-items:flex-start">
+        <span style="font-family:'Fira Code',monospace; font-size:12px; font-weight:600; color:#eef1f6">K-09</span>
+        <span style="font-family:'Fira Code',monospace; font-size:11px; font-weight:600; color:#f85149; border:1px solid rgba(248,81,73,0.4); border-radius:3px; padding:1px 5px">STRUCT</span>
+      </div>
+      <div>
+        <div style="font-size:13px; font-weight:600; margin-bottom:5px">"Why this is flagged" is a different component</div>
+        <p style="margin:0; font-size:12px; line-height:1.6; color:#9aa3b4">Three rows. Each is a 44px eyebrow (<span style="font-family:'Fira Code',monospace; font-size:11px">SENT</span> / <span style="font-family:'Fira Code',monospace; font-size:11px">TECH</span> / <span style="font-family:'Fira Code',monospace; font-size:11px">FUND</span>), three bars, and a plain-English sentence naming the evidence — "142 mentions across 38 accounts, up 2.1× on the 20-day". A read-this foot explains that two green and one amber is what "Standard long, not high conviction" looks like.</p>
+      </div>
+      <div>
+        <p style="margin:0 0 7px; font-size:12px; line-height:1.6; color:#9aa3b4"><span style="font-family:'Fira Code',monospace; font-size:11px; color:#c8cede">ticker/WhyPanel.tsx</span> is 424 lines of ensemble telemetry: a combo string, per-family vote bars with leave-one-out attribution, n_eff / regime / ADX chips, and a 70-agent vote accordion — all at 11px. It is the densest surface in the product and the mock replaced it with three sentences.</p>
+        <p style="margin:0; font-size:12px; line-height:1.6; color:#4c8dff">→ Lead with the three-leg summary. Keep the ensemble detail, but behind a "How the ensemble voted" disclosure below it — it is diagnostics, not the answer.</p>
+      </div>
+    </div>
+
+    <div style="display:grid; grid-template-columns:78px 1fr 1fr; gap:20px; padding:14px 0; border-top:1px solid #1e2634">
+      <div style="display:flex; flex-direction:column; gap:6px; align-items:flex-start">
+        <span style="font-family:'Fira Code',monospace; font-size:12px; font-weight:600; color:#eef1f6">K-10</span>
+        <span style="font-family:'Fira Code',monospace; font-size:11px; font-weight:600; color:#d29922; border:1px solid rgba(210,153,34,0.5); border-radius:3px; padding:1px 5px">DRIFT</span>
+      </div>
+      <div>
+        <div style="font-size:13px; font-weight:600; margin-bottom:5px">Right column is seven panels; the mock has two</div>
+        <p style="margin:0; font-size:12px; line-height:1.6; color:#9aa3b4">Why this is flagged, then Catalysts. That's the column.</p>
+      </div>
+      <div>
+        <p style="margin:0 0 7px; font-size:12px; line-height:1.6; color:#9aa3b4">Levels → Why → Catalysts → News → Sentiment → History → AI. Five of those are below the fold on a 1440×900 window, and the icon rail is the only thing that admits they exist.</p>
+        <p style="margin:0; font-size:12px; line-height:1.6; color:#4c8dff">→ The mock is a design for the top of the page, not a deletion order. Decide explicitly which of News / Sentiment / History / AI stay, and give the survivors a second band below the fold rather than one long column.</p>
+      </div>
+    </div>
+
+    <div style="display:grid; grid-template-columns:78px 1fr 1fr; gap:20px; padding:14px 0; border-top:1px solid #1e2634">
+      <div style="display:flex; flex-direction:column; gap:6px; align-items:flex-start">
+        <span style="font-family:'Fira Code',monospace; font-size:12px; font-weight:600; color:#eef1f6">K-11</span>
+        <span style="font-family:'Fira Code',monospace; font-size:11px; font-weight:600; color:#d29922; border:1px solid rgba(210,153,34,0.5); border-radius:3px; padding:1px 5px">DRIFT</span>
+      </div>
+      <div>
+        <div style="font-size:13px; font-weight:600; margin-bottom:5px">Chart card title and period control</div>
+        <p style="margin:0; font-size:12px; line-height:1.6; color:#9aa3b4">Titled <span style="color:#c8cede">Chart</span>, with a four-way <span style="font-family:'Fira Code',monospace; font-size:11px">1D / 1M / 6M / 2Y</span> segmented control in the card header and a read-this line at the foot.</p>
+      </div>
+      <div>
+        <p style="margin:0 0 7px; font-size:12px; line-height:1.6; color:#9aa3b4">Titled "Price & signals"; the period switch is inside <span style="font-family:'Fira Code',monospace; font-size:11px">TickerChartSection</span> in its own idiom, and <span style="font-family:'Fira Code',monospace; font-size:11px">ChartInfoStrip</span> sits under the chart where the read-this line goes.</p>
+        <p style="margin:0; font-size:12px; line-height:1.6; color:#4c8dff">→ Rename, move the period control into the panel header via <span style="font-family:'Fira Code',monospace; font-size:11px">actions</span>, and let ReadThis own the foot.</p>
+      </div>
+    </div>
+
+    <div style="display:grid; grid-template-columns:78px 1fr 1fr; gap:20px; padding:14px 0; border-top:1px solid #1e2634">
+      <div style="display:flex; flex-direction:column; gap:6px; align-items:flex-start">
+        <span style="font-family:'Fira Code',monospace; font-size:12px; font-weight:600; color:#eef1f6">K-12</span>
+        <span style="font-family:'Fira Code',monospace; font-size:11px; font-weight:600; color:#7d8698; border:1px solid #2c3648; border-radius:3px; padding:1px 5px">POLISH</span>
+      </div>
+      <div>
+        <div style="font-size:13px; font-weight:600; margin-bottom:5px">Identity zone typography</div>
+        <p style="margin:0; font-size:12px; line-height:1.6; color:#9aa3b4">Company name at 15px on the symbol's baseline; sector · industry · market cap on a second line at 12px sans with <span style="font-family:'Fira Code',monospace; font-size:11px">#2c3648</span> middots, cap in mono.</p>
+      </div>
+      <div>
+        <p style="margin:0 0 7px; font-size:12px; line-height:1.6; color:#9aa3b4">All of it on one 13px mono line below the symbol, with a "mkt cap" label the mock drops. Industry is dimmed to <span style="font-family:'Fira Code',monospace; font-size:11px">--muted-2</span>.</p>
+        <p style="margin:0; font-size:12px; line-height:1.6; color:#4c8dff">→ Name up to the symbol's baseline; the meta line to sans; drop the label.</p>
+      </div>
+    </div>
+
+    <div style="display:grid; grid-template-columns:78px 1fr 1fr; gap:20px; padding:14px 0; border-top:1px solid #1e2634; border-bottom:1px solid #1e2634">
+      <div style="display:flex; flex-direction:column; gap:6px; align-items:flex-start">
+        <span style="font-family:'Fira Code',monospace; font-size:12px; font-weight:600; color:#eef1f6">K-13</span>
+        <span style="font-family:'Fira Code',monospace; font-size:11px; font-weight:600; color:#7d8698; border:1px solid #2c3648; border-radius:3px; padding:1px 5px">POLISH</span>
+      </div>
+      <div>
+        <div style="font-size:13px; font-weight:600; margin-bottom:5px">Catalysts card header</div>
+        <p style="margin:0; font-size:12px; line-height:1.6; color:#9aa3b4">Carries a <span style="color:#4c8dff">Calendar →</span> link, and each row is a 58px time slot (<span style="color:#d29922">Tonight</span> / <span style="font-family:'Fira Code',monospace; font-size:11px">23 Jul</span>) against a sentence.</p>
+      </div>
+      <div>
+        <p style="margin:0 0 7px; font-size:12px; line-height:1.6; color:#9aa3b4">Verify against <span style="font-family:'Fira Code',monospace; font-size:11px">ticker/CatalystsCard.tsx</span> — the cross-link to <span style="font-family:'Fira Code',monospace; font-size:11px">/calendar</span> is the part most likely missing, since the calendar route arrived after this card.</p>
+        <p style="margin:0; font-size:12px; line-height:1.6; color:#4c8dff">→ Add the link; align the time column to 58px.</p>
+      </div>
+    </div>
+  </div>
+
+  <div style="display:flex; align-items:baseline; gap:12px; margin:52px 0 6px">
+    <span style="font-family:'Fira Code',monospace; font-size:11px; font-weight:500; letter-spacing:0.1em; text-transform:uppercase; color:#7d8698">Section D</span>
+    <h2 style="margin:0; font-size:20px; font-weight:600; letter-spacing:-0.01em">Shell and rails</h2>
+    <span style="font-size:13px; color:#7d8698">8 deltas · mostly conformant</span>
+    <span style="flex:1; height:1px; background:#1e2634"></span>
+  </div>
+  <p style="margin:8px 0 0; max-width:860px; font-size:13px; line-height:1.6; color:#9aa3b4">The frame is the best-converted part of the app. Nav grouping, the 36px collapse strips, the non-scrolling rail footer, the hour-grouped news feed, RankText in What's Next, the single market clock — all shipped. What's left is tone.</p>
+
+  <div style="margin-top:18px">
+
+    <div style="display:grid; grid-template-columns:78px 1fr 1fr; gap:20px; padding:14px 0; border-top:1px solid #2c3648">
+      <div style="display:flex; flex-direction:column; gap:6px; align-items:flex-start">
+        <span style="font-family:'Fira Code',monospace; font-size:12px; font-weight:600; color:#eef1f6">R-01</span>
+        <span style="font-family:'Fira Code',monospace; font-size:11px; font-weight:600; color:#d29922; border:1px solid rgba(210,153,34,0.5); border-radius:3px; padding:1px 5px">DRIFT</span>
+      </div>
+      <div>
+        <div style="font-size:13px; font-weight:600; margin-bottom:5px">The US Equity badge is the wrong colour</div>
+        <p style="margin:0; font-size:12px; line-height:1.6; color:#9aa3b4"><span style="color:#3fb950; background:rgba(63,185,80,0.12); border-radius:3px; padding:1px 5px; font-family:'Fira Code',monospace; font-size:11px">OPEN</span> — green on a green tint. Open is a state, and green is what state reads as everywhere else in the rail.</p>
+      </div>
+      <div>
+        <p style="margin:0 0 7px; font-size:12px; line-height:1.6; color:#9aa3b4"><span style="font-family:'Fira Code',monospace; font-size:11px">EquityBadge</span> renders four accent-tinted variants (pre / regular / after / closed) so the open market is blue — the same blue as every link on the page.</p>
+        <p style="margin:0; font-size:12px; line-height:1.6; color:#4c8dff">→ Green for open, muted for pre/after, amber for closed. Accent stays interactive-only.</p>
+      </div>
+    </div>
+
+    <div style="display:grid; grid-template-columns:78px 1fr 1fr; gap:20px; padding:14px 0; border-top:1px solid #1e2634">
+      <div style="display:flex; flex-direction:column; gap:6px; align-items:flex-start">
+        <span style="font-family:'Fira Code',monospace; font-size:12px; font-weight:600; color:#eef1f6">R-02</span>
+        <span style="font-family:'Fira Code',monospace; font-size:11px; font-weight:600; color:#7d8698; border:1px solid #2c3648; border-radius:3px; padding:1px 5px">POLISH</span>
+      </div>
+      <div>
+        <div style="font-size:13px; font-weight:600; margin-bottom:5px">The FX chip</div>
+        <p style="margin:0; font-size:12px; line-height:1.6; color:#9aa3b4"><span style="color:#2dd4bf; background:rgba(45,212,191,0.12); border-radius:3px; padding:1px 5px; font-family:'Fira Code',monospace; font-size:11px">LDN/NY</span> — teal on a teal tint, the session names only.</p>
+      </div>
+      <div>
+        <p style="margin:0 0 7px; font-size:12px; line-height:1.6; color:#9aa3b4"><span style="font-family:'Fira Code',monospace; font-size:11px">FX · LDN·NY</span> in muted on elevated. The "FX ·" prefix repeats the block header two words away.</p>
+        <p style="margin:0; font-size:12px; line-height:1.6; color:#4c8dff">→ Drop the prefix, use teal for an overlap and muted for a single session.</p>
+      </div>
+    </div>
+
+    <div style="display:grid; grid-template-columns:78px 1fr 1fr; gap:20px; padding:14px 0; border-top:1px solid #1e2634">
+      <div style="display:flex; flex-direction:column; gap:6px; align-items:flex-start">
+        <span style="font-family:'Fira Code',monospace; font-size:12px; font-weight:600; color:#eef1f6">R-03</span>
+        <span style="font-family:'Fira Code',monospace; font-size:11px; font-weight:600; color:#d29922; border:1px solid rgba(210,153,34,0.5); border-radius:3px; padding:1px 5px">DRIFT</span>
+      </div>
+      <div>
+        <div style="font-size:13px; font-weight:600; margin-bottom:5px">What's Next header and row shape</div>
+        <p style="margin:0; font-size:12px; line-height:1.6; color:#9aa3b4">Header carries a <span style="color:#4c8dff">calendar ›</span> link on the right. Rows are rank → name → time, with the day taking the time slot for anything not today, and today's row on a faint accent tint.</p>
+      </div>
+      <div>
+        <p style="margin:0 0 7px; font-size:12px; line-height:1.6; color:#9aa3b4">Header's right slot says "impact" — a column label for a column that isn't there. Rows carry rank → day → name → time, so a Friday event prints both "Fri" and "08:30" in a 208px rail.</p>
+        <p style="margin:0; font-size:12px; line-height:1.6; color:#4c8dff">→ Move the link into the header, collapse day and time into one slot.</p>
+      </div>
+    </div>
+
+    <div style="display:grid; grid-template-columns:78px 1fr 1fr; gap:20px; padding:14px 0; border-top:1px solid #1e2634">
+      <div style="display:flex; flex-direction:column; gap:6px; align-items:flex-start">
+        <span style="font-family:'Fira Code',monospace; font-size:12px; font-weight:600; color:#eef1f6">R-04</span>
+        <span style="font-family:'Fira Code',monospace; font-size:11px; font-weight:600; color:#7d8698; border:1px solid #2c3648; border-radius:3px; padding:1px 5px">POLISH</span>
+      </div>
+      <div>
+        <div style="font-size:13px; font-weight:600; margin-bottom:5px">News rows print the clock, not the age</div>
+        <p style="margin:0; font-size:12px; line-height:1.6; color:#9aa3b4"><span style="font-family:'Fira Code',monospace; font-size:11px">09:31 · Reuters</span> — an absolute time and a readable source, under a <span style="color:#f85149">BREAKING</span> flag when it applies.</p>
+      </div>
+      <div>
+        <p style="margin:0 0 7px; font-size:12px; line-height:1.6; color:#9aa3b4"><span style="font-family:'Fira Code',monospace; font-size:11px">14m · reu</span> — relative age and a four-letter code. Inside an hour-grouped feed the relative age is the one thing the group header already told you.</p>
+        <p style="margin:0; font-size:12px; line-height:1.6; color:#4c8dff">→ Absolute ET time, source spelled out (the codes were for a 260px rail that is now 288px).</p>
+      </div>
+    </div>
+
+    <div style="display:grid; grid-template-columns:78px 1fr 1fr; gap:20px; padding:14px 0; border-top:1px solid #1e2634">
+      <div style="display:flex; flex-direction:column; gap:6px; align-items:flex-start">
+        <span style="font-family:'Fira Code',monospace; font-size:12px; font-weight:600; color:#eef1f6">R-05</span>
+        <span style="font-family:'Fira Code',monospace; font-size:11px; font-weight:600; color:#7d8698; border:1px solid #2c3648; border-radius:3px; padding:1px 5px">POLISH</span>
+      </div>
+      <div>
+        <div style="font-size:13px; font-weight:600; margin-bottom:5px">News rows carry an earnings chip</div>
+        <p style="margin:0; font-size:12px; line-height:1.6; color:#9aa3b4">Three chip kinds: ticker (accent), <span style="color:#9d7cf5">pinned</span> (model), <span style="color:#d29922">earnings</span> (amber) — so a headline about a name reporting tonight is visibly different.</p>
+      </div>
+      <div>
+        <p style="margin:0 0 7px; font-size:12px; line-height:1.6; color:#9aa3b4">Ticker and pinned only.</p>
+        <p style="margin:0; font-size:12px; line-height:1.6; color:#4c8dff">→ Add the earnings chip; the calendar hook is already in the rail for the collapsed glyphs.</p>
+      </div>
+    </div>
+
+    <div style="display:grid; grid-template-columns:78px 1fr 1fr; gap:20px; padding:14px 0; border-top:1px solid #1e2634">
+      <div style="display:flex; flex-direction:column; gap:6px; align-items:flex-start">
+        <span style="font-family:'Fira Code',monospace; font-size:12px; font-weight:600; color:#eef1f6">R-06</span>
+        <span style="font-family:'Fira Code',monospace; font-size:11px; font-weight:600; color:#7d8698; border:1px solid #2c3648; border-radius:3px; padding:1px 5px">POLISH</span>
+      </div>
+      <div>
+        <div style="font-size:13px; font-weight:600; margin-bottom:5px">Hour headers read as ranges</div>
+        <p style="margin:0; font-size:12px; line-height:1.6; color:#9aa3b4"><span style="font-family:'Fira Code',monospace; font-size:11px">09:00 — NOW</span>, then <span style="font-family:'Fira Code',monospace; font-size:11px">08:00 — 09:00</span>. The current hour is named as current.</p>
+      </div>
+      <div>
+        <p style="margin:0 0 7px; font-size:12px; line-height:1.6; color:#9aa3b4">Bare hour marks: <span style="font-family:'Fira Code',monospace; font-size:11px">09:00</span>, <span style="font-family:'Fira Code',monospace; font-size:11px">08:00</span>.</p>
+        <p style="margin:0; font-size:12px; line-height:1.6; color:#4c8dff">→ Render the range; label the newest bucket "— now".</p>
+      </div>
+    </div>
+
+    <div style="display:grid; grid-template-columns:78px 1fr 1fr; gap:20px; padding:14px 0; border-top:1px solid #1e2634">
+      <div style="display:flex; flex-direction:column; gap:6px; align-items:flex-start">
+        <span style="font-family:'Fira Code',monospace; font-size:12px; font-weight:600; color:#eef1f6">R-07</span>
+        <span style="font-family:'Fira Code',monospace; font-size:11px; font-weight:600; color:#7d8698; border:1px solid #2c3648; border-radius:3px; padding:1px 5px">POLISH</span>
+      </div>
+      <div>
+        <div style="font-size:13px; font-weight:600; margin-bottom:5px">Left rail block separators</div>
+        <p style="margin:0; font-size:12px; line-height:1.6; color:#9aa3b4">A <span style="font-family:'Fira Code',monospace; font-size:11px">#2c3648</span> rule with 4px of air above each block; rows at a flat 27px; label 42px, value right-aligned, change in a fixed 54px slot.</p>
+      </div>
+      <div>
+        <p style="margin:0 0 7px; font-size:12px; line-height:1.6; color:#9aa3b4">Matches on the separator and header height. Worth measuring <span style="font-family:'Fira Code',monospace; font-size:11px">QuoteRow</span> against the 42 / flex / 54 tracks — a ragged change column is the most visible thing in a quote rail.</p>
+        <p style="margin:0; font-size:12px; line-height:1.6; color:#4c8dff">→ Fix the three tracks in <span style="font-family:'Fira Code',monospace; font-size:11px">QuoteRow</span>; forex gets 56 / flex / 52.</p>
+      </div>
+    </div>
+
+    <div style="display:grid; grid-template-columns:78px 1fr 1fr; gap:20px; padding:14px 0; border-top:1px solid #1e2634; border-bottom:1px solid #1e2634">
+      <div style="display:flex; flex-direction:column; gap:6px; align-items:flex-start">
+        <span style="font-family:'Fira Code',monospace; font-size:12px; font-weight:600; color:#eef1f6">R-08</span>
+        <span style="font-family:'Fira Code',monospace; font-size:11px; font-weight:600; color:#7d8698; border:1px solid #2c3648; border-radius:3px; padding:1px 5px">POLISH</span>
+      </div>
+      <div>
+        <div style="font-size:13px; font-weight:600; margin-bottom:5px">Macro gauges header link</div>
+        <p style="margin:0; font-size:12px; line-height:1.6; color:#9aa3b4">Header is <span style="color:#c8cede">MACRO</span> with a <span style="color:#4c8dff">1d ›</span> link; each gauge is a label/value row over a 4px centre-zero track with a <span style="font-family:'Fira Code',monospace; font-size:11px">#2c3648</span> tick at 50%.</p>
+      </div>
+      <div>
+        <p style="margin:0 0 7px; font-size:12px; line-height:1.6; color:#9aa3b4">Verify <span style="font-family:'Fira Code',monospace; font-size:11px">MacroGauges</span> still colours positive/negative green/red rather than the old accent/amber pair, and that the window link is present.</p>
+        <p style="margin:0; font-size:12px; line-height:1.6; color:#4c8dff">→ Cheap check; likely already correct.</p>
+      </div>
+    </div>
+  </div>
+
+  <div style="display:flex; align-items:baseline; gap:12px; margin:52px 0 6px">
+    <span style="font-family:'Fira Code',monospace; font-size:11px; font-weight:500; letter-spacing:0.1em; text-transform:uppercase; color:#7d8698">Section E</span>
+    <h2 style="margin:0; font-size:20px; font-weight:600; letter-spacing:-0.01em">The options group and the rest</h2>
+    <span style="font-size:13px; color:#7d8698">11 deltas</span>
+    <span style="flex:1; height:1px; background:#1e2634"></span>
+  </div>
+  <p style="margin:8px 0 0; max-width:860px; font-size:13px; line-height:1.6; color:#9aa3b4">Phase 2 split <span style="font-family:'Fira Code',monospace; font-size:12px">/odte/strikes</span> into five routes. The split happened; three of the five were then filled with the old cards rather than the mock's designs. That is the single largest block of remaining work.</p>
+
+  <div style="margin-top:18px">
+
+    <div style="display:grid; grid-template-columns:78px 1fr 1fr; gap:20px; padding:14px 0; border-top:1px solid #2c3648">
+      <div style="display:flex; flex-direction:column; gap:6px; align-items:flex-start">
+        <span style="font-family:'Fira Code',monospace; font-size:12px; font-weight:600; color:#eef1f6">O-01</span>
+        <span style="font-family:'Fira Code',monospace; font-size:11px; font-weight:600; color:#f85149; border:1px solid rgba(248,81,73,0.4); border-radius:3px; padding:1px 5px">STRUCT</span>
+      </div>
+      <div>
+        <div style="font-size:13px; font-weight:600; margin-bottom:5px">Gamma <span style="font-family:'Fira Code',monospace; font-size:12px; color:#7d8698">2c</span> — no regime hero</div>
+        <p style="margin:0; font-size:12px; line-height:1.6; color:#9aa3b4">"Long gamma" at 26px in teal with "Dealers dampen moves" beneath; a spot-vs-flip scale with a red→teal gradient, zero-γ and spot markers and end labels; net GEX and a pin-risk bar.</p>
+      </div>
+      <div>
+        <p style="margin:0 0 7px; font-size:12px; line-height:1.6; color:#9aa3b4">The page opens straight into <span style="font-family:'Fira Code',monospace; font-size:11px">GexChart</span> / <span style="font-family:'Fira Code',monospace; font-size:11px">GexCard</span> / <span style="font-family:'Fira Code',monospace; font-size:11px">DexChart</span> / <span style="font-family:'Fira Code',monospace; font-size:11px">SkewCard</span> / <span style="font-family:'Fira Code',monospace; font-size:11px">DeltaBandsCard</span>. The regime verdict is derivable — <span style="font-family:'Fira Code',monospace; font-size:11px">lib/odte-verdicts.ts</span> already writes it for the overview.</p>
+        <p style="margin:0; font-size:12px; line-height:1.6; color:#4c8dff">→ Build the hero from <span style="font-family:'Fira Code',monospace; font-size:11px">deriveLevels()</span>; it is mostly layout.</p>
+      </div>
+    </div>
+
+    <div style="display:grid; grid-template-columns:78px 1fr 1fr; gap:20px; padding:14px 0; border-top:1px solid #1e2634">
+      <div style="display:flex; flex-direction:column; gap:6px; align-items:flex-start">
+        <span style="font-family:'Fira Code',monospace; font-size:12px; font-weight:600; color:#eef1f6">O-02</span>
+        <span style="font-family:'Fira Code',monospace; font-size:11px; font-weight:600; color:#f85149; border:1px solid rgba(248,81,73,0.4); border-radius:3px; padding:1px 5px">STRUCT</span>
+      </div>
+      <div>
+        <div style="font-size:13px; font-weight:600; margin-bottom:5px">Gamma — profile, levels-with-sentences, scenario card</div>
+        <p style="margin:0; font-size:12px; line-height:1.6; color:#9aa3b4">15 strike rows on a centred axis calibrated to a printed ±400 scale, positive teal right and negative magenta left, ATM/ZG/CW/PW rows tinted; a levels card where every level carries a sentence saying what it does; four centred bars for net GEX by expiry; and an amber scenario card written before the break happens.</p>
+      </div>
+      <div>
+        <p style="margin:0 0 7px; font-size:12px; line-height:1.6; color:#9aa3b4">None of the four exist as designed. Level meanings are still tooltip-gated.</p>
+        <p style="margin:0; font-size:12px; line-height:1.6; color:#4c8dff">→ Roughly one day each; the scenario card is the highest-value and the cheapest.</p>
+      </div>
+    </div>
+
+    <div style="display:grid; grid-template-columns:78px 1fr 1fr; gap:20px; padding:14px 0; border-top:1px solid #1e2634">
+      <div style="display:flex; flex-direction:column; gap:6px; align-items:flex-start">
+        <span style="font-family:'Fira Code',monospace; font-size:12px; font-weight:600; color:#eef1f6">O-03</span>
+        <span style="font-family:'Fira Code',monospace; font-size:11px; font-weight:600; color:#f85149; border:1px solid rgba(248,81,73,0.4); border-radius:3px; padding:1px 5px">STRUCT</span>
+      </div>
+      <div>
+        <div style="font-size:13px; font-weight:600; margin-bottom:5px">Flow <span style="font-family:'Fira Code',monospace; font-size:12px; color:#7d8698">2d</span> — the two columns that carry the meaning</div>
+        <p style="margin:0; font-size:12px; line-height:1.6; color:#9aa3b4">Unusual prints on tracks <span style="font-family:'Fira Code',monospace; font-size:11px">62 · 132 · 70 · 78 · 92 · 82 · 1fr</span>: time, contract, size, premium, <span style="color:#c8cede">vs OI</span>, <span style="color:#c8cede">aggressor</span>, plain-English read. Those two bolded fields separate new positioning from churn and buyers from sellers.</p>
+      </div>
+      <div>
+        <p style="margin:0 0 7px; font-size:12px; line-height:1.6; color:#9aa3b4">The page is <span style="font-family:'Fira Code',monospace; font-size:11px">PcrCard</span> + <span style="font-family:'Fira Code',monospace; font-size:11px">UnusualCard</span> in a Panel. Neither field appears; there are no ratio gauges, no volume-vs-OI bars and no flow-tilt summary.</p>
+        <p style="margin:0; font-size:12px; line-height:1.6; color:#4c8dff">→ Check whether <span style="font-family:'Fira Code',monospace; font-size:11px">/api/odte/unusual</span> returns OI and side. If it doesn't, that is a backend task before any UI work.</p>
+      </div>
+    </div>
+
+    <div style="display:grid; grid-template-columns:78px 1fr 1fr; gap:20px; padding:14px 0; border-top:1px solid #1e2634">
+      <div style="display:flex; flex-direction:column; gap:6px; align-items:flex-start">
+        <span style="font-family:'Fira Code',monospace; font-size:12px; font-weight:600; color:#eef1f6">O-04</span>
+        <span style="font-family:'Fira Code',monospace; font-size:11px; font-weight:600; color:#d29922; border:1px solid rgba(210,153,34,0.5); border-radius:3px; padding:1px 5px">DRIFT</span>
+      </div>
+      <div>
+        <div style="font-size:13px; font-weight:600; margin-bottom:5px">Greeks <span style="font-family:'Fira Code',monospace; font-size:12px; color:#7d8698">2e</span> — the mirrored table</div>
+        <p style="margin:0; font-size:12px; line-height:1.6; color:#9aa3b4">Per-strike greeks in the ladder's own layout — <span style="font-family:'Fira Code',monospace; font-size:11px">Vega · Θ · Γ · Δ | Strike | Δ · Γ · Θ · Vega</span> on <span style="font-family:'Fira Code',monospace; font-size:11px">1fr×4 | 96px | 1fr×4</span> — so the muscle memory carries between the two pages. Plus a skew scatter with an ATM marker and a four-bar term structure.</p>
+      </div>
+      <div>
+        <p style="margin:0 0 7px; font-size:12px; line-height:1.6; color:#9aa3b4">The four aggregate cards are built and read well. "Exposure by strike" is a conventional table with call/put columns side by side, not mirrored. No skew scatter, no term structure.</p>
+        <p style="margin:0; font-size:12px; line-height:1.6; color:#4c8dff">→ Mirror the tracks; lift the skew scatter from <span style="font-family:'Fira Code',monospace; font-size:11px">SkewCard</span>.</p>
+      </div>
+    </div>
+
+    <div style="display:grid; grid-template-columns:78px 1fr 1fr; gap:20px; padding:14px 0; border-top:1px solid #1e2634">
+      <div style="display:flex; flex-direction:column; gap:6px; align-items:flex-start">
+        <span style="font-family:'Fira Code',monospace; font-size:12px; font-weight:600; color:#eef1f6">O-05</span>
+        <span style="font-family:'Fira Code',monospace; font-size:11px; font-weight:600; color:#f85149; border:1px solid rgba(248,81,73,0.4); border-radius:3px; padding:1px 5px">STRUCT</span>
+      </div>
+      <div>
+        <div style="font-size:13px; font-weight:600; margin-bottom:5px">Options overview <span style="font-family:'Fira Code',monospace; font-size:12px; color:#7d8698">3a</span> — no session read, no symbol switcher</div>
+        <p style="margin:0; font-size:12px; line-height:1.6; color:#9aa3b4">Header carries <span style="font-family:'Fira Code',monospace; font-size:11px">SPY / QQQ / IWM / DIA / SPX</span> as the same segmented control the ladder uses. Then a hero: one sentence at headline size, an agreement count rendered as four segments (<span style="color:#c8cede">3 of 4 inputs agree</span>), and a paragraph naming the dissent. Then the expected-move box, then the four evidence cards.</p>
+      </div>
+      <div>
+        <p style="margin:0 0 7px; font-size:12px; line-height:1.6; color:#9aa3b4">The four <span style="font-family:'Fira Code',monospace; font-size:11px">VerdictCard</span>s exist and are good — Spot/Regime, Levels, Shape/Skew, Flow/Stats. Above them there is nothing: no switcher (symbol comes from <span style="font-family:'Fira Code',monospace; font-size:11px">useOdteSymbol</span> with no visible control on this page), no synthesis, no agreement count, no expected-move band.</p>
+        <p style="margin:0; font-size:12px; line-height:1.6; color:#4c8dff">→ The four verdicts already hold the agreement data — count them. Half a day for the hero, an hour for the switcher.</p>
+      </div>
+    </div>
+
+    <div style="display:grid; grid-template-columns:78px 1fr 1fr; gap:20px; padding:14px 0; border-top:1px solid #1e2634">
+      <div style="display:flex; flex-direction:column; gap:6px; align-items:flex-start">
+        <span style="font-family:'Fira Code',monospace; font-size:12px; font-weight:600; color:#eef1f6">O-06</span>
+        <span style="font-family:'Fira Code',monospace; font-size:11px; font-weight:600; color:#7d8698; border:1px solid #2c3648; border-radius:3px; padding:1px 5px">POLISH</span>
+      </div>
+      <div>
+        <div style="font-size:13px; font-weight:600; margin-bottom:5px">Ladder <span style="font-family:'Fira Code',monospace; font-size:12px; color:#7d8698">2a</span> — verify, don't rebuild</div>
+        <p style="margin:0; font-size:12px; line-height:1.6; color:#9aa3b4">Thirteen tracks totalling 976px, <span style="font-family:'Fira Code',monospace; font-size:11px">width:max-content; margin:0 auto</span>; columns ordered outward from the strike on both sides; calls right-aligned, puts left; OI/Vol bar fills anchored toward the strike; <span style="font-family:'Fira Code',monospace; font-size:11px">Jump to strike…</span> and <span style="font-family:'Fira Code',monospace; font-size:11px">Centre on spot</span> at the right of the control bar.</p>
+      </div>
+      <div>
+        <p style="margin:0 0 7px; font-size:12px; line-height:1.6; color:#9aa3b4">Data/strikes/columns controls, expiry chips, levels strip and the collapsed explainer are all in. The three details worth checking are the mirrored column order, the bar-fill anchoring, and whether the two right-hand controls exist.</p>
+        <p style="margin:0; font-size:12px; line-height:1.6; color:#4c8dff">→ Diff against the mock at 1440px before touching anything.</p>
+      </div>
+    </div>
+
+    <div style="display:grid; grid-template-columns:78px 1fr 1fr; gap:20px; padding:14px 0; border-top:1px solid #1e2634">
+      <div style="display:flex; flex-direction:column; gap:6px; align-items:flex-start">
+        <span style="font-family:'Fira Code',monospace; font-size:12px; font-weight:600; color:#eef1f6">O-07</span>
+        <span style="font-family:'Fira Code',monospace; font-size:11px; font-weight:600; color:#d29922; border:1px solid rgba(210,153,34,0.5); border-radius:3px; padding:1px 5px">DRIFT</span>
+      </div>
+      <div>
+        <div style="font-size:13px; font-weight:600; margin-bottom:5px">Macro <span style="font-family:'Fira Code',monospace; font-size:12px; color:#7d8698">3c</span> — methodology is permanent</div>
+        <p style="margin:0; font-size:12px; line-height:1.6; color:#9aa3b4">Four columns on the page, always: Input / Scoring / Weighting / What it isn't. A sentiment number nobody can audit is a number nobody acts on, which is the whole argument for the panel.</p>
+      </div>
+      <div>
+        <p style="margin:0 0 7px; font-size:12px; line-height:1.6; color:#9aa3b4">Wrapped in <span style="font-family:'Fira Code',monospace; font-size:11px">Collapsible</span>, so it defaults shut and most sessions never see it.</p>
+        <p style="margin:0; font-size:12px; line-height:1.6; color:#4c8dff">→ Unwrap it. Also confirm the lookback control reads "1 hour / 1 day / 1 week" and that the benchmark series follows the selected window.</p>
+      </div>
+    </div>
+
+    <div style="display:grid; grid-template-columns:78px 1fr 1fr; gap:20px; padding:14px 0; border-top:1px solid #1e2634">
+      <div style="display:flex; flex-direction:column; gap:6px; align-items:flex-start">
+        <span style="font-family:'Fira Code',monospace; font-size:12px; font-weight:600; color:#eef1f6">O-08</span>
+        <span style="font-family:'Fira Code',monospace; font-size:11px; font-weight:600; color:#d29922; border:1px solid rgba(210,153,34,0.5); border-radius:3px; padding:1px 5px">DRIFT</span>
+      </div>
+      <div>
+        <div style="font-size:13px; font-weight:600; margin-bottom:5px">Portfolio <span style="font-family:'Fira Code',monospace; font-size:12px; color:#7d8698">4c</span> — six numbers, not three chips</div>
+        <p style="margin:0; font-size:12px; line-height:1.6; color:#9aa3b4">NLV, day P&amp;L, unrealised, cash, exposure, top-sector concentration — as one band.</p>
+      </div>
+      <div>
+        <p style="margin:0 0 7px; font-size:12px; line-height:1.6; color:#9aa3b4">A <span style="font-family:'Fira Code',monospace; font-size:11px">sm:grid-cols-2 lg:grid-cols-3</span> chip grid. Day P&amp;L and sector exposure are backend gaps (listed in the handoff's data requirements) — the other four are available now.</p>
+        <p style="margin:0; font-size:12px; line-height:1.6; color:#4c8dff">→ Build the six-slot band; render the two missing slots as nothing, not as a dash. The disagreement band leading the page is already correct.</p>
+      </div>
+    </div>
+
+    <div style="display:grid; grid-template-columns:78px 1fr 1fr; gap:20px; padding:14px 0; border-top:1px solid #1e2634">
+      <div style="display:flex; flex-direction:column; gap:6px; align-items:flex-start">
+        <span style="font-family:'Fira Code',monospace; font-size:12px; font-weight:600; color:#eef1f6">O-09</span>
+        <span style="font-family:'Fira Code',monospace; font-size:11px; font-weight:600; color:#7d8698; border:1px solid #2c3648; border-radius:3px; padding:1px 5px">POLISH</span>
+      </div>
+      <div>
+        <div style="font-size:13px; font-weight:600; margin-bottom:5px">Watchlist <span style="font-family:'Fira Code',monospace; font-size:12px; color:#7d8698">4a</span> and Screener <span style="font-family:'Fira Code',monospace; font-size:12px; color:#7d8698">4b</span></div>
+        <p style="margin:0; font-size:12px; line-height:1.6; color:#9aa3b4">Cards on <span style="font-family:'Fira Code',monospace; font-size:11px">#12171f</span> / <span style="font-family:'Fira Code',monospace; font-size:11px">#2c3648</span> for the lead name and <span style="font-family:'Fira Code',monospace; font-size:11px">#0c1017</span> / <span style="font-family:'Fira Code',monospace; font-size:11px">#1e2634</span> for the rest — the first card is emphasised, the others recede.</p>
+      </div>
+      <div>
+        <p style="margin:0 0 7px; font-size:12px; line-height:1.6; color:#9aa3b4">Both pages are otherwise conformant — chips filter, the sparkline and since-pin are on the card, window-progress is on recent picks, the score slider and stacked vote bar shipped. Only the surface ladder and the emphasised-lead treatment need a look.</p>
+        <p style="margin:0; font-size:12px; line-height:1.6; color:#4c8dff">→ Half a day between them. These are the two pages to hold up as the standard.</p>
+      </div>
+    </div>
+
+    <div style="display:grid; grid-template-columns:78px 1fr 1fr; gap:20px; padding:14px 0; border-top:1px solid #1e2634">
+      <div style="display:flex; flex-direction:column; gap:6px; align-items:flex-start">
+        <span style="font-family:'Fira Code',monospace; font-size:12px; font-weight:600; color:#eef1f6">O-10</span>
+        <span style="font-family:'Fira Code',monospace; font-size:11px; font-weight:600; color:#7d8698; border:1px solid #2c3648; border-radius:3px; padding:1px 5px">POLISH</span>
+      </div>
+      <div>
+        <div style="font-size:13px; font-weight:600; margin-bottom:5px">Rotation <span style="font-family:'Fira Code',monospace; font-size:12px; color:#7d8698">3b</span> — labels on the chart</div>
+        <p style="margin:0; font-size:12px; line-height:1.6; color:#9aa3b4">Quadrant names drawn inside the plot with a one-line gloss each; dots labelled with sector names and a legend under the plot mapping name → ETF; an eight-week trail behind each dot with a <span style="font-family:'Fira Code',monospace; font-size:11px">4w / 8w / Off</span> control.</p>
+      </div>
+      <div>
+        <p style="margin:0 0 7px; font-size:12px; line-height:1.6; color:#9aa3b4">Trails are built (<span style="font-family:'Fira Code',monospace; font-size:11px">lib/rotationTrails.ts</span>) and the sidebar exists. Confirm the in-chart quadrant labels and the name-not-ticker dot labels.</p>
+        <p style="margin:0; font-size:12px; line-height:1.6; color:#4c8dff">→ Verify against the mock; likely small.</p>
+      </div>
+    </div>
+
+    <div style="display:grid; grid-template-columns:78px 1fr 1fr; gap:20px; padding:14px 0; border-top:1px solid #1e2634; border-bottom:1px solid #1e2634">
+      <div style="display:flex; flex-direction:column; gap:6px; align-items:flex-start">
+        <span style="font-family:'Fira Code',monospace; font-size:12px; font-weight:600; color:#eef1f6">O-11</span>
+        <span style="font-family:'Fira Code',monospace; font-size:11px; font-weight:600; color:#7d8698; border:1px solid #2c3648; border-radius:3px; padding:1px 5px">POLISH</span>
+      </div>
+      <div>
+        <div style="font-size:13px; font-weight:600; margin-bottom:5px">Calendar <span style="font-family:'Fira Code',monospace; font-size:12px; color:#7d8698">2b</span> — the deferred columns</div>
+        <p style="margin:0; font-size:12px; line-height:1.6; color:#9aa3b4">Event rows carry actual · consensus · prior, and the expanded event's third column turns thresholds into named tickers.</p>
+      </div>
+      <div>
+        <p style="margin:0 0 7px; font-size:12px; line-height:1.6; color:#9aa3b4">Ruled out of v1 on 2026-07-31: the schema puts actual-vs-forecast out of scope and no feed stands behind it. The month strip, week spine, day grid and rank glyphs all shipped.</p>
+        <p style="margin:0; font-size:12px; line-height:1.6; color:#4c8dff">→ Leave it. Revisit only with a consensus feed — and when it lands, it also completes T-09 on the tape.</p>
+      </div>
+    </div>
+  </div>
+
+  <sc-if value="{{ showBuildOrder }}" hint-placeholder-val="{{ true }}">
+  <div style="display:flex; align-items:baseline; gap:12px; margin:52px 0 6px">
+    <span style="font-family:'Fira Code',monospace; font-size:11px; font-weight:500; letter-spacing:0.1em; text-transform:uppercase; color:#7d8698">Section F</span>
+    <h2 style="margin:0; font-size:20px; font-weight:600; letter-spacing:-0.01em">What to do, in order</h2>
+    <span style="flex:1; height:1px; background:#1e2634"></span>
+  </div>
+  <p style="margin:8px 0 24px; max-width:860px; font-size:13px; line-height:1.6; color:#9aa3b4">Five packages. Each is independently shippable and leaves the app working. Capture a Playwright baseline with <span style="font-family:'Fira Code',monospace; font-size:12px">e2e/screens.spec.ts</span> first, and diff after each one — against the previous capture, not against the mock.</p>
+
+  <div style="display:flex; flex-direction:column; gap:12px">
+
+    <div style="border:1px solid #2c3648; border-radius:8px; background:#12171f; padding:16px 18px">
+      <div style="display:flex; align-items:baseline; gap:10px; margin-bottom:8px">
+        <span style="font-family:'Fira Code',monospace; font-size:11px; font-weight:600; letter-spacing:0.06em; color:#05070b; background:#4c8dff; padding:2px 7px; border-radius:4px">P1</span>
+        <span style="font-size:15px; font-weight:600">The shared substrate</span>
+        <span style="font-family:'Fira Code',monospace; font-size:12px; color:#7d8698">~3 days · X-01 to X-06</span>
+      </div>
+      <p style="margin:0 0 8px; font-size:13px; line-height:1.6; color:#c8cede">Sweep <span style="font-family:'Fira Code',monospace; font-size:12px">text-micro</span> off anything carrying a sentence. Fix the card surface ladder. Add <span style="font-family:'Fira Code',monospace; font-size:12px">heading</span> to Panel and counts to SegmentedControl, then replace the four hand-rolled switchers. Settle the rail-width question in writing.</p>
+      <p style="margin:0; font-size:12px; line-height:1.6; color:#7d8698">Nothing user-visible is added and every page changes — same shape as Phase 1. Every package below assumes it.</p>
+    </div>
+
+    <div style="border:1px solid #2c3648; border-radius:8px; background:#12171f; padding:16px 18px">
+      <div style="display:flex; align-items:baseline; gap:10px; margin-bottom:8px">
+        <span style="font-family:'Fira Code',monospace; font-size:11px; font-weight:600; letter-spacing:0.06em; color:#05070b; background:#4c8dff; padding:2px 7px; border-radius:4px">P2</span>
+        <span style="font-size:15px; font-weight:600">The ticker header</span>
+        <span style="font-family:'Fira Code',monospace; font-size:12px; color:#7d8698">~4 days · K-01 to K-08</span>
+      </div>
+      <p style="margin:0 0 8px; font-size:13px; line-height:1.6; color:#c8cede">Rebuild <span style="font-family:'Fira Code',monospace; font-size:12px">ticker/Header.tsx</span> as the three-band card: fixed zone grid, action row, track-record columns. Price to 28px, add the range and volume bars, lift score + agreement in, retire <span style="font-family:'Fira Code',monospace; font-size:12px">CatalystStrip</span>, move entry/stop/target onto the chart and retire <span style="font-family:'Fira Code',monospace; font-size:12px">LevelsCard</span>.</p>
+      <p style="margin:0; font-size:12px; line-height:1.6; color:#7d8698">The widest single gap in the app, and the page a user reaches from every other page.</p>
+    </div>
+
+    <div style="border:1px solid #2c3648; border-radius:8px; background:#12171f; padding:16px 18px">
+      <div style="display:flex; align-items:baseline; gap:10px; margin-bottom:8px">
+        <span style="font-family:'Fira Code',monospace; font-size:11px; font-weight:600; letter-spacing:0.06em; color:#05070b; background:#4c8dff; padding:2px 7px; border-radius:4px">P3</span>
+        <span style="font-size:15px; font-weight:600">Today, band by band</span>
+        <span style="font-family:'Fira Code',monospace; font-size:12px; color:#7d8698">~4 days · T-01 to T-18</span>
+      </div>
+      <p style="margin:0 0 8px; font-size:13px; line-height:1.6; color:#c8cede">Masthead first (it is the least work and the most visible), then the tape's axis, now-lane and connectors, then the signals band — segmented tabs, toolbar on the tab row, one caveat line above the cards, card hierarchy inverted back. Sector strip to eleven fixed cells last.</p>
+      <p style="margin:0; font-size:12px; line-height:1.6; color:#7d8698">Do not add the actual-vs-consensus values here; they arrive with the calendar feed or not at all.</p>
+    </div>
+
+    <div style="border:1px solid #1e2634; border-radius:8px; background:#0c1017; padding:16px 18px">
+      <div style="display:flex; align-items:baseline; gap:10px; margin-bottom:8px">
+        <span style="font-family:'Fira Code',monospace; font-size:11px; font-weight:600; letter-spacing:0.06em; color:#eef1f6; border:1px solid #2c3648; padding:2px 7px; border-radius:4px">P4</span>
+        <span style="font-size:15px; font-weight:600">The options group</span>
+        <span style="font-family:'Fira Code',monospace; font-size:12px; color:#7d8698">~5 days · O-01 to O-06</span>
+      </div>
+      <p style="margin:0 0 8px; font-size:13px; line-height:1.6; color:#c8cede">Overview hero + symbol switcher, gamma regime hero + calibrated profile + scenario card, flow's vs-OI and aggressor columns, greeks' mirrored table. Verify the ladder rather than touching it.</p>
+      <p style="margin:0; font-size:12px; line-height:1.6; color:#7d8698">Start by confirming <span style="font-family:'Fira Code',monospace; font-size:12px">/api/odte/unusual</span> returns open interest and side. If it doesn't, O-03 is a backend ticket and the rest of this package proceeds without it.</p>
+    </div>
+
+    <div style="border:1px solid #1e2634; border-radius:8px; background:#0c1017; padding:16px 18px">
+      <div style="display:flex; align-items:baseline; gap:10px; margin-bottom:8px">
+        <span style="font-family:'Fira Code',monospace; font-size:11px; font-weight:600; letter-spacing:0.06em; color:#eef1f6; border:1px solid #2c3648; padding:2px 7px; border-radius:4px">P5</span>
+        <span style="font-size:15px; font-weight:600">Rails, Why, and the tail</span>
+        <span style="font-family:'Fira Code',monospace; font-size:12px; color:#7d8698">~3 days · R-01 to R-08, K-09 to K-13, O-07 to O-11</span>
+      </div>
+      <p style="margin:0 0 8px; font-size:13px; line-height:1.6; color:#c8cede">Rail badge colours and quote tracks, news timestamps and the earnings chip, the Why panel's three-leg lead with the ensemble behind a disclosure, macro's methodology unwrapped, portfolio's six-number band.</p>
+      <p style="margin:0; font-size:12px; line-height:1.6; color:#7d8698">The Why panel is the one item here that is a design decision rather than a fix — worth agreeing before it is built.</p>
+    </div>
+  </div>
+
+  <div style="margin-top:36px; border-top:1px solid #1e2634; padding-top:18px">
+    <p style="margin:0; max-width:860px; font-size:13px; line-height:1.65; color:#9aa3b4; text-wrap:pretty">Two things this review cannot settle. <span style="color:#c8cede">The ticker page's right column</span> — the mock shows two cards where the app has seven, and the mock was drawn as the top of the page rather than as a deletion list; someone has to decide what happens to News, Sentiment, History and AI. And <span style="color:#c8cede">the Why panel</span> — the ensemble telemetry it renders is real work and real information, and the mock replaced it with three sentences; the recommendation above keeps both, but that is a product call, not a conformance one.</p>
+  </div>
+  </sc-if>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;showScorecard&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Sections&quot;},&quot;showBuildOrder&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Sections&quot;}}">
+class Component extends DCLogic {
+  renderVals() {
+    return {
+      showScorecard: this.props.showScorecard ?? true,
+      showBuildOrder: this.props.showBuildOrder ?? true,
+    };
+  }
+}
+</script>
+</body>
+</html>
