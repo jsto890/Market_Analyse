@@ -21,6 +21,7 @@ import Contributors from "@/components/macro/Contributors";
 import ScopeBand from "@/components/macro/ScopeBand";
 import ScopeTile from "@/components/macro/ScopeTile";
 import Collapsible from "@/components/ui/Collapsible";
+import SegmentedControl from "@/components/ui/SegmentedControl";
 import Empty from "@/components/ui/Empty";
 import { useLocalStorage } from "@/lib/useLocalStorage";
 import { STATIC_KEYS } from "@/lib/storageKeys";
@@ -29,6 +30,14 @@ import Page from "@/components/ui/Page";
 const fetcher = (u: string) => fetch(u).then((r) => { if (!r.ok) throw new Error(`${r.status}`); return r.json(); });
 const WINDOWS = ["1h", "1d", "1w"];
 const VALID_WINDOWS = new Set(WINDOWS);
+// "1 hour", not "1h": a control whose segments need a sentence beside them to
+// be read is mislabelled. The blurb explains what the reading means, not what
+// the segment says.
+const WINDOW_OPTIONS = WINDOWS.map((w) => ({
+  key: w,
+  label: WINDOW_META[w].label,
+  blurb: WINDOW_META[w].meaning,
+}));
 
 function Methodology({ window }: { window: string }) {
   const meta = WINDOW_META[window];
@@ -178,24 +187,13 @@ function MacroPageInner() {
 
       <Methodology window={win} />
 
-      <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
-        <span className="eyebrow">Lookback</span>
-        <div className="flex gap-2">
-          {WINDOWS.map((w) => (
-            <button
-              key={w}
-              onClick={() => pickWindow(w)}
-              aria-pressed={w === win}
-              className={`rounded px-2 py-1 text-micro ${
-                w === win ? "bg-accent/20 text-accent" : "bg-elevated text-muted hover:text-foreground"
-              }`}
-            >
-              {WINDOW_META[w].label}
-            </button>
-          ))}
-        </div>
-        <span className="text-body text-2">{meta.meaning}</span>
-      </div>
+      <SegmentedControl
+        label="Lookback"
+        value={win}
+        options={WINDOW_OPTIONS}
+        onChange={pickWindow}
+        className="flex-wrap gap-x-3 gap-y-2"
+      />
 
       {resetNotice && (
         <p

@@ -61,6 +61,44 @@ describe("Panel", () => {
     expect(screen.getByRole("button", { name: "Refresh" })).toBeInTheDocument();
   });
 
+  it("renders the default title role at text-title, with a boxed count and the subtitle after it", () => {
+    render(
+      <Panel title="Sector rotation" count={7} subtitle="all times ET">
+        body
+      </Panel>
+    );
+    expect(screen.getByText("Sector rotation")).toHaveClass("text-title");
+    expect(screen.getByText("Sector rotation")).not.toHaveClass("eyebrow");
+    expect(screen.getByText("7")).toHaveClass("bg-elevated");
+    const subtitle = screen.getByText("all times ET");
+    expect(subtitle).toHaveClass("text-body");
+    expect(subtitle).not.toHaveClass("ml-auto");
+  });
+
+  it("renders heading=eyebrow through .eyebrow, unboxes the count and pushes the subtitle right", () => {
+    render(
+      <Panel title="Today's tape" heading="eyebrow" count={7} subtitle="all times ET">
+        body
+      </Panel>
+    );
+
+    const title = screen.getByText("Today's tape");
+    expect(title).toHaveClass("eyebrow");
+    // .eyebrow already ships size, weight and tracking — no extra type classes.
+    expect(title).not.toHaveClass("text-title");
+    expect(title).not.toHaveClass("text-micro");
+    expect(title).not.toHaveClass("uppercase");
+
+    const count = screen.getByText("7");
+    expect(count).toHaveClass("text-micro", "font-mono", "text-muted");
+    expect(count).not.toHaveClass("bg-elevated");
+    expect(count).not.toHaveClass("rounded");
+
+    const subtitle = screen.getByText("all times ET");
+    expect(subtitle).toHaveClass("ml-auto", "text-label", "text-muted");
+    expect(subtitle).not.toHaveClass("text-body");
+  });
+
   it("migrates legacy dash:panel: key to dash:collapsible: on first read (one-time)", () => {
     // Simulate existing persisted state from old Panel.tsx before migration
     localStorage.setItem("dash:panel:rotation", "true");

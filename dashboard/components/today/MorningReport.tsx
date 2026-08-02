@@ -50,7 +50,7 @@ function Tile({
   children?: React.ReactNode;
 }) {
   return (
-    <div className="flex min-w-0 flex-col gap-1 rounded-md border border-line bg-raised px-3 py-2.5">
+    <div className="flex min-w-0 flex-col gap-1 rounded-md border border-line-strong bg-elevated px-3 py-2.5">
       <div className="flex items-baseline justify-between gap-2">
         <span className="eyebrow">{label}</span>
         {href && (

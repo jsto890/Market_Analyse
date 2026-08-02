@@ -98,7 +98,7 @@ export default function LevelsCard({ ticker, bridgeRow }: LevelsCardProps) {
                 ? "border-pos/30 bg-pos/[0.06]"
                 : dir === "short"
                   ? "border-neg/30 bg-neg/[0.06]"
-                  : "border-line bg-raised/40"
+                  : "border-line bg-surface"
             }`}
           >
             {dir ? (
@@ -107,9 +107,9 @@ export default function LevelsCard({ ticker, bridgeRow }: LevelsCardProps) {
                   {dir === "long" ? "Long" : "Short"} {committed ? "plan" : "bias"}
                 </span>
                 {!committed && (
-                  <span className="ml-1.5 text-micro text-muted">watch</span>
+                  <span className="ml-1.5 text-label text-muted">watch</span>
                 )}
-                {hc && <span className="ml-1.5 text-micro text-warn">HIGH CONV</span>}
+                {hc && <span className="ml-1.5 text-label text-warn">HIGH CONV</span>}
                 <span className="text-muted">
                   {" — "}
                   {dir === "long" ? "enter near" : "sell near"}{" "}

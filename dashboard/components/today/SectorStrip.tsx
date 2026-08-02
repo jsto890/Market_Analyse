@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Panel from "@/components/ui/Panel";
 import { heatBg } from "@/lib/heat";
 import { QUADRANT_COLOR, rotationSummary } from "@/lib/rotation";
 import type { RotationRow } from "@/components/today/RotationPanel";
@@ -15,17 +16,17 @@ export default function SectorStrip({ rows }: { rows: RotationRow[] }) {
   const sorted = [...rows].sort((a, b) => (b.r1w ?? -Infinity) - (a.r1w ?? -Infinity));
 
   return (
-    <section className="rounded-md border border-line bg-elevated">
-      <div className="flex flex-wrap items-baseline justify-between gap-2 px-4 py-2.5">
-        <div className="flex min-w-0 items-baseline gap-2">
-          <span className="truncate text-title text-foreground">Sector rotation</span>
-          <span className="truncate text-body text-3">{rotationSummary(rows)}</span>
-        </div>
+    <Panel
+      title="Sector rotation"
+      heading="eyebrow"
+      subtitle={rotationSummary(rows)}
+      actions={
         <Link href="/rotation" className="shrink-0 text-body text-muted hover:text-accent">
           Full RRG ›
         </Link>
-      </div>
-      <div className="grid grid-cols-3 gap-px border-t border-line bg-line sm:grid-cols-4 lg:grid-cols-6">
+      }
+    >
+      <div className="grid grid-cols-3 gap-px bg-line sm:grid-cols-4 lg:grid-cols-6">
         {sorted.map((r) => (
           <Link
             key={r.industry}
@@ -41,7 +42,7 @@ export default function SectorStrip({ rows }: { rows: RotationRow[] }) {
                 className="h-1.5 w-1.5 shrink-0 rounded-full"
                 style={{ background: QUADRANT_COLOR[r.quadrant] ?? "var(--muted)" }}
               />
-              <span className="line-clamp-2 min-w-0 text-micro leading-tight text-2">
+              <span className="line-clamp-2 min-w-0 text-label leading-tight text-2">
                 {r.industry}
               </span>
             </span>
@@ -55,6 +56,6 @@ export default function SectorStrip({ rows }: { rows: RotationRow[] }) {
           </Link>
         ))}
       </div>
-    </section>
+    </Panel>
   );
 }

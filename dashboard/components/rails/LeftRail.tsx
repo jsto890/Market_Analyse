@@ -93,19 +93,23 @@ function MiniItem({ symbol, changePct }: MiniItemProps) {
       : changePct > 0
       ? "text-pos"
       : "text-neg";
-  // One decimal, not two: at 11px mono `+0.72%` is six characters in a 36px
-  // strip and the `%` falls off the edge. The strip is a glance, not a quote.
+  // A figure is 13px data, never 11px — and 13px mono spends 7.8px a character,
+  // so a 36px strip holds four. Sign plus one decimal under 10%, sign plus
+  // whole points above it; the unit is dropped, not the number. The strip is a
+  // glance, not a quote — the expanded rail carries price, unit and precision.
+  // No quote, no line — the standing rule is that an absent feed renders
+  // nothing, and a dash in a 36px gutter reads as a value rather than a gap.
   const pctStr =
     changePct !== undefined
-      ? `${changePct >= 0 ? "+" : ""}${changePct.toFixed(1)}%`
-      : "—";
+      ? `${changePct >= 0 ? "+" : ""}${changePct.toFixed(Math.abs(changePct) < 10 ? 1 : 0)}`
+      : null;
 
   return (
     <div className="w-full flex flex-col items-center py-1.5 gap-0.5 hover:bg-elevated cursor-default">
       <span className="eyebrow leading-none">{label}</span>
-      <span className={`text-micro font-mono font-medium tabular-nums leading-none ${pctCls}`}>
-        {pctStr}
-      </span>
+      {pctStr !== null && (
+        <span className={`text-data leading-none ${pctCls}`}>{pctStr}</span>
+      )}
     </div>
   );
 }

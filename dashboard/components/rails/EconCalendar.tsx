@@ -39,7 +39,7 @@ export function EconCalendar({ days = 7, max = 6 }: { days?: number; max?: numbe
       {events.length === 0
         ? <p className="px-3 py-1 text-body text-muted">No events scheduled.</p>
         : events.map((ev, i) => <Row key={`${ev.event}-${ev.date}-${i}`} ev={ev} today={today} />)}
-      <Link href="/calendar" className="block px-3 py-1 text-micro font-mono text-muted hover:text-accent">
+      <Link href="/calendar" className="block px-3 py-1 text-body text-muted hover:text-accent">
         {remaining > 0 ? `+${remaining} more · full calendar ›` : "full calendar ›"}
       </Link>
     </div>

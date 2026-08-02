@@ -149,6 +149,7 @@ export function TapeBand({
   return (
     <Panel
       title="Today’s tape"
+      heading="eyebrow"
       subtitle={nothingTimed ? undefined : "all times ET"}
       actions={actions}
       readThis={

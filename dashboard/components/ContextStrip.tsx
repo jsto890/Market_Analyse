@@ -92,7 +92,7 @@ export default function ContextStrip() {
         <button
           type="button"
           aria-label="Session and data status"
-          className={`flex select-none items-center gap-1.5 font-mono text-micro leading-none tracking-normal ${tone} hover:text-foreground`}
+          className={`flex select-none items-center gap-1.5 text-data leading-none ${tone} hover:text-foreground`}
         >
           <span className={`inline-block h-1.5 w-1.5 rounded-full ${dot}`} />
           {session}

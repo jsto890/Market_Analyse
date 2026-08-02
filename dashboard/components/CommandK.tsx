@@ -19,9 +19,16 @@ interface ResultItem {
   source: "bridge" | "watchlist" | "raw" | "recent" | "action";
   label?: string;
   href?: string;
+  run?: () => void;
 }
 
-const ACTIONS: { id: string; label: string; href: string }[] = [
+/** The one thing a command does that is not a route. Held on an object because
+ *  jsdom's `location.reload` is not spy-able, and a reload nobody can assert on
+ *  is a reload nobody can test. */
+export const shell = { reload: () => window.location.reload() };
+
+/** A command either goes somewhere (`href`) or does something (`run`). */
+const ACTIONS: { id: string; label: string; href?: string; run?: () => void }[] = [
   { id: "today", label: "Go to Today", href: "/" },
   { id: "watchlist", label: "Go to Watchlist", href: "/watchlist" },
   { id: "options", label: "Go to Options", href: "/odte" },
@@ -30,6 +37,10 @@ const ACTIONS: { id: string; label: string; href: string }[] = [
   { id: "screener", label: "Go to Screener", href: "/screener" },
   { id: "portfolio", label: "Go to Portfolio", href: "/portfolio" },
   { id: "alerts", label: "Go to Alerts", href: "/alerts" },
+  // The desktop shell has no browser chrome, so there is no ⌘R behind it. A
+  // full reload, not a router refresh: this is also the way back when the
+  // server has been rebuilt under an open window and its chunks are gone.
+  { id: "reload", label: "Reload", run: () => shell.reload() },
 ];
 
 function loadRecentTickers(): string[] {
@@ -60,6 +71,7 @@ function buildDefaultResults(recents: string[]): ResultItem[] {
     ticker: a.id,
     label: a.label,
     href: a.href,
+    run: a.run,
     source: "action",
   }));
   return [...recentItems, ...actionItems].slice(0, 12);
@@ -127,7 +139,13 @@ function buildResults(
 
   for (const action of ACTIONS) {
     if (action.label.toUpperCase().includes(q)) {
-      results.push({ ticker: action.id, label: action.label, href: action.href, source: "action" });
+      results.push({
+        ticker: action.id,
+        label: action.label,
+        href: action.href,
+        run: action.run,
+        source: "action",
+      });
     }
   }
 
@@ -202,7 +220,9 @@ export default function CommandK() {
   }, [query]);
 
   function activate(item: ResultItem) {
-    if (item.source === "action" && item.href) {
+    if (item.source === "action" && item.run) {
+      item.run();
+    } else if (item.source === "action" && item.href) {
       router.push(item.href);
     } else {
       setRecents(recordRecentTicker(item.ticker));

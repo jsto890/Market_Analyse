@@ -49,7 +49,7 @@ export default function SourcesTable({ rows, initialTicker }: SourcesTableProps)
       render: (r) => (
         <div className="flex flex-wrap gap-1">
           {splitAccounts(r.top_accounts).map((h) => (
-            <span key={h} className="rounded border border-line bg-elevated px-1.5 py-0.5 font-mono text-micro text-muted">
+            <span key={h} className="rounded border border-line bg-elevated px-1.5 py-0.5 text-data text-muted">
               {h}
             </span>
           ))}

@@ -79,7 +79,7 @@ function Chip({ ticker, suffix }: { ticker: string; suffix?: string }) {
   return (
     <Link
       href={`/t/${ticker}`}
-      className="rounded border border-line px-1.5 py-px font-mono text-micro text-accent hover:bg-elevated"
+      className="rounded border border-line px-1.5 py-px text-data text-accent hover:bg-elevated"
     >
       {ticker}
       {suffix && <span className="text-muted"> {suffix}</span>}

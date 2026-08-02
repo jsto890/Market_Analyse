@@ -71,7 +71,7 @@ function ResultCard({ r }: { r: ScreenerResult }) {
 
       <div className="mt-2">
         <VoteBar long={r.long_votes} short={r.short_votes} wait={r.wait_votes} className="w-full" />
-        <p className="mt-1 text-micro text-muted">
+        <p className="mt-1 text-data text-muted">
           {r.long_votes}L · {r.short_votes}S · {r.wait_votes}W
         </p>
       </div>

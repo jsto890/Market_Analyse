@@ -119,7 +119,7 @@ function TickerCell({ row, isNew }: { row: BridgeRow; isNew: boolean }) {
       className="text-data font-medium text-accent hover:underline"
     >
       {row.ticker}
-      {isNew && <sup className="ml-0.5 text-micro font-semibold text-warn">NEW</sup>}
+      {isNew && <sup className="ml-0.5 text-label font-semibold text-warn">NEW</sup>}
     </Link>
   );
 }
@@ -158,14 +158,14 @@ function RowFlags({ ext, earnDays }: { ext: boolean; earnDays: number | null }) 
   return (
     <span className="inline-flex items-center gap-1">
       {ext && (
-        <span className="rounded border border-line px-1 py-px text-micro text-muted">ext</span>
+        <span className="rounded border border-line px-1 py-px text-label text-muted">ext</span>
       )}
       {showEarn && (
         <InfoTip
           content={`earnings in ${earnDays}d — inside typical hold window`}
           label={`Earnings in ${earnDays} days`}
         >
-          <span className="rounded border border-warn/50 bg-warn/10 px-1 py-px text-micro font-medium text-warn">
+          <span className="rounded border border-warn/50 bg-warn/10 px-1 py-px text-data font-medium text-warn">
             E{earnDays}d
           </span>
         </InfoTip>
@@ -188,7 +188,7 @@ function CatalystCount({ value }: { value: string | null }) {
       }
       label={`${list.length} catalysts`}
     >
-      <span className="inline-flex cursor-default items-center rounded border border-line px-1.5 py-px font-mono text-micro tabular-nums text-muted">
+      <span className="inline-flex cursor-default items-center rounded border border-line px-1.5 py-px text-data text-muted">
         {list.length}
       </span>
     </InfoTip>
@@ -348,7 +348,7 @@ function SignalCard({
 }) {
   const catalysts = parseCatalysts(row.catalysts);
   return (
-    <article className="flex flex-col gap-2 rounded-md border border-line bg-raised px-3 py-2.5">
+    <article className="flex flex-col gap-2 rounded-md border border-line-strong bg-elevated px-3 py-2.5">
       <div className="flex items-baseline justify-between gap-2">
         <span className="flex min-w-0 items-baseline gap-2">
           <Link href={`/t/${row.ticker}`} className="text-title text-accent hover:underline">
@@ -622,32 +622,46 @@ export default function SignalGroups({
       </div>
 
       <section className="rounded-md border border-line bg-elevated">
-        {/* Four stacked tables meant the third was never scrolled to. */}
-        <div role="tablist" aria-label="Signal groups" className="flex flex-wrap gap-1 px-2 pt-2">
-          {GROUP_META.map((g) => {
-            const selected = g.key === tab;
-            return (
-              <button
-                key={g.key}
-                type="button"
-                role="tab"
-                id={`signals-tab-${g.key}`}
-                aria-selected={selected}
-                aria-controls={`signals-panel-${g.key}`}
-                onClick={() => setTab(g.key)}
-                className={`flex items-baseline gap-1.5 rounded-t border-b-2 px-3 py-1.5 text-body transition-colors ${
-                  selected
-                    ? "border-accent text-foreground"
-                    : "border-transparent text-muted hover:text-foreground"
-                }`}
-              >
-                {g.title}
-                <span className="font-mono text-micro tabular-nums text-muted">
-                  {sorted[g.key].length}
-                </span>
-              </button>
-            );
-          })}
+        {/* Four stacked tables meant the third was never scrolled to. The row
+         * renders `SegmentedControl`'s exact contract — bordered pill, 2px
+         * gaps, `bg-raised` active block, inline mono count — but keeps
+         * `tablist`/`tab`/`aria-controls` rather than importing it, because the
+         * kit control is a `radiogroup` and these buttons own a panel. */}
+        <div className="flex flex-wrap items-center gap-2 px-4 py-2.5">
+          <div
+            role="tablist"
+            aria-label="Signal groups"
+            className="flex shrink-0 gap-[2px] rounded-[6px] border border-line bg-surface p-[3px]"
+          >
+            {GROUP_META.map((g) => {
+              const selected = g.key === tab;
+              return (
+                <button
+                  key={g.key}
+                  type="button"
+                  role="tab"
+                  id={`signals-tab-${g.key}`}
+                  aria-selected={selected}
+                  aria-controls={`signals-panel-${g.key}`}
+                  onClick={() => setTab(g.key)}
+                  className={`inline-flex items-center gap-[7px] rounded-[4px] p-[5px_12px] text-body transition-colors ${
+                    selected
+                      ? "bg-raised font-semibold text-foreground"
+                      : "font-medium text-muted hover:text-foreground"
+                  }`}
+                >
+                  {g.title}
+                  <span
+                    className={`font-mono text-micro tabular-nums ${
+                      selected ? "text-3" : ""
+                    }`}
+                  >
+                    {sorted[g.key].length}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
         </div>
 
         <div

@@ -97,8 +97,8 @@ export default function SectionRail({ hasGamma = false }: { hasGamma?: boolean }
           <span
             className={
               currentId === id
-                ? "truncate text-micro"
-                : "hidden truncate text-micro group-hover:inline group-focus-visible:inline"
+                ? "truncate text-label font-medium"
+                : "hidden truncate text-label font-medium group-hover:inline group-focus-visible:inline"
             }
           >
             {label}

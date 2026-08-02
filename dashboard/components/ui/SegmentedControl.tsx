@@ -3,9 +3,16 @@
 export interface SegmentedOption<T extends string | number> {
   key: T;
   label: string;
+  /** How many rows sit behind this segment, printed inline after the label. A
+   * segment without one renders as the label alone. */
+  count?: number;
   /** One line describing what this option does, shown for the *selected*
    * option only. A per-option tooltip documents the thing you are not using. */
   blurb?: string;
+  /** `tablist` only: the tab's own id, and the id of the panel it reveals. A
+   * radio sets a value; a tab owns a region, and the region has to say so. */
+  id?: string;
+  controls?: string;
 }
 
 export interface SegmentedControlProps<T extends string | number> {
@@ -19,6 +26,10 @@ export interface SegmentedControlProps<T extends string | number> {
   /** `pills` breaks the segments apart, so two controls sharing a row do not
    * read as one joined group of five. */
   variant?: "segmented" | "pills";
+  /** Which ARIA vocabulary the group speaks. A radio sets a value and nothing
+   * else moves; a tab owns the region below it. Same pixels either way — the
+   * difference is what a screen reader is told happens when you press one. */
+  as?: "radiogroup" | "tablist";
   value: T;
   options: readonly SegmentedOption<T>[];
   onChange: (value: T) => void;
@@ -36,6 +47,7 @@ export default function SegmentedControl<T extends string | number>({
   label,
   labelHidden = false,
   variant = "segmented",
+  as = "radiogroup",
   value,
   options,
   onChange,
@@ -44,16 +56,17 @@ export default function SegmentedControl<T extends string | number>({
 }: SegmentedControlProps<T>) {
   const selected = options.find((o) => o.key === value);
   const pills = variant === "pills";
+  const tabs = as === "tablist";
   return (
     <div className={`flex items-center gap-2 ${className}`}>
       {!labelHidden && <span className="eyebrow shrink-0">{label}</span>}
       <div
-        role="radiogroup"
+        role={as}
         aria-label={label}
         className={
           pills
             ? "flex shrink-0 items-center gap-1.5"
-            : "flex shrink-0 rounded-md border border-line bg-elevated p-[2px]"
+            : "flex shrink-0 gap-[2px] rounded-[6px] border border-line bg-surface p-[3px]"
         }
       >
         {options.map((o) => {
@@ -62,22 +75,31 @@ export default function SegmentedControl<T extends string | number>({
             <button
               key={String(o.key)}
               type="button"
-              role="radio"
-              aria-checked={active}
+              role={tabs ? "tab" : "radio"}
+              {...(tabs
+                ? { "aria-selected": active, id: o.id, "aria-controls": o.controls }
+                : { "aria-checked": active })}
               onClick={() => onChange(o.key)}
-              className={`px-2 py-0.5 text-body transition-colors ${
-                pills ? "rounded border" : "rounded-[4px]"
-              } ${
-                active
-                  ? pills
-                    ? "border-line-strong bg-elevated font-medium text-foreground"
-                    : "bg-raised font-medium text-foreground"
-                  : pills
-                    ? "border-line text-muted hover:border-line-strong hover:text-foreground"
-                    : "text-muted hover:text-foreground"
+              className={`inline-flex items-center gap-[7px] text-body transition-colors ${
+                pills
+                  ? `rounded border px-2 py-0.5 ${
+                      active
+                        ? "border-line-strong bg-elevated font-medium text-foreground"
+                        : "border-line text-muted hover:border-line-strong hover:text-foreground"
+                    }`
+                  : `rounded-[4px] p-[5px_12px] ${
+                      active
+                        ? "bg-raised font-semibold text-foreground"
+                        : "font-medium text-muted hover:text-foreground"
+                    }`
               }`}
             >
               {o.label}
+              {o.count !== undefined && (
+                <span className={`font-mono text-micro tabular-nums ${active ? "text-3" : ""}`}>
+                  {o.count}
+                </span>
+              )}
             </button>
           );
         })}

@@ -42,14 +42,14 @@ function FamilyRow({ family, longV, shortV, waitV, attribution }: FamilyRowProps
         {family}
       </span>
       <CenterBar value={net} width={80} />
-      <span className="w-[28px] shrink-0 text-micro tabular-nums text-foreground">
+      <span className="w-[28px] shrink-0 text-data text-foreground">
         {netStr}
       </span>
-      <span className="text-micro tabular-nums text-muted">
+      <span className="text-data text-muted">
         {longV}/{total}
       </span>
       {attribution !== undefined && (
-        <span className="ml-auto shrink-0 text-micro tabular-nums text-model">
+        <span className="ml-auto shrink-0 text-data text-model">
           LOO {attribution >= 0 ? "+" : ""}
           {attribution.toFixed(2)}
         </span>
@@ -70,18 +70,18 @@ function VoteRow({ agent, direction, confidence, note }: VoteRowProps) {
 
   return (
     <div className="flex items-baseline gap-2 py-px">
-      <span className="min-w-0 flex-1 truncate text-micro text-foreground">
+      <span className="min-w-0 flex-1 truncate text-label text-foreground">
         {agent}
       </span>
-      <span className={`shrink-0 text-micro ${dirClass}`}>
+      <span className={`shrink-0 text-label ${dirClass}`}>
         {direction}
       </span>
-      <span className="w-[32px] shrink-0 text-right text-micro tabular-nums text-muted">
+      <span className="w-[32px] shrink-0 text-right text-data text-muted">
         {(confidence * 100).toFixed(0)}%
       </span>
       {note && (
         <InfoTip content={note} label={`${agent} rationale`}>
-          <span className="max-w-[240px] shrink-0 truncate text-micro text-muted">{note}</span>
+          <span className="max-w-[240px] shrink-0 truncate text-body text-muted">{note}</span>
         </InfoTip>
       )}
     </div>
@@ -117,7 +117,7 @@ function VoteSection({
 
   return (
     <div>
-      <p className={`mb-1 text-micro ${tone}`}>{title}</p>
+      <p className={`mb-1 text-label ${tone}`}>{title}</p>
       {groups.map(([family, rows]) => (
         <div key={family} className="mb-1.5">
           <p className="text-micro text-muted">{family}</p>
@@ -277,7 +277,7 @@ export default function WhyPanel({ ticker }: { ticker: string }) {
         <span className="text-foreground">{agrPct}%</span>
       </span>
       {ciWide && (
-        <span className="inline-flex items-center rounded border border-warn/50 bg-warn/10 px-1.5 py-px text-micro text-warn">
+        <span className="inline-flex items-center rounded border border-warn/50 bg-warn/10 px-1.5 py-px text-label text-warn">
           wide
         </span>
       )}
@@ -287,7 +287,7 @@ export default function WhyPanel({ ticker }: { ticker: string }) {
           content={
             timedOut ? "Scoring timed out — showing the last result." : "Refresh failed — showing the last result."
           }
-          className="inline-flex items-center rounded border border-muted/40 bg-muted/10 px-1.5 py-px text-micro text-muted"
+          className="inline-flex items-center rounded border border-muted/40 bg-muted/10 px-1.5 py-px text-label text-muted"
         >
           stale
         </InfoTip>
@@ -336,9 +336,9 @@ export default function WhyPanel({ ticker }: { ticker: string }) {
                       </>
                     }
                   >
-                    <span className="inline-flex items-center gap-1 rounded border border-line bg-surface px-1.5 py-0.5 text-micro text-muted">
+                    <span className="inline-flex items-center gap-1 rounded border border-line bg-surface px-1.5 py-0.5 text-label text-muted">
                       {family}
-                      <span className={letter === "N" ? "text-muted" : "text-model"}>
+                      <span className={`text-data ${letter === "N" ? "text-muted" : "text-model"}`}>
                         {letter}
                       </span>
                     </span>
@@ -362,7 +362,7 @@ export default function WhyPanel({ ticker }: { ticker: string }) {
         <div className="flex items-center gap-1.5 flex-wrap">
           {n_eff !== undefined && (
             <span className="inline-flex items-center gap-1 rounded border border-line bg-surface px-2 py-0.5">
-              <span className="text-micro text-muted">n_eff</span>
+              <span className="text-label text-muted">n_eff</span>
               <span className="text-data text-foreground">{n_eff.toFixed(1)}</span>
               <InfoTip content="Higher is not better — high n_eff backtested worse" label="n_eff info" />
             </span>
@@ -383,7 +383,7 @@ export default function WhyPanel({ ticker }: { ticker: string }) {
           <div className="flex items-start gap-1.5 rounded border border-warn/40 bg-warn/5 px-3 py-2">
             <AlertTriangle size={12} className="text-warn mt-px shrink-0" />
             <span className="text-body leading-snug text-warn">Meta-analyst: {meta_note}</span>
-            <span className="ml-1 shrink-0 text-micro text-muted">
+            <span className="ml-1 shrink-0 text-label text-muted">
               advisory only
             </span>
           </div>

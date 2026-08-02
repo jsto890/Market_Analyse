@@ -2,8 +2,16 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import type { IChartApi, ISeriesApi, IPriceLine, UTCTimestamp } from "lightweight-charts";
 import Empty from "@/components/ui/Empty";
+import SegmentedControl, { type SegmentedOption } from "@/components/ui/SegmentedControl";
 import Toggle from "@/components/ui/Toggle";
 import { visibleRangeFor, type ChartPeriod as Period } from "@/lib/chart-range";
+
+const RANGE_OPTIONS: readonly SegmentedOption<Period>[] = [
+  { key: "3M", label: "3M" },
+  { key: "6M", label: "6M" },
+  { key: "1Y", label: "1Y" },
+  { key: "2Y", label: "2Y" },
+];
 
 export interface Level {
   price: number;
@@ -443,26 +451,14 @@ export default function CandleChart({
     <div className={className}>
       {/* Controls */}
       <div className="flex flex-wrap items-center gap-2 mb-2 px-0.5">
-        {/* Range pills */}
-        <div role="radiogroup" aria-label="Chart range" className="flex gap-1">
-          {(["3M", "6M", "1Y", "2Y"] as Period[]).map((p) => (
-            <button
-              key={p}
-              type="button"
-              role="radio"
-              aria-checked={activePeriod === p}
-              onClick={() => applyPeriod(p)}
-              className={[
-                "px-2 py-0.5 rounded text-micro font-medium transition-colors",
-                activePeriod === p
-                  ? "bg-accent text-foreground"
-                  : "bg-elevated text-muted hover:text-foreground",
-              ].join(" ")}
-            >
-              {p}
-            </button>
-          ))}
-        </div>
+        {/* Range — the one segmented control (X-03) */}
+        <SegmentedControl<Period>
+          label="Chart range"
+          labelHidden
+          value={activePeriod}
+          options={RANGE_OPTIONS}
+          onChange={applyPeriod}
+        />
 
         <span className="text-line text-micro">|</span>
 
@@ -476,7 +472,7 @@ export default function CandleChart({
               setEmas((prev) => ({ ...prev, [key]: !prev[key] }))
             }
             className={[
-              "flex items-center gap-1.5 px-2 py-0.5 rounded text-micro font-medium border border-line bg-elevated transition-colors",
+              "flex items-center gap-1.5 px-2 py-0.5 rounded text-data border border-line bg-elevated transition-colors",
               emas[key] ? "text-foreground" : "text-muted hover:text-foreground",
             ].join(" ")}
           >
@@ -493,7 +489,7 @@ export default function CandleChart({
         {/* Log toggle */}
         <div className="flex items-center gap-1.5">
           <Toggle checked={logScale} onChange={setLogScale} label="Logarithmic Y-axis" />
-          <span className="text-micro font-medium text-muted">log</span>
+          <span className="text-label text-muted">log</span>
         </div>
       </div>
 

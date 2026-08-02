@@ -2,7 +2,7 @@ import { it, expect, vi, beforeEach } from "vitest";
 import { render, screen, waitFor } from "@/test/render";
 import { mockFetchJson } from "@/test/fetchMock";
 import { resetLocalStorage } from "@/test/localStorage";
-import CommandK from "@/components/CommandK";
+import CommandK, { shell } from "@/components/CommandK";
 
 const push = vi.fn();
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push }) }));
@@ -83,4 +83,23 @@ it("selecting an action command navigates to its route, not a /t/ ticker route (
 
   expect(push).toHaveBeenCalledWith("/watchlist");
   expect(push).not.toHaveBeenCalledWith(expect.stringMatching(/^\/t\//));
+});
+
+it("runs the Reload command in place instead of routing to it (X-06)", async () => {
+  mockFetchJson({
+    "/api/bridge": { signals: [] },
+    "/api/watchlist": { watchlist: [] },
+  });
+  const reload = vi.spyOn(shell, "reload").mockImplementation(() => {});
+
+  render(<CommandK />);
+  window.dispatchEvent(new Event("commandk:open"));
+
+  const command = await screen.findByText("Reload");
+  const { default: userEvent } = await import("@testing-library/user-event");
+  await userEvent.click(command);
+
+  expect(reload).toHaveBeenCalledTimes(1);
+  expect(push).not.toHaveBeenCalled();
+  reload.mockRestore();
 });

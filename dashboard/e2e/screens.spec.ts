@@ -147,14 +147,23 @@ test("state: options strikes — live mode, and scrolled right", async ({ page }
   await settle(page);
 
   await step("live toggle", async () => {
-    const toggle = page.getByRole("switch", { name: /live options ladder/i });
+    // The unlabelled `switch` became the named "Data" segmented control
+    // (OPT-03), so live is a radio you select, not a toggle you flip.
+    const toggle = page.getByRole("radio", { name: "Live" });
     await toggle.click({ timeout: 5000 });
     await page.waitForTimeout(3000); // let the 500ms poller land a snapshot
     await shot(page, "state--strikes-live-mode");
 
     // The 23-column table past the sticky Strike column: can you still tell
     // which side (calls vs puts) you are reading?
-    const scroller = page.locator("div.overflow-auto").filter({ has: page.locator("table") }).first();
+    // The ladder scrolls on `overflow-x-auto overflow-y-auto`, not the shorthand
+    // — match both, and wait with a short timeout so a miss is reported by
+    // `step` in seconds rather than eating the whole 120s test budget.
+    const scroller = page
+      .locator("div.overflow-auto, div.overflow-x-auto")
+      .filter({ has: page.locator("table") })
+      .first();
+    await scroller.waitFor({ state: "attached", timeout: 5000 });
     await scroller.evaluate((el) => { el.scrollLeft = el.scrollWidth; });
     await page.waitForTimeout(300);
     await shot(page, "state--strikes-live-scrolled-right");
@@ -395,7 +404,7 @@ test("audit: console errors, computed layout, contrast inputs", async ({ page })
   // Cross-route rollup — the three numbers the conformance pass is judged on.
   const metrics = Object.values(report).map((r) => (r as { metrics: Record<string, number> }).metrics);
   report._summary = {
-    distinctContentWidths: [...new Set(metrics.map((m) => m.contentWidth))].sort((a, b) => a - b),
+    distinctContentWidths: Array.from(new Set(metrics.map((m) => m.contentWidth))).sort((a, b) => a - b),
     minFontSize: Math.min(...metrics.map((m) => m.minFontSize ?? Infinity)),
     totalTitleAttrs: metrics.reduce((n, m) => n + (m.titleAttrs ?? 0), 0),
     routesWithHexInMarkup: Object.entries(report)
@@ -803,7 +812,9 @@ test("contract: Phase 4 — the window drives the benchmark, sectors are named, 
   await settle(page, 2500);
   requests.length = 0;
 
-  await page.getByRole("button", { name: "1 week" }).click();
+  // The lookback switch is a `SegmentedControl` now (X-03), so its segments are
+  // radios in a radiogroup, not buttons. Same label, same click, stated role.
+  await page.getByRole("radio", { name: "1 week" }).click();
   await settle(page, 2000);
 
   // 1w's benchmark is 1mo of daily bars; the 1d default is 5d of 30m bars. A

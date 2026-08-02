@@ -45,7 +45,7 @@ export function MacroGauges({ window = "1d" }: { window?: string }) {
     <div className="border-t border-line-strong">
       <div className="h-[24px] flex items-center justify-between px-3">
         <span className="eyebrow leading-none">Macro</span>
-        <Link href={`/macro?window=${window}`} className="text-micro font-mono text-muted hover:text-accent">{window} ›</Link>
+        <Link href={`/macro?window=${window}`} className="text-data leading-none text-muted hover:text-accent">{window} ›</Link>
       </div>
       {show.length === 0
         ? <Loading variant="lines" count={2} label="Building macro gauges" className="px-3 py-1.5" />

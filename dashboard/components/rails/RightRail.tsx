@@ -169,8 +169,10 @@ function shortSource(s: string): string {
 // ── Header right-side: item count indicator ───────────────────────────────────
 function NewsFeedHeader() {
   const { data, error } = useNewsFeed();
-  if (error) return <span className="text-micro text-warn leading-none">offline</span>;
-  if (!data) return <span className="text-micro text-muted opacity-40 leading-none">…</span>;
+  // One slot, one size: the count is data, and the two states that stand in for
+  // it are the word beside the figure that isn't there yet.
+  if (error) return <span className="text-label text-warn leading-none">offline</span>;
+  if (!data) return <span className="text-data text-muted opacity-40 leading-none">…</span>;
   return (
     <span className="text-data text-muted leading-none">
       {data.items.length}

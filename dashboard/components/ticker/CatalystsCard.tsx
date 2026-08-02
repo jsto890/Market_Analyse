@@ -82,7 +82,7 @@ function BridgeCatalysts({ bridgeRow }: { bridgeRow: BridgeRow }) {
             className="inline-flex items-center gap-1 text-data"
           >
             <VoteTick value={Number(bridgeRow[key])} />
-            <span className="text-micro text-muted">{label}</span>
+            <span className="text-label text-muted">{label}</span>
           </span>
         ))}
       </div>
@@ -120,7 +120,7 @@ function OffBridgeCatalysts({ ticker }: { ticker: string }) {
     <div className="flex flex-wrap gap-x-4 gap-y-1 text-data">
       {fields.map((f) => (
         <span key={f.label}>
-          <span className="text-muted text-micro">{f.label} </span>
+          <span className="text-muted text-label">{f.label} </span>
           <span className="text-foreground">{f.value}</span>
         </span>
       ))}

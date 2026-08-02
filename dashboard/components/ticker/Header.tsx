@@ -186,7 +186,7 @@ export default function Header({
                 content="The basis for the price shown here and for every percentage on this page."
                 label="Price basis"
               >
-                <span className="text-micro text-muted-2">{markBasis}</span>
+                <span className="text-label text-muted-2">{markBasis}</span>
               </InfoTip>
             )}
           </div>
@@ -241,7 +241,7 @@ export default function Header({
                 {bridgeRow.high_conviction && (
                   // The glossary used to sit under the header as body copy on
                   // every ticker; it belongs on the chip it explains (TH-01).
-                  <span className="inline-flex items-center rounded border border-model/50 bg-model/10 px-1.5 py-px text-micro text-model">
+                  <span className="inline-flex items-center rounded border border-model/50 bg-model/10 px-1.5 py-px text-label text-model">
                     <Gloss term="HC" />
                   </span>
                 )}
