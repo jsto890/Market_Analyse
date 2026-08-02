@@ -362,6 +362,29 @@ test("audit: console errors, computed layout, contrast inputs", async ({ page })
           // tooltip-only affordances: triggers with no visible content
           invisibleTips: document.querySelectorAll(".sr-only").length,
           titleAttrs: document.querySelectorAll("[title]").length,
+          // the smallest size any text actually rendered at — 11px is the floor
+          minFontSize: (() => {
+            let min = Infinity;
+            document.querySelectorAll<HTMLElement>("body *").forEach((el) => {
+              if (!el.textContent?.trim()) return;
+              const s = parseFloat(getComputedStyle(el).fontSize);
+              if (s > 0 && s < min) min = s;
+            });
+            return Number.isFinite(min) ? min : null;
+          })(),
+          // a colour spelled out in markup rather than taken from the token layer
+          hexInMarkup: (() => {
+            const hex = /#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})\b/;
+            const hits: string[] = [];
+            document.querySelectorAll<HTMLElement>("body *").forEach((el) => {
+              const cls = typeof el.className === "string" ? el.className : "";
+              const style = el.getAttribute("style") ?? "";
+              if (hex.test(cls) || hex.test(style)) {
+                hits.push(`${el.tagName.toLowerCase()}: ${(cls + " " + style).trim().slice(0, 80)}`);
+              }
+            });
+            return hits.slice(0, 10);
+          })(),
         };
       }),
     };
@@ -369,9 +392,21 @@ test("audit: console errors, computed layout, contrast inputs", async ({ page })
     page.removeAllListeners("pageerror");
   }
 
+  // Cross-route rollup — the three numbers the conformance pass is judged on.
+  const metrics = Object.values(report).map((r) => (r as { metrics: Record<string, number> }).metrics);
+  report._summary = {
+    distinctContentWidths: [...new Set(metrics.map((m) => m.contentWidth))].sort((a, b) => a - b),
+    minFontSize: Math.min(...metrics.map((m) => m.minFontSize ?? Infinity)),
+    totalTitleAttrs: metrics.reduce((n, m) => n + (m.titleAttrs ?? 0), 0),
+    routesWithHexInMarkup: Object.entries(report)
+      .filter(([, r]) => ((r as { metrics: { hexInMarkup: string[] } }).metrics.hexInMarkup ?? []).length > 0)
+      .map(([k]) => k),
+  };
+
   fs.writeFileSync(path.join(OUT, "_audit.json"), JSON.stringify(report, null, 2));
   console.log(`\n  ✓ screens/_audit.json`);
-  expect(Object.keys(report).length).toBe(ROUTES.length);
+  console.log(`    ${JSON.stringify(report._summary)}`);
+  expect(Object.keys(report).length).toBe(ROUTES.length + 1);
 });
 
 // ── 4. Phase 1 substrate contract ────────────────────────────────────────────

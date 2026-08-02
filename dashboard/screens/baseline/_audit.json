@@ -3,214 +3,243 @@
     "status": 200,
     "consoleErrors": [],
     "metrics": {
-      "scrollHeight": 1404,
+      "scrollHeight": 1598,
       "clientHeight": 674,
-      "contentWidth": 1048.5,
-      "contentPadding": "24px 24px 24px 24px",
+      "contentWidth": 792,
+      "contentPadding": "24px 28px 24px 28px",
       "tables": 1,
-      "rows": 2,
+      "rows": 4,
       "fontSizes": {
-        "13px": 392,
-        "11px": 108,
+        "13px": 568,
+        "11px": 216,
+        "12px": 77,
         "15px": 12,
-        "12px": 5,
         "20px": 4
       },
       "invisibleTips": 8,
-      "titleAttrs": 0
+      "titleAttrs": 1,
+      "minFontSize": 11,
+      "hexInMarkup": []
     }
   },
   "/t/AAPL": {
     "status": 200,
     "consoleErrors": [],
     "metrics": {
-      "scrollHeight": 2885,
+      "scrollHeight": 2660,
       "clientHeight": 674,
-      "contentWidth": 1048.5,
-      "contentPadding": "24px 24px 24px 24px",
+      "contentWidth": 1208,
+      "contentPadding": "24px 28px 24px 28px",
       "tables": 5,
       "rows": 22,
       "fontSizes": {
-        "13px": 703,
-        "11px": 397,
+        "13px": 628,
+        "11px": 357,
         "15px": 11,
+        "12px": 5,
         "28px": 1
       },
-      "invisibleTips": 7,
-      "titleAttrs": 0
+      "invisibleTips": 1,
+      "titleAttrs": 1,
+      "minFontSize": 11,
+      "hexInMarkup": [
+        "span: h-2 w-2 rounded-full background-color:#8b93a3;opacity:0.35"
+      ]
     }
   },
   "/odte": {
     "status": 200,
     "consoleErrors": [],
     "metrics": {
-      "scrollHeight": 754,
+      "scrollHeight": 755,
       "clientHeight": 674,
-      "contentWidth": 1048.5,
+      "contentWidth": 1208,
       "contentPadding": "0px 0px 0px 0px",
       "tables": 0,
       "rows": 0,
       "fontSizes": {
-        "13px": 357,
-        "11px": 62,
+        "13px": 254,
+        "11px": 28,
         "15px": 2
       },
-      "invisibleTips": 8,
-      "titleAttrs": 0
+      "invisibleTips": 2,
+      "titleAttrs": 1,
+      "minFontSize": 11,
+      "hexInMarkup": []
     }
   },
   "/odte/strikes": {
     "status": 200,
     "consoleErrors": [],
     "metrics": {
-      "scrollHeight": 1252,
+      "scrollHeight": 1230,
       "clientHeight": 674,
-      "contentWidth": 1048.5,
+      "contentWidth": 1208,
       "contentPadding": "0px 0px 0px 0px",
       "tables": 1,
       "rows": 41,
       "fontSizes": {
-        "13px": 906,
-        "11px": 131,
+        "13px": 810,
+        "11px": 97,
         "15px": 3
       },
-      "invisibleTips": 9,
-      "titleAttrs": 0
+      "invisibleTips": 3,
+      "titleAttrs": 1,
+      "minFontSize": 11,
+      "hexInMarkup": []
     }
   },
   "/options": {
     "status": 200,
     "consoleErrors": [],
     "metrics": {
-      "scrollHeight": 754,
+      "scrollHeight": 755,
       "clientHeight": 674,
-      "contentWidth": 1048.5,
+      "contentWidth": 1208,
       "contentPadding": "0px 0px 0px 0px",
       "tables": 0,
       "rows": 0,
       "fontSizes": {
-        "13px": 357,
-        "11px": 62,
+        "13px": 254,
+        "11px": 28,
         "15px": 2
       },
-      "invisibleTips": 8,
-      "titleAttrs": 0
+      "invisibleTips": 2,
+      "titleAttrs": 1,
+      "minFontSize": 11,
+      "hexInMarkup": []
     }
   },
   "/options/ladder": {
     "status": 200,
     "consoleErrors": [],
     "metrics": {
-      "scrollHeight": 1252,
+      "scrollHeight": 1230,
       "clientHeight": 674,
-      "contentWidth": 1048.5,
+      "contentWidth": 1208,
       "contentPadding": "0px 0px 0px 0px",
       "tables": 1,
       "rows": 41,
       "fontSizes": {
-        "13px": 906,
-        "11px": 131,
+        "13px": 810,
+        "11px": 97,
         "15px": 3
       },
-      "invisibleTips": 9,
-      "titleAttrs": 0
+      "invisibleTips": 3,
+      "titleAttrs": 1,
+      "minFontSize": 11,
+      "hexInMarkup": []
     }
   },
   "/options/gamma": {
     "status": 200,
     "consoleErrors": [],
     "metrics": {
-      "scrollHeight": 1066,
+      "scrollHeight": 1047,
       "clientHeight": 674,
-      "contentWidth": 1048.5,
+      "contentWidth": 1208,
       "contentPadding": "0px 0px 0px 0px",
       "tables": 0,
       "rows": 0,
       "fontSizes": {
-        "13px": 271,
-        "11px": 91,
+        "13px": 172,
+        "11px": 57,
         "15px": 6
       },
-      "invisibleTips": 8,
-      "titleAttrs": 0
+      "invisibleTips": 2,
+      "titleAttrs": 1,
+      "minFontSize": 11,
+      "hexInMarkup": []
     }
   },
   "/options/flow": {
     "status": 200,
     "consoleErrors": [],
     "metrics": {
-      "scrollHeight": 754,
+      "scrollHeight": 755,
       "clientHeight": 674,
-      "contentWidth": 1048.5,
+      "contentWidth": 1208,
       "contentPadding": "0px 0px 0px 0px",
       "tables": 0,
       "rows": 0,
       "fontSizes": {
-        "13px": 233,
-        "11px": 52,
+        "13px": 132,
+        "11px": 18,
         "15px": 2
       },
-      "invisibleTips": 8,
-      "titleAttrs": 0
+      "invisibleTips": 2,
+      "titleAttrs": 1,
+      "minFontSize": 11,
+      "hexInMarkup": []
     }
   },
   "/options/greeks": {
     "status": 200,
     "consoleErrors": [],
     "metrics": {
-      "scrollHeight": 754,
+      "scrollHeight": 755,
       "clientHeight": 674,
-      "contentWidth": 1048.5,
+      "contentWidth": 1208,
       "contentPadding": "0px 0px 0px 0px",
       "tables": 0,
       "rows": 0,
       "fontSizes": {
-        "13px": 166,
-        "11px": 48,
+        "13px": 69,
+        "11px": 14,
         "15px": 1
       },
-      "invisibleTips": 8,
-      "titleAttrs": 0
+      "invisibleTips": 2,
+      "titleAttrs": 1,
+      "minFontSize": 11,
+      "hexInMarkup": []
     }
   },
   "/calendar": {
     "status": 200,
-    "consoleErrors": [],
+    "consoleErrors": [
+      "Warning: In HTML, %s cannot be a descendant of <%s>.\nThis will cause a hydration error.%s <button> button \n    at button\n    at eval (webpack-internal:///(app-pages-browser)/./node_modules/@radix-ui/react-slot/dist/index.mjs:18:11)\n    at eval (webpack-internal:///(app-pages-browser)/./node_modules/@radix-ui/react-primitive/dist/index.mjs:38:13)\n    at eval (webpack-internal:///(app-pages-browser)/./node_modules/@radix-ui/react-slot/dist/index.mjs:18:11)\n    at eval (webpack-internal:///(app-pages-browser)/./node_modules/@radix-ui/react-primitive/dist/index.mjs:38:13)\n    at eval (webpack-internal:///(app-pages-browser)/./node_modules/@radix-ui/react-popper/dist/index.mjs:72:13)\n    at eval (webpack-internal:///(app-pages-browser)/./node_modules/@radix-ui/react-tooltip/dist/index.mjs:209:13)\n    at Provider (webpack-internal:///(app-pages-browser)/./node_modules/@radix-ui/react-context/dist/index.mjs:36:15)\n    at Provider (webpack-internal:///(app-pages-browser)/./node_modules/@radix-ui/react-context/dist/index.mjs:36:15)\n    at Popper (webpack-internal:///(app-pages-browser)/./node_modules/@radix-ui/react-popper/dist/index.mjs:54:13)\n    at Tooltip (webpack-internal:///(app-pages-browser)/./node_modules/@radix-ui/react-tooltip/dist/index.mjs:99:13)\n    at InfoTip (webpack-internal:///(app-pages-browser)/./components/ui/InfoTip.tsx:12:11)\n    at div\n    at span\n    at button\n    at div\n    at Collapsible (webpack-internal:///(app-pages-browser)/./components/ui/Collapsible.tsx:15:11)\n    at EventRow (webpack-internal:///(app-pages-browser)/./components/calendar/EventRow.tsx:47:11)\n    at div\n    at div\n    at div\n    at section\n    at div\n    at main\n    at Page (webpack-internal:///(app-pages-browser)/./components/ui/Page.tsx:28:11)\n    at CalendarPage (webpack-internal:///(app-pages-browser)/./app/calendar/page.tsx:78:105)\n    at ClientPageRoot (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/client-page.js:14:11)\n    at InnerLayoutRouter (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:243:11)\n    at RedirectErrorBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/redirect-boundary.js:74:9)\n    at RedirectBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/redirect-boundary.js:82:11)\n    at NotFoundBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/not-found-boundary.js:84:11)\n    at LoadingBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:349:11)\n    at ErrorBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/error-boundary.js:160:11)\n    at InnerScrollAndFocusHandler (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:153:9)\n    at ScrollAndFocusHandler (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:228:11)\n    at RenderFromTemplateContext (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/render-from-template-context.js:16:44)\n    at OuterLayoutRouter (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:370:11)\n    at InnerLayoutRouter (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:243:11)\n    at RedirectErrorBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/redirect-boundary.js:74:9)\n    at RedirectBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/redirect-boundary.js:82:11)\n    at NotFoundErrorBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/not-found-boundary.js:76:9)\n    at NotFoundBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/not-found-boundary.js:84:11)\n    at LoadingBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:349:11)\n    at ErrorBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/error-boundary.js:160:11)\n    at InnerScrollAndFocusHandler (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:153:9)\n    at ScrollAndFocusHandler (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:228:11)\n    at RenderFromTemplateContext (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/render-from-template-context.js:16:44)\n    at OuterLayoutRouter (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:370:11)\n    at div\n    at div\n    at RailShell (webpack-internal:///(app-pages-browser)/./components/rails/RailShell.tsx:15:11)\n    at UndoToastProvider (webpack-internal:///(app-pages-browser)/./components/ui/UndoToastProvider.tsx:22:11)\n    at Provider (webpack-internal:///(app-pages-browser)/./node_modules/@radix-ui/react-context/dist/index.mjs:36:15)\n    at TooltipProvider (webpack-internal:///(app-pages-browser)/./node_modules/@radix-ui/react-tooltip/dist/index.mjs:58:13)\n    at TooltipProvider (webpack-internal:///(app-pages-browser)/./components/ui/TooltipProvider.tsx:10:11)\n    at body\n    at html\n    at RootLayout (Server)\n    at RedirectErrorBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/redirect-boundary.js:74:9)\n    at RedirectBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/redirect-boundary.js:82:11)\n    at NotFoundErrorBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/not-found-boundary.js:76:9)\n    at NotFoundBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/not-found-boundary.js:84:11)\n    at DevRootNotFoundBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/dev-root-not-found-boundary.js:33:11)\n    at ReactDevOverlay (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/react-dev-overlay/app/ReactDevOverlay.js:87:9)\n    at HotReload (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/react-dev-overlay/app/hot-reloader-client.js:321:11)\n    at Router (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/app-router.js:207:11)\n    at ErrorBoundaryHandler (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/error-boundary.js:113:9)\n    at ErrorBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/error-boundary.js:160:11)\n    at AppRouter (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/app-router.js:585:13)\n    at ServerRoot (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/app-index.js:112:27)\n    at Root (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/app-index.js:117:11)"
+    ],
     "metrics": {
-      "scrollHeight": 2121,
+      "scrollHeight": 1378,
       "clientHeight": 674,
-      "contentWidth": 1048.5,
-      "contentPadding": "24px 24px 24px 24px",
+      "contentWidth": 1180,
+      "contentPadding": "24px 28px 24px 28px",
       "tables": 0,
       "rows": 0,
       "fontSizes": {
-        "13px": 805,
-        "11px": 418,
-        "15px": 3,
+        "13px": 562,
+        "11px": 320,
+        "15px": 13,
+        "12px": 4,
         "20px": 1
       },
-      "invisibleTips": 35,
-      "titleAttrs": 0
+      "invisibleTips": 31,
+      "titleAttrs": 1,
+      "minFontSize": 11,
+      "hexInMarkup": []
     }
   },
   "/watchlist": {
     "status": 200,
     "consoleErrors": [],
     "metrics": {
-      "scrollHeight": 1770,
+      "scrollHeight": 1832,
       "clientHeight": 674,
-      "contentWidth": 1048.5,
-      "contentPadding": "24px 24px 24px 24px",
+      "contentWidth": 1180,
+      "contentPadding": "24px 28px 24px 28px",
       "tables": 1,
-      "rows": 31,
+      "rows": 33,
       "fontSizes": {
-        "13px": 616,
-        "11px": 72,
-        "15px": 4,
-        "20px": 1
+        "13px": 647,
+        "11px": 32,
+        "12px": 12,
+        "15px": 7,
+        "20px": 3
       },
-      "invisibleTips": 7,
-      "titleAttrs": 0
+      "invisibleTips": 1,
+      "titleAttrs": 1,
+      "minFontSize": 11,
+      "hexInMarkup": []
     }
   },
   "/screener": {
@@ -219,18 +248,20 @@
     "metrics": {
       "scrollHeight": 674,
       "clientHeight": 674,
-      "contentWidth": 1048.5,
-      "contentPadding": "24px 24px 24px 24px",
+      "contentWidth": 1180,
+      "contentPadding": "24px 28px 24px 28px",
       "tables": 0,
       "rows": 0,
       "fontSizes": {
-        "13px": 148,
-        "11px": 45,
+        "13px": 51,
+        "11px": 10,
         "15px": 2,
         "20px": 1
       },
-      "invisibleTips": 7,
-      "titleAttrs": 0
+      "invisibleTips": 1,
+      "titleAttrs": 1,
+      "minFontSize": 11,
+      "hexInMarkup": []
     }
   },
   "/portfolio": {
@@ -239,18 +270,20 @@
     "metrics": {
       "scrollHeight": 674,
       "clientHeight": 674,
-      "contentWidth": 1048.5,
-      "contentPadding": "24px 24px 24px 24px",
-      "tables": 1,
-      "rows": 1,
+      "contentWidth": 1180,
+      "contentPadding": "24px 28px 24px 28px",
+      "tables": 0,
+      "rows": 0,
       "fontSizes": {
-        "13px": 150,
-        "11px": 45,
+        "13px": 42,
+        "11px": 11,
         "15px": 1,
         "20px": 1
       },
-      "invisibleTips": 7,
-      "titleAttrs": 0
+      "invisibleTips": 1,
+      "titleAttrs": 1,
+      "minFontSize": 11,
+      "hexInMarkup": []
     }
   },
   "/alerts": {
@@ -260,78 +293,86 @@
       "scrollHeight": 860,
       "clientHeight": 674,
       "contentWidth": 880,
-      "contentPadding": "24px 24px 24px 24px",
+      "contentPadding": "24px 28px 24px 28px",
       "tables": 0,
       "rows": 0,
       "fontSizes": {
-        "13px": 175,
-        "11px": 44,
+        "13px": 78,
+        "11px": 10,
         "15px": 6,
         "20px": 1
       },
-      "invisibleTips": 7,
-      "titleAttrs": 0
+      "invisibleTips": 1,
+      "titleAttrs": 1,
+      "minFontSize": 11,
+      "hexInMarkup": []
     }
   },
   "/rotation": {
     "status": 200,
     "consoleErrors": [],
     "metrics": {
-      "scrollHeight": 1044,
+      "scrollHeight": 1053,
       "clientHeight": 674,
-      "contentWidth": 1048.5,
-      "contentPadding": "24px 24px 24px 24px",
+      "contentWidth": 1180,
+      "contentPadding": "24px 28px 24px 28px",
       "tables": 1,
       "rows": 12,
       "fontSizes": {
-        "13px": 448,
-        "11px": 117,
+        "13px": 372,
+        "11px": 83,
         "10px": 4,
         "15px": 3,
         "20px": 1
       },
-      "invisibleTips": 7,
-      "titleAttrs": 0
+      "invisibleTips": 1,
+      "titleAttrs": 1,
+      "minFontSize": 10,
+      "hexInMarkup": []
     }
   },
   "/macro": {
     "status": 200,
     "consoleErrors": [],
     "metrics": {
-      "scrollHeight": 1045,
+      "scrollHeight": 989,
       "clientHeight": 674,
-      "contentWidth": 1048.5,
-      "contentPadding": "24px 24px 24px 24px",
+      "contentWidth": 1180,
+      "contentPadding": "24px 28px 24px 28px",
       "tables": 1,
       "rows": 0,
       "fontSizes": {
-        "13px": 247,
-        "11px": 64,
+        "13px": 123,
+        "11px": 28,
         "15px": 2,
         "20px": 1
       },
-      "invisibleTips": 7,
-      "titleAttrs": 0
+      "invisibleTips": 1,
+      "titleAttrs": 1,
+      "minFontSize": 11,
+      "hexInMarkup": []
     }
   },
   "/brief": {
     "status": 200,
     "consoleErrors": [],
     "metrics": {
-      "scrollHeight": 2190,
+      "scrollHeight": 2218,
       "clientHeight": 674,
       "contentWidth": 880,
-      "contentPadding": "24px 24px 24px 24px",
+      "contentPadding": "24px 28px 24px 28px",
       "tables": 0,
       "rows": 0,
       "fontSizes": {
-        "13px": 429,
-        "11px": 68,
+        "13px": 331,
+        "11px": 82,
         "15px": 6,
         "20px": 1
       },
-      "invisibleTips": 7,
-      "titleAttrs": 0
+      "invisibleTips": 23,
+      "titleAttrs": 1,
+      "minFontSize": 11,
+      "hexInMarkup": []
     }
   },
   "/learn": {
@@ -341,37 +382,41 @@
       "scrollHeight": 674,
       "clientHeight": 674,
       "contentWidth": 880,
-      "contentPadding": "24px 24px 24px 24px",
+      "contentPadding": "24px 28px 24px 28px",
       "tables": 0,
       "rows": 0,
       "fontSizes": {
-        "13px": 146,
-        "11px": 44,
+        "13px": 49,
+        "11px": 10,
         "15px": 4,
         "20px": 1
       },
-      "invisibleTips": 7,
-      "titleAttrs": 0
+      "invisibleTips": 1,
+      "titleAttrs": 1,
+      "minFontSize": 11,
+      "hexInMarkup": []
     }
   },
   "/learn/glossary": {
     "status": 200,
     "consoleErrors": [],
     "metrics": {
-      "scrollHeight": 3706,
+      "scrollHeight": 3727,
       "clientHeight": 674,
       "contentWidth": 880,
-      "contentPadding": "24px 24px 24px 24px",
+      "contentPadding": "24px 28px 24px 28px",
       "tables": 0,
       "rows": 0,
       "fontSizes": {
-        "13px": 336,
-        "11px": 47,
+        "13px": 239,
+        "11px": 13,
         "15px": 11,
         "20px": 1
       },
-      "invisibleTips": 7,
-      "titleAttrs": 0
+      "invisibleTips": 1,
+      "titleAttrs": 1,
+      "minFontSize": 11,
+      "hexInMarkup": []
     }
   },
   "/learn/options": {
@@ -381,37 +426,54 @@
       "scrollHeight": 1488,
       "clientHeight": 674,
       "contentWidth": 880,
-      "contentPadding": "24px 24px 24px 24px",
+      "contentPadding": "24px 28px 24px 28px",
       "tables": 0,
       "rows": 0,
       "fontSizes": {
-        "13px": 252,
-        "11px": 47,
+        "13px": 155,
+        "11px": 13,
         "15px": 6,
         "20px": 1
       },
-      "invisibleTips": 7,
-      "titleAttrs": 0
+      "invisibleTips": 1,
+      "titleAttrs": 1,
+      "minFontSize": 11,
+      "hexInMarkup": []
     }
   },
   "/learn/data": {
     "status": 200,
     "consoleErrors": [],
     "metrics": {
-      "scrollHeight": 7951,
+      "scrollHeight": 6824,
       "clientHeight": 674,
-      "contentWidth": 1048.5,
-      "contentPadding": "24px 24px 24px 24px",
+      "contentWidth": 1180,
+      "contentPadding": "24px 28px 24px 28px",
       "tables": 3,
-      "rows": 177,
+      "rows": 156,
       "fontSizes": {
-        "13px": 1514,
-        "11px": 289,
+        "13px": 1272,
+        "11px": 242,
         "15px": 5,
         "20px": 1
       },
-      "invisibleTips": 7,
-      "titleAttrs": 0
+      "invisibleTips": 1,
+      "titleAttrs": 1,
+      "minFontSize": 11,
+      "hexInMarkup": []
     }
+  },
+  "_summary": {
+    "distinctContentWidths": [
+      792,
+      880,
+      1180,
+      1208
+    ],
+    "minFontSize": 10,
+    "totalTitleAttrs": 21,
+    "routesWithHexInMarkup": [
+      "/t/AAPL"
+    ]
   }
 }
