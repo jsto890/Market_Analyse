@@ -8,8 +8,18 @@ each coefficient per horizon, answering one question: do the legs even have a
 positive predictive relationship with forward return? If a leg's coefficient is
 reliably negative, that is a red flag worth investigating before trusting it.
 
-Run under base conda:
-    /Users/josephstorey/anaconda3/bin/python tools/weight_opt/ridge_sanity.py
+The fit carries a DATE FIXED EFFECT — features demeaned and target ranked within
+each report date. Without it (as this script ran until 2026-08-03) the pooled fit is
+dominated by a between-date market-timing channel: it answers "were high-sentiment
+*days* good days", not "did high-sentiment *names* beat their peers that day", which
+is the only thing the production blend can act on. That defect produced a spurious
+"sentiment positive at every horizon" in the 2026-06-09 run, quoted as corroboration
+in weight_decision.md, and an equally spurious sign inversion on 2026-08-03.
+Coefficients are reported in target-sd units — the raw ranks have sd ~400-500, so an
+untransformed coefficient of -37 is -0.07 sd, which is noise wearing a big number.
+
+Run under the argus venv:
+    argus/.venv/bin/python tools/weight_opt/ridge_sanity.py
 """
 from __future__ import annotations
 
@@ -32,19 +42,24 @@ def main() -> None:
     rows = []
     for h in USABLE_HORIZONS:
         ret_col = f"fwd_ret_{h}d"
-        df = panel[["sentiment_score", "tech_score", ret_col]].dropna()
+        df = panel[["date", "sentiment_score", "tech_score", ret_col]].dropna()
         if len(df) < 30:
             continue
-        X = df[["sentiment_score", "tech_score"]].values
-        y = df[ret_col].values
-        Xs = StandardScaler().fit_transform(X)
-        # rank-transform target so the fit is not dominated by the fat right tail
-        y_rank = pd.Series(y).rank().values
-        model = Ridge(alpha=1.0).fit(Xs, y_rank)
+        # Rank the target WITHIN each date and rescale to [-0.5, 0.5], so every day
+        # contributes on the same scale regardless of how many names it carried.
+        y = df.groupby("date")[ret_col].transform(
+            lambda s: s.rank(pct=True) - 0.5).values
+        # Date fixed effect: demean each feature within its date, so the fit sees
+        # only cross-sectional variation — the same quantity rank-IC measures.
+        Xs = StandardScaler().fit_transform(
+            df.groupby("date")[["sentiment_score", "tech_score"]]
+              .transform(lambda s: s - s.mean()).values)
+        model = Ridge(alpha=1.0).fit(Xs, y)
+        sd_y = float(np.std(y)) or 1.0
         rows.append({
             "horizon_d": h, "n": len(df),
-            "coef_sentiment": round(float(model.coef_[0]), 3),
-            "coef_technical": round(float(model.coef_[1]), 3),
+            "coef_sentiment": round(float(model.coef_[0]) / sd_y, 4),
+            "coef_technical": round(float(model.coef_[1]) / sd_y, 4),
             "sentiment_sign": "＋" if model.coef_[0] > 0 else "－",
             "technical_sign": "＋" if model.coef_[1] > 0 else "－",
         })

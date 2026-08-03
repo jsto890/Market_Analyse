@@ -56,6 +56,17 @@ def main() -> None:
     print("Catalyst sub-agent vote vs forward return (where the vote fired):")
     print(res.to_string(index=False))
 
+    # A sub-agent that never fires used to report as a blank row and then get
+    # filtered out by the MIN_FIRES cut below, so "silently dead" and "not enough
+    # data yet" looked identical. earnings_proximity hid that way for eight weeks
+    # while holding 0.25 of the catalyst leg — it is gated on a metrics key with no
+    # producer in the live path. Anything that can report "no data" by omission
+    # will eventually hide a dead feed, so a zero now shouts.
+    dead = sorted(res.loc[pd.to_numeric(res["n_fires"], errors="coerce") == 0, "sub_agent"].unique())
+    if dead:
+        print(f"\n*** NEVER FIRED — check the feed, not the weights: {', '.join(dead)}")
+        print("*** A weight on an agent that never votes is a claim the config cannot honour.")
+
     enough = res[pd.to_numeric(res["n_fires"], errors="coerce") >= MIN_FIRES]
     if enough.empty:
         print(f"\nNot enough fired votes yet (need >= {MIN_FIRES}). Keep the literature prior.")

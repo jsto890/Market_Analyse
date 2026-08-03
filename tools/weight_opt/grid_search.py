@@ -28,8 +28,17 @@ REPO = Path(__file__).resolve().parents[2]
 OUT = REPO / "docs" / "weight_optimisation"
 PANEL = OUT / "panel.csv"
 
-USABLE_HORIZONS = [1, 5, 10]   # 20d has only ~27 rows — excluded
-ALPHA_GRID = np.round(np.arange(0.05, 0.96, 0.025), 4)
+# 20d is excluded, but NOT for the reason the old comment gave ("only ~27 rows" —
+# it has 1363). It terminates 2026-06-23 while 1d runs to 07-30, so it samples a
+# strictly earlier and shorter window than the other horizons and shares ~95% of
+# its forward windows with 10d. Adding it would buy no independent information and
+# would worsen the across-horizon multiplicity. If it is ever included it must be
+# labelled as one dependent block with 10d, never as separate confirmation.
+USABLE_HORIZONS = [1, 5, 10]
+# Runs to 1.00, not 0.95. The 2026-08-03 checkpoint's 10d and 20d optima sat exactly
+# on the old 0.95 cap; extending the grid showed the true argmax was 1.000 — i.e.
+# "delete the technical leg" — which a clipped grid drew as an interior peak.
+ALPHA_GRID = np.round(np.arange(0.05, 1.001, 0.025), 4)
 MIN_NAMES_PER_DAY = 5
 N_PERMUTATIONS = 2000
 RNG = np.random.default_rng(20260609)
@@ -99,8 +108,46 @@ def _permutation_null(df: pd.DataFrame, ret_col: str) -> tuple[float, float, flo
             lambda s: RNG.permutation(s.values))
         null_best[i] = max((_mean_ic(shuffled, ret_col, a)[0] for a in ALPHA_GRID),
                            key=lambda x: (x if not np.isnan(x) else -9))
-    p_value = float((null_best >= real_best).mean())
+    # (1 + count) / (1 + N), not count / N. The unbiased-looking version can print
+    # p=0.0000, which reads as certainty when all it means is "no draw out of 2000
+    # reached this". The 2026-08-03 run printed exactly that at 10d.
+    p_value = float((1 + (null_best >= real_best).sum()) / (1 + N_PERMUTATIONS))
     return float(real_best), float(np.percentile(null_best, 95)), p_value
+
+
+def _independent_windows(df: pd.DataFrame, ret_col: str, horizon: int) -> tuple[int, float]:
+    """Non-overlapping forward windows the panel actually contains, and the p-floor.
+
+    The permutation null above shuffles *within* each date, which makes every day's
+    IC independent under the null. The real day-ICs are not: consecutive report dates
+    share almost all of a 10d or 20d forward window. So the null's variance is too
+    small and its p-value is anti-conservative — and no amount of permutations fixes
+    that, because the defect is in the exchangeability assumption, not the sampling.
+
+    Report how many genuinely independent windows exist. Any test that respects the
+    block structure gets at most one sign per block, so p cannot fall below 2**-blocks.
+    On the 2026-08-03 panel that floor was 0.0625 at 10d — i.e. the 10d horizon could
+    not have reached p<0.05 whatever the data said, and the printed 0.0000 was noise.
+    """
+    dates = pd.to_datetime(df.loc[df[ret_col].notna(), "date"]).drop_duplicates().sort_values()
+    if len(dates) < 2:
+        return 0, 1.0
+    span_days = int(np.busday_count(dates.iloc[0].date(), dates.iloc[-1].date()))
+    blocks = max(1, -(-span_days // horizon))  # ceil
+    return blocks, float(2.0 ** -blocks)
+
+
+def _holm(pvals: list[float]) -> list[float]:
+    """Holm-Bonferroni across the horizon family. The horizons are a family: the run
+    tests three of them and quotes whichever looks best, which is a multiple
+    comparison the per-horizon p-value does not account for."""
+    order = sorted(range(len(pvals)), key=lambda i: pvals[i])
+    out = [0.0] * len(pvals)
+    running = 0.0
+    for rank, i in enumerate(order):
+        running = max(running, (len(pvals) - rank) * pvals[i])
+        out[i] = min(1.0, running)
+    return out
 
 
 def main() -> None:
@@ -134,11 +181,28 @@ def main() -> None:
     print(f"PERMUTATION NULL ({N_PERMUTATIONS} within-day label shuffles)")
     print("=" * 72)
     null_rows = []
-    for h in USABLE_HORIZONS:
-        real, p95, pval = _permutation_null(panel, f"fwd_ret_{h}d")
-        verdict = "SIGNAL" if pval < 0.05 else "NOT distinguishable from chance"
-        print(f"  {h}d: real_best_IC={real:+.3f}  null_p95={p95:+.3f}  p={pval:.3f}  → {verdict}")
-        null_rows.append({"horizon_d": h, "real_best_ic": real, "null_p95": p95, "p_value": pval})
+    raw = [_permutation_null(panel, f"fwd_ret_{h}d") for h in USABLE_HORIZONS]
+    holm = _holm([r[2] for r in raw])
+    for h, (real, p95, pval), p_holm in zip(USABLE_HORIZONS, raw, holm):
+        blocks, floor = _independent_windows(panel, f"fwd_ret_{h}d", h)
+        # A horizon whose p-floor is above 0.05 cannot produce a significant result
+        # on this panel no matter what the data say, so it does not get to claim one.
+        if floor > 0.05:
+            verdict = f"UNTESTABLE — only {blocks} independent windows (p floor {floor:.3f})"
+        elif p_holm < 0.05:
+            verdict = "SIGNAL"
+        else:
+            verdict = "NOT distinguishable from chance"
+        print(f"  {h}d: real_best_IC={real:+.3f}  null_p95={p95:+.3f}  p={pval:.3f}  "
+              f"p_holm={p_holm:.3f}  indep_windows={blocks}  → {verdict}")
+        null_rows.append({"horizon_d": h, "real_best_ic": real, "null_p95": p95,
+                          "p_value": pval, "p_holm": p_holm,
+                          "independent_windows": blocks, "p_floor": floor})
+    print("\n  NOTE: p_value comes from a WITHIN-DAY shuffle, which assumes day-ICs are")
+    print("  independent. Overlapping forward windows violate that, so it is")
+    print("  anti-conservative — treat it as an upper bound on significance, and read")
+    print("  indep_windows before believing any horizon. See weight_decision.md")
+    print("  'Checkpoint result — 2026-08-03' for what this cost.")
     pd.DataFrame(null_rows).to_csv(OUT / "permutation_null.csv", index=False)
     print(f"\nWrote grid_search_results.csv + permutation_null.csv to {OUT}")
 
