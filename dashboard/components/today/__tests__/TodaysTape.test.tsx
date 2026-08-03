@@ -29,6 +29,48 @@ function axis(): HTMLElement {
   return el;
 }
 
+/** The tape's `+1` rides in its own span, so a reading is split across two
+ *  nodes and RTL's string matcher never sees it whole. Match the innermost
+ *  element that holds the entire reading instead. */
+function readingByText(text: string) {
+  return screen.getByText(
+    (_, el) =>
+      el?.textContent === text &&
+      !Array.from(el.children).some((c) => c.textContent === text),
+  );
+}
+
+describe("TodaysTape — Sydney clock", () => {
+  it("prints release times on the Sydney clock, not the New York one", () => {
+    render(<TapeBand events={[event({ time_et: "08:30" })]} nowMin={10 * 60} offsetMin={14 * 60} />);
+    expect(laneBox("CPI").textContent).toBe("22:30 · CPI");
+  });
+
+  it("marks the roll past midnight on an after-hours print", () => {
+    render(
+      <TapeBand
+        events={[event({ time_et: "16:05", event: "NVDA earnings", category: "earnings", ticker: "NVDA" })]}
+        nowMin={10 * 60}
+        offsetMin={14 * 60}
+      />
+    );
+    expect(readingByText("06:05 +1")).toBeInTheDocument();
+  });
+
+  it("labels the panel Sydney, and the session bar with Sydney boundaries", () => {
+    render(<TapeBand events={[event({ time_et: "08:30" })]} nowMin={10 * 60} offsetMin={14 * 60} />);
+    expect(screen.getByText("all times Sydney")).toBeInTheDocument();
+    expect(screen.getByText("Pre · 18:00")).toBeInTheDocument();
+    expect(screen.getByText("Regular · 23:30")).toBeInTheDocument();
+    expect(readingByText("After · 06:00 +1")).toBeInTheDocument();
+  });
+
+  it("prints the now pill on the Sydney clock", () => {
+    render(<TapeBand events={[event({ time_et: "08:30" })]} nowMin={10 * 60 + 15} offsetMin={14 * 60} />);
+    expect(readingByText("now 00:15 +1")).toBeInTheDocument();
+  });
+});
+
 describe("TodaysTape — lane packing", () => {
   it("stacks two 08:30 releases instead of printing them on top of each other", () => {
     render(
@@ -38,6 +80,7 @@ describe("TodaysTape — lane packing", () => {
           event({ time_et: "08:30", event: "Initial jobless claims", category: "jobs" }),
         ]}
         nowMin={10 * 60}
+        offsetMin={14 * 60}
       />
     );
     // Same clock position, so the only thing separating them is the lane.
@@ -58,6 +101,7 @@ describe("TodaysTape — lane packing", () => {
           }),
         ]}
         nowMin={10 * 60}
+        offsetMin={14 * 60}
       />
     );
     expect(laneBox("NVDA earnings").style.bottom).toBe("0px");
@@ -74,6 +118,7 @@ describe("TodaysTape — events with no time", () => {
           event({ event: "AAPL earnings", category: "earnings", ticker: "AAPL", time_et: null }),
         ]}
         nowMin={10 * 60}
+        offsetMin={14 * 60}
       />
     );
     expect(screen.getByText("· no time on the feed")).toBeInTheDocument();
@@ -83,7 +128,7 @@ describe("TodaysTape — events with no time", () => {
   });
 
   it("says so plainly when nothing today has a time on it", () => {
-    render(<TapeBand events={[]} nowMin={10 * 60} />);
+    render(<TapeBand events={[]} nowMin={10 * 60} offsetMin={14 * 60} />);
     expect(screen.getByText(/No timed release today/)).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /What.s scheduled/ })).toHaveAttribute(
       "href",
@@ -96,12 +141,13 @@ describe("TodaysTape — events with no time", () => {
       <TapeBand
         events={[event({ event: "AAPL earnings", category: "earnings", ticker: "AAPL" })]}
         nowMin={10 * 60}
+        offsetMin={14 * 60}
       />
     );
     // Session bands are the context strip's job; an empty axis is furniture.
     expect(screen.queryByText(/Regular/)).not.toBeInTheDocument();
     expect(screen.queryByText(/^now /)).not.toBeInTheDocument();
-    expect(screen.queryByText("all times ET")).not.toBeInTheDocument();
+    expect(screen.queryByText("all times Sydney")).not.toBeInTheDocument();
     // The untimed row is the whole point of still rendering the panel.
     expect(screen.getByRole("link", { name: "AAPL" })).toBeInTheDocument();
   });
@@ -114,6 +160,7 @@ describe("TodaysTape — events with no time", () => {
           event({ time_et: "08:30" }),
         ]}
         nowMin={10 * 60}
+        offsetMin={14 * 60}
       />
     );
     expect(screen.getByText(/Regular/)).toBeInTheDocument();
@@ -123,7 +170,7 @@ describe("TodaysTape — events with no time", () => {
 describe("TodaysTape — panel header", () => {
   it("carries the date stepper rather than leaving it orphaned below the card", () => {
     render(
-      <TapeBand events={[]} nowMin={10 * 60} actions={<button type="button">Yesterday</button>} />
+      <TapeBand events={[]} nowMin={10 * 60} offsetMin={14 * 60} actions={<button type="button">Yesterday</button>} />
     );
     expect(screen.getByRole("button", { name: "Yesterday" })).toBeInTheDocument();
   });
@@ -131,19 +178,18 @@ describe("TodaysTape — panel header", () => {
 
 describe("TodaysTape — now marker", () => {
   it("draws the marker while the tape is running", () => {
-    render(<TapeBand events={[event({ time_et: "08:30" })]} nowMin={10 * 60 + 15} />);
-    // Labelled ET, because the page's other two clocks are local-time stamps.
-    expect(screen.getByText("now 10:15 ET")).toBeInTheDocument();
+    render(<TapeBand events={[event({ time_et: "08:30" })]} nowMin={10 * 60 + 15} offsetMin={14 * 60} />);
+    expect(readingByText("now 00:15 +1")).toBeInTheDocument();
   });
 
   it("drops it outside the drawn window, rather than pinning it to the edge", () => {
-    render(<TapeBand events={[event({ time_et: "08:30" })]} nowMin={22 * 60} />);
+    render(<TapeBand events={[event({ time_et: "08:30" })]} nowMin={22 * 60} offsetMin={14 * 60} />);
     expect(screen.queryByText(/^now /)).not.toBeInTheDocument();
   });
 
   it("keeps the pill in a lane of its own, above the bar it cuts", () => {
-    render(<TapeBand events={[event({ time_et: "08:30" })]} nowMin={10 * 60 + 15} />);
-    const pill = screen.getByText("now 10:15 ET");
+    render(<TapeBand events={[event({ time_et: "08:30" })]} nowMin={10 * 60 + 15} offsetMin={14 * 60} />);
+    const pill = readingByText("now 00:15 +1");
     expect(pill.className).toContain("bg-accent");
     expect(pill.className).toContain("text-bg");
     // Between 09:30 and 10:00 the pill and the REGULAR label want the same row.
@@ -155,7 +201,7 @@ describe("TodaysTape — now marker", () => {
 
 describe("TodaysTape — session axis", () => {
   it("draws one 24px track with the regular session lifted between two edges", () => {
-    render(<TapeBand events={[event({ time_et: "08:30" })]} nowMin={10 * 60} />);
+    render(<TapeBand events={[event({ time_et: "08:30" })]} nowMin={10 * 60} offsetMin={14 * 60} />);
     const track = axis();
     expect(track.style.height).toBe("24px");
     // Recessed, not raised: the panel around it is already --elevated, so a
@@ -170,7 +216,7 @@ describe("TodaysTape — session axis", () => {
   });
 
   it("sets the session labels inside the track, regular brighter than the wings", () => {
-    render(<TapeBand events={[event({ time_et: "08:30" })]} nowMin={10 * 60} />);
+    render(<TapeBand events={[event({ time_et: "08:30" })]} nowMin={10 * 60} offsetMin={14 * 60} />);
     const pre = screen.getByText(/^Pre ·/);
     expect(pre.style.left).toBe("calc(0% + 8px)");
     expect(pre.className).toContain("text-muted-2");
@@ -199,7 +245,7 @@ describe("TodaysTape — mark treatment", () => {
   });
 
   it("drops a connector from the axis to each release, and a tick where it lands", () => {
-    render(<TapeBand events={[event({ time_et: "08:30" })]} nowMin={10 * 60} />);
+    render(<TapeBand events={[event({ time_et: "08:30" })]} nowMin={10 * 60} offsetMin={14 * 60} />);
     const wrapper = laneBox("CPI");
     const connector = wrapper.querySelector("span.w-px") as HTMLElement;
     // Lane 0 sits 8px under the axis; the drop meets the label's centre line.
@@ -212,8 +258,8 @@ describe("TodaysTape — mark treatment", () => {
   });
 
   it("prints the clock and the name only — the feed carries no actual or consensus", () => {
-    render(<TapeBand events={[event({ time_et: "08:30", importance: "medium" })]} nowMin={10 * 60} />);
-    expect(laneBox("CPI").textContent).toBe("08:30CPI");
+    render(<TapeBand events={[event({ time_et: "08:30", importance: "medium" })]} nowMin={10 * 60} offsetMin={14 * 60} />);
+    expect(laneBox("CPI").textContent).toBe("22:30 · CPI");
     const connector = laneBox("CPI").querySelector("span.w-px") as HTMLElement;
     expect(connector.className).toContain("bg-line-strong");
   });
