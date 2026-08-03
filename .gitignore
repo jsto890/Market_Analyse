@@ -85,3 +85,9 @@ odte/**/.pytest_cache/
 design_handoff_argus_conformance/mocks/
 design_handoff_argus_conformance/support.js
 design_handoff_argus_conformance/e2e/
+
+# Screenshot captures. The 96-PNG conformance baseline (19MB) was cut in
+# ca49227 as a visual reference and read by nothing — the _audit.json diff
+# now catches the regression class it existed for. The JSON references beside
+# it stay; the images do not come back.
+dashboard/screens/**/*.png
