@@ -126,4 +126,10 @@ describe("ScopeBand (MAC-12)", () => {
     await screen.findByText("names driving this scope");
     expect(container.querySelectorAll(".eyebrow")).toHaveLength(1);
   });
+
+  it("stacks the cells inside a titled panel instead of a horizontal band", async () => {
+    mock();
+    render(<ScopeBand scope="sector:AI / Compute" window="1d" />);
+    expect(await screen.findByText("Where this lands")).toBeInTheDocument();
+  });
 });

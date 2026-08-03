@@ -14,6 +14,14 @@ function ageOf(ts: string): string {
   return relativeAge((Date.now() - at) / 1000);
 }
 
+/** The headline's own clock, local — the metadata rail sits beside the chart's
+ * x-axis, so a relative "3h ago" here would not line up with it. */
+function clockOf(ts: string): string {
+  const at = new Date(ts.endsWith("Z") || ts.includes("+") ? ts : `${ts}Z`);
+  if (!Number.isFinite(at.getTime())) return "—";
+  return at.toLocaleTimeString("en-AU", { hour: "2-digit", minute: "2-digit", hour12: false });
+}
+
 /**
  * The headlines behind the selected gauge, ranked by weighted share (MAC-09).
  */
@@ -43,31 +51,45 @@ export default function Contributors({ scope, window }: { scope: string; window:
           </p>
           <ul className="divide-y divide-line">
             {data.items.map((c, i) => (
-              <li key={`${c.ts}-${i}`} className="flex items-baseline gap-2 px-3 py-1.5">
-                <span className={`w-12 shrink-0 text-data ${toneClass(c.score)}`}>
-                  {signed(c.score)}
-                </span>
-                <span className="w-10 shrink-0 text-data text-muted">
-                  {(c.share * 100).toFixed(0)}%
-                </span>
-                {c.ticker && (
-                  <Link
-                    href={`/t/${c.ticker}`}
-                    className="shrink-0 text-data text-accent hover:underline"
-                  >
-                    {c.ticker}
-                  </Link>
-                )}
-                <span className="min-w-0 flex-1 text-body text-foreground">
-                  {c.url ? (
-                    <a href={c.url} target="_blank" rel="noreferrer" className="hover:text-accent">
-                      {c.headline}
-                    </a>
-                  ) : (
-                    c.headline
+              <li key={`${c.ts}-${i}`} className="px-3 py-1.5">
+                <div className="flex items-baseline gap-2">
+                  <span className={`w-12 shrink-0 text-data ${toneClass(c.score)}`}>
+                    {signed(c.score)}
+                  </span>
+                  <span className="min-w-0 flex-1 text-body text-foreground">
+                    {c.url ? (
+                      <a
+                        href={c.url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="hover:text-accent"
+                      >
+                        {c.headline}
+                      </a>
+                    ) : (
+                      c.headline
+                    )}
+                  </span>
+                </div>
+                <div className="mt-0.5 flex flex-wrap items-baseline gap-x-2 pl-14 text-data text-muted">
+                  <span>w {c.weight.toFixed(2)}</span>
+                  <span>·</span>
+                  <span>{clockOf(c.ts)}</span>
+                  {c.source && (
+                    <>
+                      <span>·</span>
+                      <span>{c.source}</span>
+                    </>
                   )}
-                </span>
-                <span className="shrink-0 text-data text-muted">{ageOf(c.ts)}</span>
+                  <span>·</span>
+                  <span>{(c.share * 100).toFixed(0)}% share</span>
+                  {c.ticker && (
+                    <Link href={`/t/${c.ticker}`} className="text-accent hover:underline">
+                      {c.ticker}
+                    </Link>
+                  )}
+                  <span className="ml-auto">{ageOf(c.ts)}</span>
+                </div>
               </li>
             ))}
           </ul>

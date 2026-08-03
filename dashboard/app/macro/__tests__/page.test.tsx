@@ -91,6 +91,15 @@ describe("MacroPage header + legend (MC-04, MAC-06)", () => {
     expect(await screen.findByText(/±0.05 neutral band/)).toBeInTheDocument();
   });
 
+  it("reads the chart with a read-this strip naming the ±0.05 threshold", async () => {
+    searchParamsMock.current = "";
+    mockMacroFetch();
+    render(<MacroPage />);
+    expect(await screen.findByText("Read this")).toBeInTheDocument();
+    expect(screen.getByText(/±0\.05 lines mark the neutral zone/)).toBeInTheDocument();
+    expect(screen.getByText(/not a signal/)).toBeInTheDocument();
+  });
+
   it("discloses the model, corpus, decay and what a number means (MAC-05)", async () => {
     searchParamsMock.current = "";
     mockMacroFetch();

@@ -24,6 +24,7 @@ import Panel from "@/components/ui/Panel";
 import SegmentedControl from "@/components/ui/SegmentedControl";
 import Empty from "@/components/ui/Empty";
 import Stale from "@/components/ui/Stale";
+import ReadThis, { ReadThisTerm } from "@/components/ui/ReadThis";
 import { useLocalStorage } from "@/lib/useLocalStorage";
 import { STATIC_KEYS } from "@/lib/storageKeys";
 import Page from "@/components/ui/Page";
@@ -229,7 +230,7 @@ function MacroPageInner() {
       </section>
 
       {anyData ? (
-        <>
+        <div className="grid grid-cols-1 gap-3 lg:grid-cols-[1fr_380px]">
           <Page.Section>
             <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-body text-muted">
               <span>
@@ -254,10 +255,18 @@ function MacroPageInner() {
               </span>
             </div>
             <MacroChart points={series?.points ?? []} spx={hist?.bars ?? []} />
+            <ReadThis>
+              the dashed ±{NEUTRAL_BAND.toFixed(2)} lines mark the neutral zone, so{" "}
+              <ReadThisTerm>a line inside them is not a signal</ReadThisTerm> whatever
+              its colour — and the benchmark tracks the lookback you picked, not a
+              fixed month.
+            </ReadThis>
           </Page.Section>
-          <Contributors scope={scope} window={win} />
-          <ScopeBand scope={scope} window={win} />
-        </>
+          <div className="flex flex-col gap-3">
+            <Contributors scope={scope} window={win} />
+            <ScopeBand scope={scope} window={win} />
+          </div>
+        </div>
       ) : (
         <Empty message="No macro data yet — the aggregator runs every 20 min." />
       )}

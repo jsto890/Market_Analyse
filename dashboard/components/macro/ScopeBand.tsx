@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import useSWR from "swr";
+import Panel from "@/components/ui/Panel";
 import { useCalendar, isEarnings, type CalEvent } from "@/lib/calendar";
 import { eventMeta, eventShortName } from "@/lib/eventMeta";
 import { useMacroContributors } from "@/lib/macro";
@@ -68,7 +69,7 @@ export function nextCatalyst(
 
 function Cell({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div className="min-w-0 flex-1 px-3 py-2">
+    <div className="min-w-0 border-t border-line px-3 py-2 first:border-t-0">
       <p className="eyebrow">{title}</p>
       <div className="mt-1 flex flex-wrap items-baseline gap-1.5">{children}</div>
     </div>
@@ -112,7 +113,7 @@ export default function ScopeBand({ scope, window }: { scope: string; window: st
   if (driving.length === 0 && held.length === 0 && !catalyst) return null;
 
   return (
-    <div className="flex flex-wrap divide-x divide-line rounded-md border border-line bg-surface">
+    <Panel title="Where this lands">
       {driving.length > 0 && (
         <Cell title="names driving this scope">
           {driving.map((t) => (
@@ -139,6 +140,6 @@ export default function ScopeBand({ scope, window }: { scope: string; window: st
           <span className="text-data text-muted">{whenLabel(catalyst.date, cal.today)}</span>
         </Cell>
       )}
-    </div>
+    </Panel>
   );
 }
