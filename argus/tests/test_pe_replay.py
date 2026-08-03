@@ -102,6 +102,34 @@ def test_health_does_not_change_trade_outcomes(tmp_path):
     assert t is not None and t["exit_reason"] == "stop"   # same round-trip as the base case
 
 
+def test_replay_default_entry_fn_matches_baseline(tmp_path):
+    # WS-7: entry_fn/skip_gap_check are additive injection points — calling replay with no
+    # new args must produce byte-identical trades/position_signals to the pre-change path.
+    conn = get_conn(tmp_path / "pe.db")
+    ensure_schema(conn)
+    df = _series()
+    replay(conn, ticker="TEST", daily=df, spy=df, sector=None, model_ver="v1", run_kind="ondemand")
+    trades = [dict(r) for r in conn.execute(
+        "SELECT * FROM trades WHERE ticker='TEST' ORDER BY entry_ts").fetchall()]
+    signals = [dict(r) for r in conn.execute(
+        "SELECT * FROM position_signals WHERE ticker='TEST' ORDER BY ts").fetchall()]
+    conn.close()
+
+    from argus.position_engine.levels import entry_trigger
+    conn2 = get_conn(tmp_path / "pe2.db")
+    ensure_schema(conn2)
+    replay(conn2, ticker="TEST", daily=df, spy=df, sector=None, model_ver="v1",
+           run_kind="ondemand", entry_fn=entry_trigger, skip_gap_check=False)
+    trades2 = [dict(r) for r in conn2.execute(
+        "SELECT * FROM trades WHERE ticker='TEST' ORDER BY entry_ts").fetchall()]
+    signals2 = [dict(r) for r in conn2.execute(
+        "SELECT * FROM position_signals WHERE ticker='TEST' ORDER BY ts").fetchall()]
+    conn2.close()
+
+    assert trades == trades2
+    assert signals == signals2
+
+
 def test_replay_persists_trailed_stop_not_static_init(tmp_path):
     # the persisted position_signals.stop must reflect the LIVE trailed stop the engine exits
     # against (replay.py:112), not the static init_stop — otherwise consumers (the daily action

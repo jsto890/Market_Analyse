@@ -14,6 +14,9 @@ GAP_ATR = 0.75
 RR_FLOOR = 1.8
 SWING_LB = 10
 STRUCT_LB = 60          # prior-structure window for the forward (overhead) target
+GAP_K = 0.5             # WS-7: min gap magnitude, in ATR, over the prior bar's high
+CLOSE_STRENGTH = 0.65   # WS-7: bar must close in the top third of its range
+VOL_MULT = 1.5          # WS-7: volume confirm vs 20d avg (stricter than RESUME_VOL)
 
 
 def entry_trigger(daily: pd.DataFrame, params: EngineParams = DEFAULT) -> bool:
@@ -29,6 +32,22 @@ def entry_trigger(daily: pd.DataFrame, params: EngineParams = DEFAULT) -> bool:
     resume = bar["close"] > prev["high"]
     vol_ok = bar["volume"] >= RESUME_VOL * v.iloc[-21:-1].mean()
     return bool(near and resume and vol_ok)
+
+
+def gap_continuation_trigger(daily: pd.DataFrame, params: EngineParams = DEFAULT) -> bool:
+    """Gap up >= GAP_K*ATR over prior high, strong close, volume confirm, above EMA50."""
+    if len(daily) < 60:
+        return False
+    c, h, l, v = daily["close"], daily["high"], daily["low"], daily["volume"]
+    atr = _atr(h, l, c, 14).iloc[-1]
+    ema50 = _ema(c, 50).iloc[-1]
+    prev = daily.iloc[-2]
+    bar = daily.iloc[-1]
+    gap_ok = (bar["open"] - prev["high"]) >= GAP_K * atr
+    close_strength_ok = (bar["close"] - bar["low"]) / (bar["high"] - bar["low"]) >= CLOSE_STRENGTH
+    vol_ok = bar["volume"] >= VOL_MULT * v.iloc[-21:-1].mean()
+    trend_ok = bar["close"] > ema50
+    return bool(gap_ok and close_strength_ok and vol_ok and trend_ok)
 
 
 def compute_levels(entry_px: float, daily: pd.DataFrame, params: EngineParams = DEFAULT) -> dict:

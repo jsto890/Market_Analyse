@@ -37,7 +37,8 @@ def _clear_prior_trades(conn, ticker, model_ver, mode):
 
 def replay(conn, *, ticker, daily: pd.DataFrame, spy: pd.DataFrame,
            sector: pd.DataFrame | None, model_ver: str, run_kind: str = "live",
-           mode: str = "paper", params: EngineParams = DEFAULT) -> int:
+           mode: str = "paper", params: EngineParams = DEFAULT,
+           entry_fn=entry_trigger, skip_gap_check: bool = False) -> int:
     data_date = str(daily.index[-1].date())
     _wk_agg = {"open": "first", "high": "max", "low": "min", "close": "last", "volume": "sum"}
     weekly = daily.resample("W-FRI").agg(_wk_agg).dropna()
@@ -83,7 +84,7 @@ def replay(conn, *, ticker, daily: pd.DataFrame, spy: pd.DataFrame,
         live_stop = cur_stop if (ostate.overlay == "LONG" and cur_stop is not None) else (cur_levels or {}).get("stop")
 
         # entry signal on completed bar (used when overlay is FLAT)
-        sig = entry_trigger(win, params) if (bstate.bias == "LONG" and armed_prev) else False
+        sig = entry_fn(win, params) if (bstate.bias == "LONG" and armed_prev) else False
         if sig and ostate.overlay == "FLAT":
             cur_levels = compute_levels(entry_px=float(bar["close"]), daily=win, params=params)
 
@@ -99,7 +100,7 @@ def replay(conn, *, ticker, daily: pd.DataFrame, spy: pd.DataFrame,
         # side effects on transitions
         if prev_overlay == "ARMED" and ostate.overlay == "LONG":
             fill = events[0]["fill_px"]
-            if cur_levels and gap_skip(cur_levels["entry"], fill, cur_levels["atr"]):
+            if not skip_gap_check and cur_levels and gap_skip(cur_levels["entry"], fill, cur_levels["atr"]):
                 ostate = OverlayState("FLAT")  # gap-skip: abandon the fill
                 cur_levels = None
             else:

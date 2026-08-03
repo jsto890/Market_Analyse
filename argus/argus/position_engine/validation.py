@@ -11,6 +11,7 @@ import pandas as pd
 from ..db import get_conn
 from .schema import ensure_schema
 from .replay import replay
+from .levels import entry_trigger
 from .backtest import _price_trades, _bh
 from .metrics import aggregate, block_bootstrap_ci
 from .fills import FillModel
@@ -38,7 +39,8 @@ def robust_trade_stats(r_values, *, r_clip=R_CLIP) -> dict:
 
 
 def validate_corpus(prices, spy, *, model_ver="bt", cost_mults=COST_MULTS, years=None,
-                    n_boot=500, seed=1, r_clip=R_CLIP, per_trade_out=None, on_progress=None) -> dict:
+                    n_boot=500, seed=1, r_clip=R_CLIP, per_trade_out=None, on_progress=None,
+                    entry_fn=entry_trigger, skip_gap_check: bool = False) -> dict:
     """`prices` = {ticker: daily_df}; `spy` = SPY daily_df. Replays each name once, then for
     each cost multiplier re-prices via the FillModel, pools, and aggregates. Names with <60
     bars are skipped. `on_progress(i, n)` is called per name for long runs."""
@@ -54,7 +56,8 @@ def validate_corpus(prices, spy, *, model_ver="bt", cost_mults=COST_MULTS, years
         try:
             ensure_schema(c)
             replay(c, ticker=t, daily=d, spy=spy, sector=None, model_ver=model_ver,
-                   run_kind="backtest", mode="paper")
+                   run_kind="backtest", mode="paper",
+                   entry_fn=entry_fn, skip_gap_check=skip_gap_check)
             rows = [dict(r) for r in c.execute(
                 "SELECT * FROM trades WHERE ticker=? AND model_ver=?", (t, model_ver)).fetchall()]
         finally:

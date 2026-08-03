@@ -1,12 +1,19 @@
 import numpy as np
 import pandas as pd
 from argus.position_engine.levels import (entry_trigger, compute_levels,
-                                          gap_skip, trail_stop, RR_FLOOR)
+                                          gap_skip, trail_stop, RR_FLOOR,
+                                          gap_continuation_trigger)
 
 
 def _df(rows):
     idx = pd.date_range("2024-01-01", periods=len(rows), freq="D")
     return pd.DataFrame(rows, index=idx, columns=["open", "high", "low", "close", "volume"])
+
+
+def _gap_warmup(n=60, base=100.0):
+    # quiet, flat-ish warmup so ATR/EMA50/20d-avg-volume settle to stable values,
+    # with close roughly at `base` so a subsequent bar can sit above EMA50
+    return [[base, base + 1.0, base - 1.0, base, 1e6] for _ in range(n)]
 
 
 def test_entry_trigger_fires_on_pullback_resume():
@@ -69,3 +76,43 @@ def test_trail_only_ratchets_up():
     # at +1R move to breakeven; beyond, chandelier; never down
     assert trail_stop(prior_stop=95, close=110, atr=2.0, progress_r=1.5, entry=100) >= 100
     assert trail_stop(prior_stop=104, close=108, atr=2.0, progress_r=2.0, entry=100) >= 104
+
+
+def test_gap_continuation_trigger_fires_clean_gap():
+    # gap >= 0.5 ATR over prior high, close in top third, volume >= 1.5x 20d avg, close > EMA50
+    rows = _gap_warmup() + [[103, 106.5, 102.5, 106, 2e6]]
+    df = _df(rows)
+    assert gap_continuation_trigger(df) is True
+
+
+def test_gap_continuation_trigger_no_gap():
+    rows = _gap_warmup() + [[100.5, 106.5, 100.0, 106, 2e6]]
+    df = _df(rows)
+    assert gap_continuation_trigger(df) is False
+
+
+def test_gap_continuation_trigger_weak_close():
+    rows = _gap_warmup() + [[103, 106.5, 100.0, 101, 2e6]]
+    df = _df(rows)
+    assert gap_continuation_trigger(df) is False
+
+
+def test_gap_continuation_trigger_low_volume():
+    rows = _gap_warmup() + [[103, 106.5, 102.5, 106, 1.1e6]]
+    df = _df(rows)
+    assert gap_continuation_trigger(df) is False
+
+
+def test_gap_continuation_trigger_counter_trend():
+    # gapped, strong close, volume ok, but close < EMA50 (declining warmup keeps EMA50 elevated)
+    closes = np.linspace(300, 100, 60)
+    rows = [[c, c + 1.0, c - 1.0, c, 1e6] for c in closes]
+    rows.append([103.6158, 105.6158, 103.1158, 104.8658, 2e6])
+    df = _df(rows)
+    assert gap_continuation_trigger(df) is False
+
+
+def test_gap_continuation_trigger_short_history():
+    rows = _gap_warmup(n=40) + [[103, 106.5, 102.5, 106, 2e6]]
+    df = _df(rows)
+    assert gap_continuation_trigger(df) is False

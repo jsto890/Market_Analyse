@@ -151,3 +151,31 @@ Plus one regression test: `replay(...)` called with no `entry_fn`/`skip_gap_chec
 on an existing fixture produces byte-identical `trades`/`position_signals` rows to the current
 (pre-change) `replay` output — proves the injection is additive, not a behavior change to the
 baseline path.
+
+---
+
+## 7. Result — FAIL (recorded 2026-08-03)
+
+The run happened on 2026-07-16 and its verdict never reached the repo; this section closes that.
+
+**Gate 1 was not cleared.** Expectancy came in at **+0.16R** and — unlike the pullback baseline's
++0.06R — it survived the 3× cost multiplier. That is the one thing the archetype swap bought. It
+did not matter, because the joint gate also requires MAR, and **MAR was 0.55 against SPY's 8.57**
+over the same window. The bar in §"Success criteria" is joint; a surviving expectancy with a MAR
+an order of magnitude below buy-and-hold is a fail, not a partial pass.
+
+This was a powered test, not an inconclusive one: the trigger fired often enough across the corpus
+to resolve the question. The archetype is closed. Combined with [ws4-exit-premise-check] (no early-
+exit overlay beats hold-to-stop) and [ws4-p2-validation-verdict] (the pullback baseline), three
+independent levers on the *mechanical* side have now failed the same bar. The edge in this system
+is SELECTION — which names, not when to enter or exit them.
+
+**What is committed.** `gap_continuation_trigger` in `position_engine/levels.py`, plus the
+`entry_fn` / `skip_gap_check` injection points in `replay.py` and `validation.py`. Production
+defaults are provably unchanged: `test_pe_replay.py` asserts the no-argument path produces
+byte-identical `trades`/`position_signals` rows. Nothing on the live path calls the new trigger.
+
+**Known dead end:** the only consumer, `argus/backtests/_run_gap_continuation_validation.py`, is
+gitignored (`.gitignore:66`) and is not in this repo. Re-running this experiment means rewriting
+that driver from §5 above. The trigger and the injection points are what was worth keeping — they
+are what makes a *next* archetype a one-file change rather than a harness rewrite.
