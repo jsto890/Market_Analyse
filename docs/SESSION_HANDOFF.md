@@ -1,103 +1,176 @@
-# Session Handoff — 2026-06-16 (Phase C / WS-3a complete, branch ws3a-news-pipeline)
+# Session Handoff — 2026-08-03
 
-> Written from the WS-3a branch perspective. **Integration pending** — the branch has not yet been merged to main. A fresh session can resume from this file alone.
+`main` is clean, pushed, and everything below is *open work*, not work in flight. There is
+no half-finished branch to pick up. Read §1 before touching weights or the scoring blend.
 
-## 1. Current state
+Recent landmarks: `89fa54c` (conformance P0–P5), `9e6746f` (backlog G2–G7), `81c9638` (label
+gates retired), `342bb43` + `73e0fb6` (weight checkpoint verdict + instrument fixes).
 
-- **Phase C / WS-3a (news pipeline): DONE on branch `ws3a-news-pipeline`** — 9 tasks complete, ready for controller integration.
-- `main` is at the Phase B/C merge state (WS-1 options intel + WS-6 catalysts + WS-2 UI shell merged).
-- **This branch has NOT been merged to main.** The controller must merge + restart the Argus API + bootstrap the ingest service (see §3).
+---
 
-## 2. What landed (WS-3a — all 9 tasks)
+## 1. The technical leg has no measurable edge — and it is 45% of the score
 
-### Argus — schema
+**This is the most important open item in the repo.** The 2026-08-03 weight checkpoint
+(`docs/weight_optimisation/weight_decision.md`, section "Checkpoint result — 2026-08-03")
+found that the technical leg's univariate per-day rank-IC is:
 
-- `argus/argus/news/schema.py` — `ensure_schema()` creates `news_items(id, ts, source, ticker, headline, body, url, tags, is_breaking, external_id)` and `backfill_cursors(channel_id, last_id)` tables; WAL + busy_timeout via shared `argus.db`.
+| horizon | 1d | 5d | 10d | 20d |
+|---|---|---|---|---|
+| technical alone | −0.024 (t=−0.52) | +0.025 (t=+0.64) | +0.009 (t=+0.19) | −0.056 (t=−1.38) |
+| sentiment alone | +0.003 (t=+0.07) | +0.062 (t=+1.36) | +0.130 (t=+2.46) | +0.220 (t=+4.17) |
 
-### Argus — store helpers
+|t| never reaches 1.4 at any horizon and the sign is negative at two of four. The corrected
+date-fixed-effect ridge agrees (technical ≈ 0 everywhere). Every alpha-grid curve marches to
+alpha = 1.000 — "delete the technical leg" — not because sentiment is strong but because
+there is nothing to trade off against.
 
-- `argus/argus/news/store.py` — `insert_news_item()` with conflict-ignore dedup on `(source, external_id)`; `fetch_after(cursor, limit)` (cursor-paginated by monotonic `id`); `fetch_for_ticker(symbol, limit)`.
+**Do not respond by re-running the weight search.** No blend-weight search on this panel can
+answer it; the question is whether the ~70-agent technical ensemble produces a usable
+cross-sectional ranking at all. That is a different investigation: score the ensemble's
+output directly against forward returns, per-family, rather than as one blended leg.
 
-### Argus — per-ticker news
+Weights stay at 35 / 45 / 20 until that is answered.
 
-- `argus/argus/news/per_ticker.py` — `get_news_for_ticker(symbol)`: fetches yfinance `Ticker.news` + IBKR `historical_news`, merges, title-deduplicates, returns sorted by recency. Each source fails independently.
+## 2. The sentiment feed's cross-section collapses on fallback days — LIVE
 
-### Argus — REST endpoints
+Distinct sentiment values per report date:
 
-- `GET /api/news` — cursor-based feed; `?after=<id>` for incremental polls; returns `{items: [...], cursor: <int>}`.
-- `GET /api/news/{symbol}` — per-ticker feed (yfinance + IBKR merge).
-- Both registered in `argus/argus/api/routes.py`.
+| date | names | distinct values | sd |
+|---|---|---|---|
+| 2026-06-23 | 35 | 28 | 0.267 |
+| 2026-07-24 | 33 | **4** | 0.138 |
+| 2026-07-26 | 85 | 56 | 0.398 |
+| 2026-08-01 | 35 | **7** | 0.105 |
 
-### Argus — Discord ingest
+Mean distinct values fell 31.2 (June) → 21.4 (post-07-19), coinciding with the X-API-402 →
+Stocktwits fallback going live (see the `session_20260720_sentiment_fallback` memory). It is
+intermittent — some days are fine — but on a bad day the leg carrying 0.35 of the live score
+resolves ~33 names into 4 buckets and cannot rank anything.
 
-- `argus/argus/news/discord_ingest.py` — `discord.py-self` self-bot (reuses `discord_copytrade` auth pattern). On `on_ready`: loads `backfill_cursors` per channel and backfills all messages since the stored cursor. `on_message`: stores live items. Processing: cashtag extraction → ticker normalisation, BREAKING detection, dedup via `source=discord:<msgid>`. Requires `DISCORD_USER_TOKEN` + `DISCORD_NEWS_CHANNEL_ID` in the git-ignored `.env`.
+Two consequences: it is a live scoring defect today, **and** it invalidates the obvious next
+move on §1/§5 ("wait for more dates, re-run"), because the re-run would measure a different
+instrument. Fix or characterise this before trusting any new panel data.
 
-### Argus — launchd service
+Start at whatever writes `sentiment_score` in the bridge path and check what the Stocktwits
+branch emits versus the X branch — the symptom is quantisation, so suspect coarse bucketing
+or a small integer scale in the fallback.
 
-- `scripts/com.argus.news-ingest.plist` — KeepAlive launchd user agent that keeps the Discord ingest process alive. Gateway reconnects automatically on disconnect.
+## 3. `earnings_proximity` has never fired — wiring, not missing data
 
-### Dashboard — live right-rail news feed
+It fired **0 times in 927 logged vote rows**. Chain:
 
-- `components/rails/RightRail.tsx` upgraded from shell to live feed. Polls `/api/argus/news?after=<cursor>` every 25s via `lib/news.ts`. Each item: timestamp, source chip, headline, optional ticker chip(s) → `/t/[ticker]`. Breaking items (is_breaking=true): red left-border + `BREAKING` tag.
+- `argus/argus/catalyst/agents.py:37` reads `pool.metrics["days_to_earnings"]`
+- the only writer is `argus/argus/catalyst/sources.py:171`, behind `if ibkr is not None`
+- the live pipeline injects `_IBKRNewsShim` whose `fundamentals()` returns `{}`
+  (`sentiment_bridge.py:249`)
+- but `argus/argus/agents/strategies.py:17` **already computes days-to-earnings from
+  yfinance** — so the value exists, it just never reaches the catalyst pool
 
-### Dashboard — per-ticker News card
+The `earnings ≤ 14d` display flag (`argus/argus/catalyst/score.py:50`) is dead from the same
+field. Harmless today only because `meta_score` renormalises over non-abstaining votes, so
+the 0.25 weight is not silently shrinking the leg.
 
-- `components/TickerNewsCard.tsx` — calls `useTickerNews(symbol)` (`lib/news.ts`), renders scrollable list (yfinance + IBKR), source chip per row.
-- Wired into the ticker page (`app/t/[ticker]/page.tsx` or equivalent).
+Decide: wire the yfinance value through to `pool.metrics`, or retire the agent. Do not just
+lower the weight — that leaves a dead agent in the config.
 
-### Dashboard — `lib/news.ts`
+## 4. `weights_config.py` cannot express a retired agent
 
-- `useNews(cursor?)` SWR hook (25s poll); `useTickerNews(symbol)` hook; `NewsItem` type.
+`argus/argus/weights_config.py` validates `if set(weights) != expected_keys: return False`,
+so dropping one key silently reverts the **entire** catalyst block to in-code defaults — and
+those differ from the YAML (`earnings_proximity` 0.15 in code vs 0.25 in
+`config/weights.yaml:18`, plus three other mismatches). Combined with the enforced
+[0.05, 0.50] per-weight floor, there is no way to say "this agent is retired".
 
-## 3. Branch commits (141b533..HEAD)
+This is a live drift trap: it activates the moment anyone edits the catalyst block, and the
+0.25-vs-0.15 divergence means the fallback is not a no-op.
+
+Relax the validator to permit a retired key, or allow 0.0, before touching `catalyst_intra`.
+
+## 5. Unexplained 26-day hole in the panel
+
+`docs/weight_optimisation/panel.csv` has no report dates between **2026-06-23 and
+2026-07-19**. No other gap exceeds 4 days. That gap cost the weight checkpoint its only clean
+out-of-block validation window, so it is worth knowing whether the daily job stopped, the
+reports stopped being written, or the ingest stopped picking them up. Check the launchd
+history for `com.market-review.daily` and the report directory over that period.
+
+## 6. Smaller open items
+
+- **Does `PRIME_LONG` survive as a tier?** The OOS label backtest found `adj >= 0.40` is
+  itself −0.166pp forward, and it survives only as the tier's definition. Deleting the tier
+  is a schema change across dashboard, alerts and screener. Badge copy is already renamed to
+  "Extended" so the UI no longer reads as a recommendation, which buys time.
+- **1D chart segment** and the **settings page** — still unbuilt.
+- **Mention-ratio denominator** — unresolved.
+- **e2e runs against `next dev`**, not a production build. Switching would make the gate
+  match what ships. Note `reuseExistingServer` means two concurrent playwright runs fight
+  over port 3100 — never run two at once, and shard with `--shard=N/4` to stay inside the
+  600s command timeout.
+- **WS-7 gap-continuation is shelved**, verdict in
+  `docs/superpowers/specs/2026-07-16-ws7-gate1-gap-continuation-prereg.md` §7. Third
+  mechanical lever to fail the same bar. The edge is selection.
+
+### What the 2026-08-02 mocks show that the pages deliberately do not
+
+The mocks in `docs/design/mockups/` are the spec for the rotation, macro and tape
+screens, and the pages were built to match them — but seven mock elements have no
+feed behind them and were cut on purpose. They are not missing work. Plan and
+per-task rulings: `docs/superpowers/plans/2026-08-03-rotation-macro-tape-mocks.md`.
+
+- **Rotation verdict paragraph** and the **"Ahead of it" prose card** — no model
+  writes rotation prose.
+- **ETF chips** (Technology XLK, Comms XLC, Real Estate XLRE…) — our universe is
+  yfinance *industries* ("Semiconductor Equipment & Materials", "Uranium"), not 11
+  GICS sectors with ETF proxies.
+- **"Macro tone for this sector"** on rotation, and **"Rotation quadrant · Leading"**
+  on macro — the same join failure in both directions. Macro scopes are
+  `sector:<sector_taxonomy family>`; rotation rows are yfinance industries, and no
+  exact join exists, so either would render nothing on every live scope.
+- **"All 412 articles →"** — there is no articles route (`app/` has no `news/`). The
+  headline count stays; the link goes.
+- **Release actuals** ("Chicago PMI 51.2 vs 49.8 est") on the tape — the morning-report
+  feed carries no actual or consensus values.
+
+Two deliberate deviations, likewise not bugs: RRG points stay **numbered rather than
+named** (industry names ellipsise at chart scale — `RRGChart.tsx:312-315`), and the tape
+prints **Sydney local time** though the mock labels itself ET.
+
+Copy on these screens was rewritten three times to match the code rather than the mock,
+which claims things that are false here — a 6-hour half-life, 34 wire sources,
+per-sentence FinBERT averaging, a 0.6–1.0 reliability multiplier, a *shaded* neutral
+band (it is three dashed price lines), and tiles "sorted by 24h change" (`byMovement`
+pins the aggregate scopes first). **Treat the mocks as layout, never as data.**
+
+---
+
+## Running the stack
 
 ```
-e400321 feat(scripts): persistent news-ingest launchd service (KeepAlive)
-8ebd256 feat(dashboard): per-ticker News card on the ticker page
-075490c feat(dashboard): right-rail live news feed — source/ticker chips, breaking treatment, 25s poll
-a7e3c16 feat(news): discord ingest — pure mapper + store, backfill/live client shell
-f0a713d feat(news): /api/news cursor feed + /api/news/{symbol} per-ticker endpoint
-3142203 feat(news): per-ticker news — yfinance + IBKR merge, title-dedup, failure-tolerant
-fb2c0ee feat(news): store helpers — insert-dedup, backfill cursor, fetch-after/for-ticker
-171ef60 feat(news): news_items + backfill-cursor schema
-(Task 9: chore(news): docs + status board for WS-3a news pipeline)
+API (launchd, port 8088)   launchctl kickstart -k gui/$UID/ai.argus.api
+dashboard dev              cd dashboard && npm run dev          # port 3100
+desktop app                open -a MarketAnalyse
+rebuild desktop app        cd dashboard && npm run app:build    # slow; tauri build
+dashboard tests            cd dashboard && npm run test:all
+argus tests                cd argus && .venv/bin/python -m pytest
 ```
 
-## 4. Regression sweep (branch, pre-integration)
+`argus/.venv` is the interpreter for every offline job — run those from the `argus/`
+directory. It now pins scikit-learn, matplotlib and pyarrow (`argus/requirements.txt`),
+which the scheduled analysis jobs need and which were absent until 2026-08-03.
 
-```
-argus pytest:       63/63 passed
-                    NOTE: test_cat_endpoint.py emits a pandas deprecation WARNING — not a failure; test passes (pre-existing)
-dashboard vitest:   49/49 passed
-dashboard tsc:      clean (no errors)
-```
+**Four argus tests fail on a clean tree and always have** — all network-dependent:
+`test_cat_endpoint.py::test_catalysts_endpoint_shape`,
+`test_eod_fallback.py::TestEODLadderFetch::test_eod_ladder_fetch`,
+`test_oi_universe.py::test_universe_indices_first_dedup_and_cap`,
+`test_oi_universe.py::test_universe_survives_missing_inputs`.
 
-## 5. Integration steps (controller)
+## Re-running the weight checkpoint
 
-1. **Check `.env` secrets**: confirm `DISCORD_USER_TOKEN` and `DISCORD_NEWS_CHANNEL_ID` are present in the git-ignored `argus/.env` (never committed, never in any plist `EnvironmentVariables` block).
-2. **Merge** `ws3a-news-pipeline` → `main`.
-3. **Restart live Argus API**: `launchctl kickstart -k gui/$(id -u)/ai.argus.api` (no sudo). After restart, `curl http://127.0.0.1:8088/api/news?after=0` should return `{items: [], cursor: 0}` (empty until ingest runs).
-4. **Bootstrap the ingest service** (first time only):
-   ```bash
-   cp scripts/com.argus.news-ingest.plist ~/Library/LaunchAgents/
-   launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.argus.news-ingest.plist
-   launchctl kickstart gui/$(id -u)/com.argus.news-ingest
-   ```
-   The gateway connects with the user's Discord token (self-bot — personal use, accepted ToS risk, same pattern as discord_copytrade). It will backfill the configured channel(s) on first `on_ready`, then stream live.
-5. **Verify**: check `/sources` heartbeats show `news-ingest` alive; `curl http://127.0.0.1:8088/api/news?after=0` returns backfilled items; the right rail in the dashboard shows the live feed.
-6. **Remove worktree**: `git worktree remove .worktrees/ws3a` once merge is confirmed.
+`tools/weight_opt/run_revalidation.sh` is a one-shot: it removes its own launchd plist on
+success. Launch it **detached** (`nohup ./tools/weight_opt/run_revalidation.sh &`) — as a
+tracked background task it gets SIGTERM'd at session end, which is what made the 2026-07-21
+and first 2026-08-03 runs look like crashes. The permutation null takes ~90 minutes.
 
-## 6. WS-3 remaining slices (next)
-
-| Slice | Content | Blockers |
-|-------|---------|---------|
-| WS-3b | Macro-sentiment scoring — FinBERT (`ProsusAI/finbert`, already installed in argus venv); `macro_sentiment` table; left-rail gauges (global/US/sector) | FinBERT ~500MB; GPU/CPU inference budget |
-| WS-3c | Economic calendar ingester — BLS/FOMC/BEA public schedules + yfinance earnings calendar; `econ_calendar` table; "Today" left-rail block | None (all public data) |
-| WS-3d | Morning macro report + whale alerts — auto-generated daily report (futures snapshot, headlines, econ events); whale alerts from unusual scorer cross-market top-N premium | WS-3b (macro scorer) + WS-1 unusual scorer already live |
-
-## 7. Architecture pointers
-
-- Master plan: `docs/superpowers/plans/2026-06-12-platform-v2-master-plan.md` (§4.1 guardrails, §9 board, §WS-3).
-- WS-3a plan: `docs/superpowers/plans/2026-06-16-phase-c-ws3a-news-pipeline.md` (9 tasks, acceptance criteria).
-- Service: `ai.argus.api` + `com.argus.news-ingest` are USER LaunchAgents — `launchctl kickstart -k gui/$(id -u)/<label>` (no sudo).
-- DB: one canonical `ARGUS_DB` path (set in `.env` + every plist); WAL + busy_timeout via `argus.db.get_conn()`.
+Before believing any output: read the `independent_windows` and `p_holm` columns, not
+`p_value`. The within-day shuffle is anti-conservative under overlapping forward windows, and
+a horizon whose p-floor exceeds 0.05 now prints `UNTESTABLE` rather than claiming a result.
