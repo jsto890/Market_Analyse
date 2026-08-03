@@ -24,3 +24,15 @@ describe("Macro — methodology", () => {
     expect(trigger).toHaveAttribute("aria-expanded", "false");
   });
 });
+
+describe("Macro — scope tiles", () => {
+  it("says how tiles are ordered and what clicking one does", async () => {
+    mockFetchJson({});
+    render(<MacroPage />);
+    expect(
+      await screen.findByText(
+        "market first, then biggest 24h movers · click any tile for its articles",
+      )
+    ).toBeInTheDocument();
+  });
+});

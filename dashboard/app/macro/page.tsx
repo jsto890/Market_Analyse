@@ -200,25 +200,33 @@ function MacroPageInner() {
         />
       )}
 
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-        {rows.map((t) => (
-          <ScopeTile
-            key={t.scope}
-            tile={t}
-            selected={t.scope === scope}
-            onSelect={() => { setResetNotice(null); setScope(t.scope); }}
-          />
-        ))}
-        {rows.length === 0 &&
-          gauges.map((g) => (
+      <section aria-label="Sentiment scopes" className="flex flex-col gap-2">
+        <div className="flex flex-wrap items-baseline justify-between gap-x-4">
+          <span className="eyebrow">Scopes</span>
+          <span className="text-body text-muted">
+            market first, then biggest 24h movers · click any tile for its articles
+          </span>
+        </div>
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
+          {rows.map((t) => (
             <ScopeTile
-              key={g.scope}
-              tile={{ scope: g.scope, score: g.score, n: g.n, ts: "", delta_1h: null, delta_1d: null, spark: [] }}
-              selected={g.scope === scope}
-              onSelect={() => setScope(g.scope)}
+              key={t.scope}
+              tile={t}
+              selected={t.scope === scope}
+              onSelect={() => { setResetNotice(null); setScope(t.scope); }}
             />
           ))}
-      </div>
+          {rows.length === 0 &&
+            gauges.map((g) => (
+              <ScopeTile
+                key={g.scope}
+                tile={{ scope: g.scope, score: g.score, n: g.n, ts: "", delta_1h: null, delta_1d: null, spark: [] }}
+                selected={g.scope === scope}
+                onSelect={() => setScope(g.scope)}
+              />
+            ))}
+        </div>
+      </section>
 
       {anyData ? (
         <>

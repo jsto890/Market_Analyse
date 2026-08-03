@@ -44,7 +44,7 @@ export default function ScopeTile({
         <span className="eyebrow">{toneLabel(tile.score)}</span>
       </div>
       <div className="flex items-end justify-between gap-2">
-        <span className={`text-data ${toneClass(tile.score)}`}>
+        <span className={`font-mono text-title tabular-nums ${toneClass(tile.score)}`}>
           {signed(tile.score)}
           {inBand && <span className="ml-1 text-label text-muted">in band</span>}
         </span>
