@@ -1,0 +1,16 @@
+run_date,sub_agent,horizon_d,n_fires,spearman,p_value
+2026-08-03,event_catalyst,5,501,0.072,0.106
+2026-08-03,event_catalyst,10,338,0.069,0.205
+2026-08-03,event_catalyst,20,336,0.005,0.924
+2026-08-03,earnings_proximity,5,0,,
+2026-08-03,earnings_proximity,10,0,,
+2026-08-03,earnings_proximity,20,0,,
+2026-08-03,squeeze_setup,5,147,0.153,0.064
+2026-08-03,squeeze_setup,10,95,0.227,0.027
+2026-08-03,squeeze_setup,20,95,0.349,0.001
+2026-08-03,growth_profitability,5,446,-0.114,0.016
+2026-08-03,growth_profitability,10,307,-0.155,0.007
+2026-08-03,growth_profitability,20,305,-0.195,0.001
+2026-08-03,analyst_upside,5,377,0.014,0.786
+2026-08-03,analyst_upside,10,242,-0.005,0.941
+2026-08-03,analyst_upside,20,240,0.19,0.003
