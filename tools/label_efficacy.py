@@ -142,7 +142,10 @@ def main() -> None:
     ap = argparse.ArgumentParser(description="Monthly label-efficacy backtest")
     _default_memory = os.environ.get(
         "MARKET_REVIEW_REPORT",
-        str(Path(__file__).resolve().parents[2].parent / "Market_Review" / "reports" / "watchlist_memory.csv"),
+        # parents[2] is the directory holding Market_Analyse, i.e. Market_Review's
+        # sibling — the extra .parent here resolved to /Users and the monthly run
+        # died on /Users/Market_Review/reports/watchlist_memory.csv.
+        str(Path(__file__).resolve().parents[2] / "Market_Review" / "reports" / "watchlist_memory.csv"),
     ).replace("ticker_setups.csv", "watchlist_memory.csv")
     ap.add_argument("--memory", default=_default_memory)
     ap.add_argument("--out-dir", default=str(Path(__file__).parent.parent / "docs" / "label_efficacy"))

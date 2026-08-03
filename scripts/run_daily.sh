@@ -16,18 +16,21 @@ PY="$REPO/argus/.venv/bin/python"
 hb() { (cd "$REPO/argus" && "$PY" -m argus.heartbeat "$1" "$2" "${3:-}") || true }
 
 # 1. Sentiment pipeline (Market_Review, unchanged — its own script, its own venv).
-# On failure, surface the cause: the X API returning 402 (out of credits) is the
-# common one — the heartbeat says so plainly so the dashboard shows it as actionable.
+# On failure, report the exception that actually stopped the run. The previous
+# classifier grepped the whole log for "402|Payment Required" and blamed X credits
+# for every non-zero exit; on 2026-08-02 that told the dashboard to top up credits
+# when the run had died of file-descriptor exhaustion in fetch-prices, and the X
+# leg had in fact succeeded through the Stocktwits fallback.
 if zsh "$MR/run_daily.sh"; then
   hb daily-sentiment ok
 else
   rc=$?
   mr_log="$MR/logs/daily_$(date +%Y%m%d).log"
-  if grep -qiE "402|Payment Required" "$mr_log" 2>/dev/null; then
-    hb daily-sentiment error "X API out of credits — top up in the X Developer Console, then re-run scripts/run_daily.sh"
-  else
-    hb daily-sentiment error "exit $rc"
+  cause="$(grep -oE '^[A-Za-z_.]*(Error|Exception)[^:]*:.*' "$mr_log" 2>/dev/null | tail -1)"
+  if [ -z "$cause" ] && grep -q "Fallback sources also failed" "$mr_log" 2>/dev/null; then
+    cause="X fetch and free fallback both failed — check X API credits"
   fi
+  hb daily-sentiment error "exit $rc${cause:+ — ${cause[1,200]}}"
 fi
 
 # 2. Account-trust backtest → reports/account_backtest.csv (feeds dashboard Sources, bug B4)

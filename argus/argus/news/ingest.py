@@ -10,6 +10,8 @@ Secret: DISCORD_USER_TOKEN read from env only — never printed/logged.
 import os
 import re
 import sys
+import threading
+import time
 
 from ..db import get_conn, heartbeat
 from .schema import ensure_news_schema
@@ -17,6 +19,14 @@ from .store import insert_item, set_cursor, get_cursor
 
 _CASHTAG = re.compile(r"\$([A-Za-z]{1,6})\b")
 _BREAKING = re.compile(r"\bBREAKING\b|\bJUST IN\b|\bURGENT\b", re.IGNORECASE)
+
+# A gateway that connects but never reaches READY reconnects forever without ever
+# exiting, so launchd's KeepAlive — which only fires on exit — cannot restart it.
+# That is how this daemon sat live-locked for seven days on one invocation while
+# its heartbeat, written only from on_ready, kept reporting the last good run.
+_READY_TIMEOUT = int(os.environ.get("NEWS_INGEST_READY_TIMEOUT", "300"))
+_DISCONNECT_LIMIT = int(os.environ.get("NEWS_INGEST_DISCONNECT_LIMIT", "10"))
+_BEAT_INTERVAL = int(os.environ.get("NEWS_INGEST_BEAT_INTERVAL", "600"))
 
 
 def to_news_item(msg) -> dict | None:
@@ -65,8 +75,46 @@ def run() -> int:
         return 2
     channels = _channel_ids()
 
+    state = {"ready": False, "disconnects": 0, "items": 0}
+
+    def _die(detail: str, code: int) -> None:
+        heartbeat("news-ingest", "error", detail)
+        print(f"[news-ingest] {detail}", file=sys.stderr)
+        # discord.py-self owns the event loop and swallows anything raised from a
+        # callback, so leaving the process is the only way out of a wedged gateway.
+        # KeepAlive restarts us after ThrottleInterval.
+        os._exit(code)
+
+    def _ready_watchdog() -> None:
+        time.sleep(_READY_TIMEOUT)
+        if not state["ready"]:
+            _die(f"gateway never reached READY within {_READY_TIMEOUT}s", 3)
+
+    def _beat() -> None:
+        # Without this the heartbeat only advances on connect, so an idle-but-healthy
+        # feed is indistinguishable from a dead one and last_run_ts means nothing.
+        while True:
+            time.sleep(_BEAT_INTERVAL)
+            if state["ready"]:
+                heartbeat("news-ingest", "ok",
+                          f"connected, {state['items']} items this session")
+
+    threading.Thread(target=_ready_watchdog, daemon=True).start()
+    threading.Thread(target=_beat, daemon=True).start()
+
     class NewsClient(discord.Client):
+        async def on_disconnect(self):
+            state["disconnects"] += 1
+            if state["disconnects"] >= _DISCONNECT_LIMIT:
+                _die(f"{state['disconnects']} consecutive gateway disconnects "
+                     "with no resume", 4)
+
+        async def on_resumed(self):
+            state["disconnects"] = 0
+
         async def on_ready(self):
+            state["ready"] = True
+            state["disconnects"] = 0
             conn = get_conn(); ensure_news_schema(conn)
             total = 0
             try:
@@ -88,6 +136,7 @@ def run() -> int:
                             total += 1
             finally:
                 conn.close()
+            state["items"] += total
             heartbeat("news-ingest", "ok", f"backfill {total} items, {len(channels)} channels")
 
         async def on_message(self, message):
@@ -95,12 +144,16 @@ def run() -> int:
                 return
             conn = get_conn(); ensure_news_schema(conn)
             try:
-                store_message(conn, message)
+                if store_message(conn, message):
+                    state["items"] += 1
             finally:
                 conn.close()
 
     NewsClient().run(token)
-    return 0
+    # run() returning at all means the gateway gave up; a persistent daemon exiting
+    # zero would leave the dashboard's last heartbeat reading ok forever.
+    heartbeat("news-ingest", "error", "gateway client exited")
+    return 5
 
 
 def main() -> int:

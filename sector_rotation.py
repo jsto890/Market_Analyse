@@ -13,7 +13,9 @@ degrades to a note rather than breaking the report.
 from __future__ import annotations
 
 import json
+import sys
 import time
+import traceback
 from pathlib import Path
 
 import numpy as np
@@ -407,8 +409,15 @@ def build_rotation_section(force_refresh: bool = False,
     try:
         rows = compute_rotation(force_refresh=force_refresh, industries=industries)
     except Exception:
+        # Degrading to a note is deliberate, but doing it silently is not: this
+        # swallow hid a provider failure for five days, and because the sidecar
+        # write and the RRG trail snapshot both live past this point, the chart
+        # simply stopped gaining points with nothing anywhere saying why.
+        traceback.print_exc(file=sys.stderr)
         rows = []
     if not rows:
+        print("[rotation] model unavailable — rotation_latest.json and the RRG trail "
+              "keep their previous values", file=sys.stderr)
         return ("## Sector Rotation\n"
                 "_Rotation model unavailable (data fetch failed); see candidate sectors below._\n")
 

@@ -15,6 +15,7 @@ import argparse
 import sys
 import os
 import json
+import traceback
 import concurrent.futures
 from datetime import datetime
 from pathlib import Path
@@ -915,9 +916,15 @@ def _write_markdown(
         try:
             rotation_md = build_rotation_section()
         except Exception:
+            traceback.print_exc(file=sys.stderr)
             rotation_md = ""
     if (not rotation_md or "unavailable" in rotation_md) and \
             full_setups_df is not None and not full_setups_df.empty:
+        # The theme fallback carries no rotation scores, so substituting it also
+        # removes the "unavailable" wording — which is why five days of model
+        # failure produced reports that read as healthy.
+        print("[rotation] falling back to the theme section — the rotation model "
+              "produced nothing this run", file=sys.stderr)
         rotation_md = _build_sector_rotation_section(full_setups_df)
     if rotation_md:
         lines.append(rotation_md)
@@ -1117,6 +1124,9 @@ def main() -> None:
     try:
         rotation_md = build_rotation_section()
     except Exception:
+        # build_rotation_section already degrades internally, so reaching here means
+        # something broke outside the model — either way the daily log gets the trace.
+        traceback.print_exc(file=sys.stderr)
         rotation_md = ""
     _write_markdown(results, out_dir / f"bridge_{ts_tag}.md", args.min_quality,
                     full_setups_df=full_setups_df, regime_note=regime_note,

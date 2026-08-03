@@ -179,8 +179,14 @@ def build_app() -> FastAPI:
     def heartbeats():
         conn = get_conn()
         try:
+            # age_secs makes staleness computable by the caller. Without it a job
+            # that wedged mid-invocation reads as its last good status forever —
+            # news-ingest sat live-locked for seven days still reporting ok.
             rows = conn.execute(
-                "SELECT job, last_run_ts, status, detail FROM heartbeats ORDER BY job"
+                "SELECT job, last_run_ts, status, detail, "
+                "       CAST(strftime('%s','now') - strftime('%s', last_run_ts) AS INTEGER) "
+                "         AS age_secs "
+                "FROM heartbeats ORDER BY job"
             ).fetchall()
         finally:
             conn.close()
