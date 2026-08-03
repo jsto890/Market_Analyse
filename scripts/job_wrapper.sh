@@ -39,6 +39,23 @@ run_with_deadline() {
   ' "$JOB_TIMEOUT" /usr/bin/caffeinate -i "$@"
 }
 
+# launchd appends to StandardErrorPath forever and rotates nothing, so the odte
+# daemon's reconnect loop grew logs/odte_error.log to 66MB of the same line.
+# Truncating in place rather than renaming is the whole trick: a daemon holds an
+# open O_APPEND fd on that inode, and a rename would leave it writing to a file
+# nobody reads. The last MAX_KEEP bytes are kept beside it as .1.
+rotate_logs() {
+  local max=$((8 * 1024 * 1024)) keep=$((512 * 1024)) f size
+  for f in "$REPO"/logs/*.log(N); do
+    size=$(stat -f%z "$f" 2>/dev/null) || continue
+    [ "$size" -gt "$max" ] || continue
+    tail -c "$keep" "$f" > "$f.1" 2>/dev/null || continue
+    : > "$f"
+    echo "[job_wrapper] rotated $f at ${size}B; tail kept in $f.1" >&2
+  done
+}
+rotate_logs
+
 hb() { (cd "$REPO/argus" && "$PY" -m argus.heartbeat "$JOB" "$1" "${2:-}") || true }
 
 hb running "started $(date '+%H:%M:%S')"

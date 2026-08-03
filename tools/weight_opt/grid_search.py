@@ -9,8 +9,8 @@ of combined vs forward return, averaged over days) is scale-invariant, so the
 renormalisation constant in production blend_legs does not affect the ranking —
 we sweep the single free parameter `a` = sentiment share of the 2-leg blend.
 
-Run under base conda:
-    /Users/josephstorey/anaconda3/bin/python tools/weight_opt/grid_search.py
+Run under the argus venv (the anaconda interpreter this used to name is gone):
+    argus/.venv/bin/python tools/weight_opt/grid_search.py
 """
 from __future__ import annotations
 

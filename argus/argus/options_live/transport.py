@@ -16,7 +16,6 @@ def serialize_ladder(ladder: LadderSnapshot) -> dict:
         - atm_strike, zero_gamma_strike, call_wall_strike, put_wall_strike
         - max_pain, pin_risk, net_gex_band
         - msi_call_strike, msi_put_strike, msi_rationale
-        - gex_profile_json
         - levels: list of {strike, call: {...14 fields}, put: {...14 fields},
                            zero_gamma_side, wall_type, gex_by_strike, max_pain_delta}
     """
@@ -38,7 +37,6 @@ def serialize_ladder(ladder: LadderSnapshot) -> dict:
         "msi_call_strike": ladder.msi_call_strike,
         "msi_put_strike": ladder.msi_put_strike,
         "msi_rationale": ladder.msi_rationale,
-        "gex_profile_json": ladder.gex_profile_json,
         "levels": [
             {
                 "strike": level.strike,

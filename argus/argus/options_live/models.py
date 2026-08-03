@@ -77,8 +77,6 @@ class LadderSnapshot:
     msi_put_strike: Optional[float] = None
     msi_rationale: Optional[str] = None
 
-    # GEX profile (61 points, already in DB)
-    gex_profile_json: Optional[str] = None  # JSON array of (strike, gex_$)
 
     def __post_init__(self):
         """Initialize levels list if not provided."""

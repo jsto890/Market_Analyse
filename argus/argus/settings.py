@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from pydantic import Field
+from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from .db import resolve_db_path
 
@@ -22,6 +22,19 @@ class Settings(BaseSettings):
 
     # Anthropic
     anthropic_api_key: str = ""
+
+    @field_validator("anthropic_api_key")
+    @classmethod
+    def _reject_non_keys(cls, v: str) -> str:
+        """Anything that is not shaped like a key counts as no key at all.
+
+        `ANTHROPIC_API_KEY=   # add your key from console.anthropic.com` parses
+        as a *value* of "# add your key…" — truthy, so every AI call took the
+        Claude path and came back 401 instead of falling back to the templated
+        report the unset case gives you.
+        """
+        v = v.strip()
+        return v if v.startswith("sk-ant-") else ""
     anthropic_model: str = "claude-opus-4-6"
     # Meta-analyst: lightweight LLM coherence check layered on the rule-based card.
     meta_analyst_model: str = "claude-haiku-4-5"

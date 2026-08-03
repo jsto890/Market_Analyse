@@ -121,4 +121,13 @@ def chart_chat(symbol: str, df: pd.DataFrame, question: str) -> dict:
         text = "".join(b.text for b in resp.content if hasattr(b, "text"))
         return {"mode": "claude", "answer": text, "grounding": payload}
     except Exception as e:
-        return {"mode": "error", "error": str(e), "grounding": payload}
+        # The same templated context the unset-key path returns. A revoked or
+        # rate-limited key used to be strictly worse than no key at all: it
+        # returned an error and no answer, while an absent one still answered.
+        return {
+            "mode": "fallback",
+            "error": str(e),
+            "answer": "Anthropic call failed. Templated context only:\n\n"
+                      + _templated_report(payload),
+            "grounding": payload,
+        }

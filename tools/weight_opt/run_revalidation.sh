@@ -7,7 +7,9 @@ set -euo pipefail
 
 set +e; source /Users/josephstorey/.zprofile 2>/dev/null; set -euo pipefail
 
-PY=/Users/josephstorey/anaconda3/bin/python
+# The anaconda interpreter this used to name was removed; the 2026-07-21 firing
+# died here with 127 and, because of `set -e`, never reached the self-removal.
+PY=/Users/josephstorey/Market_Analyse/argus/.venv/bin/python
 MA=/Users/josephstorey/Market_Analyse
 LABEL=ai.argus.weight-revalidation
 PLIST="$HOME/Library/LaunchAgents/${LABEL}.plist"

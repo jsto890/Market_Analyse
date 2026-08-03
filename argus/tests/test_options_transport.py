@@ -35,7 +35,6 @@ class TestSerializeLadder:
             msi_call_strike=455.0,
             msi_put_strike=445.0,
             msi_rationale="highest_gex",
-            gex_profile_json='[{"strike": 450, "gex": 1000}]',
         )
 
         result = serialize_ladder(ladder)
@@ -56,7 +55,6 @@ class TestSerializeLadder:
         assert result["msi_call_strike"] == 455.0
         assert result["msi_put_strike"] == 445.0
         assert result["msi_rationale"] == "highest_gex"
-        assert result["gex_profile_json"] == '[{"strike": 450, "gex": 1000}]'
 
     def test_serialize_ladder_as_of_isoformat(self):
         """Serialized as_of is ISO format string."""
@@ -233,7 +231,6 @@ class TestSerializeLadder:
             msi_call_strike=None,
             msi_put_strike=None,
             msi_rationale=None,
-            gex_profile_json=None,
         )
 
         result = serialize_ladder(ladder)
@@ -242,7 +239,6 @@ class TestSerializeLadder:
         assert result["zero_gamma_strike"] is None
         assert result["call_wall_strike"] is None
         assert result["max_pain"] is None
-        assert result["gex_profile_json"] is None
 
         # Level
         level = result["levels"][0]

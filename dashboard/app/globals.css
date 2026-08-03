@@ -34,6 +34,10 @@
   /* Tertiary: subtitles, supporting detail under a heading. */
   --text-3: #9aa3b4;
   --nav-h: 46px;
+  /* X-05, settled: the mock draws the rails at 208/260 and the content cap at
+   * 1180. Tokens win on the rails — 200/288 is what the live components were
+   * built and measured against — and the mock wins on the cap. Do not re-open
+   * the 28px right-rail difference; it is a decision, not a drift. */
   --rail-l: 200px;
   --rail-r: 288px;
   /* Both rails minimise to the same strip, so the width is stated once. */

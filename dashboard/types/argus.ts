@@ -126,12 +126,12 @@ export interface FundamentalsData {
   analyst_target?: number | null;
   analyst_rating?: string | null;
   short_pct_float?: number | null;
-  dtc?: number | null;
   week52_high?: number | null;
   week52_low?: number | null;
-  iv_rank?: number | null;
-  earnings_date?: string | null;
-  days_to_earnings?: number | null;
+  // No dtc / iv_rank / earnings_date / days_to_earnings: /api/fundamentals has
+  // never emitted them and nothing read them. Declaring a field the feed does
+  // not send is how a "no feed renders nothing" rule quietly turns into a slot
+  // that looks buildable.
   error?: string;
 }
 
