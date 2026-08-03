@@ -24,6 +24,7 @@ import Panel from "@/components/ui/Panel";
 import SegmentedControl from "@/components/ui/SegmentedControl";
 import Empty from "@/components/ui/Empty";
 import Stale from "@/components/ui/Stale";
+import ReadThis, { ReadThisTerm } from "@/components/ui/ReadThis";
 import { useLocalStorage } from "@/lib/useLocalStorage";
 import { STATIC_KEYS } from "@/lib/storageKeys";
 import Page from "@/components/ui/Page";
@@ -43,72 +44,58 @@ const WINDOW_OPTIONS = WINDOWS.map((w) => ({
 function Methodology({ window }: { window: string }) {
   const meta = WINDOW_META[window];
   return (
-    // Not a disclosure. Every number on this page is a model output with a
-    // lookback, a decay and a corpus behind it, and a reader who cannot see
-    // those cannot tell +0.31 from noise — so the method is the page's
-    // explanation, standing open, rather than an aside behind a chevron (O-07).
+    // Every number on this page is a model output with a lookback, a decay and
+    // a corpus behind it, and a reader who cannot see those cannot tell +0.31
+    // from noise. It opens by default for that reason; it collapses because on
+    // the fifth visit it is four paragraphs between you and the chart.
     <Panel
       heading="eyebrow"
       title="How this score is computed"
       subtitle="model, sources, decay, and what a number means"
+      collapsible
+      defaultOpen
+      persistKey="macro-methodology"
     >
-      <dl className="grid gap-x-6 gap-y-3 text-body leading-relaxed sm:grid-cols-2 lg:grid-cols-4">
+      <dl className="grid gap-x-6 gap-y-3 px-3 py-2 text-body leading-relaxed sm:grid-cols-2 lg:grid-cols-4">
         <div>
-          <dt className="eyebrow">Model</dt>
+          <dt className="eyebrow">Input</dt>
+          <dd className="text-2">
+            Every item in the news store: the Discord feeds, RSS pulls and whale-flow alerts that
+            fill the Chatter &amp; Flow rail, scored once on arrival by the aggregator, which runs
+            every 20 minutes — each chart point is one of those runs. Every item lands in{" "}
+            <span className="font-mono">GLOBAL</span>; also in <span className="font-mono">US</span>{" "}
+            if the headline hits a US-macro keyword (Fed, CPI, payrolls, yields, tariff…) or names a
+            tracked ticker, and in <span className="font-mono">sector:X</span> when its ticker
+            resolves to a sector family. One item can count in several scopes.{" "}
+            <span className="font-mono">n=</span> is the headlines inside the lookback for that
+            scope, before decay weighting — a high score on n=3 is three headlines, not a consensus.
+          </dd>
+        </div>
+        <div>
+          <dt className="eyebrow">Scoring</dt>
           <dd className="text-2">
             FinBERT (ProsusAI/finbert), a sentiment classifier fine-tuned on financial text. Each
             headline scores −1 (bearish) to +1 (bullish) as P(positive) − P(negative). Headline text
-            only — bodies are not scored.
+            only — bodies are not scored, and no source-reliability multiplier is applied.
           </dd>
         </div>
         <div>
-          <dt className="eyebrow">Corpus</dt>
-          <dd className="text-2">
-            Every item in the news store: the Discord feeds, RSS pulls and whale-flow alerts that
-            fill the Chatter &amp; Flow rail. Scored once on arrival by the aggregator, which runs every 20
-            minutes — each chart point is one of those runs.
-          </dd>
-        </div>
-        <div>
-          <dt className="eyebrow">Lookback &amp; decay</dt>
+          <dt className="eyebrow">Weighting</dt>
           <dd className="text-2">
             The <span className="font-mono">{window}</span> gauge reads the {meta.lookback} only.
             Inside it, weight decays exponentially with age at a half-life of {meta.halfLife}, so a
             headline that old counts half as much as one arriving now. Nothing outside the lookback
-            counts at all.
+            counts at all. The 1h and 1d figures are this scope&rsquo;s move against one hour and one
+            day ago; a dash means there is not enough history stored yet to compute it.
           </dd>
         </div>
         <div>
-          <dt className="eyebrow">Scopes</dt>
-          <dd className="text-2">
-            Every item lands in <span className="font-mono">GLOBAL</span>. It also lands in{" "}
-            <span className="font-mono">US</span> if the headline hits a US-macro keyword (Fed, CPI,
-            payrolls, yields, tariff…) or names a tracked ticker, and in{" "}
-            <span className="font-mono">sector:X</span> when its ticker resolves to a sector family.
-            One item can count in several scopes.
-          </dd>
-        </div>
-        <div>
-          <dt className="eyebrow">n =</dt>
-          <dd className="text-2">
-            Headlines inside the lookback for that scope, before decay weighting. A high score on
-            n=3 is three headlines, not a consensus.
-          </dd>
-        </div>
-        <div>
-          <dt className="eyebrow">1h / 1d change</dt>
-          <dd className="text-2">
-            The move in this scope&rsquo;s score against one hour and one day ago. A dash means
-            there is not enough history stored yet to compute it.
-          </dd>
-        </div>
-        <div>
-          <dt className="eyebrow">Reading a number</dt>
+          <dt className="eyebrow">What it isn&rsquo;t</dt>
           <dd className="text-2">
             ±{NEUTRAL_BAND.toFixed(2)} is the neutral band — inside it the tone is treated as no
-            signal, so +0.04 is <em>not</em> mild bullishness. Beyond it the score says the
-            weighted balance of coverage leans one way; it does not forecast a return, and it is not
-            an input to any trade signal.
+            signal, so +0.04 is <em>not</em> mild bullishness. Beyond it the score says the weighted
+            balance of coverage leans one way; it does not forecast a return, and it is not an input
+            to any trade signal.
           </dd>
         </div>
       </dl>
@@ -214,28 +201,37 @@ function MacroPageInner() {
         />
       )}
 
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-        {rows.map((t) => (
-          <ScopeTile
-            key={t.scope}
-            tile={t}
-            selected={t.scope === scope}
-            onSelect={() => { setResetNotice(null); setScope(t.scope); }}
-          />
-        ))}
-        {rows.length === 0 &&
-          gauges.map((g) => (
+      <section aria-label="Sentiment scopes" className="flex flex-col gap-2">
+        <div className="flex flex-wrap items-baseline justify-between gap-x-4">
+          <span className="eyebrow">Scopes</span>
+          <span className="text-body text-muted">
+            {rows.length > 0 && "market first, then biggest movers · "}
+            click any tile for its headlines
+          </span>
+        </div>
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
+          {rows.map((t) => (
             <ScopeTile
-              key={g.scope}
-              tile={{ scope: g.scope, score: g.score, n: g.n, ts: "", delta_1h: null, delta_1d: null, spark: [] }}
-              selected={g.scope === scope}
-              onSelect={() => setScope(g.scope)}
+              key={t.scope}
+              tile={t}
+              selected={t.scope === scope}
+              onSelect={() => { setResetNotice(null); setScope(t.scope); }}
             />
           ))}
-      </div>
+          {rows.length === 0 &&
+            gauges.map((g) => (
+              <ScopeTile
+                key={g.scope}
+                tile={{ scope: g.scope, score: g.score, n: g.n, ts: "", delta_1h: null, delta_1d: null, spark: [] }}
+                selected={g.scope === scope}
+                onSelect={() => setScope(g.scope)}
+              />
+            ))}
+        </div>
+      </section>
 
       {anyData ? (
-        <>
+        <div className="grid grid-cols-1 gap-3 lg:grid-cols-[1fr_380px]">
           <Page.Section>
             <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-body text-muted">
               <span>
@@ -260,10 +256,18 @@ function MacroPageInner() {
               </span>
             </div>
             <MacroChart points={series?.points ?? []} spx={hist?.bars ?? []} />
+            <ReadThis>
+              the dashed ±{NEUTRAL_BAND.toFixed(2)} lines mark the neutral zone, so{" "}
+              <ReadThisTerm>a line inside them is not a signal</ReadThisTerm> whatever
+              its colour — and the SPY line is clipped to the same span the score
+              line covers, whatever window you picked.
+            </ReadThis>
           </Page.Section>
-          <Contributors scope={scope} window={win} />
-          <ScopeBand scope={scope} window={win} />
-        </>
+          <div className="flex flex-col gap-3">
+            <Contributors scope={scope} window={win} />
+            <ScopeBand scope={scope} window={win} />
+          </div>
+        </div>
       ) : (
         <Empty message="No macro data yet — the aggregator runs every 20 min." />
       )}

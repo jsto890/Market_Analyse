@@ -8,7 +8,7 @@ import Failed from "@/components/ui/Failed";
 import Stale from "@/components/ui/Stale";
 import Page from "@/components/ui/Page";
 import { loadBridgeSignals } from "@/lib/bridge";
-import { buildTrails, type TrailHistory } from "@/lib/rotationTrails";
+import { type TrailHistory } from "@/lib/rotationTrails";
 
 export const dynamic = "force-dynamic";
 
@@ -87,9 +87,7 @@ export default function RotationPage() {
   const rotation = loadRotation();
   const mtime = loadRotationMtime();
   const namesBySector = loadNamesBySector();
-  const trails = rotation
-    ? buildTrails(loadTrailHistory(), rotation.map((r) => r.industry))
-    : {};
+  const history = loadTrailHistory();
 
   return (
     <Page width="wide">
@@ -107,7 +105,7 @@ export default function RotationPage() {
         }
       />
       {rotation ? (
-        <RotationView rows={rotation} namesBySector={namesBySector} trails={trails} />
+        <RotationView rows={rotation} namesBySector={namesBySector} history={history} />
       ) : (
         <Failed
           title="No rotation data"

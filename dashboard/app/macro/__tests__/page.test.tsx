@@ -91,6 +91,19 @@ describe("MacroPage header + legend (MC-04, MAC-06)", () => {
     expect(await screen.findByText(/±0.05 neutral band/)).toBeInTheDocument();
   });
 
+  it("reads the chart with a read-this strip naming the ±0.05 threshold", async () => {
+    searchParamsMock.current = "";
+    mockMacroFetch();
+    render(<MacroPage />);
+    expect(await screen.findByText("Read this")).toBeInTheDocument();
+    expect(screen.getByText(/±0\.05 lines mark the neutral zone/)).toBeInTheDocument();
+    expect(screen.getByText(/not a signal/)).toBeInTheDocument();
+    // The benchmark's fetched period varies by window (1w pulls a fixed 1mo of
+    // daily bars) — the true, window-invariant claim is that MacroChart clips
+    // the rendered SPY line to the score line's own span (MAC-08).
+    expect(screen.getByText(/clipped to the same span the score/)).toBeInTheDocument();
+  });
+
   it("discloses the model, corpus, decay and what a number means (MAC-05)", async () => {
     searchParamsMock.current = "";
     mockMacroFetch();
@@ -101,15 +114,14 @@ describe("MacroPage header + legend (MC-04, MAC-06)", () => {
     expect(screen.getByText(/before decay weighting/)).toBeInTheDocument();
   });
 
-  it("keeps the method on the page rather than behind a disclosure (O-07)", async () => {
+  it("opens by default but folds away on demand, rather than a fixed disclosure (O-07)", async () => {
     searchParamsMock.current = "";
     mockMacroFetch();
     render(<MacroPage />);
-    const heading = screen.getByText(/How this score is computed/);
-    expect(heading.closest("[aria-expanded]")).toBeNull();
-    expect(
-      screen.queryByRole("button", { name: /How this score is computed/ })
-    ).not.toBeInTheDocument();
+    const trigger = screen.getByRole("button", { name: /How this score is computed/ });
+    expect(trigger).toHaveAttribute("aria-expanded", "true");
+    await userEvent.click(trigger);
+    expect(trigger).toHaveAttribute("aria-expanded", "false");
   });
 });
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, type ReactNode } from "react";
+import { Fragment } from "react";
 import Link from "next/link";
 import Panel from "@/components/ui/Panel";
 import { ReadThisTerm } from "@/components/ui/ReadThis";
@@ -10,8 +10,9 @@ import {
   TAPE_SESSIONS,
   assignLanes,
   etMinutes,
-  fmtEtClock,
+  fmtLocalClock,
   laneCount,
+  localOffsetMin,
   nowEtMinutes,
   nowOnAxis,
   tapeFraction,
@@ -51,10 +52,23 @@ function toMark(e: MorningEvent, i: number, minutes: number): Mark {
   };
 }
 
+/** One clock reading, plus the `+1` that says it has rolled into tomorrow here.
+ *  The suffix is not decoration: a bare "06:00" printed to the right of "23:30"
+ *  reads as the tape running backwards. */
+function Clock({ minutes, offsetMin }: { minutes: number; offsetMin: number }) {
+  const { clock, dayShift } = fmtLocalClock(minutes, offsetMin);
+  return (
+    <>
+      {clock}
+      {dayShift === 1 && <span className="text-muted-2"> +1</span>}
+    </>
+  );
+}
+
 /** Earnings sit above the axis as amber chips — single-name event risk should
  *  not look like a scheduled macro print. The connector drops past the `now`
  *  lane to the top of the axis. */
-function EarningsMark({ mark, lane }: { mark: Mark; lane: number }) {
+function EarningsMark({ mark, lane, offsetMin }: { mark: Mark; lane: number; offsetMin: number }) {
   const f = tapeFraction(mark.minutes);
   const flip = f > FLIP_AT;
   const chip = `inline-flex items-baseline gap-1.5 whitespace-nowrap rounded-[4px] border border-warn/50 bg-warn/10 px-[7px] py-[3px] text-micro font-semibold text-warn ${
@@ -62,7 +76,10 @@ function EarningsMark({ mark, lane }: { mark: Mark; lane: number }) {
   }`;
   const inner = (
     <>
-      <span>{fmtEtClock(mark.minutes)}</span>
+      <span>
+        <Clock minutes={mark.minutes} offsetMin={offsetMin} />
+      </span>
+      {" · "}
       <span>{mark.label}</span>
     </>
   );
@@ -91,7 +108,7 @@ function EarningsMark({ mark, lane }: { mark: Mark; lane: number }) {
 /** Releases sit below the axis as text on a connector: a 1px drop from the axis
  *  to the label's lane, then an 8px tick into the label, so a 10:00 print reads
  *  against 10:00 on the bar rather than floating near it. */
-function ReleaseMark({ mark, lane }: { mark: Mark; lane: number }) {
+function ReleaseMark({ mark, lane, offsetMin }: { mark: Mark; lane: number; offsetMin: number }) {
   const f = tapeFraction(mark.minutes);
   const flip = f > FLIP_AT;
   const high = mark.importance === "high";
@@ -103,7 +120,10 @@ function ReleaseMark({ mark, lane }: { mark: Mark; lane: number }) {
       className={`flex items-center gap-1.5 whitespace-nowrap ${flip ? "-translate-x-full" : ""}`}
     >
       {!flip && tick}
-      <span className="text-data text-muted">{fmtEtClock(mark.minutes)}</span>
+      <span className="text-data text-muted">
+        <Clock minutes={mark.minutes} offsetMin={offsetMin} />
+      </span>
+      <span className="text-body text-muted">{" · "}</span>
       <span className={high ? "text-body text-warn" : "text-body text-3"}>{mark.label}</span>
       {flip && tick}
     </span>
@@ -156,23 +176,23 @@ function Untimed({ label, events }: { label: string; events: MorningEvent[] }) {
   );
 }
 
-export default function TodaysTape({ actions }: { actions?: ReactNode }) {
+export default function TodaysTape() {
   // Same SWR key as the masthead, so the two share one request.
   const { data, error, isLoading } = useMorningReport();
-  // The date stepper rides in this panel's header. With no brief there is no
-  // header to ride in, and dropping it would drop history navigation with it.
-  if (isLoading || error || !data) return <>{actions}</>;
-  return <TapeBand events={data.today_events ?? []} actions={actions} />;
+  if (isLoading || error || !data) return null;
+  return <TapeBand events={data.today_events ?? []} />;
 }
 
 export function TapeBand({
   events,
   nowMin = nowEtMinutes(),
-  actions,
+  offsetMin = localOffsetMin(),
 }: {
   events: MorningEvent[];
   nowMin?: number;
-  actions?: ReactNode;
+  /** Injected in tests so a clock assertion does not depend on the runner's
+   *  hemisphere or the date it runs on. */
+  offsetMin?: number;
 }) {
   const earnings = events.filter(isEarnings);
   const releases = events.filter((e) => !isEarnings(e));
@@ -200,8 +220,7 @@ export function TapeBand({
     <Panel
       title="Today’s tape"
       heading="eyebrow"
-      subtitle={nothingTimed ? undefined : "all times ET"}
-      actions={actions}
+      subtitle={nothingTimed ? undefined : "all times Sydney"}
       readThis={
         nothingTimed ? (
           <>
@@ -237,7 +256,7 @@ export function TapeBand({
             {aboveH > 0 && (
               <div className="relative" style={{ height: `${aboveH}px` }}>
                 {aboveLanes.map((m) => (
-                  <EarningsMark key={m.key} mark={m} lane={m.lane} />
+                  <EarningsMark key={m.key} mark={m} lane={m.lane} offsetMin={offsetMin} />
                 ))}
               </div>
             )}
@@ -250,7 +269,7 @@ export function TapeBand({
                   className="absolute bottom-0 -translate-x-1/2 whitespace-nowrap rounded-[3px] bg-accent px-1.5 py-0.5 text-micro font-semibold normal-case text-bg"
                   style={{ left: `${nowF * 100}%` }}
                 >
-                  now {fmtEtClock(nowMin)} ET
+                  now <Clock minutes={nowMin} offsetMin={offsetMin} />
                 </span>
               )}
             </div>
@@ -284,7 +303,7 @@ export function TapeBand({
                       }`}
                       style={{ left: `calc(${left}% + 8px)` }}
                     >
-                      {s.label} · {fmtEtClock(s.startMin)}
+                      {s.label} · <Clock minutes={s.startMin} offsetMin={offsetMin} />
                     </span>
                   </Fragment>
                 );
@@ -303,7 +322,7 @@ export function TapeBand({
                 style={{ height: `${belowH}px`, marginTop: `${TICK_GAP}px` }}
               >
                 {belowLanes.map((m) => (
-                  <ReleaseMark key={m.key} mark={m} lane={m.lane} />
+                  <ReleaseMark key={m.key} mark={m} lane={m.lane} offsetMin={offsetMin} />
                 ))}
               </div>
             )}

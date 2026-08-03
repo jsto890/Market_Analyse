@@ -16,16 +16,14 @@ function formatTime(generatedAt: string | null): string {
 
 export function statusMessage({
   rows,
-  viewingHistory,
   stale,
   generatedAt,
 }: {
   rows: BridgeRow[];
-  viewingHistory: boolean;
   stale: boolean;
   generatedAt: string | null;
 }): StatusMessage | null {
-  if (rows.length === 0 && !viewingHistory) {
+  if (rows.length === 0) {
     return { level: "error", text: "No bridge data — run_daily may have failed" };
   }
   if (stale) {

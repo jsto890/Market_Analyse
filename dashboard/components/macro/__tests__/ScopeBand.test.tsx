@@ -126,4 +126,17 @@ describe("ScopeBand (MAC-12)", () => {
     await screen.findByText("names driving this scope");
     expect(container.querySelectorAll(".eyebrow")).toHaveLength(1);
   });
+
+  it("stacks the cells inside a titled panel instead of a horizontal band", async () => {
+    mock();
+    const { container } = render(<ScopeBand scope="sector:AI / Compute" window="1d" />);
+    expect(await screen.findByText("Where this lands")).toBeInTheDocument();
+    // A full revert to the old `divide-x` horizontal band would still show
+    // this title, so assert the stacked structure itself: each cell borders
+    // its predecessor (`border-t`) except the first (`first:border-t-0`), and
+    // no `divide-x` band class survives anywhere in the panel.
+    const cell = (await screen.findByText("names driving this scope")).closest("div")!;
+    expect(cell).toHaveClass("border-t", "first:border-t-0");
+    expect(container.querySelectorAll(".divide-x")).toHaveLength(0);
+  });
 });

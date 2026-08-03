@@ -12,12 +12,11 @@ import {
   ReferenceArea,
   Tooltip,
 } from "recharts";
-import Link from "next/link";
 import Panel from "@/components/ui/Panel";
 import Empty from "@/components/ui/Empty";
+import { ReadThisTerm } from "@/components/ui/ReadThis";
 import type { RotationRow } from "@/components/today/RotationPanel";
 import { QUADRANT_COLOR, deriveQuadrant, splitDegenerate, rrgIndexByIndustry } from "@/lib/rotation";
-import { HeldChips } from "@/lib/positions";
 import type { TrailPoint } from "@/lib/rotationTrails";
 import { CHART_HEIGHT, CHART_AXIS_STYLE } from "@/lib/chartConventions";
 import { QUADRANT_GLOSS, QUADRANT_LABEL } from "@/lib/labels";
@@ -110,20 +109,11 @@ function RRGTooltip({ active, payload }: { active?: boolean; payload?: TooltipPa
 
 export default function RRGChart({
   rows,
-  namesBySector,
-  held,
   selected = null,
   onSelect,
   trails,
 }: {
   rows: RotationRow[];
-  /** Omitted when the signals file could not be read — the picked-names line
-   *  then never renders, rather than claiming every sector is empty. */
-  namesBySector?: SectorNames;
-  /** Your open positions. A sector's candidates are the only names it can map to
-   *  tickers, so this says which of *those* you already own — not everything you
-   *  hold in the sector, which nothing here knows the industry of. */
-  held?: Map<string, number>;
   /** Selection is owned above the chart, because the rotation table is the
    *  chart's legend and picking in either place has to move the other. */
   selected?: string | null;
@@ -168,12 +158,6 @@ export default function RRGChart({
     rrgIndex: indexByIndustry[r.industry],
   }));
 
-  // Searched across every row, not just the plotted ones: a flat sector has no
-  // point but still has a table row, and picking it should still name its
-  // candidates rather than silently doing nothing.
-  const selectedRow = rows.find((r) => r.industry === selected) ?? null;
-  const picked = selectedRow ? (namesBySector?.[selectedRow.industry] ?? []) : [];
-
   return (
     <Panel
       title="Relative Rotation Graph"
@@ -182,6 +166,14 @@ export default function RRGChart({
         // never announces a tail that is not on the chart.
         trailWeeks > 1 ? ` · ${trailWeeks}-week tails` : ""
       }${hidden.length > 0 ? ` · ${hidden.length} hidden (no data)` : ""}`}
+      readThis={
+        <>
+          the dot is today
+          {trailWeeks > 1 ? `, the fading dots behind it are the last ${trailWeeks} weeks. ` : ". "}
+          <ReadThisTerm>direction of travel matters more than the corner</ReadThisTerm> it&rsquo;s
+          sitting in — heading toward Weakening is late, heading toward Improving is early.
+        </>
+      }
     >
       <div
         role="img"
@@ -339,34 +331,6 @@ export default function RRGChart({
       {/* No legend here. It named all twelve sectors ~100px above the table
        * that names the same twelve — the numbered points key into that table
        * instead, and its rows are the picker. */}
-      {selectedRow && namesBySector && (
-        <div className="mt-2 flex flex-wrap items-baseline gap-x-2 gap-y-1 border-t border-line px-1 pt-2 text-body">
-          <span className="eyebrow">{selectedRow.industry} · on today&rsquo;s list</span>
-          {picked.length > 0 ? (
-            picked.map((n) => (
-              <Link
-                key={n.ticker}
-                href={`/t/${n.ticker}`}
-                className="rounded border border-line px-1.5 py-px font-mono text-micro text-accent hover:bg-elevated"
-              >
-                {n.ticker}
-              </Link>
-            ))
-          ) : (
-            <span className="text-muted">
-              Nothing from this sector made today&rsquo;s list — the rotation is there, the setups
-              are not.
-            </span>
-          )}
-          {held && (
-            <HeldChips
-              symbols={picked.map((n) => n.ticker)}
-              held={held}
-              className="border-l border-line pl-2"
-            />
-          )}
-        </div>
-      )}
       {hidden.length > 0 && (
         <p className="mt-2 px-1 text-body text-muted">
           Hidden (flat/no data): {hidden.map((r) => r.industry).join(", ")}
