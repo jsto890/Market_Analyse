@@ -818,8 +818,8 @@ test("contract: Phase 3 — Today is one masthead, one tape, one caveat", async 
   });
   if (dupes.length > 0) violations.push(`/: tab label repeated as a heading: ${dupes.join(", ")}`);
 
-  // The masthead and the tape share one request; on a cold Argus that outlasts
-  // the settle above, so wait for the tape rather than assume it has landed.
+  // The tape waits on the calendar route, which on a cold Argus outlasts the
+  // settle above — wait for it rather than assume it has landed.
   const tape = page.getByText("Today’s tape");
   await tape
     .first()
@@ -897,8 +897,11 @@ test("contract: Phase 3.2 — the ticker page names each thing once", async ({ p
 
   // One earnings date, one basis, one place. Case-insensitive: the chip's copy
   // is sentence case now, and a guard that quietly stops matching is worse than
-  // one that fails.
-  const earnings = await page.getByText(/earnings (today|tomorrow|in \d+d|\d+d ago)/i).count();
+  // one that fails. Agent rationale is excluded — it is the ensemble quoting its
+  // own day count, not the page restating the date.
+  const earnings = await page
+    .getByText(/earnings (today|tomorrow|in \d+d|\d+d ago)/i)
+    .evaluateAll((els) => els.filter((e) => !e.hasAttribute("data-agent-note")).length);
   if (earnings > 1) {
     violations.push(`/t/AAPL: earnings stated ${earnings}×, expected at most once`);
   }

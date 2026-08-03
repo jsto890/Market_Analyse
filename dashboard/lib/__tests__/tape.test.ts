@@ -1,19 +1,23 @@
 import { describe, it, expect } from "vitest";
 import {
-  TAPE_END_MIN,
-  TAPE_START_MIN,
+  HOUR_MS,
+  TAPE_LOOKBACK_H,
+  TAPE_SPAN_H,
   assignLanes,
   etMinutes,
-  fmtClock,
-  localOffsetMin,
-  fmtLocalClock,
+  eventMs,
+  fmtLocalTime,
   laneCount,
-  nowEtMinutes,
-  nowOnAxis,
-  tapeFraction,
+  localDayShift,
+  tapeWindow,
+  windowDates,
+  windowFraction,
+  windowSessions,
+  windowTicks,
+  zonedMs,
 } from "@/lib/tape";
 
-describe("etMinutes / fmtClock", () => {
+describe("etMinutes", () => {
   it("reads the feed's clock strings", () => {
     expect(etMinutes("08:30")).toBe(510);
     expect(etMinutes("00:00")).toBe(0);
@@ -21,7 +25,6 @@ describe("etMinutes / fmtClock", () => {
   });
 
   it("returns null for anything that isn't a clock time", () => {
-    // Every earnings row on the feed carries a date and no time.
     expect(etMinutes(null)).toBeNull();
     expect(etMinutes(undefined)).toBeNull();
     expect(etMinutes("")).toBeNull();
@@ -29,72 +32,160 @@ describe("etMinutes / fmtClock", () => {
     expect(etMinutes("25:00")).toBeNull();
     expect(etMinutes("08:75")).toBeNull();
   });
+});
 
-  it("round-trips back to the same string", () => {
-    expect(fmtClock(510)).toBe("08:30");
-    expect(fmtClock(TAPE_START_MIN)).toBe("04:00");
-    expect(fmtClock(TAPE_END_MIN)).toBe("20:00");
+describe("zonedMs", () => {
+  it("resolves a New York wall clock to the right instant on EDT", () => {
+    // 2026-08-03 08:30 in New York is UTC-4 → 12:30Z.
+    expect(zonedMs(2026, 8, 3, 8, 30, "America/New_York")).toBe(
+      Date.parse("2026-08-03T12:30:00Z"),
+    );
+  });
+
+  it("follows the offset across the DST boundary rather than assuming one", () => {
+    // January is EST (UTC-5). A fixed -4 would land this an hour early.
+    expect(zonedMs(2026, 1, 15, 8, 30, "America/New_York")).toBe(
+      Date.parse("2026-01-15T13:30:00Z"),
+    );
   });
 });
 
-describe("localOffsetMin", () => {
-  it("is +14h while New York is on EDT and Sydney on AEST", () => {
-    // 2026-08-03: NY = UTC-4, Sydney = UTC+10.
-    expect(localOffsetMin(new Date("2026-08-03T12:00:00Z"))).toBe(14 * 60);
+describe("eventMs", () => {
+  it("places a dated, timed release on the absolute timeline", () => {
+    expect(eventMs("2026-08-03", "08:30")).toBe(Date.parse("2026-08-03T12:30:00Z"));
   });
 
-  it("is +16h in January, when both sides have swapped", () => {
-    // 2026-01-15: NY = UTC-5 (EST), Sydney = UTC+11 (AEDT).
-    expect(localOffsetMin(new Date("2026-01-15T12:00:00Z"))).toBe(16 * 60);
-  });
-});
-
-describe("fmtLocalClock", () => {
-  it("prints an ET minute on the Sydney clock", () => {
-    expect(fmtLocalClock(4 * 60, 14 * 60)).toEqual({ clock: "18:00", dayShift: 0 });
-    expect(fmtLocalClock(9 * 60 + 30, 14 * 60)).toEqual({ clock: "23:30", dayShift: 0 });
-  });
-
-  it("flags the roll past midnight rather than printing a time that reads earlier", () => {
-    expect(fmtLocalClock(16 * 60, 14 * 60)).toEqual({ clock: "06:00", dayShift: 1 });
-    expect(fmtLocalClock(20 * 60, 14 * 60)).toEqual({ clock: "10:00", dayShift: 1 });
+  it("gives a row with no clock no position at all", () => {
+    // Guessing midnight would drop every date-only earnings row onto the axis
+    // hours before the pre-market open.
+    expect(eventMs("2026-08-03", null)).toBeNull();
+    expect(eventMs("2026-08-03", "BMO")).toBeNull();
+    expect(eventMs("not-a-date", "08:30")).toBeNull();
   });
 });
 
-describe("tapeFraction", () => {
-  it("places the session boundaries where the axis draws them", () => {
-    expect(tapeFraction(TAPE_START_MIN)).toBe(0);
-    expect(tapeFraction(TAPE_END_MIN)).toBe(1);
-    expect(tapeFraction(12 * 60)).toBeCloseTo(0.5, 5);
+describe("tapeWindow", () => {
+  it("starts two hours back, on the hour, and runs 24 forward", () => {
+    const win = tapeWindow(new Date("2026-08-03T12:37:41Z"));
+    expect(win.startMs).toBe(Date.parse("2026-08-03T10:00:00Z"));
+    expect(win.endMs - win.startMs).toBe(TAPE_SPAN_H * HOUR_MS);
+    expect(win.endMs).toBe(Date.parse("2026-08-04T10:00:00Z"));
   });
 
-  it("clamps rather than positioning off the axis", () => {
-    // A 03:00 print still has to render somewhere.
-    expect(tapeFraction(3 * 60)).toBe(0);
-    expect(tapeFraction(23 * 60)).toBe(1);
+  it("holds still within the hour, then steps", () => {
+    // The whole point of snapping: the window must not creep on every render,
+    // or two components a second apart disagree about where "now" sits.
+    const a = tapeWindow(new Date("2026-08-03T12:00:00Z"));
+    const b = tapeWindow(new Date("2026-08-03T12:59:59Z"));
+    const c = tapeWindow(new Date("2026-08-03T13:00:00Z"));
+    expect(b.startMs).toBe(a.startMs);
+    expect(c.startMs - a.startMs).toBe(HOUR_MS);
+  });
+
+  it("always has now on the axis, never against an edge", () => {
+    const at = new Date("2026-08-03T12:37:00Z");
+    const f = windowFraction(at.getTime(), tapeWindow(at));
+    expect(f).not.toBeNull();
+    expect(f).toBeCloseTo((TAPE_LOOKBACK_H + 37 / 60) / TAPE_SPAN_H, 6);
   });
 });
 
-describe("nowOnAxis", () => {
-  it("is true only inside the drawn window", () => {
-    expect(nowOnAxis(TAPE_START_MIN)).toBe(true);
-    expect(nowOnAxis(TAPE_END_MIN)).toBe(true);
-    expect(nowOnAxis(10 * 60)).toBe(true);
-    // A marker pinned to 04:00 all evening lies about where the tape is.
-    expect(nowOnAxis(3 * 60 + 59)).toBe(false);
-    expect(nowOnAxis(21 * 60)).toBe(false);
+describe("windowFraction", () => {
+  const win = tapeWindow(new Date("2026-08-03T12:00:00Z")); // 10:00Z → 10:00Z+1
+
+  it("maps the edges to 0 and 1", () => {
+    expect(windowFraction(win.startMs, win)).toBe(0);
+    expect(windowFraction(win.endMs, win)).toBe(1);
+    expect(windowFraction(win.startMs + 12 * HOUR_MS, win)).toBeCloseTo(0.5, 6);
+  });
+
+  it("drops anything off-window rather than clamping it to an edge", () => {
+    // Clamping stacked every out-of-range release on 0% — three prints from
+    // yesterday reading as three prints at the start of the window.
+    expect(windowFraction(win.startMs - 1, win)).toBeNull();
+    expect(windowFraction(win.endMs + 1, win)).toBeNull();
   });
 });
 
-describe("nowEtMinutes", () => {
-  it("reads Eastern wall-clock, not the viewer's zone", () => {
-    // 2026-07-31T12:30:00Z is 08:30 EDT.
-    expect(nowEtMinutes(new Date("2026-07-31T12:30:00Z"))).toBe(8 * 60 + 30);
+describe("windowSessions", () => {
+  const win = tapeWindow(new Date("2026-08-03T12:00:00Z")); // 06:00 ET Mon → 06:00 ET Tue
+
+  it("carries the sessions of both ET dates the window touches", () => {
+    const sessions = windowSessions(win);
+    expect(sessions.map((s) => s.label)).toEqual([
+      "Pre",
+      "Regular",
+      "After",
+      "Pre",
+    ]);
+    // Same label twice, so the key has to disambiguate or React collapses them.
+    expect(new Set(sessions.map((s) => s.key)).size).toBe(sessions.length);
+  });
+
+  it("clips the session the window opens inside instead of starting it early", () => {
+    const [pre] = windowSessions(win);
+    // 04:00 ET Pre already ran two hours before this window opened.
+    expect(pre.startMs).toBe(win.startMs);
+    expect(pre.endMs).toBe(zonedMs(2026, 8, 3, 9, 30, "America/New_York"));
+  });
+
+  it("keeps every band inside the window", () => {
+    for (const s of windowSessions(win)) {
+      expect(s.startMs).toBeGreaterThanOrEqual(win.startMs);
+      expect(s.endMs).toBeLessThanOrEqual(win.endMs);
+      expect(s.endMs).toBeGreaterThan(s.startMs);
+    }
+  });
+
+  it("still finds the session a window opens in the middle of the night", () => {
+    // 02:00 ET: the window opens in the overnight gap, so its own date's Pre
+    // starts later and the previous date's After has already closed.
+    const overnight = tapeWindow(new Date("2026-08-04T06:00:00Z"));
+    const labels = windowSessions(overnight).map((s) => s.label);
+    expect(labels).toEqual(["Pre", "Regular", "After"]);
+  });
+});
+
+describe("windowDates", () => {
+  it("names both ET dates the window covers", () => {
+    expect(windowDates(tapeWindow(new Date("2026-08-03T12:00:00Z")))).toEqual([
+      "2026-08-03",
+      "2026-08-04",
+    ]);
+  });
+});
+
+describe("windowTicks", () => {
+  const win = tapeWindow(new Date("2026-08-03T12:00:00Z"));
+
+  it("puts a mark on the hour every four hours, all inside the window", () => {
+    const ticks = windowTicks(win);
+    expect(ticks.length).toBeGreaterThanOrEqual(6);
+    for (const t of ticks) {
+      expect(t % (4 * HOUR_MS)).toBe(0);
+      expect(t).toBeGreaterThanOrEqual(win.startMs);
+      expect(t).toBeLessThanOrEqual(win.endMs);
+    }
+  });
+});
+
+describe("fmtLocalTime / localDayShift", () => {
+  it("prints the reader's clock, not New York's", () => {
+    // 2026-08-03T12:30:00Z is 08:30 in New York and 22:30 in Sydney.
+    expect(fmtLocalTime(Date.parse("2026-08-03T12:30:00Z"))).toBe("22:30");
+  });
+
+  it("flags the reading that has rolled into tomorrow here", () => {
+    const from = Date.parse("2026-08-03T12:30:00Z"); // 22:30 Sydney
+    expect(localDayShift(from, from)).toBe(0);
+    // +8h → 06:30 Sydney the next day. Printed bare it reads as going backwards.
+    expect(localDayShift(from + 8 * HOUR_MS, from)).toBe(1);
+    expect(fmtLocalTime(from + 8 * HOUR_MS)).toBe("06:30");
   });
 });
 
 describe("assignLanes", () => {
-  it("stacks the 08:30 cluster instead of overlapping it", () => {
+  it("stacks an 08:30 cluster instead of overlapping it", () => {
     // The feed carries PPI and Initial Jobless Claims at the same 08:30.
     const lanes = assignLanes([
       { minutes: 510, label: "PPI" },
@@ -117,18 +208,18 @@ describe("assignLanes", () => {
     const lanes = assignLanes([
       { minutes: 510, label: "PPI" },
       { minutes: 510, label: "Jobless claims" },
-      { minutes: 840, label: "Fed speakers" },
+      { minutes: 900, label: "Fed speakers" },
     ]);
-    expect(lanes.find((l) => l.minutes === 840)?.lane).toBe(0);
+    expect(lanes.find((l) => l.minutes === 900)?.lane).toBe(0);
     expect(laneCount(lanes)).toBe(2);
   });
 
-  it("orders by time and needs no lanes for nothing", () => {
+  it("sorts by clock whatever order the feed sent", () => {
     const lanes = assignLanes([
-      { minutes: 960, label: "Close" },
+      { minutes: 960, label: "Fed minutes" },
       { minutes: 510, label: "CPI" },
     ]);
-    expect(lanes.map((l) => l.label)).toEqual(["CPI", "Close"]);
+    expect(lanes.map((l) => l.label)).toEqual(["CPI", "Fed minutes"]);
     expect(laneCount([])).toBe(0);
   });
 });

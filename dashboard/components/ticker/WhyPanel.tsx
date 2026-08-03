@@ -268,7 +268,17 @@ function VoteRow({ agent, direction, confidence, note }: VoteRowProps) {
       </span>
       {note && (
         <InfoTip content={note} label={`${agent} rationale`}>
-          <span className="max-w-[240px] shrink-0 truncate text-body text-muted">{note}</span>
+          {/* Marked as the agent's own prose, not the page's. The two are easy to
+              confuse from the outside: this note says "earnings in 87d" off the
+              ensemble's own day count while the header states the date from the
+              catalysts feed, and a page-wide guard reads that as the app saying
+              the same thing twice. */}
+          <span
+            data-agent-note
+            className="max-w-[240px] shrink-0 truncate text-body text-muted"
+          >
+            {note}
+          </span>
         </InfoTip>
       )}
     </div>
