@@ -1,5 +1,6 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { render, screen } from "@/test/render";
+import userEvent from "@testing-library/user-event";
 import RotationPanel, { type RotationRow } from "../RotationPanel";
 
 const rows: RotationRow[] = [
@@ -30,6 +31,22 @@ describe("RotationPanel table", () => {
     ["Industry", "Δrank", "Quadrant", "RS-Ratio", "RS-Mom", "Breadth", "n", "1W", "1M", "3M"].forEach((h) => {
       expect(screen.getByRole("columnheader", { name: h })).toBeInTheDocument();
     });
+  });
+});
+
+describe("row selection toggle", () => {
+  it("releases the pick when the same row is opened again", async () => {
+    const user = userEvent.setup();
+    const onSelect = vi.fn();
+    const { rerender } = render(
+      <RotationPanel rows={rows} selected={null} onSelect={onSelect} />
+    );
+    await user.click(screen.getByText("Energy"));
+    expect(onSelect).toHaveBeenLastCalledWith("Energy");
+
+    rerender(<RotationPanel rows={rows} selected="Energy" onSelect={onSelect} />);
+    await user.click(screen.getByText("Energy"));
+    expect(onSelect).toHaveBeenLastCalledWith(null);
   });
 });
 

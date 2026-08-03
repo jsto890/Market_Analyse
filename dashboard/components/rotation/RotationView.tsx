@@ -61,8 +61,6 @@ export default function RotationView({
       />
       <RRGChart
         rows={rows}
-        namesBySector={namesBySector}
-        held={held}
         trails={trails}
         selected={selected}
         onSelect={setSelected}

@@ -30,38 +30,13 @@ describe("RotationView — the table is the chart's legend", () => {
     expect(screen.getByText("Utilities").closest("td")!.textContent).toBe("2Utilities");
   });
 
-  it("picks the sector from its table row and names that sector's candidates", async () => {
+  it("highlights the picked row", async () => {
     const user = userEvent.setup();
     render(<RotationView rows={rows} namesBySector={names} />);
+    const energyRow = screen.getByText("Energy").closest("tr")!;
+    expect(energyRow.className).not.toMatch(/ring-accent/);
     await user.click(screen.getByText("Energy"));
-    expect(screen.getByText(/Energy · on today/)).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "XOM" })).toHaveAttribute("href", "/t/XOM");
-  });
-
-  it("says which of the sector's candidates you already hold", async () => {
-    mockFetchJson({ "/api/argus/portfolio": [{ symbol: "XOM", position: 200 }] });
-    const user = userEvent.setup();
-    render(<RotationView rows={rows} namesBySector={names} />);
-    await user.click(screen.getByText("Energy"));
-    expect(await screen.findByText("you hold")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /XOM \+200/ })).toHaveAttribute("href", "/portfolio");
-  });
-
-  it("says nothing about holdings for a sector none of whose candidates you own", async () => {
-    mockFetchJson({ "/api/argus/portfolio": [{ symbol: "NVDA", position: 200 }] });
-    const user = userEvent.setup();
-    render(<RotationView rows={rows} namesBySector={names} />);
-    await user.click(screen.getByText("Energy"));
-    await screen.findByText(/Energy · on today/);
-    expect(screen.queryByText("you hold")).not.toBeInTheDocument();
-  });
-
-  it("releases the pick when the same row is clicked again", async () => {
-    const user = userEvent.setup();
-    render(<RotationView rows={rows} namesBySector={names} />);
-    await user.click(screen.getByText("Energy"));
-    await user.click(screen.getByText("Energy"));
-    expect(screen.queryByText(/on today/)).not.toBeInTheDocument();
+    expect(energyRow.className).toMatch(/ring-accent/);
   });
 });
 
