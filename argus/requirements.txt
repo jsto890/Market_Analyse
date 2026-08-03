@@ -8,6 +8,9 @@ python-dotenv>=1.0
 # --- Market data ---
 yfinance>=0.2.40
 pandas>=2.2
+# yfinance parses the earnings-dates table with it; without lxml
+# Ticker.get_earnings_dates raises and earnings lose their BMO/AMC clock.
+lxml>=5.0
 numpy>=1.26
 scipy>=1.11
 # Indicators are implemented in pure pandas/numpy — no external TA library.

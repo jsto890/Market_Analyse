@@ -101,6 +101,64 @@ def test_fetch_earnings_is_failure_tolerant():
             return {}
         return {"Earnings Date": [pd.Timestamp("2026-08-12")]}
 
-    out = fetch_earnings(["AAPL", "BOOM", "NONE"], fetch_cal=fake_cal)
+    # fetch_times is stubbed out: unstubbed it would reach yfinance over the network.
+    out = fetch_earnings(["AAPL", "BOOM", "NONE"], fetch_cal=fake_cal,
+                         fetch_times=lambda sym: None)
     assert [e["ticker"] for e in out] == ["AAPL"]   # BOOM raised, NONE had no date
     assert out[0]["date"] == "2026-08-12"
+    assert out[0]["time_et"] is None                # no timed source, date-only shape
+
+
+def _frame(stamps):
+    """Stand-in for yfinance's earnings-dates frame: newest-first, tz-aware ET."""
+    import pandas as pd
+    return pd.DataFrame(
+        {"EPS Estimate": [None] * len(stamps)},
+        index=pd.DatetimeIndex([pd.Timestamp(s, tz="America/New_York") for s in stamps]),
+    )
+
+
+def test_next_earnings_slot_reads_the_bell_off_the_timestamp():
+    from argus.calendar.earnings import next_earnings_slot
+
+    # Newest-first, exactly as yfinance returns it — the earliest future row wins,
+    # not the head of the frame.
+    frame = _frame(["2026-08-06 08:00", "2026-05-07 07:00", "2026-02-10 07:00"])
+    assert next_earnings_slot(frame, today="2026-08-03") == ("2026-08-06", "08:00")
+
+    after = _frame(["2026-08-04 16:00", "2026-05-05 16:00"])
+    assert next_earnings_slot(after, today="2026-08-03") == ("2026-08-04", "16:00")
+
+
+def test_next_earnings_slot_ignores_reports_already_out():
+    from argus.calendar.earnings import next_earnings_slot
+
+    frame = _frame(["2026-08-06 08:00", "2026-05-07 07:00"])
+    assert next_earnings_slot(frame, today="2026-08-07") is None
+    # Reporting today still counts — the position is held into it.
+    assert next_earnings_slot(frame, today="2026-08-06") == ("2026-08-06", "08:00")
+
+
+def test_next_earnings_slot_treats_midnight_as_no_time():
+    from argus.calendar.earnings import next_earnings_slot
+
+    # A date-only row parses as 00:00; calling that an event at midnight would
+    # put it on the axis hours before the pre-market open.
+    frame = _frame(["2026-08-06 00:00"])
+    assert next_earnings_slot(frame, today="2026-08-03") == ("2026-08-06", None)
+    assert next_earnings_slot(None) is None
+
+
+def test_timed_source_wins_over_the_bare_calendar_date():
+    import pandas as pd
+    from argus.calendar.earnings import earnings_event
+
+    cal = {"Earnings Date": [pd.Timestamp("2026-08-05")]}
+    ev = earnings_event("ANET", cal, today="2026-08-03",
+                        times=_frame(["2026-08-04 16:00"]))
+    assert (ev["date"], ev["time_et"]) == ("2026-08-04", "16:00")
+    assert ev["dedup_key"] == "earnings:ANET:2026-08-04"
+
+    # Losing the timed source degrades to the calendar's date, never to nothing.
+    ev = earnings_event("ANET", cal, today="2026-08-03", times=None)
+    assert (ev["date"], ev["time_et"]) == ("2026-08-05", None)
