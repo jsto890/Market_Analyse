@@ -101,15 +101,14 @@ describe("MacroPage header + legend (MC-04, MAC-06)", () => {
     expect(screen.getByText(/before decay weighting/)).toBeInTheDocument();
   });
 
-  it("keeps the method on the page rather than behind a disclosure (O-07)", async () => {
+  it("opens by default but folds away on demand, rather than a fixed disclosure (O-07)", async () => {
     searchParamsMock.current = "";
     mockMacroFetch();
     render(<MacroPage />);
-    const heading = screen.getByText(/How this score is computed/);
-    expect(heading.closest("[aria-expanded]")).toBeNull();
-    expect(
-      screen.queryByRole("button", { name: /How this score is computed/ })
-    ).not.toBeInTheDocument();
+    const trigger = screen.getByRole("button", { name: /How this score is computed/ });
+    expect(trigger).toHaveAttribute("aria-expanded", "true");
+    await userEvent.click(trigger);
+    expect(trigger).toHaveAttribute("aria-expanded", "false");
   });
 });
 
