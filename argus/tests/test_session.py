@@ -2,12 +2,13 @@
 
 import pytest
 from datetime import datetime, timezone, timedelta
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, create_autospec
 
 from ib_insync import Contract, Option
 
 from argus.options_live.session import Session, SymbolSession
 from argus.options_live.config import LiveConfig
+from argus.options_live.connector import IBKRConnector
 
 
 @pytest.fixture
@@ -273,3 +274,24 @@ def test_session_init_and_attributes(config):
     assert session.subscription_count == 0
     assert len(session.active_subscriptions) == 0
     assert session.connector is not None
+
+
+@pytest.mark.asyncio
+async def test_subscribe_calls_connector_with_real_signature(config):
+    """Session.subscribe must match IBKRConnector.fetch_chain's actual signature.
+
+    The other tests here drive a bare MagicMock connector, which accepts any
+    arity — so a mismatch between session.py and connector.py slipped through
+    them and surfaced only as a runtime error in the live endpoint. autospec
+    binds the mock to the real signature, which is what makes this a guard.
+    """
+    session = Session(config)
+    session.connector = create_autospec(IBKRConnector, instance=True)
+    session.connector.fetch_chain.return_value = [
+        create_mock_contract("SPY", 420.0, "C"),
+    ]
+
+    assert await session.subscribe("SPY", "0DTE") is True
+    session.connector.fetch_chain.assert_awaited_once_with(
+        "SPY", "0DTE", config.strike_window_side
+    )

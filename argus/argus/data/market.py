@@ -174,12 +174,26 @@ def get_options_chain(symbol: str, expiration: Optional[str] = None) -> dict:
     exp = expiration or expiries[0]
     chain = tk.option_chain(exp)
     calls, puts = chain.calls, chain.puts
+
+    def _records(frame):
+        # yfinance leaves NaN in volume and bid/ask on illiquid strikes. Starlette's
+        # encoder refuses them, so every call to this endpoint 500'd; the stdlib
+        # json.dumps behind the MCP tool is worse, emitting bare NaN literals that
+        # are not valid JSON at all. Null is the honest value for a missing quote.
+        # lastTradeDate arrives as a pandas Timestamp, which stdlib json also
+        # refuses, so it goes out as ISO text.
+        out = frame.astype(object).where(frame.notna(), None)
+        for col in frame.columns:
+            if pd.api.types.is_datetime64_any_dtype(frame[col]):
+                out[col] = frame[col].map(lambda t: None if pd.isna(t) else t.isoformat())
+        return out.to_dict("records")
+
     return {
         "symbol": symbol.upper(),
         "expiration": exp,
         "expirations": list(expiries),
-        "calls": calls.to_dict("records"),
-        "puts": puts.to_dict("records"),
+        "calls": _records(calls),
+        "puts": _records(puts),
         "summary": {
             "call_oi": int(calls["openInterest"].fillna(0).sum()),
             "put_oi": int(puts["openInterest"].fillna(0).sum()),

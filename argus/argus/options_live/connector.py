@@ -2,6 +2,7 @@
 
 import asyncio
 import logging
+from datetime import date
 from typing import Callable, Optional
 
 from ib_insync import IB, Contract, Option, Stock
@@ -10,6 +11,43 @@ from ib_insync.objects import OptionChain
 from .config import LiveConfig
 
 logger = logging.getLogger(__name__)
+
+
+def resolve_expiry(expirations: list[str], expiry: str) -> Optional[str]:
+    """Pick one IBKR expiration (YYYYMMDD) from the chain's list.
+
+    Accepts the "0DTE" alias — the nearest expiration on or after today — or an
+    explicit date in either YYYYMMDD or YYYY-MM-DD form. None when the requested
+    date is not listed, which the caller must treat as a failure rather than
+    subscribing to everything.
+    """
+    if not expirations:
+        return None
+    listed = sorted(expirations)
+    if expiry.upper() == "0DTE":
+        today = date.today().strftime("%Y%m%d")
+        return next((e for e in listed if e >= today), None)
+    wanted = expiry.replace("-", "")
+    return wanted if wanted in listed else None
+
+
+def select_strikes(strikes: list[float], spot: Optional[float], window_side: int) -> list[float]:
+    """The window_side strikes either side of spot, spot's own strike included.
+
+    Subscribing to a whole chain is what blows IBKR's line limit: SPY lists ~40
+    expirations × ~200 strikes × 2 rights. Without a spot price there is nothing
+    to centre on, so the window is taken around the middle of the listed strikes
+    rather than silently returning all of them.
+    """
+    ordered = sorted(strikes)
+    if not ordered or window_side <= 0:
+        return ordered
+    if spot is None:
+        centre = len(ordered) // 2
+    else:
+        centre = min(range(len(ordered)), key=lambda i: abs(ordered[i] - spot))
+    lo = max(0, centre - window_side)
+    return ordered[lo:centre + window_side + 1]
 
 
 class IBKRConnector:
@@ -68,12 +106,17 @@ class IBKRConnector:
         self._connected = False
         self._tick_cache.clear()
 
-    async def fetch_chain(self, symbol: str) -> list[Contract]:
-        """Fetch option chain for symbol using reqSecDefOptParams.
+    async def fetch_chain(self, symbol: str, expiry: str = "0DTE",
+                          window_side: int = 0) -> list[Contract]:
+        """Fetch option contracts for one expiry of symbol using reqSecDefOptParams.
 
         CRITICAL: Uses reqSecDefOptParams to get expirations/strikes,
         filters on both exchange="SMART" AND tradingClass=symbol
         to reject "2SPY" (adjusted class).
+
+        Callers pass the expiry they intend to subscribe to. Returning the whole
+        chain — every expiration, every strike, both rights — is what would blow
+        IBKR's market-data line limit the moment subscribe_quotes ran on it.
         """
         if not self._connected:
             if not await self.connect():
@@ -106,34 +149,68 @@ class IBKRConnector:
                 logger.warning("No option chains found for %s", symbol)
                 return []
 
+            # Only needed to centre the strike window; skip the round trip when
+            # the caller wants every listed strike anyway.
+            spot = await self._spot_price(underlying) if window_side > 0 else None
+
             # Build Option contracts from chains, filtering adjusted classes
             contracts = []
             for chain in chains:
-                for exp in chain.expirations:
-                    for strike in chain.strikes:
-                        for right in ["C", "P"]:
-                            contract = Option(
-                                symbol=symbol,
-                                lastTradeDateOrContractMonth=exp,
-                                strike=strike,
-                                right=right,
-                                exchange="SMART",
-                            )
-                            # Filter: accept only if tradingClass matches symbol (not "2SPY", etc.)
-                            if contract.tradingClass == symbol or contract.tradingClass == "":
-                                contracts.append(contract)
+                exp = resolve_expiry(list(chain.expirations), expiry)
+                if exp is None:
+                    logger.warning(
+                        "Expiry %s not listed for %s; skipping chain", expiry, symbol
+                    )
+                    continue
+                for strike in select_strikes(list(chain.strikes), spot, window_side):
+                    for right in ["C", "P"]:
+                        contract = Option(
+                            symbol=symbol,
+                            lastTradeDateOrContractMonth=exp,
+                            strike=strike,
+                            right=right,
+                            exchange="SMART",
+                        )
+                        # Filter: accept only if tradingClass matches symbol (not "2SPY", etc.)
+                        if contract.tradingClass == symbol or contract.tradingClass == "":
+                            contracts.append(contract)
 
             logger.info(
-                "Fetched %d option contracts for %s (%d expirations)",
+                "Fetched %d option contracts for %s expiry=%s (spot=%s, window=±%d)",
                 len(contracts),
                 symbol,
-                len(chains[0].expirations) if chains else 0,
+                expiry,
+                spot,
+                window_side,
             )
             return contracts
 
         except Exception as e:
             logger.error("fetch_chain error for %s: %s", symbol, e)
             return []
+
+    async def _spot_price(self, underlying: Contract) -> Optional[float]:
+        """Last price for the qualified underlying, or None if IBKR won't give one.
+
+        Only used to centre the strike window; None is survivable — select_strikes
+        falls back to the middle of the listed strikes.
+        """
+        try:
+            tickers = await asyncio.to_thread(self.ib.reqTickers, underlying)
+        except Exception as e:
+            logger.warning("spot price unavailable for %s: %s", underlying.symbol, e)
+            return None
+        for t in tickers or []:
+            for field in ("last", "close", "marketPrice"):
+                px = getattr(t, field, None)
+                if callable(px):
+                    try:
+                        px = px()
+                    except Exception:
+                        continue
+                if px is not None and px == px and px > 0:  # px == px rejects NaN
+                    return float(px)
+        return None
 
     def _tick_callback(self, contract: Contract, tick) -> None:
         """Internal callback to populate tick cache from market data updates.

@@ -75,14 +75,14 @@ class Session:
             logger.warning("Symbol %s already subscribed", symbol)
             return True
 
-        # Fetch option chain
-        contracts = await self.connector.fetch_chain(symbol, expiry)
+        # Fetch option chain, narrowed to what we intend to subscribe to
+        window_side = self.config.strike_window_side
+        contracts = await self.connector.fetch_chain(symbol, expiry, window_side)
         if not contracts:
             logger.error("Failed to fetch chain for %s", symbol)
             return False
 
         # Create session
-        window_side = self.config.strike_window_side
         session = SymbolSession(
             symbol=symbol,
             expiry=expiry,
