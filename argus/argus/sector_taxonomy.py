@@ -119,6 +119,18 @@ def resolve_sector(ticker: str) -> tuple[str, str]:
     return ("Other", industry)
 
 
+def yf_industry(ticker: str) -> str:
+    """The raw yfinance industry, which resolve_sector discards as soon as a curated
+    sub-sector matches.
+
+    The rotation model ranks yfinance industries ("Uranium", "Semiconductor Equipment
+    & Materials"), while the bridge tags rows with the curated label ("Uranium Miners",
+    "Semi Equipment"). Joining the two on the curated name reached 12 of 31 rows, so
+    the RRG named no candidates for most of the sectors it plotted. This is the key
+    that actually joins."""
+    return _get_yf_data(ticker.upper()).get("industry", "") or ""
+
+
 if __name__ == "__main__":
     print("NVDA:", resolve_sector("NVDA"))   # expect ("AI / Compute", "Semiconductors")
     print("OKLO:", resolve_sector("OKLO"))   # expect ("Nuclear / Uranium", "SMR / Nuclear Tech")

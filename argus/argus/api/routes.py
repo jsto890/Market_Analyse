@@ -521,7 +521,13 @@ def build_app() -> FastAPI:
                 "name": info.get("longName") or info.get("shortName"),
                 "pe_ratio": _num("trailingPE"),
                 "eps_ttm": _num("trailingEps"),
-                "revenue_ttm": _num("revenueGrowth", 100.0),  # growth %, matches UI fmtPct
+                # Two different quantities used to share the revenue_ttm key: TTM
+                # revenue in absolute dollars on the IBKR path, year-on-year growth
+                # as a percentage here. The UI rendered both through fmtPct under a
+                # "rev ttm" label, so the IBKR path printed revenue-in-millions as
+                # a percent and this one printed growth under a level's name.
+                "revenue_ttm": _num("totalRevenue"),
+                "revenue_growth_pct": _num("revenueGrowth", 100.0),
                 "market_cap": _num("marketCap"),
                 "analyst_target": _num("targetMeanPrice"),
                 "analyst_rating": info.get("recommendationKey"),

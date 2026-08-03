@@ -121,6 +121,7 @@ export interface FundamentalsData {
   pe_ratio?: number | null;
   eps_ttm?: number | null;
   revenue_ttm?: number | null;
+  revenue_growth_pct?: number | null;
   market_cap?: number | null;
   analyst_target?: number | null;
   analyst_rating?: string | null;

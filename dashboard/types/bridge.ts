@@ -59,6 +59,8 @@ export interface BridgeRow {
   report_group: ReportGroup | null;
   theme: string | null;
   industry: string | null;
+  /** The rotation model's vocabulary for the same row — see loadNamesBySector. */
+  industry_yf?: string | null;
   next_earnings_date: string | null;
   earnings_in_days: number | null;
   extra: string;
