@@ -5,12 +5,13 @@
 # catalyst vote validation, and the IC plot. Self-disables afterwards (one-shot).
 set -euo pipefail
 
-set +e; source /Users/josephstorey/.zprofile 2>/dev/null; set -euo pipefail
+set +e; source "$HOME/.zprofile" 2>/dev/null; set -euo pipefail
 
 # The anaconda interpreter this used to name was removed; the 2026-07-21 firing
 # died here with 127 and, because of `set -e`, never reached the self-removal.
-PY=/Users/josephstorey/Market_Analyse/argus/.venv/bin/python
-MA=/Users/josephstorey/Market_Analyse
+# Both paths are derived now — this file is in a public repo.
+MA="$(cd "$(dirname "$0")/../.." && pwd)"
+PY="$MA/argus/.venv/bin/python"
 LABEL=ai.argus.weight-revalidation
 PLIST="$HOME/Library/LaunchAgents/${LABEL}.plist"
 
