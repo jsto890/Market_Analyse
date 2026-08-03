@@ -23,6 +23,7 @@ export const STATIC_KEYS = {
   calendarHorizon: "dash:calendar:horizon",
   calendarShow: "dash:calendar:show",
   macroWindow: "dash:macro:window",
+  rotationTrail: "dash:rotation:trail",
 } as const;
 
 /**
