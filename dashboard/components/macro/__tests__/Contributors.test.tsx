@@ -39,9 +39,19 @@ describe("Contributors (MAC-09 restack)", () => {
   it("prints each item's weight, clock and source under the headline", async () => {
     mock();
     render(<Contributors scope="global" window="1d" />);
-    expect(await screen.findByText(/w 1\.00/)).toBeInTheDocument();
+    expect(await screen.findByText(/weight 1\.00/)).toBeInTheDocument();
     expect(screen.getByText(expectedClock)).toBeInTheDocument();
     expect(screen.getByText("Bloomberg")).toBeInTheDocument();
+  });
+
+  it("omits the source separator when an item carries no source (no-feed rule)", async () => {
+    mock({
+      ...PAYLOAD,
+      items: [{ ...PAYLOAD.items[0], source: null }],
+    });
+    render(<Contributors scope="global" window="1d" />);
+    await screen.findByText(/weight 1\.00/);
+    expect(screen.queryByText("Bloomberg")).not.toBeInTheDocument();
   });
 
   it("states the scored headline count but never links to an all-articles route", async () => {

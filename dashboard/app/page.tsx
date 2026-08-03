@@ -108,7 +108,7 @@ export default async function Home() {
       <MorningReport />
       <TodaysTape />
       {(() => {
-        const status = statusMessage({ rows, viewingHistory: false, stale, generatedAt: meta.generated_at });
+        const status = statusMessage({ rows, stale, generatedAt: meta.generated_at });
         if (!status) return null;
         if (status.level === "error") {
           return (

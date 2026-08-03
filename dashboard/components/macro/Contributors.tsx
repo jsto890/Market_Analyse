@@ -46,8 +46,9 @@ export default function Contributors({ scope, window }: { scope: string; window:
       {data && data.items.length > 0 && (
         <>
           <p className="px-3 pb-1 pt-2 text-body text-2">
-            {data.n} scored {data.n === 1 ? "headline" : "headlines"} · share is each item&rsquo;s
-            weight after recency decay, so score × share sums to the gauge.
+            {data.n} scored {data.n === 1 ? "headline" : "headlines"} · weight is each item&rsquo;s
+            recency decay (≤1); share is that weight&rsquo;s fraction of the total, so score ×
+            share sums to the gauge.
           </p>
           <ul className="divide-y divide-line">
             {data.items.map((c, i) => (
@@ -72,7 +73,7 @@ export default function Contributors({ scope, window }: { scope: string; window:
                   </span>
                 </div>
                 <div className="mt-0.5 flex flex-wrap items-baseline gap-x-2 pl-14 text-data text-muted">
-                  <span>w {c.weight.toFixed(2)}</span>
+                  <span>weight {c.weight.toFixed(2)}</span>
                   <span>·</span>
                   <span>{clockOf(c.ts)}</span>
                   {c.source && (

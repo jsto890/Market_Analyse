@@ -965,15 +965,31 @@ test("contract: Phase 4 — the window drives the benchmark, sectors are named, 
   if (etfs.length > 0) violations.push(`/rotation: plotted ETF proxies, not sectors: ${etfs}`);
 
   // The chart's legend named all twelve about 100px above the table that names
-  // the same twelve. The legend went; nothing may bring it back.
+  // the same twelve. The legend went; nothing may bring it back — but the rail
+  // beside the chart (MovedMost's top-4-by-rank-change card, plus the focused
+  // SectorCard next to it) is a controller-sanctioned exception: both are
+  // designed to repeat a name the table already carries. So this scans only
+  // the chart's own section and the table's own section, not the whole page —
+  // it still fails if a full twelve-name legend reappears inside the chart.
   const twice = await page.evaluate(
-    (names) =>
-      names.filter(
+    (names) => {
+      const chartSection = document
+        .querySelector('#main [aria-label^="Relative Rotation Graph scatter plot"]')
+        ?.closest("section");
+      const tableSection = document.querySelector("#main table")?.closest("section");
+      const roots = [chartSection, tableSection].filter((el): el is HTMLElement => Boolean(el));
+      return names.filter(
         (n) =>
-          Array.from(document.querySelectorAll<HTMLElement>("#main *")).filter(
-            (el) => el.children.length === 0 && (el.textContent ?? "").trim() === n
-          ).length > 1
-      ),
+          roots.reduce(
+            (count, root) =>
+              count +
+              Array.from(root.querySelectorAll<HTMLElement>("*")).filter(
+                (el) => el.children.length === 0 && (el.textContent ?? "").trim() === n
+              ).length,
+            0
+          ) > 1
+      );
+    },
     industries
   );
   if (twice.length > 0) violations.push(`/rotation: sector named twice: ${twice.join(", ")}`);

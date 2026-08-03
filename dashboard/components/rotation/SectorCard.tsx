@@ -57,7 +57,9 @@ export default function SectorCard({
         )}
       </div>
       <div className="border-t border-line px-3 py-2">
-        <p className="eyebrow">Your names in it</p>
+        <p className="eyebrow">
+          {row.industry} · on today&rsquo;s list
+        </p>
         <div className="mt-1 flex flex-wrap items-baseline gap-1.5">
           {names.length > 0 ? (
             names.map((n) => (

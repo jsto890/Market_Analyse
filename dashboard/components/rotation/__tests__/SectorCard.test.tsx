@@ -36,6 +36,12 @@ describe("SectorCard", () => {
     expect(screen.queryByText("1M")).not.toBeInTheDocument();
   });
 
+  it("signs a negative 1M return with a minus, not a bare number", () => {
+    render(<SectorCard row={{ ...row, r1m: -2.3 }} names={[]} />);
+    expect(screen.getByText("-2.3%")).toBeInTheDocument();
+    expect(screen.queryByText("+-2.3%")).not.toBeInTheDocument();
+  });
+
   it("marks the names you already hold", () => {
     const held = new Map([["CCJ", 100]]);
     render(

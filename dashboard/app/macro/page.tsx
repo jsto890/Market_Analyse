@@ -90,7 +90,7 @@ function Methodology({ window }: { window: string }) {
           </dd>
         </div>
         <div>
-          <dt className="eyebrow">What it isn't</dt>
+          <dt className="eyebrow">What it isn&rsquo;t</dt>
           <dd className="text-2">
             ±{NEUTRAL_BAND.toFixed(2)} is the neutral band — inside it the tone is treated as no
             signal, so +0.04 is <em>not</em> mild bullishness. Beyond it the score says the weighted
@@ -205,7 +205,8 @@ function MacroPageInner() {
         <div className="flex flex-wrap items-baseline justify-between gap-x-4">
           <span className="eyebrow">Scopes</span>
           <span className="text-body text-muted">
-            market first, then biggest 24h movers · click any tile for its articles
+            {rows.length > 0 && "market first, then biggest movers · "}
+            click any tile for its headlines
           </span>
         </div>
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
@@ -258,8 +259,8 @@ function MacroPageInner() {
             <ReadThis>
               the dashed ±{NEUTRAL_BAND.toFixed(2)} lines mark the neutral zone, so{" "}
               <ReadThisTerm>a line inside them is not a signal</ReadThisTerm> whatever
-              its colour — and the benchmark tracks the lookback you picked, not a
-              fixed month.
+              its colour — and the SPY line is clipped to the same span the score
+              line covers, whatever window you picked.
             </ReadThis>
           </Page.Section>
           <div className="flex flex-col gap-3">

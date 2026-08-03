@@ -98,6 +98,10 @@ describe("MacroPage header + legend (MC-04, MAC-06)", () => {
     expect(await screen.findByText("Read this")).toBeInTheDocument();
     expect(screen.getByText(/±0\.05 lines mark the neutral zone/)).toBeInTheDocument();
     expect(screen.getByText(/not a signal/)).toBeInTheDocument();
+    // The benchmark's fetched period varies by window (1w pulls a fixed 1mo of
+    // daily bars) — the true, window-invariant claim is that MacroChart clips
+    // the rendered SPY line to the score line's own span (MAC-08).
+    expect(screen.getByText(/clipped to the same span the score/)).toBeInTheDocument();
   });
 
   it("discloses the model, corpus, decay and what a number means (MAC-05)", async () => {

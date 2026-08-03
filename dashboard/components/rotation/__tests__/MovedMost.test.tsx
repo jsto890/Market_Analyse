@@ -49,4 +49,30 @@ describe("MovedMost", () => {
     );
     expect(container).toBeEmptyDOMElement();
   });
+
+  it("drops null and zero rank-change rows and keeps only the top-N=4 survivors", () => {
+    render(
+      <MovedMost
+        rows={[
+          row({ industry: "A", drank: null }),
+          row({ industry: "B", drank: 0 }),
+          row({ industry: "C", drank: 5 }),
+          row({ industry: "D", drank: -3 }),
+          row({ industry: "E", drank: 8 }),
+          row({ industry: "F", drank: -1 }),
+        ]}
+        selected={null}
+        onSelect={() => {}}
+      />
+    );
+    const buttons = screen.getAllByRole("button");
+    expect(buttons).toHaveLength(4);
+    const names = buttons.map((b) => b.textContent ?? "");
+    expect(names.some((n) => n.includes("A"))).toBe(false);
+    expect(names.some((n) => n.includes("B"))).toBe(false);
+    expect(names[0]).toContain("E");
+    expect(names[1]).toContain("C");
+    expect(names[2]).toContain("D");
+    expect(names[3]).toContain("F");
+  });
 });

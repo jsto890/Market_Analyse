@@ -83,10 +83,10 @@ describe("RotationView — trail length", () => {
 describe("RotationView — rail", () => {
   // "Uranium" and its RS-Ratio also appear in the legend table and in the
   // moved-most list, so the SectorCard is located via its one unique label
-  // ("Your names in it") rather than by the ambiguous industry/number text.
+  // ("on today's list") rather than by the ambiguous industry/number text.
   it("focuses top-ranked sector when nothing is picked", () => {
     render(<RotationView rows={trailRows} history={trailHistory} />);
-    const card = screen.getByText("Your names in it").closest("section")!;
+    const card = screen.getByText(/on today.s list/).closest("section")!;
     expect(within(card).getByText("Uranium")).toBeInTheDocument();
     expect(within(card).getByText("103.2")).toBeInTheDocument();
   });
@@ -95,12 +95,25 @@ describe("RotationView — rail", () => {
     const user = userEvent.setup();
     render(<RotationView rows={trailRows} history={trailHistory} />);
     await user.click(screen.getByRole("button", { name: /Software—Application/ }));
-    const card = screen.getByText("Your names in it").closest("section")!;
+    const card = screen.getByText(/on today.s list/).closest("section")!;
     expect(within(card).getByText("97.1")).toBeInTheDocument();
   });
 
   it("explains the chart foot", () => {
     render(<RotationView rows={trailRows} history={trailHistory} />);
     expect(screen.getByText(/the dot is today/i)).toBeInTheDocument();
+  });
+});
+
+describe("RotationView — held wiring (F9)", () => {
+  // Task 6 deleted the negative case for "says the sector's candidates you
+  // already hold" without leaving anything positive in its place — this is
+  // the only test that actually exercises RotationView's own
+  // useHeldPositions() call and its threading into SectorCard's `held` prop.
+  it("marks a held name in the focused SectorCard", async () => {
+    mockFetchJson(() => [{ symbol: "XOM", position: 50 }]);
+    render(<RotationView rows={rows} namesBySector={names} />);
+    expect(await screen.findByText("you hold")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "XOM +50" })).toHaveAttribute("href", "/portfolio");
   });
 });
