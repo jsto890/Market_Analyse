@@ -102,6 +102,11 @@ history for `com.market-review.daily` and the report directory over that period.
   "Extended" so the UI no longer reads as a recommendation, which buys time.
 - **1D chart segment** and the **settings page** — still unbuilt.
 - **Mention-ratio denominator** — unresolved.
+- **`/: no tape on page` is a known e2e flake.** `useMorningReport` sets
+  `shouldRetryOnError: false` (`dashboard/lib/report.ts:41`) and `TodaysTape` returns null
+  on error (`TodaysTape.tsx:182`), so a single dropped call to the ~1s
+  `/api/report/morning` blanks the tape for that page load with no recovery. Re-run
+  `e2e/screens.spec.ts:789` before believing it; the real fix is a retry, not a longer wait.
 - **e2e runs against `next dev`**, not a production build. Switching would make the gate
   match what ships. Note `reuseExistingServer` means two concurrent playwright runs fight
   over port 3100 — never run two at once, and shard with `--shard=N/4` to stay inside the
