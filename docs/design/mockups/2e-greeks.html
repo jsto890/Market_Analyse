@@ -1,0 +1,221 @@
+  <!-- ═══════════════ 2e — GREEKS ═══════════════ -->
+  <div id="2e" style="display:flex; flex-direction:column; gap:14px">
+    <div style="display:flex; align-items:center; gap:12px">
+      <span style="font-family:'Fira Code',monospace; font-size:11px; font-weight:600; letter-spacing:0.08em; color:#05070b; background:#4c8dff; padding:3px 8px; border-radius:4px">2e</span>
+      <span style="font-size:15px; font-weight:600">/options/greeks</span>
+      <span style="font-size:13px; color:#7d8698">dealer exposure, per-strike greeks, skew</span>
+    </div>
+
+    <div style="width:1440px; border:1px solid #2c3648; border-radius:10px; overflow:hidden; background:#06090f; box-shadow:0 24px 60px rgba(0,0,0,0.5)">
+      <div style="height:46px; display:flex; align-items:center; gap:20px; padding:0 16px; border-bottom:1px solid #1e2634; background:#0c1017">
+        <span style="display:flex; align-items:center; gap:8px"><span style="height:14px; width:4px; border-radius:2px; background:#4c8dff"></span><span style="font-size:14px; font-weight:700; letter-spacing:0.14em">ARGUS</span></span>
+        <div style="display:flex; align-items:center; gap:2px; height:100%">
+          <span style="display:flex; align-items:center; padding:0 10px; font-size:13px; font-weight:500; color:#7d8698">Today</span>
+          <span style="position:relative; display:flex; align-items:center; padding:0 10px; height:100%; font-size:13px; font-weight:500; color:#eef1f6">Options<span style="position:absolute; left:6px; right:6px; bottom:-1px; height:2px; border-radius:2px 2px 0 0; background:#4c8dff"></span></span>
+          <span style="display:flex; align-items:center; padding:0 10px; font-size:13px; font-weight:500; color:#7d8698">Calendar</span>
+        </div>
+        <div style="margin-left:auto; display:flex; align-items:center; gap:14px"><span style="display:flex; align-items:center; gap:6px; font-family:'Fira Code',monospace; font-size:11px; color:#9aa3b4"><span style="width:6px; height:6px; border-radius:50%; background:#3fb950"></span>OPEN · 09:42 ET</span></div>
+      </div>
+
+      <div style="display:flex; align-items:stretch; min-height:880px">
+        <div style="width:36px; flex-shrink:0; border-right:1px solid #1e2634; background:#0c1017; padding-top:8px; text-align:center"><span style="font-family:'Fira Code',monospace; font-size:13px; color:#7d8698">›</span></div>
+
+        <div style="flex:1; min-width:0; display:flex; flex-direction:column">
+          <div style="padding:16px 24px 0">
+            <div style="display:flex; align-items:baseline; gap:14px; margin-bottom:12px">
+              <h2 style="margin:0; font-size:20px; font-weight:600; letter-spacing:-0.01em">Options</h2>
+              <span style="font-family:'Fira Code',monospace; font-size:15px; color:#eef1f6">SPY</span>
+              <span style="font-family:'Fira Code',monospace; font-size:13px; color:#d29922">spot 638.20</span>
+            </div>
+            <div style="display:flex; gap:20px; border-bottom:1px solid #1e2634">
+              <span style="padding-bottom:9px; font-size:13px; font-weight:500; color:#7d8698">Overview</span>
+              <span style="padding-bottom:9px; font-size:13px; font-weight:500; color:#7d8698">Ladder</span>
+              <span style="padding-bottom:9px; font-size:13px; font-weight:500; color:#7d8698">Gamma</span>
+              <span style="padding-bottom:9px; font-size:13px; font-weight:500; color:#7d8698">Flow</span>
+              <span style="position:relative; padding-bottom:9px; font-size:13px; font-weight:600; color:#eef1f6">Greeks<span style="position:absolute; left:0; right:0; bottom:-1px; height:2px; border-radius:2px 2px 0 0; background:#4c8dff"></span></span>
+              <span style="margin-left:auto; padding-bottom:9px; font-size:13px; font-weight:500; color:#4c8dff">Greeks explained →</span>
+            </div>
+          </div>
+
+          <!-- net dealer exposure -->
+          <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:12px; padding:18px 24px 0">
+            <div style="border:1px solid #1e2634; border-radius:8px; background:#12171f; padding:14px 16px">
+              <div style="display:flex; align-items:baseline; justify-content:space-between; margin-bottom:6px"><span style="font-family:'Fira Code',monospace; font-size:13px; font-weight:600; color:#c8cede">Δ Delta</span><span style="font-family:'Fira Code',monospace; font-size:18px; color:#3fb950">+2.4M</span></div>
+              <div style="font-size:12px; color:#9aa3b4; margin-bottom:7px">shares equivalent</div>
+              <p style="margin:0; font-size:12px; line-height:1.55; color:#7d8698">Dealers are net long the underlying. A 1% drop costs them ~$15M, so they lean into supporting bids.</p>
+            </div>
+            <div style="border:1px solid #1e2634; border-radius:8px; background:#12171f; padding:14px 16px">
+              <div style="display:flex; align-items:baseline; justify-content:space-between; margin-bottom:6px"><span style="font-family:'Fira Code',monospace; font-size:13px; font-weight:600; color:#c8cede">Γ Gamma</span><span style="font-family:'Fira Code',monospace; font-size:18px; color:#2dd4bf">+0.9M</span></div>
+              <div style="font-size:12px; color:#9aa3b4; margin-bottom:7px">delta per 1% move</div>
+              <p style="margin:0; font-size:12px; line-height:1.55; color:#7d8698">Positive above 636 — every move forces a hedge in the opposite direction, which is what compresses the range.</p>
+            </div>
+            <div style="border:1px solid #1e2634; border-radius:8px; background:#12171f; padding:14px 16px">
+              <div style="display:flex; align-items:baseline; justify-content:space-between; margin-bottom:6px"><span style="font-family:'Fira Code',monospace; font-size:13px; font-weight:600; color:#c8cede">Vanna</span><span style="font-family:'Fira Code',monospace; font-size:18px; color:#f85149">−1.1M</span></div>
+              <div style="font-size:12px; color:#9aa3b4; margin-bottom:7px">delta per 1 vol point</div>
+              <p style="margin:0; font-size:12px; line-height:1.55; color:#7d8698">Falling VIX is quietly adding to dealer length. If vol reverses, that support unwinds fast.</p>
+            </div>
+            <div style="border:1px solid #1e2634; border-radius:8px; background:#12171f; padding:14px 16px">
+              <div style="display:flex; align-items:baseline; justify-content:space-between; margin-bottom:6px"><span style="font-family:'Fira Code',monospace; font-size:13px; font-weight:600; color:#c8cede">Charm</span><span style="font-family:'Fira Code',monospace; font-size:18px; color:#d29922">−340k</span></div>
+              <div style="font-size:12px; color:#9aa3b4; margin-bottom:7px">delta per day</div>
+              <p style="margin:0; font-size:12px; line-height:1.55; color:#7d8698">0DTE decay bleeds dealer length through the session — the pin tightens into the close.</p>
+            </div>
+          </div>
+
+          <div style="display:grid; grid-template-columns:1fr 372px; gap:16px; padding:16px 24px 20px">
+
+            <div style="border:1px solid #1e2634; border-radius:8px; background:#0c1017; overflow:hidden">
+              <div style="display:flex; align-items:baseline; justify-content:space-between; padding:11px 16px; border-bottom:1px solid #1e2634">
+                <span style="font-size:15px; font-weight:600">Greeks by strike</span>
+                <span style="font-family:'Fira Code',monospace; font-size:11px; color:#7d8698">same mirror as the ladder · 0DTE</span>
+              </div>
+
+              <div style="display:grid; grid-template-columns:1fr 96px 1fr; border-bottom:1px solid #2c3648">
+                <div style="padding:7px 0; text-align:center; font-family:'Fira Code',monospace; font-size:11px; font-weight:600; letter-spacing:0.14em; color:#2dd4bf; background:rgba(45,212,191,0.07)">CALLS</div>
+                <div style="border-left:2px solid #2c3648; border-right:2px solid #2c3648"></div>
+                <div style="padding:7px 0; text-align:center; font-family:'Fira Code',monospace; font-size:11px; font-weight:600; letter-spacing:0.14em; color:#e372b0; background:rgba(227,114,176,0.07)">PUTS</div>
+              </div>
+
+              <div style="display:grid; grid-template-columns:1fr 1fr 1fr 1fr 96px 1fr 1fr 1fr 1fr; border-bottom:1px solid #1e2634; font-family:'Fira Code',monospace; font-size:11px; font-weight:500; letter-spacing:0.06em; text-transform:uppercase; color:#7d8698">
+                <span style="padding:7px 8px; text-align:right">Vega</span><span style="padding:7px 8px; text-align:right">Θ</span><span style="padding:7px 8px; text-align:right">Γ</span><span style="padding:7px 8px; text-align:right">Δ</span>
+                <span style="padding:7px 6px; text-align:center; color:#eef1f6; border-left:2px solid #2c3648; border-right:2px solid #2c3648; background:#12171f">Strike</span>
+                <span style="padding:7px 8px; text-align:left">Δ</span><span style="padding:7px 8px; text-align:left">Γ</span><span style="padding:7px 8px; text-align:left">Θ</span><span style="padding:7px 8px; text-align:left">Vega</span>
+              </div>
+
+              <div style="display:grid; grid-template-columns:1fr 1fr 1fr 1fr 96px 1fr 1fr 1fr 1fr; border-bottom:1px solid rgba(30,38,52,0.55); font-family:'Fira Code',monospace; font-size:13px; align-items:center">
+                <span style="padding:6px 8px; text-align:right; color:#9aa3b4">0.041</span><span style="padding:6px 8px; text-align:right; color:#f85149">−0.62</span><span style="padding:6px 8px; text-align:right; color:#9aa3b4">0.018</span><span style="padding:6px 8px; text-align:right; color:#c8cede">0.88</span>
+                <span style="padding:6px; text-align:center; font-weight:600; color:#eef1f6; border-left:2px solid #2c3648; border-right:2px solid #2c3648; background:#12171f">634 <span style="font-size:10px; color:#e372b0">PW</span></span>
+                <span style="padding:6px 8px; text-align:left; color:#c8cede">−0.12</span><span style="padding:6px 8px; text-align:left; color:#9aa3b4">0.018</span><span style="padding:6px 8px; text-align:left; color:#f85149">−0.31</span><span style="padding:6px 8px; text-align:left; color:#9aa3b4">0.041</span>
+              </div>
+              <div style="display:grid; grid-template-columns:1fr 1fr 1fr 1fr 96px 1fr 1fr 1fr 1fr; border-bottom:1px solid rgba(30,38,52,0.55); font-family:'Fira Code',monospace; font-size:13px; align-items:center">
+                <span style="padding:6px 8px; text-align:right; color:#9aa3b4">0.048</span><span style="padding:6px 8px; text-align:right; color:#f85149">−0.71</span><span style="padding:6px 8px; text-align:right; color:#9aa3b4">0.024</span><span style="padding:6px 8px; text-align:right; color:#c8cede">0.81</span>
+                <span style="padding:6px; text-align:center; font-weight:600; color:#eef1f6; border-left:2px solid #2c3648; border-right:2px solid #2c3648; background:#12171f">635</span>
+                <span style="padding:6px 8px; text-align:left; color:#c8cede">−0.19</span><span style="padding:6px 8px; text-align:left; color:#9aa3b4">0.024</span><span style="padding:6px 8px; text-align:left; color:#f85149">−0.38</span><span style="padding:6px 8px; text-align:left; color:#9aa3b4">0.048</span>
+              </div>
+              <div style="display:grid; grid-template-columns:1fr 1fr 1fr 1fr 96px 1fr 1fr 1fr 1fr; border-bottom:1px solid rgba(30,38,52,0.55); font-family:'Fira Code',monospace; font-size:13px; align-items:center; background:rgba(45,212,191,0.045)">
+                <span style="padding:6px 8px; text-align:right; color:#9aa3b4">0.055</span><span style="padding:6px 8px; text-align:right; color:#f85149">−0.80</span><span style="padding:6px 8px; text-align:right; color:#9aa3b4">0.031</span><span style="padding:6px 8px; text-align:right; color:#c8cede">0.72</span>
+                <span style="padding:6px; text-align:center; font-weight:600; color:#eef1f6; border-left:2px solid #2dd4bf; border-right:2px solid #2c3648; background:#12171f">636 <span style="font-size:10px; color:#2dd4bf">ZG</span></span>
+                <span style="padding:6px 8px; text-align:left; color:#c8cede">−0.28</span><span style="padding:6px 8px; text-align:left; color:#9aa3b4">0.031</span><span style="padding:6px 8px; text-align:left; color:#f85149">−0.46</span><span style="padding:6px 8px; text-align:left; color:#9aa3b4">0.055</span>
+              </div>
+              <div style="display:grid; grid-template-columns:1fr 1fr 1fr 1fr 96px 1fr 1fr 1fr 1fr; border-bottom:1px solid rgba(30,38,52,0.55); font-family:'Fira Code',monospace; font-size:13px; align-items:center">
+                <span style="padding:6px 8px; text-align:right; color:#9aa3b4">0.061</span><span style="padding:6px 8px; text-align:right; color:#f85149">−0.88</span><span style="padding:6px 8px; text-align:right; color:#9aa3b4">0.038</span><span style="padding:6px 8px; text-align:right; color:#c8cede">0.62</span>
+                <span style="padding:6px; text-align:center; font-weight:600; color:#eef1f6; border-left:2px solid #2c3648; border-right:2px solid #2c3648; background:#12171f">637 <span style="font-size:10px; color:#7d8698">MP</span></span>
+                <span style="padding:6px 8px; text-align:left; color:#c8cede">−0.38</span><span style="padding:6px 8px; text-align:left; color:#9aa3b4">0.038</span><span style="padding:6px 8px; text-align:left; color:#f85149">−0.54</span><span style="padding:6px 8px; text-align:left; color:#9aa3b4">0.061</span>
+              </div>
+              <div style="display:grid; grid-template-columns:1fr 1fr 1fr 1fr 96px 1fr 1fr 1fr 1fr; border-top:1px solid #2c3648; border-bottom:1px solid #2c3648; font-family:'Fira Code',monospace; font-size:13px; align-items:center; background:#12171f">
+                <span style="padding:8px; text-align:right; color:#c8cede">0.064</span><span style="padding:8px; text-align:right; color:#f85149">−0.92</span><span style="padding:8px; text-align:right; color:#c8cede">0.042</span><span style="padding:8px; text-align:right; color:#eef1f6">0.51</span>
+                <span style="padding:8px 6px; text-align:center; font-weight:700; color:#eef1f6; border-left:2px solid #d29922; border-right:2px solid #2c3648; background:#1a212c">638 <span style="font-size:10px; color:#d29922">ATM</span></span>
+                <span style="padding:8px; text-align:left; color:#eef1f6">−0.49</span><span style="padding:8px; text-align:left; color:#c8cede">0.042</span><span style="padding:8px; text-align:left; color:#f85149">−0.61</span><span style="padding:8px; text-align:left; color:#c8cede">0.064</span>
+              </div>
+              <div style="display:grid; grid-template-columns:1fr 1fr 1fr 1fr 96px 1fr 1fr 1fr 1fr; border-bottom:1px solid rgba(30,38,52,0.55); font-family:'Fira Code',monospace; font-size:13px; align-items:center">
+                <span style="padding:6px 8px; text-align:right; color:#9aa3b4">0.061</span><span style="padding:6px 8px; text-align:right; color:#f85149">−0.86</span><span style="padding:6px 8px; text-align:right; color:#9aa3b4">0.039</span><span style="padding:6px 8px; text-align:right; color:#c8cede">0.40</span>
+                <span style="padding:6px; text-align:center; font-weight:600; color:#eef1f6; border-left:2px solid #2c3648; border-right:2px solid #2c3648; background:#12171f">639</span>
+                <span style="padding:6px 8px; text-align:left; color:#c8cede">−0.60</span><span style="padding:6px 8px; text-align:left; color:#9aa3b4">0.039</span><span style="padding:6px 8px; text-align:left; color:#f85149">−0.55</span><span style="padding:6px 8px; text-align:left; color:#9aa3b4">0.061</span>
+              </div>
+              <div style="display:grid; grid-template-columns:1fr 1fr 1fr 1fr 96px 1fr 1fr 1fr 1fr; border-bottom:1px solid rgba(30,38,52,0.55); font-family:'Fira Code',monospace; font-size:13px; align-items:center">
+                <span style="padding:6px 8px; text-align:right; color:#9aa3b4">0.054</span><span style="padding:6px 8px; text-align:right; color:#f85149">−0.77</span><span style="padding:6px 8px; text-align:right; color:#9aa3b4">0.033</span><span style="padding:6px 8px; text-align:right; color:#c8cede">0.30</span>
+                <span style="padding:6px; text-align:center; font-weight:600; color:#eef1f6; border-left:2px solid #2c3648; border-right:2px solid #2c3648; background:#12171f">640</span>
+                <span style="padding:6px 8px; text-align:left; color:#c8cede">−0.70</span><span style="padding:6px 8px; text-align:left; color:#9aa3b4">0.033</span><span style="padding:6px 8px; text-align:left; color:#f85149">−0.45</span><span style="padding:6px 8px; text-align:left; color:#9aa3b4">0.054</span>
+              </div>
+              <div style="display:grid; grid-template-columns:1fr 1fr 1fr 1fr 96px 1fr 1fr 1fr 1fr; font-family:'Fira Code',monospace; font-size:13px; align-items:center; background:rgba(45,212,191,0.045)">
+                <span style="padding:6px 8px; text-align:right; color:#9aa3b4">0.045</span><span style="padding:6px 8px; text-align:right; color:#f85149">−0.65</span><span style="padding:6px 8px; text-align:right; color:#9aa3b4">0.026</span><span style="padding:6px 8px; text-align:right; color:#c8cede">0.21</span>
+                <span style="padding:6px; text-align:center; font-weight:600; color:#eef1f6; border-left:2px solid #2dd4bf; border-right:2px solid #2c3648; background:#12171f">641 <span style="font-size:10px; color:#2dd4bf">CW</span></span>
+                <span style="padding:6px 8px; text-align:left; color:#c8cede">−0.79</span><span style="padding:6px 8px; text-align:left; color:#9aa3b4">0.026</span><span style="padding:6px 8px; text-align:left; color:#f85149">−0.34</span><span style="padding:6px 8px; text-align:left; color:#9aa3b4">0.045</span>
+              </div>
+              <p style="margin:0; padding:10px 16px; border-top:1px solid #1e2634; font-size:12px; color:#7d8698; line-height:1.5">Read this — <b style="color:#c8cede">Δ</b> is roughly the odds of finishing in the money. <b style="color:#c8cede">Γ</b> is how fast that changes, and it peaks at the money. <b style="color:#c8cede">Θ</b> is what you pay per day to hold. <b style="color:#c8cede">Vega</b> is what a one-point move in implied vol is worth.</p>
+            </div>
+
+            <div style="display:flex; flex-direction:column; gap:12px">
+              <div style="border:1px solid #1e2634; border-radius:8px; background:#0c1017; overflow:hidden">
+                <div style="padding:11px 14px; border-bottom:1px solid #1e2634; display:flex; align-items:baseline; justify-content:space-between"><span style="font-size:15px; font-weight:600">Skew</span><span style="font-family:'Fira Code',monospace; font-size:11px; color:#7d8698">IV by strike</span></div>
+                <div style="padding:14px 14px 10px; position:relative; height:168px">
+                  <div style="position:absolute; left:38px; right:14px; top:14px; bottom:34px; border-left:1px solid #1e2634; border-bottom:1px solid #1e2634"></div>
+                  <div style="position:absolute; left:6px; top:10px; font-family:'Fira Code',monospace; font-size:10px; color:#5f6878">15%</div>
+                  <div style="position:absolute; left:6px; top:60px; font-family:'Fira Code',monospace; font-size:10px; color:#5f6878">14%</div>
+                  <div style="position:absolute; left:6px; top:110px; font-family:'Fira Code',monospace; font-size:10px; color:#5f6878">13%</div>
+                  <div style="position:absolute; left:38px; right:14px; top:14px; bottom:34px">
+                    <span style="position:absolute; left:0%; top:24%; width:7px; height:7px; margin:-3px 0 0 -3px; border-radius:50%; background:#e372b0"></span>
+                    <span style="position:absolute; left:14%; top:36%; width:7px; height:7px; margin:-3px 0 0 -3px; border-radius:50%; background:#e372b0"></span>
+                    <span style="position:absolute; left:28%; top:46%; width:7px; height:7px; margin:-3px 0 0 -3px; border-radius:50%; background:#e372b0"></span>
+                    <span style="position:absolute; left:42%; top:58%; width:7px; height:7px; margin:-3px 0 0 -3px; border-radius:50%; background:#e372b0"></span>
+                    <span style="position:absolute; left:56%; top:70%; width:8px; height:8px; margin:-4px 0 0 -4px; border-radius:50%; background:#eef1f6"></span>
+                    <span style="position:absolute; left:70%; top:64%; width:7px; height:7px; margin:-3px 0 0 -3px; border-radius:50%; background:#2dd4bf"></span>
+                    <span style="position:absolute; left:84%; top:54%; width:7px; height:7px; margin:-3px 0 0 -3px; border-radius:50%; background:#2dd4bf"></span>
+                    <span style="position:absolute; left:98%; top:42%; width:7px; height:7px; margin:-3px 0 0 -3px; border-radius:50%; background:#2dd4bf"></span>
+                    <span style="position:absolute; left:56%; top:0; bottom:0; width:1px; background:rgba(210,153,34,0.5)"></span>
+                  </div>
+                  <div style="position:absolute; left:38px; right:14px; bottom:14px; display:flex; justify-content:space-between; font-family:'Fira Code',monospace; font-size:10px; color:#5f6878"><span>630</span><span>634</span><span style="color:#d29922">638</span><span>642</span><span>646</span></div>
+                </div>
+                <p style="margin:0; padding:10px 14px; border-top:1px solid #1e2634; font-size:12px; color:#7d8698; line-height:1.5">Downside still bid over upside — a 1.2pt put-over-call skew at 25 delta. Normal, and flatter than the 20-day average of 1.9.</p>
+              </div>
+
+              <div style="border:1px solid #1e2634; border-radius:8px; background:#0c1017; overflow:hidden">
+                <div style="padding:11px 14px; border-bottom:1px solid #1e2634; font-size:15px; font-weight:600">Term structure</div>
+                <div style="padding:12px 14px; display:flex; flex-direction:column; gap:8px">
+                  <div style="display:flex; align-items:center; gap:8px"><span style="width:46px; font-family:'Fira Code',monospace; font-size:12px; color:#7d8698">0DTE</span><span style="flex:1; height:12px; border-radius:2px; background:#1a212c; position:relative"><span style="position:absolute; left:0; top:0; bottom:0; width:52%; border-radius:2px; background:#4c8dff; opacity:0.55"></span></span><span style="width:44px; text-align:right; font-family:'Fira Code',monospace; font-size:12px; color:#c8cede">11.6%</span></div>
+                  <div style="display:flex; align-items:center; gap:8px"><span style="width:46px; font-family:'Fira Code',monospace; font-size:12px; color:#7d8698">1 Aug</span><span style="flex:1; height:12px; border-radius:2px; background:#1a212c; position:relative"><span style="position:absolute; left:0; top:0; bottom:0; width:58%; border-radius:2px; background:#4c8dff; opacity:0.55"></span></span><span style="width:44px; text-align:right; font-family:'Fira Code',monospace; font-size:12px; color:#c8cede">12.4%</span></div>
+                  <div style="display:flex; align-items:center; gap:8px"><span style="width:46px; font-family:'Fira Code',monospace; font-size:12px; color:#7d8698">4 Aug</span><span style="flex:1; height:12px; border-radius:2px; background:#1a212c; position:relative"><span style="position:absolute; left:0; top:0; bottom:0; width:66%; border-radius:2px; background:#4c8dff; opacity:0.55"></span></span><span style="width:44px; text-align:right; font-family:'Fira Code',monospace; font-size:12px; color:#c8cede">13.8%</span></div>
+                  <div style="display:flex; align-items:center; gap:8px"><span style="width:46px; font-family:'Fira Code',monospace; font-size:12px; color:#d29922">8 Aug</span><span style="flex:1; height:12px; border-radius:2px; background:#1a212c; position:relative"><span style="position:absolute; left:0; top:0; bottom:0; width:88%; border-radius:2px; background:#d29922; opacity:0.6"></span></span><span style="width:44px; text-align:right; font-family:'Fira Code',monospace; font-size:12px; color:#d29922">17.1%</span></div>
+                </div>
+                <p style="margin:0; padding:10px 14px; border-top:1px solid #1e2634; font-size:12px; color:#7d8698; line-height:1.5">The kink at 8 Aug is payrolls being priced. Anything you buy through that date is paying an event premium.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div style="width:36px; flex-shrink:0; border-left:1px solid #1e2634; background:#0c1017; padding-top:8px; text-align:center"><span style="font-family:'Fira Code',monospace; font-size:13px; color:#7d8698">‹</span></div>
+      </div>
+    </div>
+
+    <sc-if value="{{ showNotes }}" hint-placeholder-val="{{ true }}">
+    <div style="width:1440px; display:grid; grid-template-columns:repeat(3,1fr); gap:16px">
+      <div style="border-left:2px solid #4c8dff; padding:2px 0 2px 12px">
+        <div style="font-size:12px; font-weight:600; margin-bottom:4px">Gamma leads with the verdict</div>
+        <p style="margin:0; font-size:12px; line-height:1.55; color:#7d8698">"Long gamma — dealers dampen moves", a spot-vs-flip scale you can read at a glance, then the profile. Every level carries a sentence saying what it does, instead of a tooltip you have to find. The break scenario is stated before it happens.</p>
+      </div>
+      <div style="border-left:2px solid #4c8dff; padding:2px 0 2px 12px">
+        <div style="font-size:12px; font-weight:600; margin-bottom:4px">Flow answers "so what"</div>
+        <p style="margin:0; font-size:12px; line-height:1.55; color:#7d8698">Unusual prints gain <b style="color:#c8cede">vs OI</b> and <b style="color:#c8cede">aggressor</b> — the two fields that separate new positioning from churn and buyers from sellers — plus a plain-English read per row. Volume-vs-OI by strike shows where the book is actually being built.</p>
+      </div>
+      <div style="border-left:2px solid #4c8dff; padding:2px 0 2px 12px">
+        <div style="font-size:12px; font-weight:600; margin-bottom:4px">Greeks, aggregate before per-strike</div>
+        <p style="margin:0; font-size:12px; line-height:1.55; color:#7d8698">Net dealer Δ, Γ, vanna and charm each with one line on what they do to today's tape — then the per-strike table in the same mirrored layout as the ladder, so the muscle memory carries. Skew and term structure explain the payrolls kink.</p>
+      </div>
+    </div>
+    </sc-if>
+  </div>
+
+</section>
+
+<section style="display:flex; flex-wrap:wrap; gap:64px; padding:16px 48px 96px; align-items:flex-start">
+
+  <div style="width:100%; max-width:1440px">
+    <div style="font-family:'Fira Code',monospace; font-size:11px; font-weight:500; letter-spacing:0.1em; text-transform:uppercase; color:#7d8698; margin-bottom:10px">Argus UI overhaul · round 1 · 31 Jul 2026</div>
+    <h1 style="margin:0 0 12px; font-size:30px; font-weight:600; letter-spacing:-0.01em">Today, and the ticker header</h1>
+    <p style="margin:0; max-width:760px; font-size:14px; line-height:1.6; color:#9aa3b4; text-wrap:pretty">Same product — dark terminal, Fira, dense, tabular. What changes is that it stops looking like ten pages built by ten people. One content width, one type scale, colours that mean one thing each, explanations you can read without hovering, and the product's actual judgement given weight instead of being row 7 of table 3. Shown at 1440 with the real nav and both rails, so the density is honest.</p>
+  </div>
+
+  <div style="width:100%; max-width:1440px; display:grid; grid-template-columns:1fr 1px 1fr; gap:28px; padding:20px 24px; border:1px solid #1e2634; border-radius:8px; background:#0c1017">
+    <div>
+      <div style="font-family:'Fira Code',monospace; font-size:10px; font-weight:600; letter-spacing:0.12em; text-transform:uppercase; color:#7d8698; margin-bottom:10px">Colour, one meaning each</div>
+      <div style="display:flex; gap:14px; flex-wrap:wrap">
+        <div style="display:flex; align-items:center; gap:7px"><span style="width:13px; height:13px; border-radius:3px; background:#4c8dff"></span><span style="font-size:12px; color:#9aa3b4">interactive</span></div>
+        <div style="display:flex; align-items:center; gap:7px"><span style="width:13px; height:13px; border-radius:3px; background:#3fb950"></span><span style="width:13px; height:13px; border-radius:3px; background:#f85149"></span><span style="font-size:12px; color:#9aa3b4">money direction</span></div>
+        <div style="display:flex; align-items:center; gap:7px"><span style="width:13px; height:13px; border-radius:3px; background:#2dd4bf"></span><span style="font-size:12px; color:#9aa3b4">calls</span></div>
+        <div style="display:flex; align-items:center; gap:7px"><span style="width:13px; height:13px; border-radius:3px; background:#e372b0"></span><span style="font-size:12px; color:#9aa3b4">puts <span style="color:#d29922">new</span></span></div>
+        <div style="display:flex; align-items:center; gap:7px"><span style="width:13px; height:13px; border-radius:3px; background:#9d7cf5"></span><span style="font-size:12px; color:#9aa3b4">model output <span style="color:#d29922">new</span></span></div>
+        <div style="display:flex; align-items:center; gap:7px"><span style="width:13px; height:13px; border-radius:3px; background:#d29922"></span><span style="font-size:12px; color:#9aa3b4">degraded / attention</span></div>
+      </div>
+    </div>
+    <div style="width:1px; background:#1e2634; align-self:stretch"></div>
+    <div>
+      <div style="font-family:'Fira Code',monospace; font-size:10px; font-weight:600; letter-spacing:0.12em; text-transform:uppercase; color:#7d8698; margin-bottom:10px">Six sizes, six roles</div>
+      <div style="display:flex; gap:20px; align-items:baseline; flex-wrap:wrap">
+        <span style="font-family:'Fira Code',monospace; font-size:28px; font-weight:600">28 display</span>
+        <span style="font-size:20px; font-weight:600">20 headline</span>
+        <span style="font-size:15px; font-weight:600">15 title</span>
+        <span style="font-size:13px">13 body</span>
+        <span style="font-family:'Fira Code',monospace; font-size:13px">13 data</span>
+        <span style="font-family:'Fira Code',monospace; font-size:11px; font-weight:500; letter-spacing:0.08em; text-transform:uppercase; color:#7d8698">11 micro</span>
+      </div>
+      <p style="margin:10px 0 0; font-size:12px; color:#7d8698">The rule that matters: 11px stops being a content size. Today the brief's most actionable line, every ladder cell and every rail row are all 11px.</p>
+    </div>
+  </div>

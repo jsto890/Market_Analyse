@@ -1,0 +1,233 @@
+  <!-- ═══════════════ 3c — MACRO ═══════════════ -->
+  <div id="3c" style="display:flex; flex-direction:column; gap:14px">
+    <div style="display:flex; align-items:center; gap:12px">
+      <span style="font-family:'Fira Code',monospace; font-size:11px; font-weight:600; letter-spacing:0.08em; color:#05070b; background:#4c8dff; padding:3px 8px; border-radius:4px">3c</span>
+      <span style="font-size:15px; font-weight:600">/macro</span>
+      <span style="font-size:13px; color:#7d8698">method published · trends on every tile · drill to the articles</span>
+    </div>
+
+    <div style="width:1440px; border:1px solid #2c3648; border-radius:10px; overflow:hidden; background:#06090f; box-shadow:0 24px 60px rgba(0,0,0,0.5)">
+      <div style="height:46px; display:flex; align-items:center; gap:20px; padding:0 16px; border-bottom:1px solid #1e2634; background:#0c1017">
+        <span style="display:flex; align-items:center; gap:8px"><span style="height:14px; width:4px; border-radius:2px; background:#4c8dff"></span><span style="font-size:14px; font-weight:700; letter-spacing:0.14em">ARGUS</span></span>
+        <div style="display:flex; align-items:center; gap:2px; height:100%">
+          <span style="display:flex; align-items:center; padding:0 10px; font-size:13px; font-weight:500; color:#7d8698">Today</span>
+          <span style="display:flex; align-items:center; padding:0 10px; font-size:13px; font-weight:500; color:#7d8698">Options</span>
+          <span style="display:flex; align-items:center; padding:0 10px; font-size:13px; font-weight:500; color:#7d8698">Rotation</span>
+          <span style="position:relative; display:flex; align-items:center; padding:0 10px; height:100%; font-size:13px; font-weight:500; color:#eef1f6">Macro<span style="position:absolute; left:6px; right:6px; bottom:-1px; height:2px; border-radius:2px 2px 0 0; background:#4c8dff"></span></span>
+        </div>
+        <div style="margin-left:auto; display:flex; align-items:center; gap:14px"><span style="display:flex; align-items:center; gap:6px; font-family:'Fira Code',monospace; font-size:11px; color:#9aa3b4"><span style="width:6px; height:6px; border-radius:50%; background:#3fb950"></span>OPEN · 09:42 ET</span></div>
+      </div>
+
+      <div style="display:flex; align-items:stretch; min-height:1000px">
+        <div style="width:36px; flex-shrink:0; border-right:1px solid #1e2634; background:#0c1017; padding-top:8px; text-align:center"><span style="font-family:'Fira Code',monospace; font-size:13px; color:#7d8698">›</span></div>
+
+        <div style="flex:1; min-width:0; padding:20px 28px 32px">
+          <div style="max-width:1180px; margin:0 auto; display:flex; flex-direction:column; gap:18px">
+
+            <div style="display:flex; align-items:flex-end; justify-content:space-between; gap:24px">
+              <div>
+                <h2 style="margin:0 0 5px; font-size:20px; font-weight:600; letter-spacing:-0.01em">Macro sentiment</h2>
+                <p style="margin:0; font-size:13px; color:#9aa3b4">News tone by scope, −1 bearish to +1 bullish. Neutral is anything inside ±0.05.</p>
+              </div>
+              <div style="display:flex; gap:8px; align-items:center">
+                <span style="font-family:'Fira Code',monospace; font-size:11px; letter-spacing:0.08em; text-transform:uppercase; color:#7d8698">Lookback</span>
+                <div style="display:flex; gap:2px; border:1px solid #1e2634; border-radius:6px; background:#12171f; padding:2px">
+                  <span style="padding:5px 11px; border-radius:4px; font-size:12px; color:#7d8698">1 hour</span>
+                  <span style="padding:5px 11px; border-radius:4px; background:#1a212c; font-size:12px; font-weight:600; color:#eef1f6">1 day</span>
+                  <span style="padding:5px 11px; border-radius:4px; font-size:12px; color:#7d8698">1 week</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- methodology, permanent -->
+            <div style="border:1px solid #1e2634; border-radius:8px; background:#12171f; padding:14px 18px">
+              <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:10px">
+                <span style="font-family:'Fira Code',monospace; font-size:11px; font-weight:600; letter-spacing:0.08em; text-transform:uppercase; color:#7d8698">How this number is made</span>
+                <span style="font-size:12px; color:#7d8698">▾ collapse</span>
+              </div>
+              <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:20px">
+                <div><div style="font-size:13px; font-weight:600; color:#c8cede; margin-bottom:4px">Input</div><p style="margin:0; font-size:12px; line-height:1.55; color:#7d8698">4,180 articles in the last 24h from 34 wire and financial sources. Paywalled outlets contribute headline and standfirst only.</p></div>
+                <div><div style="font-size:13px; font-weight:600; color:#c8cede; margin-bottom:4px">Scoring</div><p style="margin:0; font-size:12px; line-height:1.55; color:#7d8698">FinBERT per sentence, averaged per article, then bucketed to a scope by entity match. Neutral sentences are kept, not dropped.</p></div>
+                <div><div style="font-size:13px; font-weight:600; color:#c8cede; margin-bottom:4px">Weighting</div><p style="margin:0; font-size:12px; line-height:1.55; color:#7d8698">Exponential recency decay, 6-hour half-life on the 1-day window. Source reliability multiplier of 0.6–1.0. <span style="font-family:'Fira Code',monospace">n</span> is the count after weighting.</p></div>
+                <div><div style="font-size:13px; font-weight:600; color:#c8cede; margin-bottom:4px">What it isn't</div><p style="margin:0; font-size:12px; line-height:1.55; color:#7d8698">Not a price forecast. It measures how the press is writing, which leads sentiment turns but not returns. Below <span style="font-family:'Fira Code',monospace">n=40</span> treat a score as noise.</p></div>
+              </div>
+            </div>
+
+            <!-- scope tiles, sorted by absolute change -->
+            <div>
+              <div style="display:flex; align-items:baseline; justify-content:space-between; margin-bottom:10px">
+                <span style="font-family:'Fira Code',monospace; font-size:11px; font-weight:600; letter-spacing:0.1em; text-transform:uppercase; color:#eef1f6">Scopes</span>
+                <span style="font-size:12px; color:#7d8698">sorted by 24h change · click any tile for its articles</span>
+              </div>
+              <div style="display:grid; grid-template-columns:repeat(5,1fr); gap:12px">
+
+                <div style="border:1px solid #2c3648; border-radius:8px; background:#12171f; padding:13px 15px">
+                  <div style="display:flex; align-items:baseline; justify-content:space-between; margin-bottom:8px"><span style="font-family:'Fira Code',monospace; font-size:11px; letter-spacing:0.06em; text-transform:uppercase; color:#9aa3b4">AI / Compute</span><span style="font-family:'Fira Code',monospace; font-size:11px; color:#5f6878">n=412</span></div>
+                  <div style="display:flex; align-items:baseline; gap:9px"><span style="font-family:'Fira Code',monospace; font-size:22px; color:#3fb950">+0.31</span><span style="font-family:'Fira Code',monospace; font-size:12px; color:#3fb950">+0.14 ▲</span></div>
+                  <div style="display:flex; align-items:flex-end; gap:2px; height:26px; margin-top:9px">
+                    <span style="flex:1; height:34%; border-radius:1px; background:#2c3648"></span><span style="flex:1; height:40%; border-radius:1px; background:#2c3648"></span><span style="flex:1; height:36%; border-radius:1px; background:#2c3648"></span><span style="flex:1; height:48%; border-radius:1px; background:#2c3648"></span><span style="flex:1; height:56%; border-radius:1px; background:#2c3648"></span><span style="flex:1; height:52%; border-radius:1px; background:#2c3648"></span><span style="flex:1; height:70%; border-radius:1px; background:#3fb950; opacity:0.5"></span><span style="flex:1; height:82%; border-radius:1px; background:#3fb950; opacity:0.6"></span><span style="flex:1; height:76%; border-radius:1px; background:#3fb950; opacity:0.7"></span><span style="flex:1; height:100%; border-radius:1px; background:#3fb950"></span>
+                  </div>
+                </div>
+
+                <div style="border:1px solid #1e2634; border-radius:8px; background:#0c1017; padding:13px 15px">
+                  <div style="display:flex; align-items:baseline; justify-content:space-between; margin-bottom:8px"><span style="font-family:'Fira Code',monospace; font-size:11px; letter-spacing:0.06em; text-transform:uppercase; color:#9aa3b4">Energy</span><span style="font-family:'Fira Code',monospace; font-size:11px; color:#5f6878">n=188</span></div>
+                  <div style="display:flex; align-items:baseline; gap:9px"><span style="font-family:'Fira Code',monospace; font-size:22px; color:#f85149">−0.18</span><span style="font-family:'Fira Code',monospace; font-size:12px; color:#f85149">−0.11 ▼</span></div>
+                  <div style="display:flex; align-items:flex-end; gap:2px; height:26px; margin-top:9px">
+                    <span style="flex:1; height:62%; border-radius:1px; background:#2c3648"></span><span style="flex:1; height:58%; border-radius:1px; background:#2c3648"></span><span style="flex:1; height:64%; border-radius:1px; background:#2c3648"></span><span style="flex:1; height:50%; border-radius:1px; background:#2c3648"></span><span style="flex:1; height:44%; border-radius:1px; background:#2c3648"></span><span style="flex:1; height:38%; border-radius:1px; background:#2c3648"></span><span style="flex:1; height:34%; border-radius:1px; background:#f85149; opacity:0.5"></span><span style="flex:1; height:28%; border-radius:1px; background:#f85149; opacity:0.6"></span><span style="flex:1; height:30%; border-radius:1px; background:#f85149; opacity:0.7"></span><span style="flex:1; height:22%; border-radius:1px; background:#f85149"></span>
+                  </div>
+                </div>
+
+                <div style="border:1px solid #1e2634; border-radius:8px; background:#0c1017; padding:13px 15px">
+                  <div style="display:flex; align-items:baseline; justify-content:space-between; margin-bottom:8px"><span style="font-family:'Fira Code',monospace; font-size:11px; letter-spacing:0.06em; text-transform:uppercase; color:#9aa3b4">Financials</span><span style="font-family:'Fira Code',monospace; font-size:11px; color:#5f6878">n=241</span></div>
+                  <div style="display:flex; align-items:baseline; gap:9px"><span style="font-family:'Fira Code',monospace; font-size:22px; color:#9aa3b4">+0.02</span><span style="font-family:'Fira Code',monospace; font-size:12px; color:#f85149">−0.06 ▼</span></div>
+                  <div style="display:flex; align-items:flex-end; gap:2px; height:26px; margin-top:9px">
+                    <span style="flex:1; height:58%; border-radius:1px; background:#2c3648"></span><span style="flex:1; height:62%; border-radius:1px; background:#2c3648"></span><span style="flex:1; height:56%; border-radius:1px; background:#2c3648"></span><span style="flex:1; height:60%; border-radius:1px; background:#2c3648"></span><span style="flex:1; height:54%; border-radius:1px; background:#2c3648"></span><span style="flex:1; height:52%; border-radius:1px; background:#2c3648"></span><span style="flex:1; height:48%; border-radius:1px; background:#7d8698; opacity:0.5"></span><span style="flex:1; height:50%; border-radius:1px; background:#7d8698; opacity:0.6"></span><span style="flex:1; height:46%; border-radius:1px; background:#7d8698; opacity:0.7"></span><span style="flex:1; height:44%; border-radius:1px; background:#7d8698"></span>
+                  </div>
+                </div>
+
+                <div style="border:1px solid #1e2634; border-radius:8px; background:#0c1017; padding:13px 15px">
+                  <div style="display:flex; align-items:baseline; justify-content:space-between; margin-bottom:8px"><span style="font-family:'Fira Code',monospace; font-size:11px; letter-spacing:0.06em; text-transform:uppercase; color:#9aa3b4">US</span><span style="font-family:'Fira Code',monospace; font-size:11px; color:#5f6878">n=1,402</span></div>
+                  <div style="display:flex; align-items:baseline; gap:9px"><span style="font-family:'Fira Code',monospace; font-size:22px; color:#9aa3b4">+0.04</span><span style="font-family:'Fira Code',monospace; font-size:12px; color:#3fb950">+0.02 ▲</span></div>
+                  <div style="display:flex; align-items:flex-end; gap:2px; height:26px; margin-top:9px">
+                    <span style="flex:1; height:44%; border-radius:1px; background:#2c3648"></span><span style="flex:1; height:46%; border-radius:1px; background:#2c3648"></span><span style="flex:1; height:42%; border-radius:1px; background:#2c3648"></span><span style="flex:1; height:48%; border-radius:1px; background:#2c3648"></span><span style="flex:1; height:46%; border-radius:1px; background:#2c3648"></span><span style="flex:1; height:50%; border-radius:1px; background:#2c3648"></span><span style="flex:1; height:48%; border-radius:1px; background:#7d8698; opacity:0.5"></span><span style="flex:1; height:52%; border-radius:1px; background:#7d8698; opacity:0.6"></span><span style="flex:1; height:50%; border-radius:1px; background:#7d8698; opacity:0.7"></span><span style="flex:1; height:54%; border-radius:1px; background:#7d8698"></span>
+                  </div>
+                </div>
+
+                <div style="border:1px solid #1e2634; border-radius:8px; background:#0c1017; padding:13px 15px">
+                  <div style="display:flex; align-items:baseline; justify-content:space-between; margin-bottom:8px"><span style="font-family:'Fira Code',monospace; font-size:11px; letter-spacing:0.06em; text-transform:uppercase; color:#9aa3b4">Global</span><span style="font-family:'Fira Code',monospace; font-size:11px; color:#5f6878">n=4,180</span></div>
+                  <div style="display:flex; align-items:baseline; gap:9px"><span style="font-family:'Fira Code',monospace; font-size:22px; color:#9aa3b4">+0.04</span><span style="font-family:'Fira Code',monospace; font-size:12px; color:#7d8698">0.00 —</span></div>
+                  <div style="display:flex; align-items:flex-end; gap:2px; height:26px; margin-top:9px">
+                    <span style="flex:1; height:48%; border-radius:1px; background:#2c3648"></span><span style="flex:1; height:50%; border-radius:1px; background:#2c3648"></span><span style="flex:1; height:46%; border-radius:1px; background:#2c3648"></span><span style="flex:1; height:52%; border-radius:1px; background:#2c3648"></span><span style="flex:1; height:48%; border-radius:1px; background:#2c3648"></span><span style="flex:1; height:50%; border-radius:1px; background:#2c3648"></span><span style="flex:1; height:52%; border-radius:1px; background:#7d8698; opacity:0.5"></span><span style="flex:1; height:48%; border-radius:1px; background:#7d8698; opacity:0.6"></span><span style="flex:1; height:50%; border-radius:1px; background:#7d8698; opacity:0.7"></span><span style="flex:1; height:50%; border-radius:1px; background:#7d8698"></span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div style="display:grid; grid-template-columns:1fr 380px; gap:16px">
+
+              <div style="border:1px solid #1e2634; border-radius:8px; background:#0c1017; overflow:hidden">
+                <div style="display:flex; align-items:baseline; justify-content:space-between; padding:11px 16px; border-bottom:1px solid #1e2634">
+                  <span style="font-size:15px; font-weight:600">AI / Compute · 1 day</span>
+                  <div style="display:flex; gap:14px; align-items:center; font-size:12px; color:#7d8698">
+                    <span style="display:inline-flex; align-items:center; gap:6px"><span style="width:14px; height:2px; border-radius:1px; background:#4c8dff"></span>sentiment</span>
+                    <span style="display:inline-flex; align-items:center; gap:6px"><span style="width:14px; height:2px; border-radius:1px; background:#7d8698"></span>SPY, same window</span>
+                    <span style="display:inline-flex; align-items:center; gap:6px"><span style="width:14px; height:8px; border-radius:2px; background:#1a212c"></span>neutral ±0.05</span>
+                  </div>
+                </div>
+                <div style="padding:16px 18px 10px">
+                  <div style="position:relative; height:250px">
+                    <div style="position:absolute; left:40px; right:44px; top:0; bottom:26px; border-left:1px solid #1e2634; border-bottom:1px solid #1e2634"></div>
+                    <div style="position:absolute; left:40px; right:44px; top:96px; height:34px; background:#1a212c; opacity:0.65"></div>
+                    <div style="position:absolute; left:40px; right:44px; top:113px; height:1px; background:#2c3648"></div>
+                    <div style="position:absolute; left:4px; top:-6px; font-family:'Fira Code',monospace; font-size:10px; color:#5f6878">+0.40</div>
+                    <div style="position:absolute; left:4px; top:50px; font-family:'Fira Code',monospace; font-size:10px; color:#5f6878">+0.20</div>
+                    <div style="position:absolute; left:4px; top:107px; font-family:'Fira Code',monospace; font-size:10px; color:#5f6878">0.00</div>
+                    <div style="position:absolute; left:4px; top:164px; font-family:'Fira Code',monospace; font-size:10px; color:#5f6878">−0.20</div>
+                    <div style="position:absolute; right:4px; top:20px; font-family:'Fira Code',monospace; font-size:10px; color:#5f6878">644</div>
+                    <div style="position:absolute; right:4px; top:120px; font-family:'Fira Code',monospace; font-size:10px; color:#5f6878">632</div>
+                    <div style="position:absolute; left:40px; right:44px; top:0; bottom:26px">
+                      <span style="position:absolute; left:0%; top:66%; width:6px; height:6px; margin:-3px; border-radius:50%; background:#4c8dff"></span>
+                      <span style="position:absolute; left:12%; top:62%; width:6px; height:6px; margin:-3px; border-radius:50%; background:#4c8dff"></span>
+                      <span style="position:absolute; left:24%; top:64%; width:6px; height:6px; margin:-3px; border-radius:50%; background:#4c8dff"></span>
+                      <span style="position:absolute; left:36%; top:54%; width:6px; height:6px; margin:-3px; border-radius:50%; background:#4c8dff"></span>
+                      <span style="position:absolute; left:48%; top:46%; width:6px; height:6px; margin:-3px; border-radius:50%; background:#4c8dff"></span>
+                      <span style="position:absolute; left:60%; top:40%; width:6px; height:6px; margin:-3px; border-radius:50%; background:#4c8dff"></span>
+                      <span style="position:absolute; left:72%; top:34%; width:6px; height:6px; margin:-3px; border-radius:50%; background:#4c8dff"></span>
+                      <span style="position:absolute; left:84%; top:26%; width:6px; height:6px; margin:-3px; border-radius:50%; background:#4c8dff"></span>
+                      <span style="position:absolute; left:96%; top:22%; width:8px; height:8px; margin:-4px; border-radius:50%; background:#4c8dff; border:2px solid #0c1017"></span>
+                      <span style="position:absolute; left:0%; top:82%; width:4px; height:4px; margin:-2px; border-radius:50%; background:#7d8698"></span>
+                      <span style="position:absolute; left:12%; top:80%; width:4px; height:4px; margin:-2px; border-radius:50%; background:#7d8698"></span>
+                      <span style="position:absolute; left:24%; top:76%; width:4px; height:4px; margin:-2px; border-radius:50%; background:#7d8698"></span>
+                      <span style="position:absolute; left:36%; top:72%; width:4px; height:4px; margin:-2px; border-radius:50%; background:#7d8698"></span>
+                      <span style="position:absolute; left:48%; top:70%; width:4px; height:4px; margin:-2px; border-radius:50%; background:#7d8698"></span>
+                      <span style="position:absolute; left:60%; top:62%; width:4px; height:4px; margin:-2px; border-radius:50%; background:#7d8698"></span>
+                      <span style="position:absolute; left:72%; top:58%; width:4px; height:4px; margin:-2px; border-radius:50%; background:#7d8698"></span>
+                      <span style="position:absolute; left:84%; top:52%; width:4px; height:4px; margin:-2px; border-radius:50%; background:#7d8698"></span>
+                      <span style="position:absolute; left:96%; top:48%; width:4px; height:4px; margin:-2px; border-radius:50%; background:#7d8698"></span>
+                    </div>
+                    <div style="position:absolute; left:40px; right:44px; bottom:4px; display:flex; justify-content:space-between; font-family:'Fira Code',monospace; font-size:10px; color:#5f6878"><span>10:00</span><span>14:00</span><span>18:00</span><span>02:00</span><span>06:00</span><span>now</span></div>
+                  </div>
+                </div>
+                <p style="margin:0; padding:10px 16px; border-top:1px solid #1e2634; font-size:12px; color:#7d8698; line-height:1.5">Read this — the shaded band is the ±0.05 neutral zone, so a line inside it is not a signal regardless of colour. The benchmark tracks the same window you selected, not a fixed month.</p>
+              </div>
+
+              <div style="display:flex; flex-direction:column; gap:12px">
+                <div style="border:1px solid #1e2634; border-radius:8px; background:#0c1017; overflow:hidden">
+                  <div style="padding:11px 14px; border-bottom:1px solid #1e2634; display:flex; align-items:baseline; justify-content:space-between"><span style="font-size:15px; font-weight:600">What moved it</span><span style="font-family:'Fira Code',monospace; font-size:11px; color:#7d8698">top weighted</span></div>
+                  <div>
+                    <div style="padding:10px 14px; border-bottom:1px solid rgba(30,38,52,0.55)">
+                      <div style="display:flex; align-items:baseline; gap:8px; margin-bottom:3px"><span style="font-family:'Fira Code',monospace; font-size:12px; font-weight:600; color:#3fb950">+0.82</span><span style="font-family:'Fira Code',monospace; font-size:11px; color:#5f6878">w 1.00 · 09:18 · Bloomberg</span></div>
+                      <p style="margin:0; font-size:12px; line-height:1.5; color:#c8cede">Microsoft signs Azure AI capacity deal with three sovereign funds</p>
+                    </div>
+                    <div style="padding:10px 14px; border-bottom:1px solid rgba(30,38,52,0.55)">
+                      <div style="display:flex; align-items:baseline; gap:8px; margin-bottom:3px"><span style="font-family:'Fira Code',monospace; font-size:12px; font-weight:600; color:#3fb950">+0.74</span><span style="font-family:'Fira Code',monospace; font-size:11px; color:#5f6878">w 0.93 · 08:40 · Reuters</span></div>
+                      <p style="margin:0; font-size:12px; line-height:1.5; color:#c8cede">Taiwan foundry lifts full-year capex guidance on AI demand</p>
+                    </div>
+                    <div style="padding:10px 14px; border-bottom:1px solid rgba(30,38,52,0.55)">
+                      <div style="display:flex; align-items:baseline; gap:8px; margin-bottom:3px"><span style="font-family:'Fira Code',monospace; font-size:12px; font-weight:600; color:#3fb950">+0.61</span><span style="font-family:'Fira Code',monospace; font-size:11px; color:#5f6878">w 0.88 · 07:55 · FT</span></div>
+                      <p style="margin:0; font-size:12px; line-height:1.5; color:#c8cede">Hyperscaler orders push networking backlog to a record</p>
+                    </div>
+                    <div style="padding:10px 14px">
+                      <div style="display:flex; align-items:baseline; gap:8px; margin-bottom:3px"><span style="font-family:'Fira Code',monospace; font-size:12px; font-weight:600; color:#f85149">−0.44</span><span style="font-family:'Fira Code',monospace; font-size:11px; color:#5f6878">w 0.71 · 06:12 · CNBC</span></div>
+                      <p style="margin:0; font-size:12px; line-height:1.5; color:#c8cede">Analysts question whether AI capex can hold this pace into 2027</p>
+                    </div>
+                  </div>
+                  <a href="#3c" style="display:block; padding:9px 14px; border-top:1px solid #1e2634; font-size:12px">All 412 articles →</a>
+                </div>
+
+                <div style="border:1px solid #1e2634; border-radius:8px; background:#0c1017; overflow:hidden">
+                  <div style="padding:11px 14px; border-bottom:1px solid #1e2634; font-size:15px; font-weight:600">Where this lands</div>
+                  <div style="padding:12px 14px; display:flex; flex-direction:column; gap:11px">
+                    <div>
+                      <div style="font-family:'Fira Code',monospace; font-size:11px; letter-spacing:0.06em; text-transform:uppercase; color:#7d8698; margin-bottom:6px">Names driving it</div>
+                      <div style="display:flex; flex-wrap:wrap; gap:5px">
+                        <span style="font-family:'Fira Code',monospace; font-size:12px; color:#4c8dff; border:1px solid #1e2634; border-radius:4px; padding:3px 7px">NVDA</span>
+                        <span style="font-family:'Fira Code',monospace; font-size:12px; color:#4c8dff; border:1px solid #1e2634; border-radius:4px; padding:3px 7px">MSFT</span>
+                        <span style="font-family:'Fira Code',monospace; font-size:12px; color:#4c8dff; border:1px solid #1e2634; border-radius:4px; padding:3px 7px">AVGO</span>
+                        <span style="font-family:'Fira Code',monospace; font-size:12px; color:#4c8dff; border:1px solid #1e2634; border-radius:4px; padding:3px 7px">ANET</span>
+                      </div>
+                    </div>
+                    <div style="padding-top:10px; border-top:1px solid #1e2634; display:flex; align-items:center; justify-content:space-between"><span style="font-size:12px; color:#7d8698">Your exposure</span><span style="font-family:'Fira Code',monospace; font-size:12px; color:#c8cede">5 of 9 pinned</span></div>
+                    <div style="display:flex; align-items:center; justify-content:space-between"><span style="font-size:12px; color:#7d8698">Rotation quadrant</span><span style="font-family:'Fira Code',monospace; font-size:12px; color:#3fb950">Technology · Leading</span></div>
+                    <div style="display:flex; align-items:center; justify-content:space-between"><span style="font-size:12px; color:#7d8698">Next catalyst</span><span style="font-family:'Fira Code',monospace; font-size:12px; color:#d29922">AAPL tonight</span></div>
+                  </div>
+                  <div style="display:flex; border-top:1px solid #1e2634">
+                    <a href="#3b" style="flex:1; padding:9px 14px; font-size:12px; text-align:center; border-right:1px solid #1e2634">Rotation →</a>
+                    <a href="#2b" style="flex:1; padding:9px 14px; font-size:12px; text-align:center">Calendar →</a>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div style="width:36px; flex-shrink:0; border-left:1px solid #1e2634; background:#0c1017; padding-top:8px; text-align:center"><span style="font-family:'Fira Code',monospace; font-size:13px; color:#7d8698">‹</span></div>
+      </div>
+    </div>
+
+    <sc-if value="{{ showNotes }}" hint-placeholder-val="{{ true }}">
+    <div style="width:1440px; display:grid; grid-template-columns:repeat(3,1fr); gap:16px">
+      <div style="border-left:2px solid #4c8dff; padding:2px 0 2px 12px">
+        <div style="font-size:12px; font-weight:600; margin-bottom:4px">Overview states a verdict</div>
+        <p style="margin:0; font-size:12px; line-height:1.55; color:#7d8698">One sentence, an agreement count, then four cards that each lead with a plain read instead of a status dot. "If you're trading this" turns the regime into named strikes with cost, breakeven and a reason — and says out loud that none survive a break of 636.</p>
+      </div>
+      <div style="border-left:2px solid #4c8dff; padding:2px 0 2px 12px">
+        <div style="font-size:12px; font-weight:600; margin-bottom:4px">Rotation gets its trails</div>
+        <p style="margin:0; font-size:12px; line-height:1.55; color:#7d8698">Quadrants labelled on the chart with a line each on what they mean, eight-week trails so direction is visible, and a click-through from a sector to the names you hold in it. An RRG without trails is just a scatter plot.</p>
+      </div>
+      <div style="border-left:2px solid #4c8dff; padding:2px 0 2px 12px">
+        <div style="font-size:12px; font-weight:600; margin-bottom:4px">Macro shows its working</div>
+        <p style="margin:0; font-size:12px; line-height:1.55; color:#7d8698">Method published on the page — sources, decay half-life, what n counts, when to ignore a score. Every tile carries a delta and a sparkline, the ±0.05 neutral band is shaded, the benchmark follows the selected window, and every score drills to the articles that made it.</p>
+      </div>
+    </div>
+    </sc-if>
+  </div>
+
+</section>
+
+<section style="display:flex; flex-wrap:wrap; gap:64px; padding:16px 48px 40px; align-items:flex-start">
+
+  <div style="width:100%; max-width:1440px">
+    <div style="font-family:'Fira Code',monospace; font-size:11px; font-weight:500; letter-spacing:0.1em; text-transform:uppercase; color:#7d8698; margin-bottom:10px">Turn 2 · the two broken journeys</div>
+    <h1 style="margin:0 0 12px; font-size:30px; font-weight:600; letter-spacing:-0.01em">The ladder, and the calendar that doesn't exist</h1>
+    <p style="margin:0; max-width:820px; font-size:14px; line-height:1.6; color:#9aa3b4; text-wrap:pretty">Both screens show rails collapsed to their 36px strips — the ladder genuinely wants the width, and it keeps the new content in focus. Same system as <a href="#1a">1a</a> and <a href="#1b">1b</a>: one type scale, colours with one meaning each, explanations you can read without hovering.</p>
+  </div>
