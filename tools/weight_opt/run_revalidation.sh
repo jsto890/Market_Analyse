@@ -18,6 +18,12 @@ PLIST="$HOME/Library/LaunchAgents/${LABEL}.plist"
 LOG="$MA/logs/weight_revalidation_$(date +%Y%m%d).log"
 exec >> "$LOG" 2>&1
 
+# The grid search prints its rank-IC table before starting the permutation null,
+# which runs for hours. Redirected to a file, Python block-buffers stdout, so the
+# log sits empty for that whole window and a live run is indistinguishable from a
+# dead one — which is how the 2026-08-03 re-run got misread as a silent crash.
+export PYTHONUNBUFFERED=1
+
 echo "===== Weight re-validation — $(date) ====="
 cd "$MA"
 "$PY" tools/weight_opt/historical_bridge_dataset.py
