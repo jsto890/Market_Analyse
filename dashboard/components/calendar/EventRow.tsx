@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import Collapsible from "@/components/ui/Collapsible";
-import InfoTip from "@/components/ui/InfoTip";
 import RankText from "@/components/ui/RankText";
 import ValueCell from "@/components/ui/ValueCell";
 import {
@@ -60,11 +59,13 @@ export default function EventRow({
           earnings row has ever carried a time, so "TBA" printed on all of
           them and said only that the row was an earnings row. One line: the
           local conversion quadrupled the row height to restate the same
-          instant, so it moved onto the tooltip. */}
+          instant, so it moved into the expanded body below. Neither hover
+          affordance was available here: InfoTip's trigger is a <button> and
+          this header already sits inside Collapsible's <button> (invalid HTML,
+          which React refuses to hydrate), and a native title= is barred from
+          #main by the Phase 1 substrate rule. */}
       {ev.time_et ? (
-        <InfoTip content={`${ev.time_et} ET${local ? ` · ${local} local` : ""}`} className="text-data text-muted">
-          {ev.time_et}
-        </InfoTip>
+        <span className="text-data text-muted">{ev.time_et}</span>
       ) : (
         <span />
       )}
@@ -105,6 +106,11 @@ export default function EventRow({
       trigger={header}
     >
       <div className="space-y-2.5 border-t border-line bg-elevated/30 px-3 py-3">
+        {local && (
+          <p className="text-data text-muted">
+            {ev.time_et} ET · {local} local
+          </p>
+        )}
         {meta ? (
           <>
             <p className="text-body leading-relaxed text-2">

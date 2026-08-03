@@ -179,8 +179,14 @@ def build_app() -> FastAPI:
     def heartbeats():
         conn = get_conn()
         try:
+            # age_secs makes staleness computable by the caller. Without it a job
+            # that wedged mid-invocation reads as its last good status forever —
+            # news-ingest sat live-locked for seven days still reporting ok.
             rows = conn.execute(
-                "SELECT job, last_run_ts, status, detail FROM heartbeats ORDER BY job"
+                "SELECT job, last_run_ts, status, detail, "
+                "       CAST(strftime('%s','now') - strftime('%s', last_run_ts) AS INTEGER) "
+                "         AS age_secs "
+                "FROM heartbeats ORDER BY job"
             ).fetchall()
         finally:
             conn.close()
@@ -515,7 +521,13 @@ def build_app() -> FastAPI:
                 "name": info.get("longName") or info.get("shortName"),
                 "pe_ratio": _num("trailingPE"),
                 "eps_ttm": _num("trailingEps"),
-                "revenue_ttm": _num("revenueGrowth", 100.0),  # growth %, matches UI fmtPct
+                # Two different quantities used to share the revenue_ttm key: TTM
+                # revenue in absolute dollars on the IBKR path, year-on-year growth
+                # as a percentage here. The UI rendered both through fmtPct under a
+                # "rev ttm" label, so the IBKR path printed revenue-in-millions as
+                # a percent and this one printed growth under a level's name.
+                "revenue_ttm": _num("totalRevenue"),
+                "revenue_growth_pct": _num("revenueGrowth", 100.0),
                 "market_cap": _num("marketCap"),
                 "analyst_target": _num("targetMeanPrice"),
                 "analyst_rating": info.get("recommendationKey"),

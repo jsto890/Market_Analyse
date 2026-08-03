@@ -12,34 +12,13 @@ import AiPanel from "@/components/ticker/AiPanel";
 import NewsCard from "@/components/ticker/NewsCard";
 import SectionRail from "@/components/ticker/SectionRail";
 import TickerNav from "@/components/ticker/TickerNav";
+import { fetchHistory } from "@/lib/history";
 import { loadBridgeSignals } from "@/lib/bridge";
 import { signalHistory } from "@/lib/signals";
 import { MEDIAN_PEAK_PCT, MEDIAN_DAYS_TO_PEAK } from "@/lib/perf-constants";
 import Page from "@/components/ui/Page";
 
 const INDEX_ETFS = ["SPY", "QQQ", "IWM", "DIA"];
-
-type HistoryResult =
-  | { status: "ok"; bars: Bar[] }
-  | { status: "timeout" }
-  | { status: "no-data" }
-  | { status: "error" };
-
-async function fetchHistory(ticker: string): Promise<HistoryResult> {
-  try {
-    const res = await fetch(
-      `http://127.0.0.1:8088/api/history/${encodeURIComponent(ticker)}?period=2y`,
-      { cache: "no-store", signal: AbortSignal.timeout(5000) }
-    );
-    if (!res.ok) return { status: "error" };
-    const json = (await res.json()) as { bars: Bar[] };
-    const bars = json.bars ?? [];
-    return bars.length > 0 ? { status: "ok", bars } : { status: "no-data" };
-  } catch (err) {
-    if (err instanceof Error && err.name === "TimeoutError") return { status: "timeout" };
-    return { status: "error" };
-  }
-}
 
 export default async function TickerPage({
   params,

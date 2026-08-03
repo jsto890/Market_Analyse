@@ -6,7 +6,7 @@ from unittest.mock import MagicMock, AsyncMock, patch, call
 from datetime import datetime, timezone
 from ib_insync import Contract, Option
 
-from argus.options_live.connector import IBKRConnector
+from argus.options_live.connector import IBKRConnector, resolve_expiry, select_strikes
 from argus.options_live.config import LiveConfig
 
 
@@ -422,3 +422,92 @@ def test_subscription_tracking(connector):
     connector._subscribed_contracts.pop(1002)
     assert len(connector._subscribed_contracts) == 2
     assert 1002 not in connector._subscribed_contracts
+
+
+# ---------------------------------------------------------------------------
+# Expiry / strike narrowing. Both helpers are pure, so they test offline.
+# ---------------------------------------------------------------------------
+
+EXPIRATIONS = ["20260807", "20260814", "20260821", "20260919"]
+
+
+def test_resolve_expiry_explicit_both_formats():
+    assert resolve_expiry(EXPIRATIONS, "20260814") == "20260814"
+    assert resolve_expiry(EXPIRATIONS, "2026-08-14") == "20260814"
+
+
+def test_resolve_expiry_unlisted_date_returns_none():
+    """A miss must not fall through to "subscribe to everything"."""
+    assert resolve_expiry(EXPIRATIONS, "2026-08-15") is None
+    assert resolve_expiry([], "0DTE") is None
+
+
+def test_resolve_expiry_0dte_picks_nearest_not_yet_expired():
+    with patch("argus.options_live.connector.date") as fake_date:
+        fake_date.today.return_value = datetime(2026, 8, 10).date()
+        assert resolve_expiry(EXPIRATIONS, "0DTE") == "20260814"
+        fake_date.today.return_value = datetime(2026, 8, 14).date()
+        assert resolve_expiry(EXPIRATIONS, "0DTE") == "20260814"
+        fake_date.today.return_value = datetime(2026, 10, 1).date()
+        assert resolve_expiry(EXPIRATIONS, "0DTE") is None
+
+
+def test_select_strikes_centres_on_spot():
+    strikes = [400.0, 405.0, 410.0, 415.0, 420.0, 425.0, 430.0]
+    assert select_strikes(strikes, 416.0, 1) == [410.0, 415.0, 420.0]
+    assert select_strikes(strikes, 401.0, 2) == [400.0, 405.0, 410.0]
+
+
+def test_select_strikes_without_spot_or_window():
+    strikes = [400.0, 405.0, 410.0, 415.0, 420.0]
+    assert select_strikes(strikes, None, 1) == [405.0, 410.0, 415.0]
+    assert select_strikes(strikes, 410.0, 0) == strikes
+    assert select_strikes([], 410.0, 3) == []
+
+
+@pytest.mark.asyncio
+async def test_fetch_chain_narrows_to_one_expiry_and_window(connector):
+    """The whole point: subscribe_quotes must not receive the full chain."""
+    connector._connected = True
+    underlying = MagicMock()
+    underlying.conId = 756603
+    connector.ib.qualifyContracts = MagicMock(return_value=[underlying])
+
+    chain = MagicMock()
+    chain.expirations = EXPIRATIONS
+    chain.strikes = [float(s) for s in range(400, 460, 5)]
+    connector.ib.reqSecDefOptParamsAsync = MagicMock(return_value=[chain])
+    connector.ib.reqTickers = MagicMock(return_value=[MagicMock(last=421.0)])
+
+    async def mock_to_thread(func, *args, **kwargs):
+        return func(*args, **kwargs)
+
+    with patch("asyncio.to_thread", side_effect=mock_to_thread):
+        contracts = await connector.fetch_chain("SPY", "2026-08-21", 2)
+
+    # 5 strikes (420 ± 2) x 2 rights, one expiration only
+    assert len(contracts) == 10
+    assert {c.lastTradeDateOrContractMonth for c in contracts} == {"20260821"}
+    assert sorted({c.strike for c in contracts}) == [410.0, 415.0, 420.0, 425.0, 430.0]
+
+
+@pytest.mark.asyncio
+async def test_fetch_chain_returns_nothing_for_unlisted_expiry(connector):
+    connector._connected = True
+    underlying = MagicMock()
+    underlying.conId = 756603
+    connector.ib.qualifyContracts = MagicMock(return_value=[underlying])
+
+    chain = MagicMock()
+    chain.expirations = EXPIRATIONS
+    chain.strikes = [415.0, 420.0, 425.0]
+    connector.ib.reqSecDefOptParamsAsync = MagicMock(return_value=[chain])
+    connector.ib.reqTickers = MagicMock(return_value=[])
+
+    async def mock_to_thread(func, *args, **kwargs):
+        return func(*args, **kwargs)
+
+    with patch("asyncio.to_thread", side_effect=mock_to_thread):
+        contracts = await connector.fetch_chain("SPY", "2026-12-25", 2)
+
+    assert contracts == []

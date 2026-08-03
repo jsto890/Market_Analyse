@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import fs from "fs";
+import path from "path";
 import Papa from "papaparse";
 import {
   AccountStat,
@@ -10,9 +11,12 @@ import {
 
 export const dynamic = "force-dynamic";
 
+// Relative to the repo, not to one machine's home directory: this file is in a
+// public repo, and the absolute path both leaked a username and made the route
+// return nothing for anyone who checked the tree out elsewhere.
 const CSV_PATH =
   process.env.ACCOUNTS_CSV ??
-  "/Users/josephstorey/Market_Review/reports/account_backtest.csv";
+  path.resolve(process.cwd(), "..", "..", "Market_Review", "reports", "account_backtest.csv");
 
 function parseNullableFloat(value: unknown): number | null {
   if (value === null || value === undefined || value === "") return null;

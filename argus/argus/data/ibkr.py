@@ -159,7 +159,10 @@ class IBKRClient:
 
                 result["pe_ratio"]     = _ratio("P/E")
                 result["eps_ttm"]      = _ratio("EPS")
-                result["revenue_ttm"]  = _ratio("TTMREV")
+                # TTMREV is reported in millions; the field is dollars everywhere else.
+                _rev = _ratio("TTMREV")
+                result["revenue_ttm"]  = _rev * 1e6 if _rev is not None else None
+                result["revenue_growth_pct"] = _ratio("TTMREVCHG")
                 result["market_cap"]   = _ratio("MKTCAP")
 
                 # Analyst target mean and consensus

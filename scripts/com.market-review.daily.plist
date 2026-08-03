@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.market-review.daily</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>/bin/zsh</string>
+        <string>/Users/josephstorey/Market_Analyse/scripts/job_wrapper.sh</string>
+        <string>daily</string>
+        <string>/bin/zsh</string>
+        <string>/Users/josephstorey/Market_Analyse/scripts/run_daily.sh</string>
+    </array>
+
+    <!-- Three hours: the run normally finishes in under ten minutes, but it walks
+         a thousand tickers through yfinance and a slow provider day is not a wedge. -->
+    <key>EnvironmentVariables</key>
+    <dict><key>JOB_TIMEOUT</key><string>10800</string></dict>
+
+    <!-- job_wrapper.sh also raises this; declaring it here means a run started by
+         hand through launchctl gets the same headroom. -->
+    <key>SoftResourceLimits</key>
+    <dict><key>NumberOfFiles</key><integer>4096</integer></dict>
+
+    <!-- Runs at 20:30 (8:30pm) AEST = ~06:30 ET US premarket -->
+    <key>StartCalendarInterval</key>
+    <dict>
+        <key>Hour</key>
+        <integer>20</integer>
+        <key>Minute</key>
+        <integer>30</integer>
+    </dict>
+
+    <key>StandardOutPath</key>
+    <string>/Users/josephstorey/Market_Review/logs/launchd.log</string>
+
+    <key>StandardErrorPath</key>
+    <string>/Users/josephstorey/Market_Review/logs/launchd_error.log</string>
+</dict>
+</plist>

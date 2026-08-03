@@ -23,6 +23,7 @@ import ScopeTile from "@/components/macro/ScopeTile";
 import Panel from "@/components/ui/Panel";
 import SegmentedControl from "@/components/ui/SegmentedControl";
 import Empty from "@/components/ui/Empty";
+import Stale from "@/components/ui/Stale";
 import { useLocalStorage } from "@/lib/useLocalStorage";
 import { STATIC_KEYS } from "@/lib/storageKeys";
 import Page from "@/components/ui/Page";
@@ -198,6 +199,19 @@ function MacroPageInner() {
         >
           {resetNotice}
         </p>
+      )}
+
+      {/* The tiles carry the timestamp of the score they show but never printed it,
+          so a corpus that had gone quiet for a week still read as a live reading. */}
+      {rows.length > 0 && (
+        <Stale
+          asOf={rows.reduce<string | null>((newest, t) => (
+            t.ts && (!newest || t.ts > newest) ? t.ts : newest
+          ), null)}
+          source="FinBERT"
+          staleAfterMins={90}
+          variant="line"
+        />
       )}
 
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">

@@ -12,6 +12,12 @@
         <string>-m</string><string>argus.news.ingest</string>
     </array>
     <key>WorkingDirectory</key><string>/Users/josephstorey/Market_Analyse/argus</string>
+    <!-- A gateway daemon, not a periodic job: the deadline is a backstop, not the
+         restart mechanism. Reconnect failure is handled in ingest.py, which exits
+         non-zero so KeepAlive can act; this only bounds a wedge it doesn't catch.
+         A healthy restart is harmless — on_ready backfills from the stored cursor. -->
+    <key>EnvironmentVariables</key>
+    <dict><key>JOB_TIMEOUT</key><string>86400</string></dict>
     <key>KeepAlive</key><true/>
     <key>ThrottleInterval</key><integer>30</integer>
     <key>StandardOutPath</key><string>/tmp/argus-news-ingest.log</string>

@@ -32,9 +32,13 @@ function loadRotation(): RotationRow[] | null {
 }
 
 /**
- * Today's candidates keyed by industry — the bridge tags every row with the
- * same industry vocabulary the rotation job uses, so a sector on the chart maps
- * straight onto the names that came out of it. Null when the signals file can't
+ * Today's candidates keyed by industry. The two sides speak different
+ * vocabularies — the rotation job ranks yfinance industries ("Uranium",
+ * "Semiconductor Equipment & Materials") while the bridge tags rows with the
+ * curated sub-sector ("Uranium Miners", "Semi Equipment") — so keying on the
+ * curated name alone reached 12 of 31 rows and most plotted sectors named
+ * nothing. industry_yf is the joining key; industry stays as a fallback for
+ * rows written before the bridge carried it. Null when the signals file can't
  * be read: the chart then shows no picked-names line rather than telling you
  * every sector is empty.
  */
@@ -42,8 +46,13 @@ function loadNamesBySector(): SectorNames | undefined {
   try {
     const bySector: SectorNames = {};
     for (const row of loadBridgeSignals()) {
-      if (!row.industry || !row.ticker) continue;
-      (bySector[row.industry] ??= []).push({ ticker: row.ticker, action_label: row.action_label });
+      if (!row.ticker) continue;
+      const keys = [row.industry_yf, row.industry].filter(
+        (k, i, all): k is string => Boolean(k) && all.indexOf(k) === i,
+      );
+      for (const key of keys) {
+        (bySector[key] ??= []).push({ ticker: row.ticker, action_label: row.action_label });
+      }
     }
     return bySector;
   } catch {

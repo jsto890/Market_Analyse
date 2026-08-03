@@ -175,5 +175,4 @@ def run_analytics(
         msi_call_strike=msi_call_strike,
         msi_put_strike=msi_put_strike,
         msi_rationale=msi_rationale,
-        gex_profile_json=None,  # TODO: fetch from DB
     )

@@ -111,6 +111,13 @@ def tile_stats(rows: list[dict], now: datetime, spark_points: int = 20) -> list[
 
         def _delta(seconds: int):
             cutoff = now - timedelta(seconds=seconds)
+            # A window with no observation in it has no change to report. Without
+            # this guard the newest point is also its own comparand once the feed
+            # goes quiet, so a week-old score renders as "1h → 0.00" — unchanged,
+            # rather than unknown.
+            latest_ts = _parse_ts(latest["ts"])
+            if latest_ts is None or latest_ts <= cutoff:
+                return None
             older = [s for s in series if (_parse_ts(s["ts"]) or now) <= cutoff]
             if not older:
                 return None

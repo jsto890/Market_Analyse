@@ -18,9 +18,16 @@ fn port_open(port: u16) -> bool {
 }
 
 fn repo_dir() -> PathBuf {
-    std::env::var("MARKET_ANALYSE_DIR")
-        .unwrap_or_else(|_| "/Users/josephstorey/Market_Analyse".into())
-        .into()
+    // $HOME, not a literal home directory: the old fallback shipped one
+    // machine's username inside a public repo and resolved to nothing anywhere
+    // else. MARKET_ANALYSE_DIR still wins when the checkout lives elsewhere.
+    if let Ok(dir) = std::env::var("MARKET_ANALYSE_DIR") {
+        return dir.into();
+    }
+    match std::env::var("HOME") {
+        Ok(home) => PathBuf::from(home).join("Market_Analyse"),
+        Err(_) => PathBuf::from("Market_Analyse"),
+    }
 }
 
 fn find_node() -> String {

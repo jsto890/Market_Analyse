@@ -141,6 +141,16 @@ function fmtMoney(n: number | null | undefined): string {
   return `$${n.toFixed(2)}`;
 }
 
+/** Absolute dollars at revenue/market-cap scale — $2.4B, not $2400000000.00. */
+function fmtBig(n: number | null | undefined): string {
+  if (n === null || n === undefined || !Number.isFinite(n)) return "—";
+  const abs = Math.abs(n);
+  if (abs >= 1e12) return `$${(n / 1e12).toFixed(2)}T`;
+  if (abs >= 1e9) return `$${(n / 1e9).toFixed(2)}B`;
+  if (abs >= 1e6) return `$${(n / 1e6).toFixed(1)}M`;
+  return `$${n.toFixed(0)}`;
+}
+
 function BridgeCatalysts({ bridgeRow }: { bridgeRow: BridgeRow }) {
   const tokens = parseCatalysts(bridgeRow.catalysts);
 
@@ -188,7 +198,9 @@ function OffBridgeCatalysts({ ticker }: { ticker: string }) {
   }
 
   const fields: { label: string; value: string }[] = [];
-  if (data.revenue_ttm != null) fields.push({ label: "rev ttm", value: fmtPct(data.revenue_ttm) });
+  if (data.revenue_ttm != null) fields.push({ label: "rev ttm", value: fmtBig(data.revenue_ttm) });
+  if (data.revenue_growth_pct != null)
+    fields.push({ label: "rev growth", value: fmtPct(data.revenue_growth_pct) });
   if (data.pe_ratio != null) fields.push({ label: "P/E", value: data.pe_ratio.toFixed(1) });
   if (data.eps_ttm != null) fields.push({ label: "EPS", value: data.eps_ttm.toFixed(2) });
   if (data.analyst_target != null) fields.push({ label: "target", value: fmtMoney(data.analyst_target) });

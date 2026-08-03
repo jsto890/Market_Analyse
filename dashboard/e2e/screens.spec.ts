@@ -493,6 +493,25 @@ test("audit: console errors, computed layout, contrast inputs", async ({ page })
   console.log(`\n  ✓ screens/_audit.json`);
   console.log(`    ${JSON.stringify(report._summary)}`);
   expect(Object.keys(report).length).toBe(ROUTES.length + 1);
+
+  // The file was written first on purpose: these two assertions are what turns
+  // the audit from a report nobody opens into a gate. Both ran clean at the time
+  // they were added — a nested <button> hydration error on /calendar was the one
+  // and only entry, and it was fixed rather than allowlisted. If a third-party
+  // script ever makes zero unrealistic, narrow the filter here; don't delete it.
+  const routes = Object.entries(report).filter(([k]) => k !== "_summary");
+  expect(
+    routes.filter(([, r]) => (r as { status: unknown }).status !== 200).map(([k]) => k),
+    "routes not returning 200",
+  ).toEqual([]);
+  expect(
+    routes.flatMap(([routePath, r]) =>
+      ((r as { consoleErrors: string[] }).consoleErrors ?? []).map(
+        (e) => `${routePath}: ${e.split("\n")[0].slice(0, 160)}`,
+      ),
+    ),
+    "browser console errors",
+  ).toEqual([]);
 });
 
 // ── 4. Phase 1 substrate contract ────────────────────────────────────────────
@@ -681,9 +700,13 @@ test("contract: Phase 1 substrate holds on every route", async ({ page }) => {
 
 // ── 5. Phase 2 contract — /calendar and the options split ────────────────────
 
-/** Two months of macro releases plus watchlist earnings. Below this the page is
- * a stub, which is what it was before the endpoint served more than 7 days. */
-const MIN_CALENDAR_EVENTS = 20;
+/**
+ * The page's default horizon (app/calendar/page.tsx). The contract is that the
+ * page renders every event the feed offers for that horizon; a hardcoded floor
+ * only measured how far ahead the seed happened to reach the week it was
+ * written, and went red at 9 events with nothing actually broken.
+ */
+const CALENDAR_HORIZON_DAYS = 30;
 
 /** The five sections one page became. All must resolve, or a tab is a 404. */
 const OPTIONS_ROUTES = [
@@ -707,9 +730,19 @@ test("contract: Phase 2 — calendar has events and every options tab resolves",
   await settle(page, 2500);
 
   // Each event is one Collapsible; nothing else on the page discloses.
+  const expected: number = await page
+    .request.get(`/api/argus/calendar?days=${CALENDAR_HORIZON_DAYS}`)
+    .then((r) => r.json())
+    .then((j) => (j.events ?? []).length)
+    .catch(() => -1);
   const events = await page.locator("#main button[aria-expanded]").count();
-  if (events < MIN_CALENDAR_EVENTS)
-    violations.push(`/calendar: ${events} events, expected ≥ ${MIN_CALENDAR_EVENTS}`);
+  if (expected < 1) {
+    // Not a page regression, but not something to pass over in silence either:
+    // the seed reaches months ahead, so an empty horizon means the feed is down.
+    violations.push(`/calendar: feed returned no events for ${CALENDAR_HORIZON_DAYS}d`);
+  } else if (events !== expected) {
+    violations.push(`/calendar: rendered ${events} of ${expected} feed events`);
+  }
 
   // The rail's overflow link is the only route into the full calendar from a
   // page that is not the calendar — and the rail is only open on Today, so that
@@ -990,27 +1023,44 @@ test("contract: Phase 5 — one action bar, and every surface reaches your book"
     violations.push("/t/AAPL: no Copy action");
 
   // ── calendar event → affected names → positions ───────────────────────────
-  const feed = await page
-    .request.get("/api/argus/calendar?days=30")
-    .then((r) => r.json())
-    .catch(() => ({ events: [] }));
-  const reporting: string | null =
-    (feed.events ?? []).map((e: { ticker?: string }) => e.ticker).find(Boolean) ?? null;
-  if (!reporting) {
-    // No earnings inside the horizon is a data state, not a regression.
-    console.warn("calendar: no reporting name in the horizon, skipping the holdings link");
-  } else {
-    await stubPortfolio(page, [{ symbol: reporting, position: 250 }]);
-    await page.goto("/calendar");
-    await settle(page, 2500);
-    // No word boundaries: the accessible name concatenates the chip, the ticker
-    // and the figure columns with no whitespace between them.
-    await page.getByRole("button", { name: new RegExp(reporting) }).first().click();
-    const held = page.locator('#main a[href="/portfolio"]');
-    await held.first().waitFor({ timeout: 10_000 }).catch(() => {});
-    if ((await held.count()) === 0)
-      violations.push(`/calendar: ${reporting} reports and is held, but the row reaches no position`);
-  }
+  // The feed is stubbed rather than read: whether any watchlist name happens to
+  // report inside the horizon is a fact about the week, and this used to skip
+  // itself silently on the weeks it didn't. What is under test is the wiring
+  // from an earnings row to the position it affects, which holds every week.
+  const reporting = "AAPL";
+  const today = new Date().toISOString().slice(0, 10);
+  await page.route("**/api/argus/calendar*", (r) =>
+    r.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        today,
+        days: 30,
+        events: [
+          {
+            date: today,
+            time_et: "16:30",
+            event: `${reporting} Q3 earnings`,
+            category: "earnings",
+            importance: "high",
+            source: "e2e-stub",
+            ticker: reporting,
+          },
+        ],
+      }),
+    })
+  );
+  await stubPortfolio(page, [{ symbol: reporting, position: 250 }]);
+  await page.goto("/calendar");
+  await settle(page, 2500);
+  // No word boundaries: the accessible name concatenates the chip, the ticker
+  // and the figure columns with no whitespace between them.
+  await page.getByRole("button", { name: new RegExp(reporting) }).first().click();
+  const held = page.locator('#main a[href="/portfolio"]');
+  await held.first().waitFor({ timeout: 10_000 }).catch(() => {});
+  if ((await held.count()) === 0)
+    violations.push(`/calendar: ${reporting} reports and is held, but the row reaches no position`);
+  await page.unroute("**/api/argus/calendar*");
 
   // ── sector → its candidates → the ones you hold ───────────────────────────
   await page.goto("/rotation");
@@ -1033,9 +1083,10 @@ test("contract: Phase 5 — one action bar, and every surface reaches your book"
     else await rows.nth(i).click(); // release the pick before trying the next
   }
   if (!candidate) {
-    // Every sector's candidates come from today's bridge signals; an empty run
-    // leaves the band with nothing to intersect against.
-    console.warn("rotation: no candidates on today's list, skipping the holdings link");
+    // Every sector's candidates come from today's bridge signals, and the join
+    // now keys on the rotation model's own industry vocabulary — so twelve
+    // sectors naming nobody means the join broke, not that the day was quiet.
+    violations.push("/rotation: none of the top 12 sectors named a candidate");
   } else {
     await stubPortfolio(page, [{ symbol: candidate.trim(), position: 250 }]);
     await page.goto("/rotation");

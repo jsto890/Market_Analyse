@@ -127,7 +127,6 @@ def _fetch_eod_ladder_sync(symbol: str, expiry: str) -> Optional[LadderSnapshot]
             msi_call_strike=None,
             msi_put_strike=None,
             msi_rationale=None,
-            gex_profile_json=None,
         )
         return ladder
 

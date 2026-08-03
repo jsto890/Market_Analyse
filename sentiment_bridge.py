@@ -15,6 +15,7 @@ import argparse
 import sys
 import os
 import json
+import traceback
 import concurrent.futures
 from datetime import datetime
 from pathlib import Path
@@ -37,7 +38,7 @@ from argus.agents.base import Verdict              # noqa: E402
 from argus.catalyst import catalyst_leg            # noqa: E402
 from argus.settings import settings               # noqa: E402
 from argus.weights_config import BRIDGE_WEIGHTS    # noqa: E402  loaded from config/weights.yaml
-from argus.sector_taxonomy import resolve_sector   # noqa: E402
+from argus.sector_taxonomy import resolve_sector, yf_industry   # noqa: E402
 
 
 # ── config ────────────────────────────────────────────────────────────────────
@@ -368,6 +369,10 @@ def _analyse_ticker(row: pd.Series) -> Optional[dict]:
         sector_tuple = resolve_sector(fetch_sym)
     except Exception:
         sector_tuple = ("Other", "")
+    try:
+        industry_yf = yf_industry(fetch_sym)
+    except Exception:
+        industry_yf = ""
 
     # ── next earnings ─────────────────────────────────────────────────────────
     next_earnings_date, earnings_in_days = _next_earnings(fetch_sym)
@@ -438,6 +443,8 @@ def _analyse_ticker(row: pd.Series) -> Optional[dict]:
         "report_group":      _report_group(group1, group2, row.get("conviction") or "", sentiment_score),
         "theme":             sector_tuple[0] if sector_tuple[0] != "Other" else "",
         "industry":          sector_tuple[1],
+        # The rotation model's vocabulary, so the RRG can name a sector's candidates.
+        "industry_yf":       industry_yf,
         "next_earnings_date": next_earnings_date,
         "earnings_in_days":  earnings_in_days,
         # private keys stripped from CSV
@@ -915,9 +922,15 @@ def _write_markdown(
         try:
             rotation_md = build_rotation_section()
         except Exception:
+            traceback.print_exc(file=sys.stderr)
             rotation_md = ""
     if (not rotation_md or "unavailable" in rotation_md) and \
             full_setups_df is not None and not full_setups_df.empty:
+        # The theme fallback carries no rotation scores, so substituting it also
+        # removes the "unavailable" wording — which is why five days of model
+        # failure produced reports that read as healthy.
+        print("[rotation] falling back to the theme section — the rotation model "
+              "produced nothing this run", file=sys.stderr)
         rotation_md = _build_sector_rotation_section(full_setups_df)
     if rotation_md:
         lines.append(rotation_md)
@@ -1117,6 +1130,9 @@ def main() -> None:
     try:
         rotation_md = build_rotation_section()
     except Exception:
+        # build_rotation_section already degrades internally, so reaching here means
+        # something broke outside the model — either way the daily log gets the trace.
+        traceback.print_exc(file=sys.stderr)
         rotation_md = ""
     _write_markdown(results, out_dir / f"bridge_{ts_tag}.md", args.min_quality,
                     full_setups_df=full_setups_df, regime_note=regime_note,

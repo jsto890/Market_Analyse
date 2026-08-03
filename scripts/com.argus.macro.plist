@@ -12,6 +12,10 @@
         <string>-m</string><string>argus.macro.run</string>
     </array>
     <key>WorkingDirectory</key><string>/Users/josephstorey/Market_Analyse/argus</string>
+    <!-- Shorter than StartInterval on purpose: launchd refuses to start a second
+         instance of a label, so a wedged run suppresses every later one. -->
+    <key>EnvironmentVariables</key>
+    <dict><key>JOB_TIMEOUT</key><string>900</string></dict>
     <key>StartInterval</key><integer>1200</integer>
     <key>RunAtLoad</key><true/>
     <key>StandardOutPath</key><string>/tmp/argus-macro.log</string>
