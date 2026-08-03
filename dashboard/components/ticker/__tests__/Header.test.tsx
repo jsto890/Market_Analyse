@@ -35,7 +35,7 @@ beforeEach(() => {
 describe("Header badge row (TK-04)", () => {
   it("shows one consolidated badge (tier), not three separate badges", () => {
     render(<Header ticker="NVDA" bridgeRow={bridgeRow()} signalHistory={[]} lastClose={null} />);
-    expect(screen.getByText("Prime long")).toBeInTheDocument();
+    expect(screen.getByText("Extended")).toBeInTheDocument();
     expect(screen.queryByText("Long")).not.toBeInTheDocument();
     expect(screen.queryByText("MOMENTUM")).not.toBeInTheDocument();
   });
@@ -50,12 +50,12 @@ describe("Header badge row (TK-04)", () => {
       />
     );
     expect(screen.getByText("Short")).toBeInTheDocument();
-    expect(screen.queryByText("Avoid")).not.toBeInTheDocument();
+    expect(screen.queryByText("Weak")).not.toBeInTheDocument();
   });
 
   it("renders the tier as display copy, keeping the raw enum on data-value (TH-02)", () => {
     render(<Header ticker="NVDA" bridgeRow={bridgeRow({ action_label: "STANDARD_LONG" })} signalHistory={[]} lastClose={null} />);
-    const badge = screen.getByText("Standard long");
+    const badge = screen.getByText("Trending");
     expect(badge).toHaveAttribute("data-value", "STANDARD_LONG");
     expect(badge).not.toHaveAttribute("title");
     expect(screen.queryByText("STANDARD_LONG")).not.toBeInTheDocument();
@@ -281,7 +281,7 @@ describe("Header verdict zone (K-04)", () => {
     });
     render(<Header ticker="NVDA" bridgeRow={bridgeRow()} signalHistory={[]} lastClose={null} />);
     const chip = await screen.findByText("Earnings today");
-    const verdictZone = screen.getByText("Prime long").closest("div")!.parentElement!;
+    const verdictZone = screen.getByText("Extended").closest("div")!.parentElement!;
     expect(verdictZone).not.toContainElement(chip);
   });
 });

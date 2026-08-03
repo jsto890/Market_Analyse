@@ -175,7 +175,7 @@ describe("SignalGroups — cards then table", () => {
     };
     render(<SignalGroups groups={groups} newTickers={[]} sectors={SECTORS} />);
     await screen.findByText("NVDA");
-    const cell = screen.getByRole("cell", { name: "Standard long" });
+    const cell = screen.getByRole("cell", { name: "Trending" });
     // Thirty rows of badges is thirty boxes; only Badge carries data-value.
     expect(cell.querySelector("[data-value]")).toBeNull();
   });

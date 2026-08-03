@@ -37,7 +37,7 @@ describe("HistoryCard", () => {
 
   it("reads the tier as copy, not as the column it came out of (TH-02)", () => {
     render(<HistoryCard rows={rows.slice(0, 2)} lastClose={110} />);
-    expect(screen.getAllByText("Prime long")).toHaveLength(2);
+    expect(screen.getAllByText("Extended")).toHaveLength(2);
     expect(screen.queryByText("PRIME_LONG")).toBeNull();
   });
 });

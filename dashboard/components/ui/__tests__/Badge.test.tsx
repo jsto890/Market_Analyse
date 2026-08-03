@@ -17,7 +17,7 @@ describe("Badge", () => {
       </>
     );
     expect(screen.getByText("Long")).toBeInTheDocument();
-    expect(screen.getByText("Standard long")).toBeInTheDocument();
+    expect(screen.getByText("Trending")).toBeInTheDocument();
     expect(screen.queryByText("STANDARD_LONG")).not.toBeInTheDocument();
     // text-micro shouts; display copy is a phrase, so it opts out.
     expect(badge("STANDARD_LONG")).toHaveClass("normal-case");
@@ -25,10 +25,15 @@ describe("Badge", () => {
 
   it("maps known tier values onto --model, never P&L green", () => {
     render(<Badge variant="tier" value="PRIME_LONG" />);
-    expect(badge("PRIME_LONG")).toHaveClass("bg-model/[0.20]", "text-model");
+    expect(badge("PRIME_LONG")).toHaveClass("bg-model/[0.14]", "text-model");
   });
 
-  it("PRIME_LONG is the most-saturated tier — strictly stronger tint than BREAKOUT_LONG/STANDARD_LONG", () => {
+  it("draws no tint ladder across the long tiers — the OOS ranking is inverted", () => {
+    // This used to assert PRIME > BREAKOUT > STANDARD saturation. The
+    // 2015-2024 OOS backtest (75,385 signals) found the tier order ranks
+    // trailing strength and carries no forward information, with PRIME_LONG
+    // the weakest forward-20d bucket — so a descending ramp was drawing a
+    // conviction ranking the data does not support. Equal weight is the claim.
     render(
       <>
         <Badge variant="tier" value="PRIME_LONG" />
@@ -36,9 +41,9 @@ describe("Badge", () => {
         <Badge variant="tier" value="STANDARD_LONG" />
       </>
     );
-    expect(badge("PRIME_LONG")).toHaveClass("bg-model/[0.20]");
-    expect(badge("BREAKOUT_LONG")).toHaveClass("bg-model/[0.14]");
-    expect(badge("STANDARD_LONG")).toHaveClass("bg-model/[0.09]");
+    for (const tier of ["PRIME_LONG", "BREAKOUT_LONG", "STANDARD_LONG"]) {
+      expect(badge(tier)).toHaveClass("bg-model/[0.14]", "border-model/40");
+    }
   });
 
   it("maps known verdict values onto --model — direction is carried by the word", () => {

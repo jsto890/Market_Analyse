@@ -6,10 +6,17 @@
 // never in P&L green/red. A 0.72 score in green tells the user it is profit;
 // the app's own caveat line says magnitude does not predict returns (r≈0).
 // Direction is carried by the word ("Long" / "Short"), not by hue.
+//
+// The fill weight no longer runs PRIME > BREAKOUT > STANDARD. A 2015-2024 OOS
+// backtest over 75,385 signals found the tier ladder ranks *trailing* relative
+// strength (Spearman +0.67) and carries no forward information (−0.015):
+// PRIME_LONG is the weakest forward-20d bucket and AVOID the strongest. A
+// descending ramp drew that ladder as a conviction ranking, so all three long
+// tiers now sit at one weight and the word does the work.
 const TIER: Record<string, string> = {
-  PRIME_LONG: "border-model/45 bg-model/[0.20] text-model",
+  PRIME_LONG: "border-model/40 bg-model/[0.14] text-model",
   BREAKOUT_LONG: "border-model/40 bg-model/[0.14] text-model",
-  STANDARD_LONG: "border-model/30 bg-model/[0.09] text-model",
+  STANDARD_LONG: "border-model/40 bg-model/[0.14] text-model",
   WATCH: "border-line bg-muted/10 text-muted",
   AVOID: "border-line-strong bg-raised text-muted",
   WAIT: "border-line bg-muted/10 text-muted",
@@ -38,13 +45,19 @@ const EDGE: Record<string, string> = {
  *  (TH-02). Mapping here rather than at each call site is what stops
  *  `STANDARD_LONG` reaching the screen: a site that forgets to ask for display
  *  copy gets it anyway. The copy is no wider than the enum, so dense tables pay
- *  nothing for it. */
+ *  nothing for it.
+ *
+ *  The three long tiers are named for the *state* they describe, not for how
+ *  much the model likes the name. "Prime long" read as a recommendation; the
+ *  OOS backtest says that tier marks the most extended names and the weakest
+ *  forward return, so it says "Extended". Likewise AVOID, which had the best
+ *  forward 20d return of any tier and is not a short signal. */
 export const BADGE_LABEL: Record<string, string> = {
-  PRIME_LONG: "Prime long",
-  BREAKOUT_LONG: "Breakout long",
-  STANDARD_LONG: "Standard long",
+  PRIME_LONG: "Extended",
+  BREAKOUT_LONG: "Breakout",
+  STANDARD_LONG: "Trending",
   WATCH: "Watch",
-  AVOID: "Avoid",
+  AVOID: "Weak",
   WAIT: "Wait",
   LONG: "Long",
   SHORT: "Short",

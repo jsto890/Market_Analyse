@@ -42,8 +42,25 @@ from argus.action_card.builder import (
     _REGIME_FAMILY_MULT,
     _AGENT_FAMILY,
     _FAMILIES,
+    _RR_MULT,
 )
 from argus.agents.base import Vote, Verdict
+
+
+def _neuter_earnings() -> None:
+    """Remove the earnings agent's look-ahead before any historical replay.
+
+    `strategies._days_to_earnings` resolves against `datetime.now()`. That is
+    correct live and silently wrong in replay: it stamps *today's* earnings
+    calendar onto every past bar, a per-ticker constant that forces ~5% of
+    tickers to WAIT across their entire history. Anything calling `run_all` in
+    a backtest inherits this unless the agent is neutered.
+    """
+    from argus.agents import strategies
+    strategies._days_to_earnings = lambda ticker: None
+
+
+_neuter_earnings()   # module scope, so pool workers inherit it on import
 
 OUT_CSV = REPO_ROOT / "reports" / "backtest_results.csv"
 
@@ -118,14 +135,17 @@ MIN_BARS        = 260
 FETCH_YEARS     = BACKTEST_YEARS + 0.5
 MAX_HOLD_DAYS   = 20
 
-# Dynamic R:R multipliers per regime: (stop_mult, target_mult)
-# Trending → wider target (trend can run); ranging → tighter (range-bound)
-_REGIME_RR: dict[str, tuple[float, float]] = {
-    "trending":              (2.0, 4.0),   # 2:1 R:R — let winners run
-    "trending_late":         (2.0, 3.0),   # 1.5:1 — trend waning, take profits sooner
-    "ranging":               (1.5, 2.5),   # 1.67:1 — range won't run far
-    "gap_down_continuation": (1.5, 2.5),   # defensive — don't trust signal
-    "neutral":               (2.0, 3.0),   # 1.5:1 default
+# Stop distance in ATR per regime; the target is always `_RR_MULT` x risk so that
+# replay mirrors production (`action_card.builder._RR_MULT`). The old table set an
+# ad-hoc target multiple per regime that production never applied — trending got
+# 2.0/4.0 while every other regime got 1.5-1.67:1, so backtested trending trades
+# were held to a target 2x the ~2.2 ATR median MFE and stopped out on the way.
+_REGIME_STOP: dict[str, float] = {
+    "trending":              2.0,
+    "trending_late":         2.0,
+    "ranging":               1.5,
+    "gap_down_continuation": 1.5,   # defensive — don't trust signal
+    "neutral":               2.0,
 }
 
 # Tier position-size weights (as fraction of full size)
@@ -144,7 +164,11 @@ FAMILY_KEYS = ["ma_trend", "breakout", "squeeze", "momentum_osc"]
 def _fast_score(df_slice: pd.DataFrame) -> dict:
     """Score with post-cap regime scaling. Votes kept raw; regime applied in _capped_weights."""
     regime = _detect_ticker_regime(df_slice)
-    votes  = [v for v in run_all(df_slice) if v.agent != "RS vs Sector"]
+    # Keep every vote, including "RS vs Sector". Dropping it systematically inflates
+    # |score| and pushes borderline names over the 0.15 verdict and 0.30/0.40 tier
+    # gates. With no sector data the agent returns WAIT/0.2 here exactly as it does
+    # in production, so it belongs in the denominator.
+    votes  = run_all(df_slice)
 
     lw, sw = _capped_weights(votes, regime)   # post-cap scaling applied here
     tw = lw + sw
@@ -154,8 +178,11 @@ def _fast_score(df_slice: pd.DataFrame) -> dict:
 
     n_long  = sum(1 for v in votes if v.verdict == Verdict.LONG)
     n_short = sum(1 for v in votes if v.verdict == Verdict.SHORT)
-    n_total = len(votes)
-    agreement     = max(n_long, n_short) / n_total if n_total > 0 else 0.5
+    # Production divides by ACTIONABLE votes (long+short), not all votes. Using
+    # len(votes) drove inflation_gap into [-0.61, -0.20], which made the `< 0.15`
+    # gate in _classify_action vacuous — it passed everything.
+    actionable    = n_long + n_short
+    agreement     = max(n_long, n_short) / actionable if actionable else 0.0
     inflation_gap = round(agreement - (1.0 + abs(score)) / 2.0, 4)
     n_eff         = _effective_n(votes)
     combo         = _combo_string(votes)
@@ -181,10 +208,11 @@ def _fast_score(df_slice: pd.DataFrame) -> dict:
 def _atr_exit(highs: np.ndarray, lows: np.ndarray, idx: int,
               c0: float, atr: float, verdict: str, regime: str) -> tuple[str, int, float]:
     """
-    ATR-based stop/target exit with dynamic R:R per regime.
+    ATR-based stop/target exit with a regime-dependent stop and a fixed R:R.
     Returns (outcome, days_held, actual_rr).
     """
-    stop_m, tgt_m = _REGIME_RR.get(regime, (2.0, 3.0))
+    stop_m = _REGIME_STOP.get(regime, 2.0)
+    tgt_m = stop_m * _RR_MULT
 
     if atr <= 0 or verdict == "WAIT":
         return "OPEN", MAX_HOLD_DAYS, 0.0
@@ -275,7 +303,9 @@ def backtest_ticker(meta: dict) -> list[dict]:
                 Verdict.LONG if verdict == "LONG" else (Verdict.SHORT if verdict == "SHORT" else Verdict.WAIT),
                 score, regime, combo, n_eff, inflation_gap, None,
             )
-            tier = "BULLISH_SETUP" if action_label in ("PRIME_LONG","BREAKOUT_LONG","STANDARD_LONG") else (
+            # BREAKOUT_LONG dropped: _classify_action only ever returns PRIME_LONG,
+            # STANDARD_LONG, WATCH, AVOID or WAIT, so the old test was dead code.
+            tier = "BULLISH_SETUP" if action_label in ("PRIME_LONG","STANDARD_LONG") else (
                    "AVOID" if action_label == "AVOID" else
                    "WAIT"  if action_label == "WAIT" else "WATCH")
             onset = prev_verdict != verdict and verdict in ("LONG", "SHORT")

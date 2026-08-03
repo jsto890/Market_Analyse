@@ -132,7 +132,7 @@ describe("WhyPanel legs (K-09)", () => {
     );
     expect(
       await screen.findByText(
-        /three legs, each with the evidence behind the bar\..*is what "Standard long, not high conviction" looks like\./
+        /three legs, each with the evidence behind the bar\..*is what "Trending, not high conviction" looks like\./
       )
     ).toBeInTheDocument();
   });
