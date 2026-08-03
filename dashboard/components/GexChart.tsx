@@ -24,6 +24,31 @@ export interface GexChartProps {
   zeroGammaStrike?: number | null;
 }
 
+/**
+ * X range for the profile. Recharts' default numeric domain is [0, 'auto'], so
+ * a chain whose strikes sit near 700 draws 700 points of empty axis before the
+ * first bar and squeezes the whole profile into the last tenth of the panel.
+ * Anchor to the strikes actually present, widened to keep the spot and
+ * zero-gamma markers on the chart, with a little air either side.
+ */
+export function strikeDomain(
+  data: GexDataPoint[],
+  ...marks: (number | null | undefined)[]
+): [number, number] {
+  const points = [
+    ...data.map((d) => d.strike),
+    ...marks.filter((m): m is number => m != null && Number.isFinite(m)),
+  ].filter(Number.isFinite);
+  if (points.length === 0) return [0, 1];
+  const lo = Math.min(...points);
+  const hi = Math.max(...points);
+  const span = hi - lo;
+  // A single strike has no span to take a percentage of, and a zero-width
+  // domain collapses the axis, so fall back to a step off the value itself.
+  const pad = span > 0 ? span * 0.02 : Math.max(1, Math.abs(hi) * 0.01);
+  return [lo - pad, hi + pad];
+}
+
 function formatYAxis(value: number): string {
   if (value === 0) return "0";
   if (Math.abs(value) >= 1_000_000) return `${(value / 1_000_000).toFixed(0)}M`;
@@ -69,7 +94,14 @@ export default function GexChart({ data, spotStrike, zeroGammaStrike }: GexChart
             </linearGradient>
           </defs>
           <CartesianGrid strokeDasharray="3 3" stroke="var(--line)" />
-          <XAxis dataKey="strike" type="number" tick={{ fontSize: 11 }} stroke="var(--muted)" />
+          <XAxis
+            dataKey="strike"
+            type="number"
+            domain={strikeDomain(data, spotStrike, zeroGammaStrike)}
+            allowDataOverflow={false}
+            tick={{ fontSize: 11 }}
+            stroke="var(--muted)"
+          />
           <YAxis tickFormatter={formatYAxis} tick={{ fontSize: 11 }} stroke="var(--muted)" />
           <Tooltip content={<GexTooltip />} />
           <ReferenceLine y={0} stroke="var(--muted)" />
