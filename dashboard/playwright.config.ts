@@ -10,7 +10,10 @@ export default defineConfig({
   // that load can outrun a test's own timeout — the suite flaked on a different
   // test each run until it was serialised.
   workers: 1,
-  forbidOnly: !!process.env.CI,
+  // Unconditional, not `!!process.env.CI`: there is no CI, so gating on it meant
+  // a committed `.only` would have silently reduced the suite to one test for
+  // good. Focus a run with `npm run test:e2e -- --grep "…"` instead.
+  forbidOnly: true,
   retries: process.env.CI ? 1 : 0,
   reporter: [["list"]],
   use: {
