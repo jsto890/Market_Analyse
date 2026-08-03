@@ -60,6 +60,7 @@ describe("MovedMost", () => {
           row({ industry: "D", drank: -3 }),
           row({ industry: "E", drank: 8 }),
           row({ industry: "F", drank: -1 }),
+          row({ industry: "G", drank: 2 }),
         ]}
         selected={null}
         onSelect={() => {}}
@@ -68,11 +69,14 @@ describe("MovedMost", () => {
     const buttons = screen.getAllByRole("button");
     expect(buttons).toHaveLength(4);
     const names = buttons.map((b) => b.textContent ?? "");
+    // A and B are dropped by the filter, F by the cap — five rows qualify and
+    // only four may render, so removing `.slice(0, TOP_N)` brings F back.
     expect(names.some((n) => n.includes("A"))).toBe(false);
     expect(names.some((n) => n.includes("B"))).toBe(false);
+    expect(names.some((n) => n.includes("F"))).toBe(false);
     expect(names[0]).toContain("E");
     expect(names[1]).toContain("C");
     expect(names[2]).toContain("D");
-    expect(names[3]).toContain("F");
+    expect(names[3]).toContain("G");
   });
 });

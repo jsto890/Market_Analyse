@@ -42,6 +42,8 @@ describe("Contributors (MAC-09 restack)", () => {
     expect(await screen.findByText(/weight 1\.00/)).toBeInTheDocument();
     expect(screen.getByText(expectedClock)).toBeInTheDocument();
     expect(screen.getByText("Bloomberg")).toBeInTheDocument();
+    // Three separators: weight · clock · source · share.
+    expect(screen.getAllByText("·")).toHaveLength(3);
   });
 
   it("omits the source separator when an item carries no source (no-feed rule)", async () => {
@@ -52,6 +54,9 @@ describe("Contributors (MAC-09 restack)", () => {
     render(<Contributors scope="global" window="1d" />);
     await screen.findByText(/weight 1\.00/);
     expect(screen.queryByText("Bloomberg")).not.toBeInTheDocument();
+    // The separator count is what bites: drop the `c.source &&` guard and the
+    // row keeps a stray "·" with nothing after it, taking this back to three.
+    expect(screen.getAllByText("·")).toHaveLength(2);
   });
 
   it("states the scored headline count but never links to an all-articles route", async () => {
