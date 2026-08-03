@@ -14,6 +14,7 @@ import {
 } from "recharts";
 import Panel from "@/components/ui/Panel";
 import Empty from "@/components/ui/Empty";
+import { ReadThisTerm } from "@/components/ui/ReadThis";
 import type { RotationRow } from "@/components/today/RotationPanel";
 import { QUADRANT_COLOR, deriveQuadrant, splitDegenerate, rrgIndexByIndustry } from "@/lib/rotation";
 import type { TrailPoint } from "@/lib/rotationTrails";
@@ -165,6 +166,14 @@ export default function RRGChart({
         // never announces a tail that is not on the chart.
         trailWeeks > 1 ? ` · ${trailWeeks}-week tails` : ""
       }${hidden.length > 0 ? ` · ${hidden.length} hidden (no data)` : ""}`}
+      readThis={
+        <>
+          the dot is today
+          {trailWeeks > 1 ? `, the fading dots behind it are the last ${trailWeeks} weeks. ` : ". "}
+          <ReadThisTerm>direction of travel matters more than the corner</ReadThisTerm> it&rsquo;s
+          sitting in — heading toward Weakening is late, heading toward Improving is early.
+        </>
+      }
     >
       <div
         role="img"

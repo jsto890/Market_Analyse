@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from "vitest";
-import { render, screen } from "@/test/render";
+import { render, screen, within } from "@/test/render";
 import userEvent from "@testing-library/user-event";
 import { mockFetchJson } from "@/test/fetchMock";
 import RotationView from "../RotationView";
@@ -17,25 +17,31 @@ beforeEach(() => {
 });
 
 describe("RotationView — the table is the chart's legend", () => {
-  it("names each sector exactly once on the page", () => {
+  // The rail's focused SectorCard now repeats the top-ranked sector's name
+  // beside the chart by design (RO-7), so uniqueness is scoped to the table —
+  // its own legend job — rather than the whole page.
+  it("names each sector exactly once in the table", () => {
     render(<RotationView rows={rows} namesBySector={names} />);
-    expect(screen.getAllByText("Energy")).toHaveLength(1);
-    expect(screen.getAllByText("Utilities")).toHaveLength(1);
+    const table = screen.getByRole("table");
+    expect(within(table).getAllByText("Energy")).toHaveLength(1);
+    expect(within(table).getAllByText("Utilities")).toHaveLength(1);
   });
 
   it("prints the plot index in front of each industry so a point resolves to a row", () => {
     render(<RotationView rows={rows} namesBySector={names} />);
-    const energyCell = screen.getByText("Energy").closest("td")!;
+    const table = screen.getByRole("table");
+    const energyCell = within(table).getByText("Energy").closest("td")!;
     expect(energyCell.textContent).toBe("1Energy");
-    expect(screen.getByText("Utilities").closest("td")!.textContent).toBe("2Utilities");
+    expect(within(table).getByText("Utilities").closest("td")!.textContent).toBe("2Utilities");
   });
 
   it("highlights the picked row", async () => {
     const user = userEvent.setup();
     render(<RotationView rows={rows} namesBySector={names} />);
-    const energyRow = screen.getByText("Energy").closest("tr")!;
+    const table = screen.getByRole("table");
+    const energyRow = within(table).getByText("Energy").closest("tr")!;
     expect(energyRow.className).not.toMatch(/ring-accent/);
-    await user.click(screen.getByText("Energy"));
+    await user.click(within(table).getByText("Energy"));
     expect(energyRow.className).toMatch(/ring-accent/);
   });
 });
@@ -71,5 +77,30 @@ describe("RotationView — trail length", () => {
     expect(screen.getByText(/week tails/)).toBeInTheDocument();
     await user.click(screen.getByRole("radio", { name: "Off" }));
     expect(screen.queryByText(/week tails/)).not.toBeInTheDocument();
+  });
+});
+
+describe("RotationView — rail", () => {
+  // "Uranium" and its RS-Ratio also appear in the legend table and in the
+  // moved-most list, so the SectorCard is located via its one unique label
+  // ("Your names in it") rather than by the ambiguous industry/number text.
+  it("focuses top-ranked sector when nothing is picked", () => {
+    render(<RotationView rows={trailRows} history={trailHistory} />);
+    const card = screen.getByText("Your names in it").closest("section")!;
+    expect(within(card).getByText("Uranium")).toBeInTheDocument();
+    expect(within(card).getByText("103.2")).toBeInTheDocument();
+  });
+
+  it("follows a pick made in the moved-most card", async () => {
+    const user = userEvent.setup();
+    render(<RotationView rows={trailRows} history={trailHistory} />);
+    await user.click(screen.getByRole("button", { name: /Software—Application/ }));
+    const card = screen.getByText("Your names in it").closest("section")!;
+    expect(within(card).getByText("97.1")).toBeInTheDocument();
+  });
+
+  it("explains the chart foot", () => {
+    render(<RotationView rows={trailRows} history={trailHistory} />);
+    expect(screen.getByText(/the dot is today/i)).toBeInTheDocument();
   });
 });

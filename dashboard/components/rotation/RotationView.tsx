@@ -3,6 +3,8 @@
 import { useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import RRGChart, { type SectorNames } from "@/components/rotation/RRGChart";
+import MovedMost from "@/components/rotation/MovedMost";
+import SectorCard from "@/components/rotation/SectorCard";
 import RotationPanel, { type RotationRow } from "@/components/today/RotationPanel";
 import SegmentedControl from "@/components/ui/SegmentedControl";
 import { rrgIndexByIndustry } from "@/lib/rotation";
@@ -51,6 +53,11 @@ export default function RotationView({
     return buildTrails(history, rows.map((r) => r.industry), Number(trailKey));
   }, [history, rows, trailKey]);
 
+  // Nothing picked yet: the top-ranked sector is what the page is about until
+  // you say otherwise. An empty rail beside a full chart reads as missing
+  // column furniture.
+  const focus = rows.find((r) => r.industry === selected) ?? [...rows].sort((a, b) => a.rank - b.rank)[0] ?? null;
+
   return (
     <>
       <SegmentedControl
@@ -59,12 +66,24 @@ export default function RotationView({
         options={TRAIL_OPTIONS}
         onChange={setTrailKey}
       />
-      <RRGChart
-        rows={rows}
-        trails={trails}
-        selected={selected}
-        onSelect={setSelected}
-      />
+      <div className="grid gap-3 lg:grid-cols-[1fr_340px]">
+        <RRGChart
+          rows={rows}
+          trails={trails}
+          selected={selected}
+          onSelect={setSelected}
+        />
+        <div className="flex flex-col gap-3">
+          <MovedMost rows={rows} selected={selected} onSelect={setSelected} />
+          {focus && (
+            <SectorCard
+              row={focus}
+              names={namesBySector?.[focus.industry] ?? []}
+              held={held}
+            />
+          )}
+        </div>
+      </div>
       <RotationPanel
         rows={rows}
         defaultOpen
