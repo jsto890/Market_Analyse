@@ -4,14 +4,16 @@ import {
   TAPE_START_MIN,
   assignLanes,
   etMinutes,
-  fmtEtClock,
+  fmtClock,
+  localOffsetMin,
+  fmtLocalClock,
   laneCount,
   nowEtMinutes,
   nowOnAxis,
   tapeFraction,
 } from "@/lib/tape";
 
-describe("etMinutes / fmtEtClock", () => {
+describe("etMinutes / fmtClock", () => {
   it("reads the feed's clock strings", () => {
     expect(etMinutes("08:30")).toBe(510);
     expect(etMinutes("00:00")).toBe(0);
@@ -29,9 +31,33 @@ describe("etMinutes / fmtEtClock", () => {
   });
 
   it("round-trips back to the same string", () => {
-    expect(fmtEtClock(510)).toBe("08:30");
-    expect(fmtEtClock(TAPE_START_MIN)).toBe("04:00");
-    expect(fmtEtClock(TAPE_END_MIN)).toBe("20:00");
+    expect(fmtClock(510)).toBe("08:30");
+    expect(fmtClock(TAPE_START_MIN)).toBe("04:00");
+    expect(fmtClock(TAPE_END_MIN)).toBe("20:00");
+  });
+});
+
+describe("localOffsetMin", () => {
+  it("is +14h while New York is on EDT and Sydney on AEST", () => {
+    // 2026-08-03: NY = UTC-4, Sydney = UTC+10.
+    expect(localOffsetMin(new Date("2026-08-03T12:00:00Z"))).toBe(14 * 60);
+  });
+
+  it("is +16h in January, when both sides have swapped", () => {
+    // 2026-01-15: NY = UTC-5 (EST), Sydney = UTC+11 (AEDT).
+    expect(localOffsetMin(new Date("2026-01-15T12:00:00Z"))).toBe(16 * 60);
+  });
+});
+
+describe("fmtLocalClock", () => {
+  it("prints an ET minute on the Sydney clock", () => {
+    expect(fmtLocalClock(4 * 60, 14 * 60)).toEqual({ clock: "18:00", dayShift: 0 });
+    expect(fmtLocalClock(9 * 60 + 30, 14 * 60)).toEqual({ clock: "23:30", dayShift: 0 });
+  });
+
+  it("flags the roll past midnight rather than printing a time that reads earlier", () => {
+    expect(fmtLocalClock(16 * 60, 14 * 60)).toEqual({ clock: "06:00", dayShift: 1 });
+    expect(fmtLocalClock(20 * 60, 14 * 60)).toEqual({ clock: "10:00", dayShift: 1 });
   });
 });
 

@@ -32,7 +32,7 @@ export function etMinutes(timeEt: string | null | undefined): number | null {
 }
 
 /** 510 → "08:30". */
-export function fmtEtClock(minutes: number): string {
+export function fmtClock(minutes: number): string {
   const hh = Math.floor(minutes / 60) % 24;
   const mm = Math.round(minutes) % 60;
   return `${String(hh).padStart(2, "0")}:${String(mm).padStart(2, "0")}`;
@@ -49,6 +49,42 @@ export function nowEtMinutes(at: Date = new Date()): number {
   const hh = Number(parts.find((p) => p.type === "hour")?.value ?? 0) % 24;
   const mm = Number(parts.find((p) => p.type === "minute")?.value ?? 0);
   return hh * 60 + mm;
+}
+
+/** Where the tape runs. The axis and the session boundaries are facts about
+ *  this exchange and never move. */
+export const TAPE_TZ = "America/New_York";
+/** Where it is read. Only the printed clock moves. */
+export const LOCAL_TZ = "Australia/Sydney";
+
+function tzMinutes(at: Date, tz: string): number {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: tz,
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).format(at);
+  const [h, m] = parts.split(":").map(Number);
+  return (h % 24) * 60 + m;
+}
+
+/** Minutes to add to a New York clock reading to get the Sydney one, in
+ *  [0, 1440). Read off the current instant, so it follows both hemispheres'
+ *  daylight saving without a table. */
+export function localOffsetMin(at: Date = new Date()): number {
+  return (((tzMinutes(at, LOCAL_TZ) - tzMinutes(at, TAPE_TZ)) % 1440) + 1440) % 1440;
+}
+
+/** An ET minute-of-day printed on the Sydney clock. The tape spans 04:00–20:00
+ *  in New York, which is one calendar day there and two here — `dayShift` is 1
+ *  once the reading has rolled past midnight, so 06:00 after 23:30 does not read
+ *  as going backwards. */
+export function fmtLocalClock(
+  minutes: number,
+  offsetMin: number,
+): { clock: string; dayShift: 0 | 1 } {
+  const shifted = minutes + offsetMin;
+  return { clock: fmtClock(shifted % 1440), dayShift: shifted >= 1440 ? 1 : 0 };
 }
 
 /** Position along the axis as 0..1, clamped so an 03:00 print still renders. */
