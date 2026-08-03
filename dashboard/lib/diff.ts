@@ -104,19 +104,12 @@ function deriveGroupFromCsvRow(row: Record<string, unknown>): string {
   return "other";
 }
 
-export async function loadYesterdayRows(todayDate?: string): Promise<DiffRow[]> {
+export async function loadYesterdayRows(): Promise<DiffRow[]> {
   const rawDates = reportDates() as { date: string }[];
 
   if (rawDates.length >= 2) {
-    let targetDate: string;
-    if (todayDate) {
-      const before = rawDates.filter((r) => r.date < todayDate).sort((a, b) => b.date.localeCompare(a.date));
-      if (before.length === 0) return [];
-      targetDate = before[0].date;
-    } else {
-      const sorted = rawDates.sort((a, b) => b.date.localeCompare(a.date));
-      targetDate = sorted[1].date;
-    }
+    const sorted = rawDates.sort((a, b) => b.date.localeCompare(a.date));
+    const targetDate = sorted[1].date;
 
     const dbRows = byDate(targetDate) as Array<Record<string, unknown>>;
     return dbRows.map((r) => {
@@ -149,15 +142,8 @@ export async function loadYesterdayRows(todayDate?: string): Promise<DiffRow[]> 
   const perDay = latestPerDay(names);
   const sortedDates = Array.from(perDay.keys()).sort().reverse();
 
-  let targetDay: string;
-  if (todayDate) {
-    const before = sortedDates.filter((d) => d < todayDate);
-    if (before.length === 0) return [];
-    targetDay = before[0];
-  } else {
-    if (sortedDates.length < 2) return [];
-    targetDay = sortedDates[1];
-  }
+  if (sortedDates.length < 2) return [];
+  const targetDay = sortedDates[1];
 
   const fileName = perDay.get(targetDay);
   if (!fileName) return [];

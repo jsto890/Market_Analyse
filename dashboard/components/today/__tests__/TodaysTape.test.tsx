@@ -167,12 +167,11 @@ describe("TodaysTape — events with no time", () => {
   });
 });
 
-describe("TodaysTape — panel header", () => {
-  it("carries the date stepper rather than leaving it orphaned below the card", () => {
-    render(
-      <TapeBand events={[]} nowMin={10 * 60} offsetMin={14 * 60} actions={<button type="button">Yesterday</button>} />
-    );
-    expect(screen.getByRole("button", { name: "Yesterday" })).toBeInTheDocument();
+describe("TodaysTape — no history", () => {
+  it("offers no way to step back to a past date", () => {
+    render(<TapeBand events={[event({ time_et: "08:30" })]} nowMin={10 * 60} offsetMin={14 * 60} />);
+    expect(screen.queryByRole("button", { name: /yesterday|previous|←/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: /yesterday|previous|←/i })).not.toBeInTheDocument();
   });
 });
 

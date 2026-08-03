@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, type ReactNode } from "react";
+import { Fragment } from "react";
 import Link from "next/link";
 import Panel from "@/components/ui/Panel";
 import { ReadThisTerm } from "@/components/ui/ReadThis";
@@ -176,27 +176,23 @@ function Untimed({ label, events }: { label: string; events: MorningEvent[] }) {
   );
 }
 
-export default function TodaysTape({ actions }: { actions?: ReactNode }) {
+export default function TodaysTape() {
   // Same SWR key as the masthead, so the two share one request.
   const { data, error, isLoading } = useMorningReport();
-  // The date stepper rides in this panel's header. With no brief there is no
-  // header to ride in, and dropping it would drop history navigation with it.
-  if (isLoading || error || !data) return <>{actions}</>;
-  return <TapeBand events={data.today_events ?? []} actions={actions} />;
+  if (isLoading || error || !data) return null;
+  return <TapeBand events={data.today_events ?? []} />;
 }
 
 export function TapeBand({
   events,
   nowMin = nowEtMinutes(),
   offsetMin = localOffsetMin(),
-  actions,
 }: {
   events: MorningEvent[];
   nowMin?: number;
   /** Injected in tests so a clock assertion does not depend on the runner's
    *  hemisphere or the date it runs on. */
   offsetMin?: number;
-  actions?: ReactNode;
 }) {
   const earnings = events.filter(isEarnings);
   const releases = events.filter((e) => !isEarnings(e));
@@ -225,7 +221,6 @@ export function TapeBand({
       title="Today’s tape"
       heading="eyebrow"
       subtitle={nothingTimed ? undefined : "all times Sydney"}
-      actions={actions}
       readThis={
         nothingTimed ? (
           <>
